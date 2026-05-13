@@ -1,11 +1,7 @@
-/**
- * STAND-ALONE WHATSAPP ENGINE - SAPATAMU.KU
- * Deploy as Web App -> Execute as: Me -> Access: Anyone
  */
 
-const FONNTE_TOKEN = "fRx1Canf4GYroBZZNfo7";
-
 function handleWAEnginePost(data) {
+
   // --- DELAY 2 DETIK UNTUK SINKRONISASI DATA ONSITE ---
   Utilities.sleep(2000); 
 

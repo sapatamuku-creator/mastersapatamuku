@@ -1,12 +1,7 @@
-/**
- * Sapatamu.ku v3.3 - Selfie Check-in Microservice (Dynamic Naming)
- * Migrated to New Drive Environment
  */
 
-const TARGET_FOLDER_ID = "1yqHqIf6prjKWs5HxSVjw3t3zOLykJn7S";
-const MASTER_DB_ID = "12z2fqewIamIRpVJ4zocMDp-8CwjZsjsrQRh3dXx-VAw"; // Database Pusat (Updated to New ID)
-
 function handleSelfiePost(data) {
+
   try {
     const SPREADSHEET_ID = data.ssId; 
     
