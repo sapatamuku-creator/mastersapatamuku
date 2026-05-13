@@ -135,6 +135,10 @@
             border-bottom: 1px solid var(--border);
         }
 
+        .pax-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; background: #fafafa; padding: 10px 15px; border-radius: 15px; border: 1px solid #eee; }
+        .pax-label { font-size: 10px; font-weight: 800; color: #666; text-transform: uppercase; }
+        .pax-total-label { font-size: 10px; font-weight: 800; color: var(--gold); text-align: right; margin-top: 5px; }
+        
         /* UNIFIED NAVBAR STYLES */
         .sapatamu-navbar {
             width: 100%;
@@ -262,17 +266,25 @@
                     <input type="text" id="reg-nama" class="form-control" placeholder="Nama tamu">
                 </div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Alamat / Instansi</label>
-                        <input type="text" id="reg-alamat" class="form-control" placeholder="Asal kota/kantor">
-                    </div>
-                    <div class="form-group" style="flex: 0.4;">
-                        <label class="form-label">Pax</label>
-                        <div class="counter-wrapper">
-                            <button type="button" class="btn-step" onclick="updatePax('reg-pax', -1)">-</button>
-                            <div id="reg-pax" class="counter-value">1</div>
-                            <button type="button" class="btn-step" onclick="updatePax('reg-pax', 1)">+</button>
+                    <div class="form-group" style="flex:1">
+                        <label class="form-label">Kehadiran Pax</label>
+                        <div class="pax-row">
+                            <span class="pax-label">Dewasa</span>
+                            <div class="counter-wrapper">
+                                <button type="button" class="btn-step" onclick="updatePax('reg', 'adult', -1)">-</button>
+                                <div id="reg-pax-adult" class="counter-value">1</div>
+                                <button type="button" class="btn-step" onclick="updatePax('reg', 'adult', 1)">+</button>
+                            </div>
                         </div>
+                        <div class="pax-row">
+                            <span class="pax-label">Anak</span>
+                            <div class="counter-wrapper">
+                                <button type="button" class="btn-step" onclick="updatePax('reg', 'child', -1)">-</button>
+                                <div id="reg-pax-child" class="counter-value">0</div>
+                                <button type="button" class="btn-step" onclick="updatePax('reg', 'child', 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="pax-total-label">TOTAL: <span id="reg-pax-total">1</span> PAX</div>
                     </div>
                 </div>
                 <div class="form-row">
@@ -322,13 +334,25 @@
         </div>
         <button onclick="takeSnapshot()" id="btn-snap" style="background:none; border:1px solid var(--gold); color:var(--gold); padding:5px 15px; border-radius:20px; font-size:10px; font-weight:800; margin-bottom:10px;">AMBIL SELFIE</button>
         <div class="form-row">
-            <div class="form-group" style="flex:0.5">
-                <label class="form-label">Jumlah Pax</label>
-                <div class="counter-wrapper">
-                    <button type="button" class="btn-step" onclick="updatePax('m-pax', -1)">-</button>
-                    <div id="m-pax" class="counter-value">1</div>
-                    <button type="button" class="btn-step" onclick="updatePax('m-pax', 1)">+</button>
+            <div class="form-group" style="flex:1">
+                <label class="form-label">Kehadiran Pax</label>
+                <div class="pax-row">
+                    <span class="pax-label">Dewasa</span>
+                    <div class="counter-wrapper">
+                        <button type="button" class="btn-step" onclick="updatePax('m', 'adult', -1)">-</button>
+                        <div id="m-pax-adult" class="counter-value">1</div>
+                        <button type="button" class="btn-step" onclick="updatePax('m', 'adult', 1)">+</button>
+                    </div>
                 </div>
+                <div class="pax-row">
+                    <span class="pax-label">Anak</span>
+                    <div class="counter-wrapper">
+                        <button type="button" class="btn-step" onclick="updatePax('m', 'child', -1)">-</button>
+                        <div id="m-pax-child" class="counter-value">0</div>
+                        <button type="button" class="btn-step" onclick="updatePax('m', 'child', 1)">+</button>
+                    </div>
+                </div>
+                <div class="pax-total-label">TOTAL: <span id="m-pax-total">1</span> PAX</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Pemberian</label>
@@ -505,13 +529,34 @@
         document.getElementById('capture-preview-onsite').style.display = 'none';
         capturedOnsitePhoto = null; document.getElementById('btn-onsite-snap').innerText = "AMBIL SELFIE";
         document.getElementById('btn-final-onsite').disabled = true; document.getElementById('btn-final-onsite').style.opacity = 0.5;
-        document.getElementById('reg-pax').innerText = "1";
+        document.getElementById('reg-pax-adult').innerText = "1";
+        document.getElementById('reg-pax-child').innerText = "0";
+        document.getElementById('reg-pax-total').innerText = "1";
     }
 
+    window.updatePax = function(prefix, type, delta) {
+        const el = document.getElementById(prefix + '-pax-' + type);
+        let val = parseInt(el.innerText) + delta;
+        if (type === 'adult' && val < 1) val = 1;
+        if (type === 'child' && val < 0) val = 0;
+        el.innerText = val;
+        
+        const adult = parseInt(document.getElementById(prefix + '-pax-adult').innerText);
+        const child = parseInt(document.getElementById(prefix + '-pax-child').innerText);
+        document.getElementById(prefix + '-pax-total').innerText = adult + child;
+    };
+
     window.openConfirm = async function(kode, nama, alamat, kategori) {
-        selectedGuest = { kode, nama, kategori };
+        selectedGuest = masterData.find(g => g.kode === kode);
         document.getElementById('m-nama').innerText = nama;
         document.getElementById('m-info').innerText = `${kategori} | ${alamat}`;
+        
+        // Reset counters
+        const initialAdult = parseInt(selectedGuest.rencanaHadir) || 1;
+        document.getElementById('m-pax-adult').innerText = initialAdult;
+        document.getElementById('m-pax-child').innerText = "0";
+        document.getElementById('m-pax-total').innerText = initialAdult;
+
         document.getElementById('modal-confirm').style.display = 'flex';
         if (html5QrCode) await html5QrCode.stop();
         confirmStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
@@ -526,7 +571,11 @@
 
     window.executeCheckIn = async function() {
         document.getElementById('loading').style.display = 'flex';
-        const p = document.getElementById('m-pax').innerText;
+        const adult = document.getElementById('m-pax-adult').innerText;
+        const child = document.getElementById('m-pax-child').innerText;
+        const total = document.getElementById('m-pax-total').innerText;
+        const paxString = `${total} ( ${adult}D + ${child}A )`;
+
         const note = (document.getElementById('m-tag-angpao').classList.contains('active')?"ANGPAO ":"") + (document.getElementById('m-tag-kado').classList.contains('active')?"KADO":"");
         
         try {
@@ -536,7 +585,7 @@
                     action: "confirm_checkin", 
                     ssId: CURRENT_SS_ID,
                     kodeUnik: selectedGuest.kode, 
-                    realHadir: p, 
+                    realHadir: paxString, 
                     catatan: note||"-" 
                 }) 
             });
@@ -560,7 +609,7 @@
                 const idx = masterData.findIndex(g => g.kode === selectedGuest.kode);
                 if(idx !== -1) {
                     masterData[idx].statusHadir = "1";
-                    masterData[idx].realHadir = p;
+                    masterData[idx].realHadir = paxString;
                     masterData[idx].jamDatang = "Tadi";
                 }
                 closeConfirm(); 
@@ -596,7 +645,11 @@
 
     window.submitOnsite = async function() {
         document.getElementById('loading').style.display = 'flex';
-        const p = document.getElementById('reg-pax').innerText;
+        const adult = document.getElementById('reg-pax-adult').innerText;
+        const child = document.getElementById('reg-pax-child').innerText;
+        const total = document.getElementById('reg-pax-total').innerText;
+        const paxString = `${total} ( ${adult}D + ${child}A )`;
+
         const payload = { 
             action: "register_new_onsite", 
             ssId: CURRENT_SS_ID,
@@ -605,7 +658,7 @@
             whatsapp: document.getElementById('reg-wa').value, 
             kategori: document.getElementById('reg-kategori').value, 
             host: document.getElementById('reg-host').value, 
-            realHadir: p 
+            realHadir: paxString 
         };
 
         try {
