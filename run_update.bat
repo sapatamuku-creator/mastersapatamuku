@@ -22,7 +22,7 @@ echo.
 :: 2. Update Backend via Clasp
 echo [STEP 2] Mengunggah Backend ke Google Apps Script...
 cd backend
-call clasp push
+call clasp push --force
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Gagal melakukan clasp push.
     cd ..
