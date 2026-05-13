@@ -248,25 +248,49 @@
       const encoder = new TextEncoder();
       const rawNama = data.nama ? String(data.nama).toUpperCase() : "GUEST";
       const rawKode = data.kode ? String(data.kode) : "-";
-      const kategori = data.kategori ? String(data.kategori).toUpperCase() : "VVIP";
-      const rawInfo = data.info ? String(data.info).toUpperCase() : "CHECK-IN";
-      const timeStr = new Date().toLocaleString('id-ID');
+      const kategori = data.kategori ? String(data.kategori).toUpperCase() : "REGULER";
+      const alamat = data.alamat ? String(data.alamat).toUpperCase() : "-";
+      const pihak = data.pihak ? String(data.pihak).toUpperCase() : "-";
+      const sesi = data.sesi ? String(data.sesi).toUpperCase() : "-";
+      const pax = data.pax || "1";
+      
+      // Extract Clean Label Title (e.g. "SOUVENIR: KADO" -> "KADO" or "CHECKIN-LABEL" -> "CHECK-IN")
+      let labelTitle = "CHECK-IN";
+      if (data.info.includes("SOUVENIR")) {
+          labelTitle = data.info.split(":")[1] || "SOUVENIR";
+      } else if (data.info.includes("CHECKIN")) {
+          labelTitle = "CHECK-IN";
+      }
 
-      if (currentDeviceName.includes("BY") || currentDeviceName.includes("TP")) {
+      if (currentDeviceName.includes("BY") || currentDeviceName.includes("TP") || currentDeviceName.includes("B") || currentDeviceName.includes("RHEBAR")) {
         let tspl = [
-          `SIZE 75 mm, 45 mm\r\n`, `CLS\r\n`,
-          `BOX 10,10,580,340,4\r\n`,
-          `TEXT 30,35,"2",0,1,1,"[ ${rawInfo} ]"\r\n`,
+          `SIZE 75 mm, 45 mm\r\n`, 
+          `DIRECTION 0,0\r\n`,
+          `CLS\r\n`,
           `SET BOLD 3\r\n`,
-          `TEXT 30,120,"4",0,1,1,"${rawNama}"\r\n`,
+          `TEXT 30,30,"3",0,1,1,"${rawNama}"\r\n`,
           `SET BOLD 0\r\n`,
-          `TEXT 30,250,"3",0,1,1,"${rawKode}"\r\n`,
-          `TEXT 30,300,"2",0,1,1,"${timeStr} | ${kategori}"\r\n`,
-          `QRCODE 380,100,H,8,A,0,"${rawKode}"\r\n`,
+          
+          `TEXT 30,90,"2",0,1,1,"HOME: ${alamat}"\r\n`,
+          `TEXT 30,130,"2",0,1,1,"INV BY: ${pihak}"\r\n`,
+          `TEXT 30,170,"2",0,1,1,"SESI: ${sesi}"\r\n`,
+          
+          `BOX 30,225,180,265,3\r\n`,
+          `TEXT 45,235,"2",0,1,1,"${kategori}"\r\n`,
+          
+          `SET BOLD 3\r\n`,
+          `TEXT 30,285,"2",0,1,1,"PAX PLAN: ${pax}"\r\n`,
+          `TEXT 30,325,"4",0,1,1,"${labelTitle.trim().toUpperCase()}"\r\n`,
+          `SET BOLD 0\r\n`,
+          
+          `QRCODE 400,80,H,9,A,0,"${rawKode}"\r\n`,
+          `TEXT 400,325,"2",0,1,1,"ID: ${rawKode}"\r\n`,
+          
           `PRINT 1,1\r\n`
         ].join('');
         await printCharacteristic.writeValue(encoder.encode(tspl));
       } else {
+        // Fallback ESC/POS
         let esc = `\x1B@\x1Ba\x01\x1BE\x01${rawNama}\n${kategori}\n${rawKode}\n\n\n`;
         await printCharacteristic.writeValue(encoder.encode(esc));
       }

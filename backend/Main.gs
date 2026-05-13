@@ -273,7 +273,16 @@ function getMasterDataV3(ssId) {
 // --- 4. PRINT & QUEUE FUNCTIONS ---
 
 function processPrintLogic(ssId, guestData, giftStatus) {
-  const guestInfo = { nama: guestData[2], kategori: guestData[4], kode: guestData[5], qr: guestData[6] };
+  const guestInfo = { 
+    nama: guestData[2], 
+    kategori: guestData[4], 
+    kode: guestData[5], 
+    qr: guestData[6],
+    pax: guestData[7],
+    pihak: guestData[11],
+    alamat: guestData[12],
+    sesi: guestData[18]
+  };
   let catUpper = String(guestInfo.kategori).toUpperCase();
   let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
   addToQueue(ssId, guestInfo, guestInfo.kategori, labelType);
@@ -292,11 +301,33 @@ function processPrintLogic(ssId, guestData, giftStatus) {
 function addToQueue(ssId, guest, category, info) {
   const ss = getSS(ssId);
   let qSheet = ss.getSheetByName(SHEET_PRINT) || ss.insertSheet(SHEET_PRINT);
+  
+  // JABAT TANGAN BACKEND: Pastikan Header Lengkap (ID s/d PAX)
   if (qSheet.getLastRow() === 0) {
-    qSheet.appendRow(["ID", "TIMESTAMP", "NAMA", "KODE", "QR LINK", "INFO", "STATUS", "KATEGORI"]);
+    qSheet.appendRow(["ID", "TIMESTAMP", "NAMA", "KODE", "QR LINK", "INFO", "STATUS", "KATEGORI", "ALAMAT", "PIHAK", "SESI", "PAX"]);
+  } else {
+    // Jika sheet sudah ada, pastikan kolom ke-9 (ALAMAT) sudah ada header-nya
+    const headerCheck = qSheet.getRange(1, 1, 1, 12).getValues()[0];
+    if (headerCheck.length < 9 || headerCheck[8] !== "ALAMAT") {
+       qSheet.getRange(1, 9, 1, 4).setValues([["ALAMAT", "PIHAK", "SESI", "PAX"]]);
+    }
   }
+
   const now = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss");
-  qSheet.appendRow([Utilities.getUuid(), now, guest.nama || "-", guest.kode || "-", guest.qr || "-", info, "WAITING", category || "UMUM"]);
+  qSheet.appendRow([
+    Utilities.getUuid(), 
+    now, 
+    guest.nama || "-", 
+    guest.kode || "-", 
+    guest.qr || "-", 
+    info, 
+    "WAITING", 
+    category || "UMUM",
+    guest.alamat || "-",
+    guest.pihak || "-",
+    guest.sesi || "-",
+    guest.pax || "1"
+  ]);
 }
 
 function getPrintQueue(ssId, station) {
@@ -307,38 +338,28 @@ function getPrintQueue(ssId, station) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return []; 
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+  // JABAT TANGAN: Pastikan kolom cukup sebelum membaca
+  if (sheet.getLastColumn() < 12) {
+    sheet.getRange(1, 9, 1, 4).setValues([["ALAMAT", "PIHAK", "SESI", "PAX"]]);
+  }
+
+  const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
   const currentStation = (station || "").toUpperCase().trim();
 
   return data
     .filter(r => {
       const statusMatch = r[6].toString().toUpperCase().trim() === "WAITING"; // Kolom G
-      const jenisInfo = r[5].toString().toUpperCase().trim(); // Kolom F (Contoh: "SOUVENIR: KADO")
+      const jenisInfo = r[5].toString().toUpperCase().trim(); // Kolom F
       
-      // Jika status bukan WAITING, langsung buang
       if (!statusMatch) return false;
 
-      // LOGIKA FILTER LOKET
-      if (currentStation === "LOKET-1") {
-        // Hanya cetak jika di kolom F mengandung kata SOUVENIR
-        return jenisInfo.indexOf("SOUVENIR") !== -1;
-      }
-      
-      if (currentStation === "LOKET-2") {
-        // Hanya cetak jika di kolom F mengandung kata CHECKIN
-        return jenisInfo.indexOf("CHECKIN") !== -1;
-      }
-      
-      if (currentStation === "REGISTRASI") {
-        // Cetak semua yang berstatus WAITING
-        return true;
-      }
-      
-      // Jika station kosong atau tidak dikenal, tampilkan semua (mode aman)
+      if (currentStation === "LOKET-1") return jenisInfo.indexOf("SOUVENIR") !== -1;
+      if (currentStation === "LOKET-2") return jenisInfo.indexOf("CHECKIN") !== -1;
       return true;
     })
     .map(r => ({ 
-      id: r[0], timestamp: r[1], nama: r[2], kode: r[3], qr: r[4], info: r[5], status: r[6], kategori: r[7] 
+      id: r[0], timestamp: r[1], nama: r[2], kode: r[3], qr: r[4], info: r[5], status: r[6], kategori: r[7],
+      alamat: r[8], pihak: r[9], sesi: r[10], pax: r[11]
     }));
 }
 
