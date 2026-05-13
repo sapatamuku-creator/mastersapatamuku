@@ -3,99 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SapaTamu.ku - Logout</title>
+    <title>SapaTamu.ku - Keluar Sesi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        @keyframes rotation {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        :root { 
+            --primary: #E07B7B; 
+            --bg: #FFF9F5; 
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --border: #F0E6DE;
+        }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg); 
+            display: flex; align-items: center; justify-content: center; height: 100vh;
+            color: var(--text-main);
+        }
+        .logout-card {
+            background: #fff;
+            padding: 50px 40px;
+            border-radius: 35px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 30px 60px rgba(74, 63, 53, 0.1);
+            border: 1px solid var(--border);
+            animation: modalPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        h2 { font-family: 'Lora', serif; font-size: 24px; font-weight: 700; margin-bottom: 15px; }
+        p { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 30px; }
+        
+        .loader {
+            width: 40px; height: 40px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 25px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes modalPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 12px 25px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+        .btn-cancel:hover { background: var(--border); color: var(--text-main); }
+
+        /* CUSTOM NOTIFICATION MODAL (For Confirm) */
+        #sapa-confirm-modal { 
+            position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); 
+            backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 9999; 
         }
     </style>
 </head>
 <body>
 
-<div id="logout-screen" style="
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center; 
-    height: 100vh; 
-    font-family: 'Inter', -apple-system, sans-serif;
-    text-align: center;
-    background-color: #f8fafc;
-">
-    <!-- Icon Spinner Clean -->
-    <div class="loader-logout" style="
-        width: 40px;
-        height: 40px;
-        border: 4px solid #e2e8f0;
-        border-bottom-color: #2563eb;
-        border-radius: 50%;
-        animation: rotation 1s linear infinite;
-        margin-bottom: 20px;
-    "></div>
-    
-    <h3 style="margin: 0; color: #1e293b; font-weight: 700;">Mengakhiri Sesi...</h3>
-    <p style="color: #64748b; margin-top: 8px;">Menghapus data sesi Anda dengan aman di semua tab.</p>
-    
-    <a href="javascript:void(0)" onclick="executeLogout()" id="manual-btn" style="
-        margin-top: 24px;
-        color: #2563eb; 
-        font-weight: 600; 
-        text-decoration: none; 
-        padding: 12px 24px;
-        border: 1px solid #e2e8f0;
-        background: white;
-        border-radius: 10px;
-        display: none;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    ">
-        Klik di sini jika tidak otomatis pindah
-    </a>
-</div>
+    <div id="sapa-confirm-modal">
+        <div class="logout-card">
+            <div id="icon" style="font-size: 50px; margin-bottom: 20px;">👋</div>
+            <h2>Keluar Sesi?</h2>
+            <p id="confirm-msg">Apakah Anda yakin ingin mengakhiri sesi SapaTamu.ku saat ini?</p>
+            <div style="display: flex; gap: 10px; flex-direction: column;">
+                <button onclick="executeLogout()" style="background: var(--text-main); color: #fff; border: none; padding: 15px; border-radius: 15px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 11px;">YA, KELUAR SEKARANG</button>
+                <button onclick="cancelLogout()" class="btn-cancel">BATAL</button>
+            </div>
+        </div>
+    </div>
 
-<script>
-  const SESSION_KEY = 'sapatamu_session';
-  const LOCAL_DB = 'sapatamu_db';
-  const SIGNOUT_SIGNAL = 'sapatamu_signout_broadcast';
+    <div id="logging-out" style="display: none;">
+        <div class="logout-card">
+            <div class="loader"></div>
+            <h2>Mengakhiri Sesi...</h2>
+            <p>Menghapus data sesi Anda dengan aman di semua tab.</p>
+        </div>
+    </div>
 
-  window.executeLogout = function() {
-    const currentData = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_DB) || "{}");
+    <script>
+        const SESSION_KEY = 'sapatamu_session';
+        const LOCAL_DB = 'sapatamu_db';
+        const SIGNOUT_SIGNAL = 'sapatamu_signout_broadcast';
 
-    if (currentData.username && currentData.ssId) {
-        localStorage.setItem(SIGNOUT_SIGNAL, JSON.stringify({
-            username: currentData.username,
-            ssId: currentData.ssId,
-            timestamp: Date.now()
-        }));
-        
-        setTimeout(() => localStorage.removeItem(SIGNOUT_SIGNAL), 500);
-    }
+        function executeLogout() {
+            document.getElementById('sapa-confirm-modal').style.display = 'none';
+            document.getElementById('logging-out').style.display = 'block';
 
-    sessionStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(LOCAL_DB);
-    
-    window.location.replace("login.html"); 
-  };
+            const currentData = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_DB) || "{}");
+            if (currentData.username && currentData.ssId) {
+                localStorage.setItem(SIGNOUT_SIGNAL, JSON.stringify({
+                    username: currentData.username,
+                    ssId: currentData.ssId,
+                    timestamp: Date.now()
+                }));
+                setTimeout(() => localStorage.removeItem(SIGNOUT_SIGNAL), 500);
+            }
 
-  window.onload = function() {
-    setTimeout(() => {
-        const currentData = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_DB) || "{}");
-        const userLabel = currentData.username ? ` akun ${currentData.username}` : "";
+            sessionStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem(LOCAL_DB);
+            
+            setTimeout(() => {
+                window.location.replace("login.html");
+            }, 1500);
+        }
 
-        if (confirm(`Apakah Anda yakin ingin keluar dari${userLabel}?`)) {
-            executeLogout();
-        } else {
+        function cancelLogout() {
+            const currentData = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_DB) || "{}");
             const ssId = currentData.ssId ? `?ssId=${currentData.ssId}` : "";
             window.location.replace("dashboard.html" + ssId);
         }
-        
-        setTimeout(() => {
-            const btn = document.getElementById('manual-btn');
-            if (btn) btn.style.display = 'inline-block';
-        }, 2000);
-        
-    }, 800);
-  };
-</script>
+
+        const currentData = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_DB) || "{}");
+        if (currentData.username) {
+            document.getElementById('confirm-msg').innerText = `Halo ${currentData.username}, apakah Anda yakin ingin keluar dari sistem SapaTamu.ku?`;
+        }
+    </script>
 </body>
 </html>

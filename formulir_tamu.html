@@ -404,10 +404,38 @@
     </div>
 </div>
 
-<script>
-(function() {
-    // GANTI URL DIBAWAH INI DENGAN URL MASTER BACKEND ANDA
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJ8biF1h3tjehSK88lDLxoQopTG8pJoWZNSBvh3YwFVX0Sow-7hCcZX4_eVqWWgdH4/exec"; 
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
+            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Pesan</h2>
+            <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
+            <button onclick="closeSapaModal()" class="btn-save" style="padding: 18px; border-radius: 18px; font-size: 11px;">MENGERTI</button>
+        </div>
+    </div>
+
+    <style>
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
+    <script>
+    (function() {
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJ8biF1h3tjehSK88lDLxoQopTG8pJoWZNSBvh3YwFVX0Sow-7hCcZX4_eVqWWgdH4/exec"; 
+
+        // --- CUSTOM NOTIFICATION SYSTEM ---
+        window.showSapaModal = function(title, msg, icon = "✨") {
+            document.getElementById('notify-title').innerText = title;
+            document.getElementById('notify-msg').innerText = msg;
+            document.getElementById('notify-icon').innerText = icon;
+            document.getElementById('sapa-notify-modal').style.display = 'flex';
+        };
+
+        window.closeSapaModal = function() {
+            document.getElementById('sapa-notify-modal').style.display = 'none';
+        };
 
 
     const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
@@ -501,7 +529,7 @@
             sesi: document.getElementById('in-sesi-undangan').value
         };
 
-        if(!payload.nama || !payload.whatsapp) return alert("Isi Nama & WA");
+        if(!payload.nama || !payload.whatsapp) return showSapaModal("Data Belum Lengkap", "Silakan isi Nama & Nomor WhatsApp tamu.", "⚠️");
         
         toggleProcessing(true, "SAVING GUEST...");
         try {
@@ -512,9 +540,10 @@
             document.getElementById('in-c7-nama').value = "";
             document.getElementById('in-d7-wa').value = "";
             document.getElementById('in-m7-alamat').value = "";
+            showSapaModal("Berhasil!", "Tamu berhasil ditambahkan ke koleksi.", "✅");
             refreshApp(); 
         } catch(e) { 
-            alert("Gagal menyimpan!"); 
+            showSapaModal("Gagal", "Terjadi kesalahan saat menyimpan data tamu.", "❌"); 
             toggleProcessing(false);
         }
     };
@@ -642,9 +671,10 @@
             };
             await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
             tutupModalEdit();
+            showSapaModal("Sukses", "Detail acara berhasil diperbarui!", "🎉");
             refreshApp(); 
         } catch (e) {
-            alert("Gagal update data.");
+            showSapaModal("Gagal", "Gagal memperbarui detail acara.", "❌");
             toggleProcessing(false);
         }
     };
@@ -682,13 +712,14 @@
             });
             const result = await response.json();
             if (result.success) {
+                showSapaModal("Berhasil", "Tamu telah dihapus dari koleksi.", "✅");
                 refreshApp();
             } else {
-                alert("Gagal hapus: " + result.message);
+                showSapaModal("Gagal", result.message || "Gagal menghapus tamu.", "❌");
                 toggleProcessing(false);
             }
         } catch (e) {
-            alert("Error saat menghapus!");
+            showSapaModal("Error", "Gagal menghapus tamu dari koleksi.", "⚠️");
             toggleProcessing(false);
         }
     }

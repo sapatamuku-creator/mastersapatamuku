@@ -4,18 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu.ku - Access Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #2563eb;
-            --bg-gray: #f8fafc;
-            --text-main: #1e293b;
-            --border-color: #e2e8f0;
-            --white: #ffffff;
+        :root { 
+            --primary: #E07B7B; /* Rose */
+            --bg: #FFF9F5;      /* Warm White */
+            --card: #FFFFFF;
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --border: #F0E6DE;
+            --input-bg: #FDF8F4;
+            --gold: #C8962E;
+            --success: #10B981;
         }
         body { 
             margin: 0; padding: 0; 
-            font-family: 'Inter', -apple-system, sans-serif; 
-            background-color: var(--bg-gray); 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main);
         }
         .sapatamu-wrapper { 
             display: flex; justify-content: center; align-items: center; 
@@ -66,9 +72,30 @@
             animation: rotation 0.8s linear infinite; 
         }
         @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* CUSTOM NOTIFICATION MODAL */
+        #sapa-notify-modal { position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999; }
+        .sapa-modal-content { background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .sapa-modal-title { font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px; }
+        .sapa-modal-msg { font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px; }
+        
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal">
+        <div class="sapa-modal-content">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
+            <h2 id="notify-title" class="sapa-modal-title">Pesan</h2>
+            <p id="notify-msg" class="sapa-modal-msg">Pesan notifikasi akan muncul di sini.</p>
+            <button onclick="closeSapaModal()" class="sapatamu-btn" style="padding: 15px; border-radius: 15px; font-size: 11px; margin-top: 0; background: var(--text-main); width: 100%; border: none; color: white;">MENGERTI</button>
+        </div>
+    </div>
 
 <div class="sapatamu-wrapper">
     <div class="sapatamu-card" id="loginForm">
@@ -213,8 +240,49 @@
     </div>
 </div>
 
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
+            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Pesan</h2>
+            <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
+            <button onclick="closeSapaModal()" class="sapatamu-btn" style="padding: 15px; border-radius: 15px; font-size: 11px; margin-top: 0;">MENGERTI</button>
+        </div>
+    </div>
+
+    <style>
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJ8biF1h3tjehSK88lDLxoQopTG8pJoWZNSBvh3YwFVX0Sow-7hCcZX4_eVqWWgdH4/exec"; 
+
+    // --- CUSTOM NOTIFICATION SYSTEM ---
+    window.showSapaModal = function(title, msg, icon = "✨") {
+        document.getElementById('notify-title').innerText = title;
+        document.getElementById('notify-msg').innerText = msg;
+        document.getElementById('notify-icon').innerText = icon;
+        document.getElementById('sapa-notify-modal').style.display = 'flex';
+    };
+
+    window.closeSapaModal = function() {
+        document.getElementById('sapa-notify-modal').style.display = 'none';
+    };
+
+    // --- CUSTOM NOTIFICATION SYSTEM ---
+    window.showSapaModal = function(title, msg, icon = "✨") {
+        document.getElementById('notify-title').innerText = title;
+        document.getElementById('notify-msg').innerText = msg;
+        document.getElementById('notify-icon').innerText = icon;
+        document.getElementById('sapa-notify-modal').style.display = 'flex';
+    };
+
+    window.closeSapaModal = function() {
+        document.getElementById('sapa-notify-modal').style.display = 'none';
+    };
 
     const SESSION_KEY = 'sapatamu_session';
     const LOCAL_DB = 'sapatamu_db';
@@ -255,7 +323,7 @@
     window.prosesLogin = async function() {
         const user = document.getElementById('log_user').value;
         const pass = document.getElementById('log_pass').value;
-        if (!user || !pass) return alert("Silakan lengkapi Username dan Password.");
+        if (!user || !pass) return showSapaModal("Lengkapi Data", "Silakan masukkan Username dan Password Anda.", "⚠️");
 
         setLoading('btn_login', true);
         try {
@@ -272,18 +340,18 @@
                 localStorage.setItem(LOCAL_DB, JSON.stringify(authData));
                 window.location.replace("dashboard.html?ssId=" + res.data.ssId);
             } else {
-                alert(res.message);
+                showSapaModal("Login Gagal", res.message, "❌");
                 setLoading('btn_login', false);
             }
         } catch (e) {
-            alert("Kesalahan koneksi.");
+            showSapaModal("Koneksi Bermasalah", "Tidak dapat terhubung ke server SapaTamu.", "⚠️");
             setLoading('btn_login', false);
         }
     };
 
     window.generateSheet = async function() {
         const user = document.getElementById('reg_user').value;
-        if (!user) return alert("Isi Nama Klien!");
+        if (!user) return showSapaModal("Isi Nama Klien", "Nama klien diperlukan untuk membuat Google Sheets baru.", "⚠️");
 
         setLoading('btn_gen_sheet', true);
         try {
@@ -322,11 +390,13 @@
                 document.getElementById('btn_gen_sheet').disabled = true;
                 document.getElementById('btn_reg').disabled = false;
                 
-                alert("Spreadsheet Berhasil Dibuat!\nID: " + fileId);
+                showSapaModal("Berhasil!", "Spreadsheet baru Anda telah dibuat dengan ID: " + fileId, "📊");
             } else {
-                alert("Gagal dari Google: " + (res.message || "Tanpa pesan detail"));
+                showSapaModal("Gagal", (res.message || "Gagal membuat spreadsheet."), "❌");
             }
-        } catch (e) { alert("Gagal generate sheet: " + e.toString()); }
+        } catch (e) { 
+            showSapaModal("Error", "Gagal generate sheet: " + e.toString(), "⚠️"); 
+        }
         setLoading('btn_gen_sheet', false);
     };
 
@@ -355,9 +425,11 @@
                 window.open(`https://wa.me/6285111567829?text=${pesan}`, '_blank');
                 location.reload();
             } else {
-                alert("Gagal Daftar: " + res.message);
+                showSapaModal("Gagal Daftar", res.message, "❌");
             }
-        } catch (e) { alert("Gagal Daftar: " + e.toString()); }
+        } catch (e) { 
+            showSapaModal("Gagal Daftar", "Masalah koneksi: " + e.toString(), "⚠️"); 
+        }
         setLoading('btn_reg', false);
     };
 
@@ -371,9 +443,11 @@
                 body: JSON.stringify({ action: "forgotPassword", username: user, contact: contact })
             });
             const res = await response.json();
-            alert(res.message);
+            showSapaModal("Hasil", res.message, (res.status === "success" ? "✅" : "❌"));
             if(res.status === "success") toggleForm('loginForm');
-        } catch (e) { alert("Error."); }
+        } catch (e) { 
+            showSapaModal("Error", "Masalah koneksi ke server.", "⚠️"); 
+        }
         setLoading('btn_forgot', false);
     };
 
@@ -384,15 +458,15 @@
             currentPass: document.getElementById('chg_curr_pass').value,
             newPass: document.getElementById('chg_new_pass').value
         };
-        if(data.newPass !== document.getElementById('chg_conf_pass').value) return alert("Password tidak cocok!");
+        if(data.newPass !== document.getElementById('chg_conf_pass').value) return showSapaModal("Password Tidak Cocok", "Konfirmasi password baru tidak sesuai.", "⚠️");
         
         setLoading('btn_chg', true);
         try {
             const response = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(data) });
             const res = await response.json();
-            alert(res.message);
+            showSapaModal("Hasil", res.message, (res.status === "success" ? "✅" : "❌"));
             if(res.status === "success") location.reload();
-        } catch (e) { alert("Gagal."); }
+        } catch (e) { showSapaModal("Error", "Gagal menghubungi server.", "⚠️"); }
         setLoading('btn_chg', false);
     };
 

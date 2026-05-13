@@ -315,15 +315,35 @@
 
 </div>
 
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">⚠️</div>
+            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Sesi Berakhir</h2>
+            <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Silakan Login terlebih dahulu untuk mengakses menu ini.</p>
+            <button onclick="window.location.href='login.html'" class="nav-item" style="justify-content: center; background: var(--text-main); color: #fff; padding: 18px; border-radius: 18px; font-size: 11px; width: 100%; border: none;">LOGIN SEKARANG</button>
+        </div>
+    </div>
+
+    <style>
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
 <script>
     const sessionData = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
     const session = sessionData ? JSON.parse(sessionData) : null;
     const SSID = session ? session.ssId : '';
 
+    window.showSapaModal = function() {
+        document.getElementById('sapa-notify-modal').style.display = 'flex';
+    };
+
     function nav(target) {
         if (!SSID && target !== 'undangan.html') {
-            alert("Sesi berakhir, silakan Login terlebih dahulu.");
-            window.location.href = "login.html";
+            showSapaModal();
             return;
         }
         window.location.href = target + "?ssId=" + SSID;
