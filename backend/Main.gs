@@ -92,6 +92,9 @@ function handleMainGet(e) {
   if (action === "getMasterData") return createResponse({ status: "success", data: getMasterDataV3(ssId) });
   if (action === "getMasterDataAngpao") return createResponse({ status: "success", guestList: getMasterDataV3(ssId) });
   
+  // WELCOME SIGN HANDSHAKE
+  if (action === "getWelcome") return createResponse(getWelcomeData(ssId));
+
   // Routing untuk Worker dengan Filter Station
   if (action === "getPrintQueue") {
     const queueData = getPrintQueue(ssId, station); // Mengirim parameter station ke fungsi filter
@@ -446,4 +449,65 @@ function markAsSent(ssId, row) {
   const sheet = ss.getSheetByName(SHEET_DATA);
   sheet.getRange(row, COL_STATUS_WA).setValue("✅ " + Utilities.formatDate(new Date(), "GMT+7", "dd/MM HH:mm"));
   return { status: "success" };
+}
+
+/**
+ * JABAT TANGAN WELCOME SIGN
+ * Mengambil data event, rundown, dan tamu terbaru untuk display.
+ */
+function getWelcomeData(ssId) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    const meta = sheet.getRange("A1:B6").getValues();
+    
+    const weddingName = meta[0][1] || "SapaTamu.Ku";
+    const weddingDate = meta[1][1] || "-";
+    
+    // Cari Tamu Terakhir Check-in (Status 1)
+    const lastRow = sheet.getLastRow();
+    let latestGuest = { nama: "", kategori: "", alamat: "" };
+    
+    if (lastRow >= START_ROW) {
+      const guestData = sheet.getRange(START_ROW, 1, lastRow - (START_ROW - 1), 13).getValues(); // Ambil s/d kolom M
+      // Cari yang statusnya 1 (Index 8) dan ambil yang paling bawah
+      for (let i = guestData.length - 1; i >= 0; i--) {
+        if (String(guestData[i][8]) === "1") {
+          latestGuest = {
+            nama: guestData[i][2],     // Kolom C
+            kategori: guestData[i][4], // Kolom E
+            alamat: guestData[i][12]   // Kolom M
+          };
+          break;
+        }
+      }
+    }
+
+    // Ambil Rundown
+    let rundown = [];
+    const rundownSheet = ss.getSheetByName("Rundown");
+    if (rundownSheet) {
+      const rdLast = rundownSheet.getLastRow();
+      if (rdLast >= 2) {
+        const rdData = rundownSheet.getRange(2, 1, rdLast - 1, 3).getValues();
+        rundown = rdData.map(r => ({
+          syncTime: Utilities.formatDate(new Date(r[0]), "GMT+7", "HH:mm"),
+          displayTime: r[1],
+          eventName: r[2]
+        }));
+      }
+    }
+
+    return {
+      status: "success",
+      weddingName,
+      weddingDate,
+      latestGuest,
+      rundown,
+      log: latestGuest.nama ? `SELAMAT DATANG, ${latestGuest.nama}` : "MENUNGGU TAMU...",
+      displayDuration: 10000
+    };
+  } catch (err) {
+    return { status: "error", message: err.toString() };
+  }
 }

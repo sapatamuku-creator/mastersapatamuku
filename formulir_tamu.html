@@ -98,13 +98,153 @@
         #sapatamu-app { 
             max-width: 1400px; 
             margin: 0 auto; 
-            padding: 20px;
+            background: transparent; 
+            min-height: 100vh; 
+            padding-bottom: 80px; 
         }
+        
+        /* NEW LAYOUT SYSTEM */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 40px;
+            padding: 0 30px;
+        }
+
+        @media (min-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 450px 1fr;
+                align-items: start;
+                padding: 40px;
+            }
+            #form-container {
+                position: sticky;
+                top: 80px; /* Adjusted for Navbar */
+                background: #fff;
+                border-radius: 32px;
+                box-shadow: 0 15px 35px rgba(140, 117, 96, 0.05);
+                border: 1px solid var(--border);
+                padding: 40px !important;
+            }
+            #list-section {
+                background: #fff !important;
+                border-radius: 32px !important;
+                margin-top: 0 !important;
+                box-shadow: 0 15px 35px rgba(140, 117, 96, 0.05);
+                border: 1px solid var(--border);
+                min-height: 80vh !important;
+            }
+        }
+
+        .input-group { border-bottom: 1.5px solid var(--border); margin-bottom: 25px; display: block; padding: 5px 0; }
+        label { display: block; font-size: 10px; font-weight: 800; color: var(--text-muted); letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px; }
+        input, select { width: 100%; border: none; background: transparent; padding: 10px 0; font-size: 16px; font-weight: 700; color: var(--text-main); outline: none; }
+        
+        .btn-save { width: 100%; background: var(--text-main); color: #FFF; border: none; border-radius: 20px; padding: 22px; font-size: 12px; font-weight: 800; letter-spacing: 2px; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.15); }
+        .btn-save:active { transform: scale(0.96); }
+
+        .qty-control { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
+        .qty-btn { width: 40px; height: 40px; border-radius: 14px; border: 1.5px solid var(--border); background: #FFF; font-weight: 800; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .qty-btn:active { background: var(--input-bg); transform: scale(0.9); }
+        
+        #fs-toggle { position: fixed; bottom: 25px; right: 25px; z-index: 2147483645; background: #fff; color: var(--text-main); width: 50px; height: 50px; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(140, 117, 96, 0.15); }
+
+        #v3-draft-list-container { max-height: 75vh; overflow-y: auto; margin-top: 25px; padding-right: 5px; transition: all 0.3s ease; }
+        #v3-draft-list-container::-webkit-scrollbar { width: 4px; }
+        #v3-draft-list-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        #v3-draft-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        @media (max-width: 640px) {
+            #v3-draft-list { grid-template-columns: 1fr; }
+        }
+        .delete-guest-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 22px;
+            height: 22px;
+            background: rgba(255, 77, 77, 0.1);
+            color: #ff4d4d;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            border: none;
+            z-index: 20;
+        }
+        .delete-guest-btn:hover {
+            background: #ff4d4d;
+            color: white;
+            transform: scale(1.1);
+        }
+        .guest-item-card { position: relative; transition: all 0.3s ease; }
+
+        .static-edit-box {
+            border: 1.5px solid var(--gold);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(212, 175, 55, 0.05);
+        }
+        .static-edit-box:active { transform: scale(0.98); background: rgba(212, 175, 55, 0.1); }
+        .static-edit-box span { font-size: 10px; font-weight: 900; letter-spacing: 1px; color: #1a1a1a; text-transform: uppercase; }
+        .static-edit-box .icon { font-size: 16px; color: var(--gold); }
+
+        /* LOADING & OVERLAY BLOCKER */
+        .loading-overlay { 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(255,255,255,0.7); 
+            backdrop-filter: blur(4px);
+            z-index: 1000000; 
+            display: none; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 900; 
+            color: var(--gold); 
+            letter-spacing: 2px;
+            pointer-events: all; /* Kunci semua klik */
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(212, 175, 55, 0.1);
+            border-left-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .sapatamu-btn { width: 100%; padding: 18px; border-radius: 15px; font-weight: 800; font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: 0.3s; color: #fff; border: none; }
+        
+        /* REDUPKAN AREA SAAT PROSES */
+        .is-processing { opacity: 0.4; filter: grayscale(0.5); pointer-events: none; }
 
         /* UNIFIED NAVBAR STYLES */
         .sapatamu-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
             padding: 20px 20px 0;
-            background: var(--bg);
             display: flex;
             justify-content: center;
             z-index: 10000;
