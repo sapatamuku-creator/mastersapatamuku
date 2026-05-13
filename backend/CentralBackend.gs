@@ -4,7 +4,7 @@
  * Migrated to New Drive Environment
  */
 
-const MASTER_SS_ID = "12z2fqewIamIRpVJ4zocMDp-8CwjZsjsrQRh3dXx-VAw"; // Master Database ID Client (Updated)
+const MASTER_SS_ID = "12z2fqewIamIRpVJ4zocMDp-8CwjZsjsrQRh3dXx-VAw"; // Master Database ID Client (Corrected)
 const CLIENT_MASTER_ID = "1eJhbMfrErp9KtHxU0qN2IV4fyhxMTW8tfRooxBwv950"; // Master Draft SapaTamu.Ku (Updated)
 const FOLDER_KLIEN_ID = "16rNOcoR_PYQYkn7jq7gLgospii5gw2Dn"; 
 const MASTER_SHEET_NAME = "Sheet1";
