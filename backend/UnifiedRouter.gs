@@ -77,3 +77,15 @@ function createResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+/**
+ * JALANKAN FUNGSI INI DI EDITOR (KLIK RUN) UNTUK MEMBERIKAN IZIN AKSES
+ */
+function triggerAuth() {
+  Logger.log("Memicu izin akses...");
+  DriveApp.getRootFolder();
+  SpreadsheetApp.getActiveSpreadsheet();
+  UrlFetchApp.fetch("https://google.com");
+  Logger.log("Izin berhasil diberikan!");
+}
+
