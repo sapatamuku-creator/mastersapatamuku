@@ -23,12 +23,20 @@ echo.
 echo [STEP 2] Mengunggah Backend ke Google Apps Script...
 cd backend
 call clasp push --force
-if %ERRORLEVEL% NEQ 0 (
+if %errorlevel% neq 0 (
     echo [ERROR] Gagal melakukan clasp push.
     cd ..
     pause
-    exit /b %ERRORLEVEL%
+    exit /b
 )
+
+echo [STEP 3] Memperbarui Deployment (URL) agar menggunakan kode terbaru...
+call clasp deploy --deploymentId AKfycbzIfY3HDb7qF-zpgKX_86g2cK6wm_J1-9IdjDDC_He0pmx_qPGTSiZCoQPyiRClZzBm --description "Auto Updated by Antigravity"
+cd ..
+if %errorlevel% neq 0 (
+    echo [WARNING] Gagal update deployment otomatis.
+)
+
 echo OK: Kode backend terkirim.
 echo.
 
