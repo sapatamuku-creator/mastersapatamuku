@@ -98,6 +98,48 @@
     .st-btn:active { transform: scale(0.97); }
 
     .btn-primary { background: var(--primary); }
+
+    /* UNIFIED NAVBAR STYLES */
+    .sapatamu-navbar {
+        padding: 20px 20px 0;
+        background: var(--bg);
+        display: flex;
+        justify-content: center;
+        z-index: 10000;
+        width: 100%;
+    }
+    .sapatamu-nav-container {
+        background: #FFFDFB;
+        padding: 6px 10px;
+        border-radius: 50px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08);
+        border: 1px solid var(--border);
+        max-width: 95%;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+    }
+    .sapatamu-nav-container::-webkit-scrollbar { display: none; }
+    .nav-group { display: flex; align-items: center; gap: 4px; }
+    .nav-link {
+        text-decoration: none;
+        font-size: 10.5px;
+        font-weight: 700;
+        color: var(--text-muted);
+        padding: 10px 18px;
+        border-radius: 30px;
+        transition: 0.3s;
+        display: flex;
+        align-items: center;
+    }
+    .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+    .nav-link.active { background: var(--primary); color: white !important; }
+    .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
+    .nav-divider-bold { width: 1.5px; height: 22px; background: #D6C7BC; margin: 0 12px; }
+
     .btn-gold { background: var(--gold); }
     .btn-dark { background: var(--text-main); }
     .btn-outline { 
@@ -207,13 +249,35 @@
     }
     </style>
 </head>
-<body>
+<body onload="initBlast()">
 
 <div class="fullscreen-btn" onclick="toggleFullScreen()" title="Toggle Fullscreen">
     <svg id="fs-icon" viewBox="0 0 24 24" style="width:24px; height:24px; fill:currentColor;">
         <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
     </svg>
 </div>
+
+<nav class="sapatamu-navbar">
+    <div class="sapatamu-nav-container">
+        <div class="nav-group">
+            <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+            <div class="nav-divider"></div>
+            <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
+            <a href="wa_blast.html" class="nav-link active" id="nav-wa">WA Blast</a>
+            <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+        </div>
+        <div class="nav-divider-bold"></div>
+        <div class="nav-group">
+            <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+            <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+            <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+            <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+            <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+            <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+            <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+        </div>
+    </div>
+</nav>
 
 <div id="loading-global">
     <div class="spinner"></div>
@@ -312,18 +376,31 @@
 (function() {
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2P-eJYni_mvNFqsa6_rDjvCBoIiv3qli10MWmsTtZAYwUcduSrSAbxv4hJ5kY6ICz/exec"; 
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const CURRENT_SS_ID = urlParams.get("ssId") || localStorage.getItem("st_saved_ssid");
-
-    if (!CURRENT_SS_ID) {
-        window.location.href = "https://sapatamu.weebly.com/";
-        return;
+    function syncNavbar() {
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            const baseHref = link.getAttribute('href').split('?')[0];
+            link.href = `${baseHref}?ssId=${CURRENT_SS_ID}`;
+        });
     }
 
-    localStorage.setItem("st_saved_ssid", CURRENT_SS_ID);
-    
+    let CURRENT_SS_ID;
     let localData = { categories: [], tamu: [], liveUsage: 0 };
     let isProcessing = false;
+
+    window.initBlast = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        CURRENT_SS_ID = urlParams.get("ssId") || localStorage.getItem("st_saved_ssid");
+
+        if (!CURRENT_SS_ID) {
+            window.location.href = "https://sapatamu.weebly.com/";
+            return;
+        }
+
+        localStorage.setItem("st_saved_ssid", CURRENT_SS_ID);
+        syncNavbar();
+        refreshData(true);
+    };
 
     function showToast(msg, duration = 3000) {
         const toast = document.getElementById('customToast');

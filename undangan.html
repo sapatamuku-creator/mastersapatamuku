@@ -98,8 +98,49 @@
             letter-spacing: 0.25em; padding: 18px 50px;
             transition: all 0.3s ease;
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            cursor: pointer;
         }
+
+        /* UNIFIED NAVBAR STYLES */
+        .sapatamu-navbar {
+            padding: 20px 20px 0;
+            background: #fff;
+            display: flex;
+            justify-content: center;
+            z-index: 10000;
+            width: 100%;
+            position: relative;
+        }
+        .sapatamu-nav-container {
+            background: #FFFDFB;
+            padding: 6px 10px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08);
+            border: 1px solid #F0E6DE;
+            max-width: 95%;
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: none;
+        }
+        .sapatamu-nav-container::-webkit-scrollbar { display: none; }
+        .nav-group { display: flex; align-items: center; gap: 4px; }
+        .nav-link {
+            text-decoration: none;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #8C7560;
+            padding: 10px 18px;
+            border-radius: 30px;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        .nav-link:hover { color: #E07B7B; background: rgba(224, 123, 123, 0.05); }
+        .nav-link.active { background: #E07B7B; color: white !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
+        .nav-divider-bold { width: 1.5px; height: 22px; background: #D6C7BC; margin: 0 12px; }
 
         .hero-section { width: 100%; height: 100vh; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .hero-image-wrapper { position: absolute; width: 100%; height: 100%; overflow: hidden; }
@@ -193,7 +234,28 @@
     </style>
 </head>
 <body class="bg-pattern">
-
+    <nav class="sapatamu-navbar">
+        <div class="sapatamu-nav-container">
+            <div class="nav-group">
+                <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+                <div class="nav-divider"></div>
+                <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
+                <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+                <a href="undangan.html" class="nav-link active" id="nav-undangan">Undangan</a>
+            </div>
+            <div class="nav-divider-bold"></div>
+            <div class="nav-group">
+                <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+                <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+                <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+                <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+                <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+            </div>
+        </div>
+    </nav>
+    <div id="content-app">
     <!-- AUDIO ELEMENT INTEGRATED -->
     <audio id="main-audio" loop preload="auto">
         <source src="https://raw.githubusercontent.com/opick8c/Annisa-Bintang/main/sal-priadi-ada-titik-titik-di-ujung-doa_x6a7RHIL~2.mp3" type="audio/mpeg">
@@ -494,12 +556,28 @@
             if(musicTxt) musicTxt.innerText = isPlaying ? "PAUSE" : "PLAY";
         }
 
+        function syncNavbar() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ssId = urlParams.get('ssId') || localStorage.getItem('sapatamu_db_ssId');
+            if (ssId) localStorage.setItem('sapatamu_db_ssId', ssId);
+            
+            const links = document.querySelectorAll('.nav-link');
+            links.forEach(link => {
+                const baseHref = link.getAttribute('href').split('?')[0];
+                link.href = `${baseHref}?ssId=${ssId}`;
+            });
+        }
+
         function initObserver() {
             const obs = new IntersectionObserver((entries) => {
                 entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('active'); });
             }, { threshold: 0.1 });
             document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => obs.observe(el));
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            syncNavbar();
+        });
 
         window.sendWish = async function() {
             const name = document.getElementById('wish-name').value;

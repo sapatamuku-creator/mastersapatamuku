@@ -98,6 +98,48 @@
             width: 100%;
             box-shadow: 0 10px 30px rgba(140, 117, 96, 0.05);
         }
+
+        /* UNIFIED NAVBAR STYLES */
+        .sapatamu-navbar {
+            padding: 20px 20px 0;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            z-index: 10000;
+            width: 100%;
+        }
+        .sapatamu-nav-container {
+            background: #FFFDFB;
+            padding: 6px 10px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08);
+            border: 1px solid var(--border);
+            max-width: 95%;
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: none;
+        }
+        .sapatamu-nav-container::-webkit-scrollbar { display: none; }
+        .nav-group { display: flex; align-items: center; gap: 4px; }
+        .nav-link {
+            text-decoration: none;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            padding: 10px 18px;
+            border-radius: 30px;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
+        .nav-divider-bold { width: 1.5px; height: 22px; background: #D6C7BC; margin: 0 12px; }
+
         .nav-item:hover {
             border-color: var(--primary);
             transform: translateY(-8px);
@@ -183,6 +225,28 @@
 <body>
 
 <div class="logout-pill" onclick="window.location.href='logout.html'">Sign Out</div>
+
+<nav class="sapatamu-navbar">
+    <div class="sapatamu-nav-container">
+        <div class="nav-group">
+            <a href="dashboard.html" class="nav-link active" id="nav-dashboard">Dashboard</a>
+            <div class="nav-divider"></div>
+            <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
+            <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+            <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+        </div>
+        <div class="nav-divider-bold"></div>
+        <div class="nav-group">
+            <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+            <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+            <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+            <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+            <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+            <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+            <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+        </div>
+    </div>
+</nav>
 
 <div class="main-wrapper">
     <header>
@@ -333,6 +397,22 @@
     </style>
 
 <script>
+    const CURRENT_SS_ID = localStorage.getItem('sapatamu_db') ? JSON.parse(localStorage.getItem('sapatamu_db')).ssId : null;
+
+    function syncNavbar() {
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            const baseHref = link.getAttribute('href').split('?')[0];
+            link.href = `${baseHref}?ssId=${CURRENT_SS_ID}`;
+        });
+    }
+
+    function initHub() {
+        syncNavbar();
+    }
+    
+    initHub();
+
     const sessionData = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
     const session = sessionData ? JSON.parse(sessionData) : null;
     const SSID = session ? session.ssId : '';

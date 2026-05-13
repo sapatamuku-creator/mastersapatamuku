@@ -87,11 +87,74 @@
 
         @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* UNIFIED NAVBAR STYLES */
+        .sapatamu-navbar {
+            padding: 15px 20px 5px;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            z-index: 10001;
+            flex-shrink: 0;
+        }
+        .nav-container-bar {
+            background: #FFFDFB;
+            padding: 6px 10px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08);
+            border: 1px solid var(--border);
+            max-width: 95%;
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: none;
+        }
+        .nav-container-bar::-webkit-scrollbar { display: none; }
+        .nav-group { display: flex; align-items: center; gap: 4px; }
+        .nav-link {
+            text-decoration: none;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            padding: 10px 18px;
+            border-radius: 30px;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
+        .nav-divider-bold { width: 1.5px; height: 22px; background: #D6C7BC; margin: 0 12px; }
     </style>
 </head>
 <body>
 
     <div id="app-container">
+        <nav class="sapatamu-navbar">
+            <div class="nav-container-bar">
+                <div class="nav-group">
+                    <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+                    <div class="nav-divider"></div>
+                    <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
+                    <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+                    <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+                </div>
+                <div class="nav-divider-bold"></div>
+                <div class="nav-group">
+                    <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                    <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                    <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+                    <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+                    <a href="angpao.html" class="nav-link active" id="nav-angpao">Angpao</a>
+                    <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+                    <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+                </div>
+            </div>
+        </nav>
+        
         <!-- CUSTOM NOTIFICATION MODAL -->
         <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
             <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
@@ -172,6 +235,15 @@
 
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2P-eJYni_mvNFqsa6_rDjvCBoIiv3qli10MWmsTtZAYwUcduSrSAbxv4hJ5kY6ICz/exec"; 
+    const CURRENT_SS_ID = new URLSearchParams(window.location.search).get('ssId') || JSON.parse(localStorage.getItem('sapatamu_db') || '{}').ssId;
+
+    function syncNavbar() {
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            const baseHref = link.getAttribute('href').split('?')[0];
+            link.href = `${baseHref}?ssId=${CURRENT_SS_ID}`;
+        });
+    }
 
     // --- CUSTOM NOTIFICATION SYSTEM ---
     window.showSapaModal = function(title, msg, icon = "✨") {
