@@ -51,12 +51,17 @@
             position: relative; width: 100%; max-width: 220px; margin: 0 auto; 
             aspect-ratio: 1 / 1; background: #000; border-radius: 28px; overflow: hidden; 
             border: 4px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.1); flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
         }
         #reader, #onsite-video, #preview-canvas, #capture-preview-onsite { width: 100% !important; height: 100% !important; object-fit: cover; }
         #onsite-video { transform: scaleX(-1); display: none; }
 
         .card-panel { background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; flex: 1; min-height: 0; }
-        #guest-list-container { flex: 1; overflow-y: auto; padding-right: 2px; -webkit-overflow-scrolling: touch; }
+        #guest-list-container { 
+            flex: 1; overflow-y: auto; padding-right: 2px; -webkit-overflow-scrolling: touch; 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
+            align-content: start;
+        }
 
         .counter-wrapper { display: flex; align-items: center; background: #f0f0f0; border-radius: 10px; padding: 2px; height: 40px; }
         .btn-step { width: 40px; height: 100%; border: none; background: white; border-radius: 8px; font-size: 18px; font-weight: bold; color: var(--dark); cursor: pointer; }
@@ -73,12 +78,20 @@
 
         .btn-main { background: var(--dark); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; cursor: pointer; }
         
-        .guest-item { padding: 12px; background: #fff; border: 1px solid #f0f0f0; border-radius: 15px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; }
-        .guest-info h4 { margin: 0; font-size: 12px; color: var(--dark); font-weight: 800; text-transform: uppercase; }
-        .guest-meta { margin-top: 4px; display: grid; grid-template-columns: 1fr; gap: 2px; }
-        .meta-line { font-size: 8px; color: #777; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-        .meta-line span { color: var(--gold); font-weight: 800; }
-        .guest-badge { font-size: 7px; padding: 3px 7px; border-radius: 5px; font-weight: 900; text-transform: uppercase; background:#f0f0f0; color:#555; white-space: nowrap; }
+        .guest-item { padding: 16px; background: #fff; border: 1px solid #f0f0f0; border-radius: 18px; margin-bottom: 0px; display: flex; flex-direction: column; position: relative; transition: 0.3s; }
+        .guest-item:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(140, 117, 96, 0.1); }
+        .guest-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f0e6de; padding-bottom: 8px; }
+        .guest-info h4 { margin: 0; font-size: 13px; color: var(--text-main); font-weight: 800; text-transform: uppercase; line-height: 1.2; }
+        .guest-wa { font-size: 9px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px; }
+        
+        .guest-details { display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 12px; }
+        .detail-item { font-size: 9px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .detail-item span { color: var(--text-main); font-weight: 700; }
+        
+        .guest-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; }
+        .guest-badge { font-size: 8px; padding: 4px 10px; border-radius: 6px; font-weight: 800; text-transform: uppercase; background:#fdf8f4; color:var(--gold); border: 1px solid #f0e6de; }
+        .guest-status-label { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        .pax-badge { font-size: 10px; font-weight: 800; color: var(--primary); }
 
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 100000; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-card { background: white; width: 100%; max-width: 350px; border-radius: 30px; padding: 20px; text-align: center; }
@@ -308,17 +321,28 @@
         container.innerHTML = filtered.map(g => {
             const isHadir = String(g.statusHadir) === "1" || (g.jamDatang && g.jamDatang !== "-");
             return `
-                <div class="guest-item" style="border-left:5px solid ${isHadir?'var(--success)':'#ddd'}; opacity:${isHadir?0.6:1}" onclick="${isHadir?"":`openConfirm('${g.kode}','${g.nama}','${g.alamat}','${g.kategori}')`}">
-                    <div class="guest-info">
-                        <h4>${g.nama}</h4>
-                        <div class="guest-meta">
-                            <div class="meta-line">□ ${g.alamat || '-'}</div>
-                            <div class="meta-line">□ Inv by: <span>${g.pihakPengundang || '-'}</span></div>
-                            <div class="meta-line">□ Est: <span>${g.rencanaHadir || '-'} Pax</span> | ID: <span>${g.kode}</span></div>
-                            <div class="meta-line">□ ${g.whatsapp || '-'}</div>
+                <div class="guest-item" style="border-top: 4px solid ${isHadir?'var(--success)':'var(--border)'}; opacity:${isHadir?0.7:1}" onclick="${isHadir?"":`openConfirm('${g.kode}','${g.nama}','${g.alamat}','${g.kategori}')`}">
+                    <div class="guest-header">
+                        <div style="flex:1">
+                            <div class="guest-badge" style="margin-bottom:4px; display:inline-block">${g.kategori || 'REGULER'}</div>
+                            <h4>${g.nama}</h4>
+                        </div>
+                        <div class="guest-wa">${g.whatsapp || '-'}</div>
+                    </div>
+                    
+                    <div class="guest-details">
+                        <div class="detail-item">🏠 <span>${g.alamat || '-'}</span></div>
+                        <div class="detail-item">💌 Inv by: <span>${g.pihakPengundang || '-'}</span></div>
+                        <div class="detail-item">⏰ Sesi: <span>${g.rencanaJamHadir || g.jamHadir || '-'}</span></div>
+                    </div>
+
+                    <div class="guest-footer">
+                        <div class="pax-badge">Pax: ${g.rencanaHadir || '1'}</div>
+                        <div class="guest-status-label" style="color:${isHadir?'var(--success)':'var(--text-muted)'}">
+                            ${isHadir ? '✓ HADIR ('+g.realHadir+')' : '● BELUM SCAN'}
                         </div>
                     </div>
-                    <div class="guest-badge">${g.kategori}</div>
+                    <div style="font-size:7px; color:#ccc; margin-top:5px; text-align:right">ID: ${g.kode}</div>
                 </div>`;
         }).join('');
     };
