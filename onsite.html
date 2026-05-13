@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>sapatamu.ku | TOTAL INTEGRATION V7.6</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root { --gold: #d4af37; --dark: #1a1a1a; --brand-warm: #5d4037; --success: #4CAF50; --danger: #e74c3c; --bg: #f4f7f6; }
+        
+        /* BLOKIR FOOTER WEEBLY */
+        .weebly-footer, .w-footer, [class*="weebly"], #weebly-footer-signup-container, 
+        div[style*="position: fixed; bottom: 0;"], .footer-wrap, div[class*="powered-by"] { 
+            display: none !important; visibility: hidden !important; z-index: -1 !important; height: 0 !important;
+        }
+
+        html, body { overflow: hidden; height: 100%; width: 100%; margin: 0; padding: 0; background: white; font-family: 'Montserrat', sans-serif; }
+        
+        #app-root { 
+            display: flex; flex-direction: column; position: fixed; 
+            top: 0; left: 0; right: 0; bottom: 0; z-index: 99999 !important; 
+            background: var(--bg); height: 100vh;
+        }
+
+        .header { text-align: center; padding: 12px; background: white; box-shadow: 0 2px 15px rgba(0,0,0,0.05); z-index: 100; flex-shrink: 0; }
+        .header h1 { font-family: 'Quicksand', sans-serif; font-size: 14px; color: var(--brand-warm); margin: 0; letter-spacing: 1px; }
+        .header h1 span { color: var(--gold); }
+
+        .nav-wrapper { padding: 10px 15px; background: white; flex-shrink: 0; }
+        .nav-tabs { display: flex; background: #f0f0f0; border-radius: 12px; padding: 4px; gap: 4px; }
+        .tab-btn { flex: 1; padding: 10px; border-radius: 9px; border: none; background: transparent; font-size: 10px; font-weight: 800; color: #888; text-transform: uppercase; transition: 0.3s; cursor: pointer; }
+        .tab-btn.active { background: white; color: var(--dark); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 0 10px 10px; overflow: hidden; gap: 10px; }
+
+        #media-container { 
+            position: relative; width: 100%; max-width: 220px; margin: 0 auto; 
+            aspect-ratio: 1 / 1; background: #000; border-radius: 28px; overflow: hidden; 
+            border: 4px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.1); flex-shrink: 0;
+        }
+        #reader, #onsite-video, #preview-canvas, #capture-preview-onsite { width: 100% !important; height: 100% !important; object-fit: cover; }
+        #onsite-video { transform: scaleX(-1); display: none; }
+
+        .card-panel { background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; flex: 1; min-height: 0; }
+        #guest-list-container { flex: 1; overflow-y: auto; padding-right: 2px; -webkit-overflow-scrolling: touch; }
+
+        .counter-wrapper { display: flex; align-items: center; background: #f0f0f0; border-radius: 10px; padding: 2px; height: 40px; }
+        .btn-step { width: 40px; height: 100%; border: none; background: white; border-radius: 8px; font-size: 18px; font-weight: bold; color: var(--dark); cursor: pointer; }
+        .counter-value { flex: 1; text-align: center; font-weight: 800; font-size: 14px; color: var(--dark); }
+
+        .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .form-group { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .form-label { font-size: 7.5px; font-weight: 900; color: #aaa; text-transform: uppercase; margin-left: 5px; }
+        .form-control { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #eee; background: #fcfcfc; font-size: 12px; font-weight: 600; outline: none; box-sizing: border-box; }
+        
+        .tag-row { display: flex; gap: 8px; margin: 5px 0 15px; }
+        .tag-item { flex: 1; padding: 10px; border-radius: 10px; background: #f5f5f5; border: 1px solid #eee; font-size: 9px; font-weight: 800; text-align: center; cursor: pointer; color: #888; }
+        .tag-item.active { background: var(--gold); color: white; border-color: var(--gold); }
+
+        .btn-main { background: var(--dark); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; cursor: pointer; }
+        
+        .guest-item { padding: 12px; background: #fff; border: 1px solid #f0f0f0; border-radius: 15px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .guest-info h4 { margin: 0; font-size: 12px; color: var(--dark); font-weight: 800; text-transform: uppercase; }
+        .guest-meta { margin-top: 4px; display: grid; grid-template-columns: 1fr; gap: 2px; }
+        .meta-line { font-size: 8px; color: #777; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .meta-line span { color: var(--gold); font-weight: 800; }
+        .guest-badge { font-size: 7px; padding: 3px 7px; border-radius: 5px; font-weight: 900; text-transform: uppercase; background:#f0f0f0; color:#555; white-space: nowrap; }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 100000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-card { background: white; width: 100%; max-width: 350px; border-radius: 30px; padding: 20px; text-align: center; }
+        .modal-video-box { width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 20px; overflow: hidden; margin: 15px 0; border: 3px solid #f0f0f0; position: relative; }
+        #confirm-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-cancel { background: #eee; color: #666; border: none; flex: 1; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        .btn-confirm { background: var(--gold); color: white; border: none; flex: 2; padding: 12px; border-radius: 12px; font-weight: 800; cursor: pointer; }
+
+        .loading-overlay { position: fixed; inset: 0; background: white; z-index: 100001; display: none; align-items: center; justify-content: center; font-weight: 800; color: var(--gold); }
+
+        #btn-fullscreen {
+            position: fixed; bottom: 20px; right: 20px; width: 45px; height: 45px;
+            background: var(--dark); color: white; border: 2px solid var(--gold);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            z-index: 100002; cursor: pointer; transition: 0.3s;
+        }
+        .fade-out { opacity: 0; visibility: hidden; }
+    </style>
+</head>
+<body onload="initApp()">
+
+<div id="app-root">
+    <div id="loading" class="loading-overlay">MEMPROSES...</div>
+    <div class="header"><h1>sapa<span>tamu</span>.ku <span>V7.6</span></h1></div>
+
+    <div class="nav-wrapper">
+        <div class="nav-tabs">
+            <button class="tab-btn active" id="tab-scan" onclick="switchMode('scan')">QR Scan</button>
+            <button class="tab-btn" id="tab-onsite" onclick="switchMode('onsite')">On-Site Reg</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="media-container">
+            <div id="reader"></div>
+            <video id="onsite-video" autoplay playsinline muted></video>
+            <canvas id="capture-preview-onsite" style="display:none;"></canvas>
+        </div>
+
+        <div id="panel-scan" class="card-panel">
+            <div class="search-box"><input type="text" id="search-input" class="form-control" placeholder="Cari Nama / Kode / Pihak Pengundang..." oninput="renderGuestList()"></div>
+            <div id="guest-list-container"></div>
+        </div>
+
+        <div id="panel-onsite" class="card-panel" style="display: none; overflow-y: auto;">
+            <div class="form-group" style="margin-bottom:10px;">
+                <label class="form-label">Nama Lengkap</label>
+                <input type="text" id="reg-nama" class="form-control" placeholder="Nama tamu">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Alamat / Instansi</label>
+                    <input type="text" id="reg-alamat" class="form-control" placeholder="Asal kota/kantor">
+                </div>
+                <div class="form-group" style="flex: 0.4;">
+                    <label class="form-label">Pax</label>
+                    <div class="counter-wrapper">
+                        <button type="button" class="btn-step" onclick="updatePax('reg-pax', -1)">-</button>
+                        <div id="reg-pax" class="counter-value">1</div>
+                        <button type="button" class="btn-step" onclick="updatePax('reg-pax', 1)">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">WhatsApp</label>
+                    <input type="tel" id="reg-wa" class="form-control" placeholder="0812...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kategori</label>
+                    <select id="reg-kategori" class="form-control">
+                        <option value="REGULER">REGULER</option>
+                        <option value="VIP">VIP</option>
+                        <option value="VVIP">VVIP</option>
+                        <option value="KELUARGA">KELUARGA</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label class="form-label">Pihak Pengundang</label>
+                <select id="reg-host" class="form-control">
+                    <option value="Pengantin Pria">Pengantin Pria</option>
+                    <option value="Pengantin Wanita">Pengantin Wanita</option>
+                    <option value="Orang Tua Pria">Orang Tua Pria</option>
+                    <option value="Orang Tua Wanita">Orang Tua Wanita</option>
+                </select>
+            </div>
+            <div class="tag-row">
+                <div class="tag-item" id="tag-angpao" onclick="this.classList.toggle('active')">ANGPAO</div>
+                <div class="tag-item" id="tag-kado" onclick="this.classList.toggle('active')">KADO</div>
+            </div>
+            <button type="button" onclick="takeOnsiteSnapshot()" id="btn-onsite-snap" style="background: none; border: 1px solid var(--gold); color: var(--gold); padding: 8px; border-radius: 20px; font-size: 10px; font-weight: 800; cursor: pointer; width: 100%; margin-bottom: 10px;">AMBIL SELFIE</button>
+            <button id="btn-final-onsite" class="btn-main" onclick="submitOnsite()" style="opacity: 0.5;" disabled>Daftarkan Tamu</button>
+        </div>
+    </div>
+</div>
+
+<div id="btn-fullscreen" onclick="toggleFullScreen()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
+
+<div id="modal-confirm" class="modal-overlay">
+    <div class="modal-card">
+        <h4 id="m-nama" style="margin:0; font-size:16px; text-transform:uppercase;">-</h4>
+        <p id="m-info" style="font-size:10px; color:#999; margin:5px 0 10px;">-</p>
+        <div class="modal-video-box">
+            <video id="confirm-video" autoplay playsinline muted></video>
+            <canvas id="preview-canvas" style="display:none;"></canvas>
+        </div>
+        <button onclick="takeSnapshot()" id="btn-snap" style="background:none; border:1px solid var(--gold); color:var(--gold); padding:5px 15px; border-radius:20px; font-size:10px; font-weight:800; margin-bottom:10px;">AMBIL SELFIE</button>
+        <div class="form-row">
+            <div class="form-group" style="flex:0.5">
+                <label class="form-label">Jumlah Pax</label>
+                <div class="counter-wrapper">
+                    <button type="button" class="btn-step" onclick="updatePax('m-pax', -1)">-</button>
+                    <div id="m-pax" class="counter-value">1</div>
+                    <button type="button" class="btn-step" onclick="updatePax('m-pax', 1)">+</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Pemberian</label>
+                <div class="tag-row" style="margin:0">
+                    <div class="tag-item" id="m-tag-angpao" onclick="this.classList.toggle('active')">ANGPAO</div>
+                    <div class="tag-item" id="m-tag-kado" onclick="this.classList.toggle('active')">KADO</div>
+                </div>
+            </div>
+        </div>
+        <div class="btn-group">
+            <button class="btn-cancel" onclick="closeConfirm()">BATAL</button>
+            <button class="btn-confirm" id="btn-final-confirm" onclick="executeCheckIn()" style="opacity:0.5;" disabled>KONFIRMASI</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- KONFIGURASI ---
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCj4W8OvxkwO32zE7aDo5uqgUjNaamxSSJHOFEWhjT5jGiTrQuCrDNLRp87jFh9-rV-w/exec"; 
+    const SELFIE_URL = "https://script.google.com/macros/s/AKfycbzy244BM3lYzw0ix7jD-_1Qvxu3deKukqHDJbr4RcJQn-K7k5Dgzw1sEBclT2w8jIys/exec";
+    const WA_ENGINE_URL = "https://script.google.com/macros/s/AKfycbyRCxN6s_4e3RmxWa95POqM6GDZZ9PkCreNbqGjJEF4R5jjoN2GZVjwmqQg5nsaUs95Vw/exec";
+    
+    // --- SESSION HANDLER ---
+    const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+    if (!session || !session.ssId) {
+        alert("⚠️ Sesi berakhir. Silakan login kembali.");
+        window.location.href = "https://sapatamu.weebly.com/";
+    }
+    const CURRENT_SS_ID = session.ssId;
+
+    let masterData = [], html5QrCode = null, onsiteStream = null, confirmStream = null;
+    let currentMode = 'scan', selectedGuest = null, capturedPhoto = null, capturedOnsitePhoto = null;
+
+    async function initApp() { 
+        startScanner(); 
+        fetchMasterData(); 
+        startExtremeWeeblyKiller();
+    }
+
+    function startExtremeWeeblyKiller() {
+        setInterval(() => {
+            document.querySelectorAll('.weebly-footer, .w-footer, [class*="weebly"], #weebly-footer-signup-container').forEach(el => el.remove());
+        }, 500);
+    }
+
+    window.updatePax = function(id, step) {
+        const el = document.getElementById(id);
+        let val = parseInt(el.innerText) + step;
+        if (val < 1) val = 1; if (val > 20) val = 20;
+        el.innerText = val;
+    };
+
+    window.toggleFullScreen = function() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().then(() => {
+                document.getElementById('btn-fullscreen').classList.add('fade-out');
+            });
+        }
+    };
+
+    async function fetchMasterData() {
+        try {
+            const res = await fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ action: "get_master_data", ssId: CURRENT_SS_ID }) 
+            });
+            const data = await res.json();
+            masterData = data.guestList || [];
+            renderGuestList();
+        } catch (e) {}
+    }
+
+    window.renderGuestList = function() {
+        const container = document.getElementById('guest-list-container');
+        const term = document.getElementById('search-input').value.toLowerCase();
+        const filtered = masterData.filter(g => 
+            (g.nama||"").toLowerCase().includes(term) || 
+            (g.kode||"").toLowerCase().includes(term) ||
+            (g.pihakPengundang||"").toLowerCase().includes(term)
+        );
+
+        container.innerHTML = filtered.map(g => {
+            const isHadir = String(g.statusHadir) === "1" || (g.jamDatang && g.jamDatang !== "-");
+            return `
+                <div class="guest-item" style="border-left:5px solid ${isHadir?'var(--success)':'#ddd'}; opacity:${isHadir?0.6:1}" onclick="${isHadir?"":`openConfirm('${g.kode}','${g.nama}','${g.alamat}','${g.kategori}')`}">
+                    <div class="guest-info">
+                        <h4>${g.nama}</h4>
+                        <div class="guest-meta">
+                            <div class="meta-line">□ ${g.alamat || '-'}</div>
+                            <div class="meta-line">□ Inv by: <span>${g.pihakPengundang || '-'}</span></div>
+                            <div class="meta-line">□ Est: <span>${g.rencanaHadir || '-'} Pax</span> | ID: <span>${g.kode}</span></div>
+                            <div class="meta-line">□ ${g.whatsapp || '-'}</div>
+                        </div>
+                    </div>
+                    <div class="guest-badge">${g.kategori}</div>
+                </div>`;
+        }).join('');
+    };
+
+    async function startScanner() {
+        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 220 }, (txt) => {
+            const t = masterData.find(g => String(g.kode) === String(txt));
+            if (t && String(t.statusHadir)!=="1") openConfirm(t.kode, t.nama, t.alamat, t.kategori);
+        }).catch(()=>{});
+    }
+
+    window.takeSnapshot = function() {
+        const v = document.getElementById('confirm-video'), c = document.getElementById('preview-canvas'), ctx = c.getContext('2d');
+        if (v.style.display === 'none') { resetSnapshot(); return; }
+        c.width = v.videoWidth; c.height = v.videoHeight;
+        ctx.translate(c.width, 0); ctx.scale(-1, 1);
+        ctx.drawImage(v, 0, 0, c.width, c.height);
+        capturedPhoto = c.toDataURL('image/jpeg', 0.8);
+        v.style.display = 'none'; c.style.display = 'block';
+        document.getElementById('btn-snap').innerText = "ULANGI";
+        document.getElementById('btn-final-confirm').disabled = false; document.getElementById('btn-final-confirm').style.opacity = 1;
+    };
+
+    function resetSnapshot() {
+        document.getElementById('confirm-video').style.display = 'block';
+        document.getElementById('preview-canvas').style.display = 'none';
+        capturedPhoto = null; document.getElementById('btn-snap').innerText = "AMBIL SELFIE";
+        document.getElementById('btn-final-confirm').disabled = true; document.getElementById('btn-final-confirm').style.opacity = 0.5;
+        document.getElementById('m-pax').innerText = "1";
+    }
+
+    window.takeOnsiteSnapshot = function() {
+        const v = document.getElementById('onsite-video'), c = document.getElementById('capture-preview-onsite'), ctx = c.getContext('2d');
+        if (v.style.display === 'none') { resetOnsiteSnapshot(); return; }
+        const size = Math.min(v.videoWidth, v.videoHeight);
+        c.width = 600; c.height = 600;
+        const sx = (v.videoWidth - size) / 2;
+        const sy = (v.videoHeight - size) / 2;
+        ctx.translate(c.width, 0); ctx.scale(-1, 1);
+        ctx.drawImage(v, sx, sy, size, size, 0, 0, c.width, c.height);
+        capturedOnsitePhoto = c.toDataURL('image/jpeg', 0.8);
+        v.style.display = 'none'; c.style.display = 'block';
+        document.getElementById('btn-onsite-snap').innerText = "ULANGI";
+        document.getElementById('btn-final-onsite').disabled = false; document.getElementById('btn-final-onsite').style.opacity = 1;
+    };
+
+    function resetOnsiteSnapshot() {
+        document.getElementById('onsite-video').style.display = 'block';
+        document.getElementById('capture-preview-onsite').style.display = 'none';
+        capturedOnsitePhoto = null; document.getElementById('btn-onsite-snap').innerText = "AMBIL SELFIE";
+        document.getElementById('btn-final-onsite').disabled = true; document.getElementById('btn-final-onsite').style.opacity = 0.5;
+        document.getElementById('reg-pax').innerText = "1";
+    }
+
+    window.openConfirm = async function(kode, nama, alamat, kategori) {
+        selectedGuest = { kode, nama, kategori };
+        document.getElementById('m-nama').innerText = nama;
+        document.getElementById('m-info').innerText = `${kategori} | ${alamat}`;
+        document.getElementById('modal-confirm').style.display = 'flex';
+        if (html5QrCode) await html5QrCode.stop();
+        confirmStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        document.getElementById('confirm-video').srcObject = confirmStream;
+    };
+
+    window.closeConfirm = function() {
+        if (confirmStream) confirmStream.getTracks().forEach(t => t.stop());
+        resetSnapshot(); document.getElementById('modal-confirm').style.display = 'none';
+        if (currentMode === 'scan') startScanner();
+    };
+
+    window.executeCheckIn = async function() {
+        document.getElementById('loading').style.display = 'flex';
+        const p = document.getElementById('m-pax').innerText;
+        const note = (document.getElementById('m-tag-angpao').classList.contains('active')?"ANGPAO ":"") + (document.getElementById('m-tag-kado').classList.contains('active')?"KADO":"");
+        
+        try {
+            const res = await fetch(SCRIPT_URL, { 
+                method:'POST', 
+                body: JSON.stringify({ 
+                    action: "confirm_checkin", 
+                    ssId: CURRENT_SS_ID,
+                    kodeUnik: selectedGuest.kode, 
+                    realHadir: p, 
+                    catatan: note||"-" 
+                }) 
+            });
+            
+            const json = await res.json();
+            
+            if (json.status === "success") {
+                fetch(WA_ENGINE_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        ssId: CURRENT_SS_ID,
+                        kodeUnik: selectedGuest.kode
+                    })
+                });
+
+                fetch(SELFIE_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    body: JSON.stringify({ 
+                        image: capturedPhoto, 
+                        nama: selectedGuest.nama, 
+                        kode: selectedGuest.kode,
+                        ssId: CURRENT_SS_ID 
+                    }) 
+                });
+
+                confetti({ particleCount: 150, spread: 70 });
+                closeConfirm(); 
+                fetchMasterData();
+            }
+        } catch (e) {
+            console.error("Error checkin:", e);
+        } finally { 
+            document.getElementById('loading').style.display = 'none'; 
+        }
+    };
+
+    window.switchMode = async function(m) {
+        currentMode = m;
+        document.getElementById('tab-scan').classList.toggle('active', m==='scan');
+        document.getElementById('tab-onsite').classList.toggle('active', m==='onsite');
+        document.getElementById('panel-scan').style.display = m==='scan'?'flex':'none';
+        document.getElementById('panel-onsite').style.display = m==='onsite'?'block':'none';
+        if (m === 'onsite') {
+            if (html5QrCode) await html5QrCode.stop();
+            document.getElementById('reader').style.display = 'none';
+            document.getElementById('onsite-video').style.display = 'block';
+            onsiteStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            document.getElementById('onsite-video').srcObject = onsiteStream;
+        } else {
+            if (onsiteStream) onsiteStream.getTracks().forEach(t => t.stop());
+            document.getElementById('reader').style.display = 'block';
+            document.getElementById('onsite-video').style.display = 'none';
+            startScanner();
+        }
+    };
+
+    window.submitOnsite = async function() {
+        document.getElementById('loading').style.display = 'flex';
+        const p = document.getElementById('reg-pax').innerText;
+        const payload = { 
+            action: "register_new_onsite", 
+            ssId: CURRENT_SS_ID,
+            namaTamu: document.getElementById('reg-nama').value, 
+            alamat: document.getElementById('reg-alamat').value, 
+            whatsapp: document.getElementById('reg-wa').value, 
+            kategori: document.getElementById('reg-kategori').value, 
+            host: document.getElementById('reg-host').value, 
+            realHadir: p 
+        };
+
+        try {
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const json = await res.json();
+
+            if (json.status === "success") {
+                fetch(WA_ENGINE_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        ssId: CURRENT_SS_ID,
+                        kodeUnik: json.kode 
+                    })
+                });
+
+                fetch(SELFIE_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    body: JSON.stringify({ 
+                        image: capturedOnsitePhoto, 
+                        nama: payload.namaTamu, 
+                        kode: json.kode,
+                        ssId: CURRENT_SS_ID
+                    }) 
+                });
+
+                confetti({ particleCount: 100, spread: 50 });
+                resetOnsiteSnapshot(); 
+                document.getElementById('reg-nama').value = ""; 
+                document.getElementById('reg-alamat').value = ""; 
+                document.getElementById('reg-wa').value = "";
+                fetchMasterData(); 
+                switchMode('scan');
+            }
+        } catch (e) {
+            console.error("Error onsite registration:", e);
+        } finally { 
+            document.getElementById('loading').style.display = 'none'; 
+        }
+    };
+</script>
+</body>
+</html>

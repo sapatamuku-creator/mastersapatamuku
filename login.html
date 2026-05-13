@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu.ku - Access Control</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg-gray: #f8fafc;
+            --text-main: #1e293b;
+            --border-color: #e2e8f0;
+            --white: #ffffff;
+        }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            background-color: var(--bg-gray); 
+        }
+        .sapatamu-wrapper { 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; padding: 20px; box-sizing: border-box;
+        }
+        .sapatamu-card { 
+            background: var(--white); width: 100%; max-width: 400px; 
+            padding: 40px; border-radius: 20px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); 
+        }
+        .sapatamu-header { text-align: center; margin-bottom: 32px; }
+        .sapatamu-header h2 { margin: 0; font-size: 28px; color: var(--text-main); font-weight: 800; }
+        .sapatamu-header p { color: #64748b; font-size: 14px; margin-top: 8px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px; }
+        .sapatamu-input { 
+            width: 100%; padding: 14px 18px; border: 1.5px solid var(--border-color); 
+            border-radius: 12px; font-size: 16px; box-sizing: border-box; transition: border 0.2s;
+        }
+        .sapatamu-input:focus { outline: none; border-color: var(--primary); }
+        .readonly-input { background: #f1f5f9; cursor: not-allowed; }
+        .small-font { font-size: 12px; }
+        
+        .sapatamu-btn { 
+            width: 100%; padding: 16px; background: var(--primary); color: white; 
+            border: none; border-radius: 12px; font-weight: 700; font-size: 16px;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; 
+        }
+        .sapatamu-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        .gen-btn { padding: 0 15px; border-radius: 12px; border: none; background: #fbbf24; cursor: pointer; font-weight: bold; white-space: nowrap; }
+        .success-btn { background: #059669; }
+        .primary-btn { background: #6366f1; }
+
+        .footer-link { text-align: center; margin-top: 24px; font-size: 14px; color: #64748b; }
+        .clickable { color: var(--primary); cursor: pointer !important; font-weight: 700; display: inline-block; }
+        .clickable:hover { text-decoration: underline; }
+
+        .inject-box { background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px dashed #cbd5e1; }
+        .inject-title { font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 10px; text-transform: uppercase; }
+
+        .meter-bg { height: 4px; background: #e2e8f0; margin-top: 8px; border-radius: 2px; overflow: hidden; }
+        .meter-bar { height: 100%; width: 0%; transition: 0.3s; }
+        .meter-text { font-size: 11px; margin-top: 4px; display: block; font-weight: bold; }
+
+        .loader { 
+            width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); 
+            border-bottom-color: #fff; border-radius: 50%; display: none; 
+            animation: rotation 0.8s linear infinite; 
+        }
+        @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="sapatamu-wrapper">
+    <div class="sapatamu-card" id="loginForm">
+        <div class="sapatamu-header">
+            <h2>SapaTamu.ku</h2>
+            <p>Masuk ke dashboard manajemen tamu</p>
+        </div>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="log_user" class="sapatamu-input" placeholder="Username">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="log_pass" class="sapatamu-input" placeholder="••••••••">
+        </div>
+        <button onclick="prosesLogin()" id="btn_login" class="sapatamu-btn">
+            <span id="text_login">Masuk Sekarang</span>
+            <span class="loader" id="load_login"></span>
+        </button>
+        <div class="footer-link">
+            <div>Belum punya akun? <span class="clickable" onclick="toggleForm('registerForm')">Daftar</span></div>
+            <div style="font-size: 12px; margin-top: 10px;">
+                <span class="clickable" onclick="toggleForm('forgotForm')">Lupa Password?</span> | 
+                <span class="clickable" onclick="toggleForm('changePassForm')">Ganti Password</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="sapatamu-card" id="registerForm" style="display:none;">
+        <div class="sapatamu-header">
+            <h2>Daftar Akun</h2>
+            <p>Data otomatis akan masuk ke Spreadsheet Anda</p>
+        </div>
+        
+        <div class="form-group">
+            <label>Nama Klien / Wedding</label>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="reg_user" class="sapatamu-input" placeholder="Gildan & Mita">
+                <button onclick="generateSheet()" id="btn_gen_sheet" class="gen-btn">
+                    <span id="text_gen_sheet">Buat Sheet</span>
+                    <span class="loader" id="load_gen_sheet"></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>ID Spreadsheet (Otomatis)</label>
+            <input type="text" id="reg_ssid" class="sapatamu-input readonly-input" placeholder="Akan terisi otomatis..." readonly>
+        </div>
+
+        <div class="inject-box">
+            <p class="inject-title">Detail Acara (Inject ke Master)</p>
+            <div class="form-group"><input type="text" id="ev_date_text" class="sapatamu-input" placeholder="Senin, 25 Mei 2026"></div>
+            <div class="form-group"><input type="text" id="ev_loc" class="sapatamu-input" placeholder="Lokasi Lengkap Acara"></div>
+            <div class="form-group"><input type="text" id="ev_time" class="sapatamu-input" placeholder="Akad: 08.00 / Resepsi: 12.30"></div>
+            <div class="form-group"><input type="text" id="ev_link" class="sapatamu-input" placeholder="Link Undangan Digital"></div>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="ev_s1" class="sapatamu-input small-font" placeholder="08.00 WIB">
+                <input type="text" id="ev_s2" class="sapatamu-input small-font" placeholder="11.00 WIB">
+                <input type="text" id="ev_s3" class="sapatamu-input small-font" placeholder="13.00 WIB">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>WhatsApp (628...)</label>
+            <input type="text" id="reg_wa" class="sapatamu-input" placeholder="6285111567829">
+        </div>
+
+        <div class="form-group">
+            <label>Email (Pemulihan)</label>
+            <input type="email" id="reg_email" class="sapatamu-input" placeholder="wedding@gmail.com">
+        </div>
+
+        <div class="form-group">
+            <label>Password Baru</label>
+            <input type="password" id="reg_pass" class="sapatamu-input" placeholder="••••••••">
+        </div>
+
+        <button onclick="prosesDaftar()" id="btn_reg" class="sapatamu-btn success-btn" disabled>
+            <span id="text_reg">Buat Akun & Konfirmasi WA</span>
+            <span class="loader" id="load_reg"></span>
+        </button>
+        <div class="footer-link">
+            Sudah punya akun? <span class="clickable" onclick="toggleForm('loginForm')">Login</span>
+        </div>
+    </div>
+
+    <div class="sapatamu-card" id="forgotForm" style="display:none;">
+        <div class="sapatamu-header">
+            <h2>Lupa Password</h2>
+            <p>Masukkan data untuk pemulihan akun</p>
+        </div>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="for_user" class="sapatamu-input" placeholder="Username">
+        </div>
+        <div class="form-group">
+            <label>WhatsApp / Email</label>
+            <input type="text" id="for_contact" class="sapatamu-input" placeholder="Masukkan WA atau Email terdaftar">
+        </div>
+        <button onclick="prosesLupaPassword()" id="btn_forgot" class="sapatamu-btn">
+            <span id="text_forgot">Kirim Password</span>
+            <span class="loader" id="load_forgot"></span>
+        </button>
+        <div class="footer-link">
+            <span class="clickable" onclick="toggleForm('loginForm')">Kembali ke Login</span>
+        </div>
+    </div>
+
+    <div class="sapatamu-card" id="changePassForm" style="display:none;">
+        <div class="sapatamu-header">
+            <h2>Ganti Password</h2>
+            <p>Masukkan password lama dan password baru</p>
+        </div>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="chg_user" class="sapatamu-input" placeholder="Username">
+        </div>
+        <div class="form-group">
+            <label>Password Saat Ini</label>
+            <input type="password" id="chg_curr_pass" class="sapatamu-input" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+            <label>Password Baru</label>
+            <input type="password" id="chg_new_pass" class="sapatamu-input" oninput="checkStrength(this.value)" placeholder="••••••••">
+            <div id="strength-meter" class="meter-bg">
+                <div id="strength-bar" class="meter-bar"></div>
+            </div>
+            <small id="strength-text" class="meter-text"></small>
+        </div>
+        <div class="form-group">
+            <label>Konfirmasi Password Baru</label>
+            <input type="password" id="chg_conf_pass" class="sapatamu-input" placeholder="••••••••">
+        </div>
+        <button onclick="prosesGantiPassword()" id="btn_chg" class="sapatamu-btn primary-btn">
+            <span id="text_chg">Perbarui Password</span>
+            <span class="loader" id="load_chg"></span>
+        </button>
+        <div class="footer-link">
+            <span class="clickable" onclick="toggleForm('loginForm')">Batal</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxc-EH46EgJtOVJp0tP1gWD5XcevKUWvTiXy1LDHs-1kbolMiQzkOwUQkybuLnxywuW/exec";
+    const SESSION_KEY = 'sapatamu_session';
+    const LOCAL_DB = 'sapatamu_db';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const session = sessionStorage.getItem(SESSION_KEY);
+        const localData = localStorage.getItem(LOCAL_DB);
+
+        if (session) {
+            const data = JSON.parse(session);
+            if (data.ssId) window.location.replace("dashboard.html?ssId=" + data.ssId);
+        } else if (localData) {
+            const data = JSON.parse(localData);
+            if (data.ssId) {
+                sessionStorage.setItem(SESSION_KEY, localData);
+                window.location.replace("dashboard.html?ssId=" + data.ssId);
+            }
+        }
+    });
+
+    window.toggleForm = function(id) {
+        const forms = ['loginForm', 'registerForm', 'forgotForm', 'changePassForm'];
+        forms.forEach(f => {
+            const el = document.getElementById(f);
+            if(el) el.style.display = (f === id) ? 'block' : 'none';
+        });
+    };
+
+    function setLoading(btnId, isLoad) {
+        const btn = document.getElementById(btnId);
+        const text = document.getElementById(btnId.replace('btn', 'text'));
+        const load = document.getElementById(btnId.replace('btn', 'load'));
+        if (btn) btn.disabled = isLoad;
+        if (text) text.style.display = isLoad ? 'none' : 'block';
+        if (load) load.style.display = isLoad ? 'block' : 'none';
+    }
+
+    window.prosesLogin = async function() {
+        const user = document.getElementById('log_user').value;
+        const pass = document.getElementById('log_pass').value;
+        if (!user || !pass) return alert("Silakan lengkapi Username dan Password.");
+
+        setLoading('btn_login', true);
+        try {
+            const response = await fetch(BACKEND_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "login", username: user, password: pass })
+            });
+            const res = await response.json();
+            if (res.status === "success") {
+                const authData = { username: res.data.username, ssId: res.data.ssId, time: Date.now() };
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify(authData));
+                localStorage.setItem(LOCAL_DB, JSON.stringify(authData));
+                window.location.replace("dashboard.html?ssId=" + res.data.ssId);
+            } else {
+                alert(res.message);
+                setLoading('btn_login', false);
+            }
+        } catch (e) {
+            alert("Kesalahan koneksi.");
+            setLoading('btn_login', false);
+        }
+    };
+
+    window.generateSheet = async function() {
+        const user = document.getElementById('reg_user').value;
+        if (!user) return alert("Isi Nama Klien!");
+
+        setLoading('btn_gen_sheet', true);
+        try {
+            const payload = { 
+                action: "copyMaster", 
+                clientName: user,
+                eventData: {
+                    nama: user,
+                    tgl: document.getElementById('ev_date_text').value,
+                    lokasi: document.getElementById('ev_loc').value,
+                    waktu: document.getElementById('ev_time').value,
+                    link: document.getElementById('ev_link').value,
+                    s1: document.getElementById('ev_s1').value,
+                    s2: document.getElementById('ev_s2').value,
+                    s3: document.getElementById('ev_s3').value
+                }
+            };
+            const response = await fetch(BACKEND_URL, { method: "POST", body: JSON.stringify(payload) });
+            const res = await response.json();
+            if (res.status === "success") {
+                document.getElementById('reg_ssid').value = res.data.fileId;
+                document.getElementById('reg_user').readOnly = true; 
+                document.getElementById('btn_gen_sheet').disabled = true;
+                document.getElementById('btn_reg').disabled = false;
+                alert("Spreadsheet Berhasil Dibuat!");
+            }
+        } catch (e) { alert("Gagal generate sheet."); }
+        setLoading('btn_gen_sheet', false);
+    };
+
+    window.prosesDaftar = async function() {
+        const data = {
+            action: "register",
+            username: document.getElementById('reg_user').value,
+            ssId: document.getElementById('reg_ssid').value,
+            password: document.getElementById('reg_pass').value,
+            whatsapp: document.getElementById('reg_wa').value,
+            email: document.getElementById('reg_email').value,
+            weddingDate: document.getElementById('ev_date_text').value
+        };
+
+        setLoading('btn_reg', true);
+        try {
+            const response = await fetch(BACKEND_URL, { method: "POST", body: JSON.stringify(data) });
+            const res = await response.json();
+            if (res.status === "success") {
+                const pesan = `*Konfirmasi Pendaftaran*%0A*User:* ${data.username}%0A*Pass:* ${data.password}`;
+                window.open(`https://wa.me/6285111567829?text=${pesan}`, '_blank');
+                location.reload();
+            }
+        } catch (e) { alert("Gagal Daftar."); }
+        setLoading('btn_reg', false);
+    };
+
+    window.prosesLupaPassword = async function() {
+        const user = document.getElementById('for_user').value;
+        const contact = document.getElementById('for_contact').value;
+        setLoading('btn_forgot', true);
+        try {
+            const response = await fetch(BACKEND_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "forgotPassword", username: user, contact: contact })
+            });
+            const res = await response.json();
+            alert(res.message);
+            if(res.status === "success") toggleForm('loginForm');
+        } catch (e) { alert("Error."); }
+        setLoading('btn_forgot', false);
+    };
+
+    window.prosesGantiPassword = async function() {
+        const data = {
+            action: "changePassword",
+            username: document.getElementById('chg_user').value,
+            currentPass: document.getElementById('chg_curr_pass').value,
+            newPass: document.getElementById('chg_new_pass').value
+        };
+        if(data.newPass !== document.getElementById('chg_conf_pass').value) return alert("Password tidak cocok!");
+        
+        setLoading('btn_chg', true);
+        try {
+            const response = await fetch(BACKEND_URL, { method: "POST", body: JSON.stringify(data) });
+            const res = await response.json();
+            alert(res.message);
+            if(res.status === "success") location.reload();
+        } catch (e) { alert("Gagal."); }
+        setLoading('btn_chg', false);
+    };
+
+    window.checkStrength = function(pass) {
+        const bar = document.getElementById('strength-bar');
+        const text = document.getElementById('strength-text');
+        let strength = 0;
+        if (pass.length > 6) strength++;
+        if (pass.match(/[a-z]/) && pass.match(/[A-Z]/)) strength++;
+        if (pass.match(/[0-9]/)) strength++;
+        if (pass.match(/[^a-zA-Z0-9]/)) strength++;
+        const config = [
+            { width: '0%', color: '#e2e8f0', label: '' },
+            { width: '25%', color: '#ef4444', label: 'Sangat Lemah' },
+            { width: '50%', color: '#f59e0b', label: 'Lemah' },
+            { width: '75%', color: '#3b82f6', label: 'Cukup Kuat' },
+            { width: '100%', color: '#10b981', label: 'Sangat Kuat' }
+        ];
+        bar.style.width = config[strength].width;
+        bar.style.backgroundColor = config[strength].color;
+        text.innerText = config[strength].label;
+        text.style.color = config[strength].color;
+    };
+</script>
+</body>
+</html>

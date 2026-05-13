@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu.ku - Logout</title>
+    <style>
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="logout-screen" style="
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    height: 100vh; 
+    font-family: 'Inter', -apple-system, sans-serif;
+    text-align: center;
+    background-color: #f8fafc;
+">
+    <!-- Icon Spinner Clean -->
+    <div class="loader-logout" style="
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e2e8f0;
+        border-bottom-color: #2563eb;
+        border-radius: 50%;
+        animation: rotation 1s linear infinite;
+        margin-bottom: 20px;
+    "></div>
+    
+    <h3 style="margin: 0; color: #1e293b; font-weight: 700;">Mengakhiri Sesi...</h3>
+    <p style="color: #64748b; margin-top: 8px;">Menghapus data sesi Anda dengan aman di semua tab.</p>
+    
+    <a href="javascript:void(0)" onclick="executeLogout()" id="manual-btn" style="
+        margin-top: 24px;
+        color: #2563eb; 
+        font-weight: 600; 
+        text-decoration: none; 
+        padding: 12px 24px;
+        border: 1px solid #e2e8f0;
+        background: white;
+        border-radius: 10px;
+        display: none;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    ">
+        Klik di sini jika tidak otomatis pindah
+    </a>
+</div>
+
+<script>
+  const SESSION_KEY = 'sapatamu_session';
+  const LOCAL_DB = 'sapatamu_db';
+  const SIGNOUT_SIGNAL = 'sapatamu_signout_broadcast';
+
+  window.executeLogout = function() {
+    const currentData = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_DB) || "{}");
+
+    if (currentData.username && currentData.ssId) {
+        localStorage.setItem(SIGNOUT_SIGNAL, JSON.stringify({
+            username: currentData.username,
+            ssId: currentData.ssId,
+            timestamp: Date.now()
+        }));
+        
+        setTimeout(() => localStorage.removeItem(SIGNOUT_SIGNAL), 500);
+    }
+
+    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(LOCAL_DB);
+    
+    window.location.replace("login.html"); 
+  };
+
+  window.onload = function() {
+    setTimeout(() => {
+        const currentData = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_DB) || "{}");
+        const userLabel = currentData.username ? ` akun ${currentData.username}` : "";
+
+        if (confirm(`Apakah Anda yakin ingin keluar dari${userLabel}?`)) {
+            executeLogout();
+        } else {
+            const ssId = currentData.ssId ? `?ssId=${currentData.ssId}` : "";
+            window.location.replace("dashboard.html" + ssId);
+        }
+        
+        setTimeout(() => {
+            const btn = document.getElementById('manual-btn');
+            if (btn) btn.style.display = 'inline-block';
+        }, 2000);
+        
+    }, 800);
+  };
+</script>
+</body>
+</html>

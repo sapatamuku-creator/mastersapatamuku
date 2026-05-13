@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>sapatamu.ku | DYNAMIC SCAN V6.9.1</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root { 
+            --gold: #d4af37; --dark: #1a1a1a; --brand-warm: #5d4037;
+            --success: #4CAF50; --bg: #f4f7f6;
+        }
+        
+        /* EXTREME WEEBLY CLEANER */
+        .weebly-footer, .w-footer, [class*="weebly"], #weebly-footer-signup-container, 
+        .footer-wrap, div[style*="z-index: 9999"], div[style*="bottom: 0"] {
+            display: none !important; opacity: 0 !important; visibility: hidden !important; 
+            height: 0 !important; pointer-events: none !important; position: absolute; left: -9999px;
+        }
+
+        html, body { overflow: hidden; height: 100%; width: 100%; margin: 0; padding: 0; background: var(--bg); font-family: 'Montserrat', sans-serif; }
+        #app-root { display: flex; position: absolute; top: 0; left: 0; right: 0; bottom: 0; flex-direction: column; z-index: 10; }
+
+        .header { text-align: center; padding: 12px; background: white; box-shadow: 0 2px 15px rgba(0,0,0,0.05); z-index: 100; }
+        .header h1 { font-family: 'Quicksand', sans-serif; font-size: 15px; color: var(--brand-warm); margin: 0; }
+        .header h1 span { color: var(--gold); }
+        .header p { font-size: 7px; letter-spacing: 1px; color: #999; font-weight: 700; margin: 0; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 10px; overflow: hidden; }
+        .stats-card { background: var(--dark); color: white; padding: 10px 15px; border-radius: 15px; display: flex; justify-content: space-between; }
+        .stats-value { font-size: 14px; font-weight: 700; color: var(--gold); }
+
+        #scanner-wrapper { 
+            position: relative; width: 100%; max-width: 250px; margin: 0 auto; 
+            aspect-ratio: 1 / 1;
+            background: #000; border-radius: 24px; overflow: hidden; border: 4px solid white; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;
+        }
+        #reader { width: 100% !important; height: 100% !important; }
+        #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+
+        .scan-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 5; pointer-events: none; }
+        .scan-frame { 
+            width: 70%; height: 70%; border: 2px solid rgba(255,255,255,0.1); border-radius: 20px; 
+            box-shadow: 0 0 0 1000px rgba(0,0,0,0.5); transition: all 0.25s ease; transform: scale(0.95); opacity: 0.5;
+        }
+        .scan-frame.qr-detected { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,175,55,0.4), 0 0 0 1000px rgba(0,0,0,0.2); transform: scale(1); opacity: 1; }
+        .scan-frame.qr-success { border-color: var(--success) !important; box-shadow: 0 0 30px var(--success), 0 0 0 1000px rgba(0,0,0,0.1) !important; transform: scale(1.05); }
+
+        .bottom-section { flex: 1; background: white; border-radius: 25px 25px 0 0; display: flex; flex-direction: column; overflow: hidden; }
+        .search-container { padding: 12px; border-bottom: 1px solid #f2f2f2; display: flex; gap: 8px; }
+        .search-input { flex: 1; padding: 12px; border-radius: 14px; border: 1px solid #eee; background: #f8f9f9; font-size: 13px; }
+        .multi-action-btn { background: var(--gold); color: white; border: none; padding: 0 15px; border-radius: 12px; font-weight: 700; font-size: 10px; display: none; }
+
+        .list-wrapper { flex: 1; padding: 5px 12px; overflow-y: auto; }
+        .guest-item { padding: 12px; margin-bottom: 8px; border-radius: 15px; background: #fff; border: 1px solid #f0f0f0; display: flex; flex-direction: column; }
+        .guest-item.checked-in { background: #f0fdf4; border-color: #dcfce7; }
+        .item-main { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .item-left { flex: 1; display: flex; align-items: center; gap: 10px; }
+        
+        .guest-name { font-size: 12px; font-weight: 700; color: var(--dark); line-height: 1.2; }
+        .guest-code { font-size: 8px; color: var(--gold); font-weight: 800; margin-top: 2px; }
+        .guest-alamat { font-size: 8px; color: #777; font-weight: 500; margin-top: 1px; font-style: italic; }
+        .guest-cat { font-size: 7px; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-weight: 800; display: inline-block; }
+        .guest-status { font-size: 8px; font-weight: 900; margin-top: 4px; }
+
+        .modal { display: none; position: fixed; z-index: 20000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.35); backdrop-filter: blur(12px); align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: rgba(255,255,255,0.9); width: 100%; max-width: 350px; border-radius: 28px; padding: 22px; border: 1px solid white; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        
+        .fab-fullscreen { position: fixed; bottom: 25px; right: 25px; width: 45px; height: 45px; background: rgba(26,26,26,0.9); color: white; border-radius: 50%; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; z-index: 1000; cursor: pointer; }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); z-index: 30000; display: none; align-items: center; justify-content: center; font-weight: 700; color: var(--gold); }
+
+        #selfie-section { display: none; flex-direction: column; align-items: center; margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 15px; }
+        #camera-preview { 
+            width: 140px; height: 140px; background: #000; border-radius: 20px; 
+            object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            transform: scaleX(-1);
+        }
+        .btn-capture { margin-top: 10px; padding: 10px 18px; border-radius: 12px; border: none; background: var(--dark); color: white; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
+        .capture-success-msg { color: var(--success); font-size: 9px; font-weight: 800; margin-top: 6px; display: none; }
+        
+        .tag-btn { transition: all 0.2s ease; cursor: pointer; }
+        .tag-btn.active { transform: scale(1.05); box-shadow: 0 4px 8px rgba(212,175,55,0.3); }
+    </style>
+</head>
+<body onload="initApp()">
+
+<div id="app-root">
+    <div id="loading" class="loading-overlay">MEMPROSES...</div>
+    
+    <div class="header">
+        <h1>sapa<span>tamu</span>.ku</h1>
+        <p>PRECISION SCAN V6.9.1 | AUTO-SSID ENABLED</p>
+    </div>
+
+    <div class="main-content">
+        <div class="stats-card">
+            <div><div style="font-size:7px; opacity:0.6; letter-spacing:1px;">KEHADIRAN (PAX)</div><div class="stats-value" id="stat-count">0 / 0</div></div>
+            <div style="text-align:right;"><div style="font-size:7px; opacity:0.6; letter-spacing:1px;">SOUVENIR</div><div class="stats-value" id="stat-souvenir">0</div></div>
+        </div>
+
+        <div id="scanner-wrapper">
+            <div id="reader"></div>
+            <div class="scan-overlay"><div class="scan-frame" id="target-frame"></div></div>
+        </div>
+
+        <div class="bottom-section">
+            <div class="search-container">
+                <input type="text" class="search-input" id="search-box" placeholder="Cari nama atau kode..." oninput="renderUI()">
+                <button id="bulk-btn" class="multi-action-btn" onclick="openConfirmModal()">KONFIRMASI (<span id="selected-count">0</span>)</button>
+            </div>
+            <div class="list-wrapper" id="guest-list"></div>
+        </div>
+    </div>
+
+    <div class="fab-fullscreen" id="btn-fs">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+    </div>
+
+    <div id="modalConfirm" class="modal">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 15px 0; color: var(--brand-warm); font-size: 14px; font-weight: 800; text-align: center; text-transform: uppercase; letter-spacing: 1px;">Konfirmasi Kedatangan</h3>
+            
+            <div id="cards-container" style="max-height: 40vh; overflow-y: auto; padding-right: 5px;"></div>
+            
+            <div id="selfie-section">
+                <p style="font-size: 8px; font-weight: 800; color: var(--gold); margin-bottom: 8px;">DOKUMENTASI VIP/KELUARGA</p>
+                <video id="camera-preview" autoplay playsinline muted></video>
+                <canvas id="capture-canvas" style="display:none;"></canvas>
+                <button type="button" class="btn-capture" id="btn-snap" onclick="takeSelfie()">Ambil Foto</button>
+                <div id="capture-msg" class="capture-success-msg">✓ FOTO BERHASIL DIAMBIL (FREEZE)</div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="closeModal()" style="flex:1; padding:14px; border-radius:16px; border:none; background:#eee; font-weight:700; font-size:11px; color:#666;">BATAL</button>
+                <button onclick="executeCheckin()" style="flex:2; padding:14px; border-radius:16px; border:none; background:var(--gold); color:white; font-weight:800; font-size:11px; box-shadow: 0 4px 15px rgba(212,175,55,0.3);">CHECK-IN SEKARANG</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- KONFIGURASI ---
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCj4W8OvxkwO32zE7aDo5uqgUjNaamxSSJHOFEWhjT5jGiTrQuCrDNLRp87jFh9-rV-w/exec"; 
+    const SELFIE_URL = "https://script.google.com/macros/s/AKfycbzy244BM3lYzw0ix7jD-_1Qvxu3deKukqHDJbr4RcJQn-K7k5Dgzw1sEBclT2w8jIys/exec";
+    const WA_ENGINE_URL = "https://script.google.com/macros/s/AKfycbyRCxN6s_4e3RmxWa95POqM6GDZZ9PkCreNbqGjJEF4R5jjoN2GZVjwmqQg5nsaUs95Vw/exec";
+    
+    // --- SESSION HANDLER ---
+    const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+    if (!session || !session.ssId) {
+        alert("⚠️ Sesi tidak ditemukan! Silakan login kembali.");
+        window.location.href = "https://sapatamu.weebly.com/";
+    }
+    const CURRENT_SS_ID = session.ssId;
+
+    let masterData = [];
+    let selectedIDs = new Set();
+    let isBusy = false;
+    let html5QrCode = null;
+    let currentStream = null;
+    let capturedBase64 = null;
+
+    function initApp() {
+        initScanner();
+        fetchData();
+        startExtremeWeeblyKiller();
+        setupFullscreen();
+    }
+
+    function setupFullscreen() {
+        const btn = document.getElementById('btn-fs');
+        btn.addEventListener('click', function() {
+            const doc = document.documentElement;
+            if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
+                if (doc.requestFullscreen) doc.requestFullscreen();
+                else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+                btn.style.background = "var(--gold)";
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                btn.style.background = "rgba(26,26,26,0.9)";
+            }
+        });
+    }
+
+    function startExtremeWeeblyKiller() {
+        setInterval(() => {
+            document.querySelectorAll('.weebly-footer, .w-footer, [class*="weebly"], #weebly-footer-signup-container').forEach(el => el.remove());
+        }, 500);
+    }
+
+    function initScanner() {
+        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            { fps: 25, qrbox: 220, aspectRatio: 1.0 }, 
+            onScanSuccess
+        ).catch(err => console.error("Scanner Error", err));
+    }
+
+    async function fetchData() {
+        try {
+            const res = await fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    action: "get_master_data", 
+                    ssId: CURRENT_SS_ID 
+                }) 
+            });
+            const data = await res.json();
+            masterData = data.guestList || [];
+            renderUI();
+        } catch (e) { console.error("Sync error"); }
+    }
+
+    window.renderUI = function() {
+        const listBody = document.getElementById('guest-list');
+        const term = document.getElementById('search-box').value.toLowerCase();
+        
+        const filtered = masterData.filter(row => 
+            (row.nama && row.nama.toLowerCase().includes(term)) || 
+            (row.kode && row.kode.toLowerCase().includes(term))
+        );
+
+        listBody.innerHTML = filtered.map(row => {
+            const isDone = row.jamDatang && row.jamDatang !== "-";
+            const isChecked = selectedIDs.has(row.kode);
+            return `
+                <div class="guest-item ${isDone ? 'checked-in' : ''}">
+                    <div class="item-main">
+                        <div class="item-left">
+                            <div onclick="toggleSelect('${row.kode}')">
+                                ${!isDone ? `<input type="checkbox" ${isChecked ? 'checked' : ''} style="accent-color:var(--gold); transform:scale(1.2)">` : '✅'}
+                            </div>
+                            <div onclick="${isDone ? '' : `toggleSelect('${row.kode}')`}">
+                                <div class="guest-name">${row.nama}</div>
+                                <div class="guest-code">${row.kode}</div>
+                                <div class="guest-alamat">${row.alamat || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="item-right" style="text-align:right">
+                            <div class="guest-cat">${row.kategori || 'REGULER'}</div>
+                            <div class="guest-status" style="color:${isDone ? '#166534':'#9a3412'}">
+                                ${isDone ? `HADIR (${row.realHadir} PAX)` : 'BELUM SCAN'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        updateStats();
+    };
+
+    function onScanSuccess(decodedText) {
+        if (isBusy || document.getElementById('modalConfirm').style.display === 'flex') return;
+        const frame = document.getElementById('target-frame');
+        const guest = masterData.find(r => r.kode && r.kode.toString() === decodedText);
+        
+        frame.classList.add('qr-detected');
+        if (guest && (!guest.jamDatang || guest.jamDatang === "-")) {
+            frame.classList.add('qr-success');
+            setTimeout(() => {
+                frame.classList.remove('qr-success', 'qr-detected');
+                selectedIDs.clear();
+                selectedIDs.add(decodedText);
+                openConfirmModal();
+            }, 400);
+        } else {
+            setTimeout(() => frame.classList.remove('qr-detected'), 1000);
+        }
+    }
+
+    window.toggleSelect = function(id) {
+        if (selectedIDs.has(id)) selectedIDs.delete(id);
+        else selectedIDs.add(id);
+        document.getElementById('selected-count').innerText = selectedIDs.size;
+        document.getElementById('bulk-btn').style.display = selectedIDs.size > 0 ? 'block' : 'none';
+        renderUI();
+    };
+
+    function updateStats() {
+        const rencana = masterData.reduce((acc, r) => acc + (parseInt(r.rencanaHadir) || 0), 0);
+        const real = masterData.reduce((acc, r) => acc + (parseInt(r.realHadir) || 0), 0);
+        document.getElementById('stat-count').innerText = `${real} / ${rencana}`;
+        document.getElementById('stat-souvenir').innerText = masterData.filter(r => r.statusHadiah === "SUDAH KLAIM HADIAH").length;
+    }
+
+    async function startSelfieCamera() {
+        try {
+            if (html5QrCode) await html5QrCode.stop();
+            
+            currentStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "user", width: {ideal: 600}, height: {ideal: 600} }, 
+                audio: false 
+            });
+            const video = document.getElementById('camera-preview');
+            video.srcObject = currentStream;
+            video.onloadedmetadata = () => video.play();
+        } catch (e) { console.log("Selfie cam failed", e); }
+    }
+
+    window.takeSelfie = function() {
+        const video = document.getElementById('camera-preview');
+        const canvas = document.getElementById('capture-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = video.videoWidth || 600;
+        canvas.height = video.videoHeight || 600;
+        
+        video.pause();
+        
+        ctx.save();
+        ctx.translate(canvas.width, 0); 
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        
+        capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+        }
+        
+        document.getElementById('capture-msg').style.display = 'block';
+        const btnSnap = document.getElementById('btn-snap');
+        btnSnap.style.background = "var(--success)";
+        btnSnap.innerText = "FOTO TERKUNCI";
+    };
+
+    window.openConfirmModal = function() {
+        const container = document.getElementById('cards-container');
+        const selectedList = Array.from(selectedIDs).map(id => masterData.find(r => r.kode === id));
+        
+        capturedBase64 = null;
+        document.getElementById('capture-msg').style.display = 'none';
+        document.getElementById('btn-snap').style.background = "var(--dark)";
+        document.getElementById('btn-snap').innerText = "AMBIL FOTO";
+
+        container.innerHTML = selectedList.map(g => `
+            <div style="background:white; border-radius:18px; padding:15px; margin-bottom:12px; border:1px solid #eee;">
+                <div style="font-size:11px; font-weight:800; margin-bottom:10px; color:var(--dark)">${g.nama}</div>
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; gap:8px; background:#f5f5f5; padding:4px; border-radius:12px;">
+                        <button style="border:none; background:white; width:32px; height:32px; border-radius:10px; font-weight:900;" onclick="adjustPax('${g.kode}', -1)">-</button>
+                        <div style="font-size:16px; font-weight:900; min-width:30px; text-align:center; line-height:32px;" id="val-${g.kode}">${g.rencanaHadir || 1}</div>
+                        <button style="border:none; background:white; width:32px; height:32px; border-radius:10px; font-weight:900;" onclick="adjustPax('${g.kode}', 1)">+</button>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <div class="tag-btn" style="font-size:8px; font-weight:800; padding:10px; border-radius:10px; background:#f5f5f5; border:1px solid #eee;" onclick="toggleTag(this)" id="tag-angpao-${g.kode}">ANGPAO</div>
+                        <div class="tag-btn" style="font-size:8px; font-weight:800; padding:10px; border-radius:10px; background:#f5f5f5; border:1px solid #eee;" onclick="toggleTag(this)" id="tag-kado-${g.kode}">KADO</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        const isPriority = selectedList.some(g => ["VIP", "KELUARGA", "VVIP", "PANITIA"].includes(g.kategori?.toUpperCase()));
+        if(isPriority) {
+            document.getElementById('selfie-section').style.display = 'flex';
+            startSelfieCamera();
+        } else {
+            document.getElementById('selfie-section').style.display = 'none';
+        }
+        document.getElementById('modalConfirm').style.display = 'flex';
+    };
+
+    window.toggleTag = function(el) {
+        el.classList.toggle('active');
+        if(el.classList.contains('active')) {
+            el.style.background = 'var(--gold)'; el.style.color = 'white'; el.style.borderColor = 'var(--gold)';
+        } else {
+            el.style.background = '#f5f5f5'; el.style.color = 'black'; el.style.borderColor = '#eee';
+        }
+    };
+
+    window.adjustPax = function(id, delta) {
+        const el = document.getElementById(`val-${id}`);
+        let cur = parseInt(el.innerText);
+        if (cur + delta >= 1) el.innerText = cur + delta;
+    };
+
+    window.closeModal = async function() { 
+        document.getElementById('modalConfirm').style.display = 'none'; 
+        
+        if (currentStream) {
+            currentStream.getTracks().forEach(t => t.stop());
+            currentStream = null;
+        }
+        
+        const video = document.getElementById('camera-preview');
+        video.srcObject = null;
+
+        setTimeout(() => {
+            initScanner();
+        }, 300);
+    };
+
+    window.executeCheckin = async function() {
+        if (isBusy) return;
+        isBusy = true;
+        document.getElementById('loading').style.display = 'flex';
+        
+        try {
+            const list = Array.from(selectedIDs);
+            for (const id of list) {
+                const guest = masterData.find(r => r.kode === id);
+                const pax = document.getElementById(`val-${id}`).innerText;
+                const gift = (document.getElementById(`tag-angpao-${id}`).classList.contains('active') ? "ANGPAO " : "") + (document.getElementById(`tag-kado-${id}`).classList.contains('active') ? "KADO" : "");
+                
+                // 1. Jalankan Check-in Master (Database)
+                const mainCheckin = fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ 
+                        action: "confirm_checkin", 
+                        ssId: CURRENT_SS_ID, 
+                        kodeUnik: id, 
+                        realHadir: pax, 
+                        statusAngpao: gift || "-" 
+                    }) 
+                });
+
+                // 2. Jalankan WA Engine secara PARALEL (Stand-alone)
+                const waBlast = fetch(WA_ENGINE_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        ssId: CURRENT_SS_ID,
+                        kodeUnik: id
+                    })
+                });
+
+                // 3. Jalankan Selfie jika ada
+                let selfieUpload = Promise.resolve();
+                if (capturedBase64) {
+                    selfieUpload = fetch(SELFIE_URL, {
+                        method: 'POST', mode: 'no-cors',
+                        body: JSON.stringify({ 
+                            image: capturedBase64, 
+                            nama: guest.nama, 
+                            kategori: guest.kategori, 
+                            kode: id,
+                            ssId: CURRENT_SS_ID 
+                        })
+                    });
+                }
+
+                await mainCheckin; 
+            }
+
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            selectedIDs.clear();
+            document.getElementById('selected-count').innerText = "0";
+            document.getElementById('bulk-btn').style.display = 'none';
+            await closeModal();
+            await fetchData();
+            
+        } catch (e) { 
+            alert("Gagal memproses check-in. Cek internet."); 
+        } finally { 
+            isBusy = false; 
+            document.getElementById('loading').style.display = 'none'; 
+        }};
+</script>
+</body>
+</html>

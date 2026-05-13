@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu.Ku - Hub Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --gold: #D4AF37; }
+        * { line-height: normal !important; }
+        body { 
+            font-family: 'Montserrat', sans-serif; 
+            background: #fff; 
+            margin: 0; 
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            min-height: 100vh;
+        }
+        .main-wrapper {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+            padding: 30px 15px;
+        }
+        .brand-title {
+            font-weight: 100 !important;
+            letter-spacing: 12px !important;
+            font-size: clamp(20px, 5vw, 26px) !important;
+            text-transform: uppercase !important;
+            margin-bottom: 25px !important;
+            color: #1a1a1a !important;
+        }
+        .tagline-box {
+            padding: 25px 5px !important;
+            margin-bottom: 35px !important;
+            border-top: 1px solid #f0f0f0 !important;
+            border-bottom: 1px solid #f0f0f0 !important;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .tagline-main {
+            font-size: clamp(11px, 3vw, 13px) !important;
+            font-weight: 900 !important;
+            letter-spacing: 1.5px !important;
+            margin-bottom: 10px !important;
+            color: #000 !important;
+            text-transform: uppercase !important;
+        }
+        .tagline-sub {
+            font-size: clamp(9px, 2.5vw, 11px) !important;
+            font-weight: 400 !important;
+            color: #666 !important;
+            line-height: 1.6 !important;
+        }
+        .tagline-highlight {
+            color: var(--gold) !important;
+            font-weight: 800 !important;
+            display: block;
+            margin-top: 6px;
+        }
+        .nav-container {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 16px;
+            width: 100%;
+        }
+        @media (min-width: 768px) {
+            .nav-container {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 15px;
+            border-radius: 20px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            width: 100%;
+        }
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(212, 175, 55, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+        .glass-box {
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: clamp(65px, 15vw, 80px);
+            height: clamp(65px, 15vw, 80px);
+            flex-shrink: 0;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .nav-item:hover .glass-box {
+            border-color: var(--gold);
+            transform: scale(1.05);
+        }
+        .icon-mono {
+            filter: grayscale(1);
+            opacity: 0.7;
+            width: 28px;
+        }
+        .nav-item:hover .icon-mono {
+            filter: none;
+            opacity: 1;
+        }
+        .content-box {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden;
+        }
+        .label-text {
+            font-size: clamp(10px, 2.5vw, 12px) !important;
+            font-weight: 900 !important;
+            letter-spacing: 1.2px !important;
+            text-transform: uppercase !important;
+            color: #111 !important;
+            margin: 0 !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .desc-text {
+            font-size: clamp(8px, 2vw, 10px) !important;
+            font-weight: 500 !important;
+            color: #888 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            line-height: 1.4 !important;
+            margin: 0 !important;
+        }
+        .gold-accent .label-text, 
+        .gold-accent .desc-text { color: var(--gold) !important; }
+        .gold-border { border-bottom: 2px solid rgba(212, 175, 55, 0.4) !important; }
+        .gold-bg { background: rgba(212, 175, 55, 0.03) !important; }
+        #weebly-footer-signup-container, .weebly-footer-signup-container, .w-footer, .weebly-footer { 
+            display: none !important; 
+        }
+        .logout-pill {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid #eee;
+            cursor: pointer;
+            z-index: 1000;
+            transition: 0.3s;
+        }
+        .logout-pill:hover { background: #fdfdfd; border-color: #ef4444; color: #ef4444; }
+    </style>
+</head>
+<body>
+
+<div class="logout-pill" onclick="window.location.href='logout.html'">Sign Out</div>
+
+<div class="main-wrapper">
+    <header>
+        <h1 class="brand-title">SapaTamu.Ku</h1>
+        <div class="tagline-box">
+            <p class="tagline-main">All in One Digital Guestbook Management</p>
+            <p class="tagline-sub">
+                Sentuhan teknologi <b>AI Experience</b> Collaboration with <b>Knowhere Studio</b> to serving you 
+                <span class="tagline-highlight">Instant AI Gallery Face Finder with QR Code.</span>
+            </p>
+        </div>
+    </header>
+
+    <div class="nav-container">
+        <!-- Guestbook -->
+        <div class="nav-item" onclick="nav('formulir_tamu.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/document.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Digital Guestbook</span>
+                <p class="desc-text">Self-Registration & Realtime Check-in</p>
+            </div>
+        </div>
+
+        <!-- Checkin Scanner -->
+        <div class="nav-item" onclick="nav('checkin.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/qr-code.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">QR Scanner</span>
+                <p class="desc-text">Fast Attendance & Selfie Mode</p>
+            </div>
+        </div>
+
+        <!-- On-Site -->
+        <div class="nav-item" onclick="nav('onsite.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/plus.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">On-Site Registration</span>
+                <p class="desc-text">Manual entry at venue</p>
+            </div>
+        </div>
+
+        <!-- Angpao -->
+        <div class="nav-item" onclick="nav('angpao.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/wallet.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Input Angpao</span>
+                <p class="desc-text">Secure Digital Gift Log Record</p>
+            </div>
+        </div>
+
+        <!-- WA Blast -->
+        <div class="nav-item" onclick="nav('wa_blast.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/whatsapp.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">WA Blast Manager</span>
+                <p class="desc-text">Broadcast Messages to Guests</p>
+            </div>
+        </div>
+
+        <!-- Lucky Draw -->
+        <div class="nav-item" onclick="nav('luckydraw.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/trophy.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Lucky Draw</span>
+                <p class="desc-text">Raffle System for Winners</p>
+            </div>
+        </div>
+
+        <!-- Analytics -->
+        <div class="nav-item" onclick="nav('analytics.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/data-configuration.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Analytics Node</span>
+                <p class="desc-text">Attendance & Traffic Insight</p>
+            </div>
+        </div>
+
+        <!-- Welcome Sign -->
+        <div class="nav-item" onclick="nav('welcome.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/image.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Welcome Sign</span>
+                <p class="desc-text">Greeting Screen Display</p>
+            </div>
+        </div>
+
+        <!-- Worker -->
+        <div class="nav-item" onclick="nav('worker.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/print.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Printer Worker</span>
+                <p class="desc-text">Bluetooth Label Printing Engine</p>
+            </div>
+        </div>
+
+        <!-- Digital Invitation -->
+        <div class="nav-item gold-accent" onclick="nav('undangan.html')">
+            <div class="glass-box gold-border">
+                <img src="https://img.icons8.com/ios-filled/50/D4AF37/star.png" class="icon-mono" style="filter:none; opacity:1;"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Digital Invitation</span>
+                <p class="desc-text">Exclusive Personalized Web</p>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="mt-20 text-center pb-10">
+        <p style="font-size: 8px !important; font-weight: 700; letter-spacing: 3px; color: #BBB; text-transform: uppercase;">Powered by Sapatamu.Ku</p>
+    </footer>
+
+</div>
+
+<script>
+    const sessionData = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
+    const session = sessionData ? JSON.parse(sessionData) : null;
+    const SSID = session ? session.ssId : '';
+
+    function nav(target) {
+        if (!SSID && target !== 'undangan.html') {
+            alert("Sesi berakhir, silakan Login terlebih dahulu.");
+            window.location.href = "login.html";
+            return;
+        }
+        window.location.href = target + "?ssId=" + SSID;
+    }
+</script>
+
+</body>
+</html>

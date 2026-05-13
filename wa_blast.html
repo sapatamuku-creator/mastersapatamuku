@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sapa Tamu.ku - Admin</title>
+    <style>
+    .st-container {
+        background-color: #0f0f0f;
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        width: 100%; /* Mengikuti lebar device */
+        max-width: 100%; /* Menghapus batasan 1200px */
+        margin: 0;
+        min-height: 100vh;
+        box-sizing: border-box;
+    }
+    .st-card {
+        background: #1a1a1a;
+        border: 2px solid #333;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+    .st-label {
+        display: block;
+        font-size: 14px !important;
+        font-weight: bold;
+        color: #d4af37;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+    }
+    .st-input {
+        width: 100%;
+        padding: 12px;
+        background: #000;
+        border: 1px solid #444;
+        color: #fff;
+        border-radius: 8px;
+        font-size: 14px !important;
+        margin-bottom: 15px;
+        box-sizing: border-box;
+    }
+    .btn-login-fonnte {
+        width: 100%; 
+        margin-top: 10px; 
+        background: transparent; 
+        border: 1px dashed #d4af37; 
+        color: #d4af37;
+        text-decoration: none;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+    }
+    .btn-login-fonnte:hover {
+        background: rgba(212, 175, 55, 0.1);
+    }
+    .st-btn {
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        border: none;
+        font-size: 13px;
+        text-transform: uppercase;
+        transition: 0.3s;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+    }
+    /* Gaya tombol saat tidak aktif */
+    .btn-disabled { 
+        background: #444 !important; 
+        color: #888 !important; 
+        cursor: not-allowed; 
+    }
+
+    /* Gaya tombol saat aktif (HIJAU) */
+    .btn-green { 
+        background: #2d6a4f !important; 
+        color: #ffffff !important; 
+        box-shadow: 0 4px 15px rgba(45, 106, 79, 0.3);
+    }
+    .btn-green:hover { 
+        background: #40916c !important; 
+    }
+    
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px; border-bottom: 2px solid #333; color: #666; font-size: 13px; position: sticky; top: 0; background: #1a1a1a; }
+    td { padding: 12px; border-bottom: 1px solid #222; font-size: 14px; }
+    
+    .grid-layout { 
+        display: flex; 
+        gap: 25px; 
+        align-items: flex-start;
+    }
+    .sidebar { flex: 0 0 350px; }
+    .main-content { 
+        flex: 1; 
+        min-width: 0; 
+        height: calc(100vh - 100px); /* Tinggi dinamis mengikuti layar */
+        display: flex;
+        flex-direction: column;
+    }
+
+    .table-scroll-area {
+        flex-grow: 1; 
+        overflow-y: auto; /* Aktifkan Scroll Down */
+        border: 1px solid #222; 
+        border-radius: 8px; 
+        background: #000;
+        max-height: 600px; /* Batasi tinggi agar Navigator tetap terlihat */
+    }
+
+    #loading-global {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); 
+        display: flex; justify-content: center;
+        align-items: center; z-index: 9999; flex-direction: column;
+    }
+    .spinner {
+        width: 40px; height: 40px;
+        border: 4px solid #333; border-top: 4px solid #d4af37;
+        border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Floating Fullscreen Button */
+    .fullscreen-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        background: rgba(212, 175, 55, 0.2);
+        border: 1px solid #d4af37;
+        border-radius: 50%;
+        color: #d4af37;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        z-index: 9999;
+        backdrop-filter: blur(5px);
+        transition: 0.3s;
+    }
+    .fullscreen-btn:hover { background: #d4af37; color: #000; transform: scale(1.1); }
+    .fullscreen-btn svg { width: 24px; height: 24px; fill: currentColor; }
+
+    .st-modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        backdrop-filter: blur(8px);
+    }
+    .st-modal-content {
+        background: #1a1a1a;
+        border: 1px solid #d4af37;
+        padding: 40px 30px;
+        border-radius: 20px;
+        text-align: center;
+        max-width: 380px;
+        width: 90%;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        animation: modalPop 0.3s ease-out;
+    }
+    @keyframes modalPop {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+    .st-modal-icon { font-size: 60px; margin-bottom: 20px; display: block; }
+    .st-modal-title { color: #d4af37; margin-bottom: 15px; font-size: 22px; font-weight: bold; letter-spacing: 1px; }
+    .st-modal-msg { color: #888; line-height: 1.6; font-size: 16px; margin-bottom: 30px; }
+    .st-modal-btn { background: #eeeeee; color: #000; border: none; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800; width: 100%; font-size: 16px; text-transform: uppercase; transition: 0.2s; }
+    .st-modal-btn:hover { background: #ffffff; transform: translateY(-2px); }
+    .type-success .st-modal-title { color: #4caf50; }
+    .type-error .st-modal-title { color: #ff4d4d; }
+    .type-warning .st-modal-title { color: #d4af37; }
+
+    .switch-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 34px;
+        height: 18px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+        position: absolute; cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #333;
+        transition: .4s; border-radius: 20px;
+        border: 1px solid #444;
+    }
+    .slider:before {
+        position: absolute; content: "";
+        height: 12px; width: 12px;
+        left: 2px; bottom: 2px;
+        background-color: #fff;
+        transition: .4s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #d4af37; border-color: #d4af37; }
+    input:checked + .slider:before { transform: translateX(16px); }
+
+    @media (max-width: 900px) {
+        .grid-layout { flex-direction: column; }
+        .sidebar { flex: 1 0 100%; width: 100%; }
+    }
+    </style>
+</head>
+<body>
+
+<!-- Tombol Fullscreen Fixed -->
+<div class="fullscreen-btn" onclick="toggleFullScreen()" title="Toggle Fullscreen">
+    <svg id="fs-icon" viewBox="0 0 24 24">
+        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+    </svg>
+</div>
+
+<div id="loading-global">
+    <div class="spinner"></div>
+    <div style="color:#d4af37; font-size: 12px; font-weight:bold; letter-spacing: 2px;" id="loading-text">INITIALIZING...</div>
+</div>
+
+<div id="st-modal" class="st-modal-overlay">
+    <div id="modal-container" class="st-modal-content">
+        <span id="st-modal-icon" class="st-modal-icon">⚠️</span>
+        <div id="st-modal-title" class="st-modal-title">Notifikasi</div>
+        <div id="st-modal-msg" class="st-modal-msg">Pesan akan muncul di sini.</div>
+        <button onclick="closeModal()" class="st-modal-btn">MENGERTI</button>
+    </div>
+</div>
+
+<div id="customToast" style="display:none; position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:rgba(212,175,55,0.9); color:black; padding:10px 20px; border-radius:20px; font-weight:bold; z-index:10001; font-size:12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); white-space: nowrap;"></div>
+
+<div class="st-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px;">
+        <h2 style="margin:0; font-style: italic; font-weight: 900; font-size: 24px;">SAPA TAMU.KU 
+            <span id="connectionStatus" style="background:#cc0000; color:white; font-size:10px; padding:3px 8px; border-radius:4px; font-style: normal; vertical-align: middle;">OFFLINE</span>
+        </h2>
+        <div style="text-align: right;">
+            <div id="weddingTitle" style="font-size: 14px; color: #d4af37; font-weight: bold;">--</div>
+            <div style="font-size: 10px; color: #555;">SSID: <span id="displaySsId">...</span></div>
+        </div>
+    </div>
+
+    <div class="grid-layout">
+        <div class="sidebar">
+            
+            <div class="st-card" style="padding: 15px;">
+                <label class="st-label">Fonnte Account Token (Master)</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="password" id="masterToken" class="st-input" style="margin:0;" placeholder="Token Utama...">
+                    <button onclick="saveMasterToken()" class="st-btn btn-dark">SAVE</button>
+                </div>
+                <button onclick="window.open('https://md.fonnte.com/new/login.php')" class="st-btn" style="width:100%; margin-top:10px; background:#111; border:1px solid #333; color:#d4af37;">
+                    REGISTER / LOGIN FONNTE
+                </button>
+            </div>
+
+            <div class="st-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="color: #d4af37; margin: 0;">CONTROL CENTER</h3>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span id="statusIndicator" style="font-size:10px; padding:2px 6px; border-radius:3px; background:#333;">OFFLINE</span>
+                        <span id="statusCounter" style="color: #666; font-size: 12px; font-family: monospace;">[0/3]</span>
+                    </div>
+                </div>
+
+                <label class="st-label">PILIH PIHAK PENGUNDANG</label>
+                <select id="kategoriSelect" class="st-input" onchange="updateClientView()"></select>
+
+                <label class="st-label">NOMOR WHATSAPP</label>
+                <input type="text" id="clientPhone" class="st-input" placeholder="Contoh: 6285111567829">
+
+                <div class="switch-container">
+                    <label class="st-label" style="margin-bottom: 0;">DEVICE TOKEN</label>
+                    <label class="switch">
+                        <input type="checkbox" id="statusToggle" onchange="manualStatusUpdate()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <input type="text" id="displayToken" class="st-input" readonly style="color: #d4af37; border-style: dashed; font-family: monospace;"> 
+                
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                    <button onclick="remoteSyncDevice()" class="st-btn btn-gold" style="flex:1;">GET TOKEN</button>
+                    <button id="btnBlastAction" onclick="executeMassBlast()" class="st-btn btn-disabled" style="flex:1;" disabled>
+                        BLAST ALL
+                    </button>
+                </div>
+                
+                <button onclick="window.open('https://md.fonnte.com', '_blank')" class="st-btn" style="width:100%; margin-top:10px; background:#111; border:1px solid #333; color:#d4af37;">
+                    CONNECT TO FONNTE
+                </button>
+            </div>
+        </div> 
+        <div class="main-content">
+            <div class="st-card" style="height: 100%; display: flex; flex-direction: column; padding: 15px;">
+                <label class="st-label" style="margin-bottom: 15px;">Database Tamu (<span id="countTamu">0</span>)</label>
+                
+                <div class="table-scroll-area">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>NAMA</th>
+                                <th>PENGUNDANG</th>
+                                <th style="text-align: right;">STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tamuTable">
+                            <tr><td colspan="3" style="text-align:center; color:#444; padding: 40px;">Memuat data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbztsrya7gYVdgsfwG08e1y5SAmM35NWEl-X-d5w_QIC0TIP_NfVmhiICeAbEl1QUsZR6A/exec";
+    const urlParams = new URLSearchParams(window.location.search);
+    const CURRENT_SS_ID = urlParams.get("ssId") || localStorage.getItem("st_saved_ssid");
+
+    if (!CURRENT_SS_ID) {
+        window.location.href = "https://sapatamu.weebly.com/";
+        return;
+    }
+
+    localStorage.setItem("st_saved_ssid", CURRENT_SS_ID);
+    document.getElementById('displaySsId').innerText = CURRENT_SS_ID.substring(0,8) + "...";
+    const API_ENDPOINT = `${WEB_APP_URL}?ssId=${CURRENT_SS_ID}`;
+    
+    let localData = { categories: [], tamu: [], liveUsage: 0 };
+    let isProcessing = false; // State Management Global
+
+    // Fungsi Notifikasi Modern
+    function showToast(msg, duration = 3000) {
+        const toast = document.getElementById('customToast');
+        toast.innerText = msg;
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, duration);
+    }
+
+    window.closeModal = function() {
+        document.getElementById('st-modal').style.display = 'none';
+    };
+
+    function toggleProcessing(isStart, text = "PROCESSING...") {
+        isProcessing = isStart; // Kunci status agar auto-sync tidak masuk
+        document.getElementById('loading-text').innerText = text;
+        document.getElementById('loading-global').style.display = isStart ? 'flex' : 'none';
+    }
+
+    window.refreshData = async function(isInitial = false) {
+        try {
+            const response = await fetch(API_ENDPOINT);
+            localData = await response.json();
+            
+            document.getElementById('connectionStatus').innerText = "ONLINE";
+            document.getElementById('connectionStatus').style.background = "#4caf50";
+            document.getElementById('weddingTitle').innerText = localData.weddingTitle || "--";
+            document.getElementById('masterToken').value = localData.masterToken || '';
+            
+            renderCategories(localData);
+            renderTable();
+        } catch (err) {
+            document.getElementById('connectionStatus').innerText = "OFFLINE";
+            document.getElementById('connectionStatus').style.background = "#cc0000";
+        } finally {
+            if(isInitial) toggleProcessing(false);
+        }
+    }
+
+    window.renderCategories = function(data) {
+        const select = document.getElementById('kategoriSelect');
+        const counterEl = document.getElementById('statusCounter');
+        const currentVal = select.value;
+        
+        const currentUsage = data.liveUsage || 0;
+        const maxSlots = 3;
+        if (counterEl) {
+            counterEl.innerText = `[${currentUsage}/${maxSlots}]`;
+            counterEl.style.color = currentUsage >= maxSlots ? "#ff4d4d" : "#d4af37";
+        }
+
+        select.innerHTML = '<option value="">-- PILIH KATEGORI --</option>';
+        data.categories.forEach(c => {
+            if(c.kategori) {
+                const opt = document.createElement('option');
+                opt.value = c.kategori;
+                opt.textContent = c.kategori;
+                select.appendChild(opt);
+            }
+        });
+
+        if(currentVal) select.value = currentVal;
+        updateClientView();
+    };
+
+    function renderTable() {
+        const tbody = document.getElementById('tamuTable');
+        tbody.innerHTML = localData.tamu.length ? localData.tamu.map(t => `
+            <tr>
+                <td><b>${t.nama}</b></td>
+                <td style="color:#666; font-size:12px;">${t.kategori}</td>
+                <td style="text-align:right; font-weight:bold; color:${t.status.includes('✅') ? '#4caf50' : '#d4af37'}">
+                    ${t.status}
+                </td>
+            </tr>
+        `).join('') : '<tr><td colspan="3" style="text-align:center;">Data Kosong</td></tr>';
+        document.getElementById('countTamu').innerText = localData.tamu.length;
+    }
+
+    window.updateClientView = function() {
+        const selectedKat = document.getElementById('kategoriSelect').value;
+        const found = localData.categories.find(c => c.kategori === selectedKat);
+        
+        const statusInd = document.getElementById('statusIndicator');
+        const btnBlast = document.getElementById('btnBlastAction');
+        const toggle = document.getElementById('statusToggle');
+
+        if (found) {
+            document.getElementById('clientPhone').value = found.nomor || "";
+            document.getElementById('displayToken').value = (found.token && found.token !== "-") ? found.token : "";
+            const isConnect = found.statusConnect === "connect";
+            toggle.checked = isConnect;
+
+            // --- BAGIAN YANG DIUBAH PADA updateClientView ---
+                if (isConnect) {
+                // ... logika online lainnya
+                btnBlast.disabled = false;
+                btnBlast.className = "st-btn btn-green"; // Menjadi Hijau
+            } else {
+                // ... logika offline lainnya
+                btnBlast.disabled = true;
+                btnBlast.className = "st-btn btn-disabled"; // Kembali Abu-abu
+            }
+        } else {
+            document.getElementById('clientPhone').value = "";
+            document.getElementById('displayToken').value = "";
+            toggle.checked = false;
+            statusInd.innerText = "OFFLINE";
+            statusInd.style.background = "#333";
+            btnBlast.disabled = true;
+        }
+    };
+
+    window.saveMasterToken = async function() {
+        const tokenEl = document.getElementById('masterToken');
+        const token = tokenEl.value.trim(); // Gunakan trim() untuk menghindari spasi tak sengaja
+        
+        if (!token) {
+            showToast("⚠️ Token tidak boleh kosong!");
+            return;
+        }
+
+        toggleProcessing(true, "SAVING MASTER TOKEN...");
+        
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: "POST",
+                // Penting: Apps Script terkadang butuh header ini untuk membaca text body dengan benar
+                mode: "cors", 
+                cache: "no-cache",
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8",
+                },
+                body: JSON.stringify({
+                    action: "saveMasterToken",
+                    ssId: CURRENT_SS_ID,
+                    token: token
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === "success") {
+                showToast("✅ Token Master berhasil disimpan!");
+                // Refresh data agar tampilan input tetap sinkron dengan database
+                await refreshData();
+            } else {
+                showToast("❌ Gagal: " + (result.msg || "Terjadi kesalahan sistem"));
+            }
+        } catch (e) {
+            // Jika error "unexpected token <", itu biasanya karena redirect Apps Script
+            showToast("❌ Gagal terhubung ke server.");
+            console.error("SaveMasterToken Error:", e);
+        } finally {
+            toggleProcessing(false);
+        }
+    };
+
+    window.manualStatusUpdate = async function() {
+        const kat = document.getElementById('kategoriSelect').value;
+        const isChecked = document.getElementById('statusToggle').checked;
+        const newStatus = isChecked ? "connect" : "disconnect";
+
+        if(!kat) {
+            showToast("⚠️ Pilih kategori dulu!");
+            document.getElementById('statusToggle').checked = !isChecked;
+            return;
+        }
+
+        toggleProcessing(true, "UPDATING STATUS...");
+        try {
+            await fetch(API_ENDPOINT, {
+                method: "POST",
+                body: JSON.stringify({ action: "toggleStatus", ssId: CURRENT_SS_ID, kategori: kat, status: newStatus })
+            });
+            await refreshData();
+            showToast("✅ Status berhasil diperbarui");
+        } catch (e) { showToast("❌ Gagal update status."); }
+        finally { toggleProcessing(false); }
+    };
+
+    window.remoteSyncDevice = async function() {
+        const kat = document.getElementById('kategoriSelect').value;
+        const phone = document.getElementById('clientPhone').value;
+        if(!kat || !phone) return showToast("⚠️ Data tidak lengkap!");
+
+        toggleProcessing(true, "SYNCING DEVICE...");
+        try {
+            const res = await fetch(API_ENDPOINT, {
+                method: "POST",
+                body: JSON.stringify({ action: "remoteFonnte", ssId: CURRENT_SS_ID, kategori: kat, targetNumber: phone })
+            });
+            const result = await res.json();
+            if (result.status === "success") {
+                showToast("✅ Berhasil! Silahkan Scan QR.");
+                window.open("https://md.fonnte.com/new/device.php", "_blank");
+                await refreshData();
+            } else { showToast("❌ Gagal: " + result.msg); }
+        } catch (e) { showToast("❌ Error koneksi."); }
+        finally { toggleProcessing(false); }
+    };
+
+    window.executeMassBlast = async function() {
+        const kat = document.getElementById('kategoriSelect').value;
+        const token = document.getElementById('displayToken').value;
+        
+        // Mengambil data detail acara dari localData (doGet)
+        const meta = {
+            pengantin: localData.weddingTitle || "Kedua Mempelai",
+            hariTanggal: localData.hariTanggal || "",
+            lokasi: localData.lokasiAcara || "",
+            linkBase: localData.linkInvitation || "",
+            // Baris 4 di Sheet1 biasanya berisi jam detail Akad & Resepsi
+            detailWaktu: "Akad: 08.00 / Resepsi: 10.30" 
+        };
+
+        const targets = localData.tamu.filter(t => t.kategori === kat && !t.status.includes('✅'));
+
+        if(!targets.length) return showToast("□ Semua tamu sudah terkirim!");
+        if(!confirm(`Kirim undangan untuk ${targets.length} tamu?`)) return;
+
+        toggleProcessing(true, "BLASTING MESSAGES...");
+
+        const payload = targets.map(t => {
+            const encodedName = encodeURIComponent(t.nama);
+            const inviteLink = `${meta.linkBase}?id=${t.kode}&u=${encodedName}`;
+            const qrLink = `https://api.qrserver.com/v1/create-qr-code/?data=${t.kode}&size=400x400`;
+
+            return {
+                row: t.row, 
+                target: t.nomor, 
+                token: token,
+                message: `Kepada Yth. Bapak/Ibu/Saudara/i\n*${t.nama.toUpperCase()}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\n*Tepat pada pukul [${t.sesi || "Sesuai Jadwal"}]*\n\n*${meta.pengantin}*\n▫️ ${meta.hariTanggal}\n▫️ ${meta.detailWaktu}\n▫️ Lokasi: ${meta.lokasi}\n\nInformasi lengkap mengenai jadwal, lokasi, dan kartu akses digital dapat diakses melalui tautan berikut:\n${inviteLink}\n\n*Mohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara:*\n${qrLink}\n\nMerupakan suatu kehormatan bagi kami apabila Anda berkenan hadir. Terima kasih.`
+            };
+        });
+
+        try {
+            const res = await fetch(API_ENDPOINT, {
+                method: "POST",
+                body: JSON.stringify({ 
+                    action: "executeFonnteBlast", 
+                    ssId: CURRENT_SS_ID, 
+                    payload: payload 
+                })
+            });
+            const result = await res.json();
+            
+            if(result.status === "success") {
+                showToast(`✅ Berhasil mengirim ${result.sent} pesan!`);
+            } else {
+                showToast("❌ Gagal mengirim pesan.");
+            }
+            
+            // Memastikan dashboard terupdate dengan tanda centang (✅) terbaru
+            await refreshData(); 
+        } catch (e) { 
+            showToast("❌ Error koneksi saat blasting."); 
+        } finally { 
+            toggleProcessing(false); 
+        }
+    };
+    // INIT & AUTO SYNC
+    refreshData(true);
+    
+    // Auto-sync hanya jika tidak sedang memproses aksi manual
+    setInterval(() => { 
+        // CEK: Jangan refresh jika sedang BLAST atau sedang ada MODAL popup
+        const isModalOpen = document.getElementById('st-modal').style.display === 'flex';
+        
+        if (!isProcessing && !isModalOpen && document.visibilityState === 'visible') { 
+            refreshData(); 
+        } 
+    }, 15000); // 15 detik sudah cukup ideal untuk pengawasan
+})();
+</script>
+</body>
+</html>

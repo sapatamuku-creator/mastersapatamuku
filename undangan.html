@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bintang & Anisa - SapaTamu.Ku</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Alice&family=Montserrat:wght@200;400;600;700&display=swap" rel="stylesheet">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // Placeholder for firebase config - will be injected or need to be set
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        if (firebaseConfig.apiKey) {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const auth = getAuth(app);
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+            window.db = db;
+            window.collection = collection;
+            window.addDoc = addDoc;
+            window.onSnapshot = onSnapshot;
+            window.query = query;
+            window.serverTimestamp = serverTimestamp;
+            window.appId = appId;
+
+            async function init() {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    if (typeof loadWishes === 'function') loadWishes();
+                } catch (err) {
+                    console.error("Auth error:", err);
+                }
+            }
+            init();
+        }
+    </script>
+
+    <style>
+        :root { --primary: #1a1a1a; --bg: #ffffff; --gold: #D4AF37; }
+        body { 
+            font-family: 'Montserrat', sans-serif; 
+            background: var(--bg); 
+            color: var(--primary); 
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            scroll-behavior: smooth;
+        }
+        .font-serif { font-family: 'Alice', serif; }
+        
+        .reveal { opacity: 0; transform: translateY(30px); transition: all 1s cubic-bezier(0.2, 1, 0.3, 1); }
+        .reveal-left { opacity: 0; transform: translateX(-30px); transition: all 1s cubic-bezier(0.2, 1, 0.3, 1); }
+        .reveal-right { opacity: 0; transform: translateX(30px); transition: all 1s cubic-bezier(0.2, 1, 0.3, 1); }
+        .reveal.active, .reveal-left.active, .reveal-right.active { opacity: 1; transform: translate(0); }
+        
+        .bg-pattern { 
+            background-color: #ffffff;
+            background-image: url("https://www.transparenttextures.com/patterns/cream-paper.png"); 
+        }
+
+        .carousel-container {
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            padding: 20px 0;
+        }
+        .carousel-track {
+            display: flex;
+            width: max-content;
+            gap: 16px;
+            animation: scroll 40s linear infinite;
+        }
+        .carousel-track:hover { animation-play-state: paused; }
+        
+        @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(-50% - 8px)); }
+        }
+
+        .carousel-card {
+            width: 200px; height: 280px; flex-shrink: 0; border-radius: 16px;
+            overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: #eee;
+        }
+
+        .btn-primary { 
+            background: #1a1a1a; color: white; border-radius: 9999px; 
+            font-size: 10px; font-weight: bold; text-transform: uppercase; 
+            letter-spacing: 0.25em; padding: 18px 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+
+        .hero-section { width: 100%; height: 100vh; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .hero-image-wrapper { position: absolute; width: 100%; height: 100%; overflow: hidden; }
+        .hero-image { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; }
+
+        .wish-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #f0f0f0;
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        .music-bars { display: flex; align-items: flex-end; gap: 2px; height: 12px; }
+        .bar { width: 2px; background: var(--gold); animation: pulse 0.5s ease-in-out infinite alternate; }
+        @keyframes pulse { from { height: 20%; } to { height: 100%; } }
+        .paused .bar { animation-play-state: paused; height: 2px; }
+
+        .countdown-item { display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+        .countdown-val { font-size: 2.2rem; font-family: 'Alice', serif; color: var(--gold); font-weight: bold; line-height: 1; }
+        .countdown-label { font-size: 9px; text-transform: uppercase; color: #D4AF37; opacity: 0.8; margin-top: 5px; font-weight: bold; }
+        
+        #wishes-container::-webkit-scrollbar { width: 4px; }
+        #wishes-container::-webkit-scrollbar-thumb { background: #eee; border-radius: 10px; }
+
+        .gift-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            transition: transform 0.3s ease;
+        }
+        .gift-card:hover { transform: translateY(-5px); }
+        .copy-toast {
+            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: #1a1a1a; color: white; padding: 10px 24px; border-radius: 50px;
+            font-size: 10px; font-weight: bold; z-index: 200; opacity: 0; transition: 0.3s;
+        }
+
+        /* Shortcut Tab */
+        .shortcut-tab {
+            position: fixed;
+            right: -2px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 90;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .tab-item {
+            background: white;
+            border: 1.5px solid #f0f0f0;
+            border-right: none;
+            padding: 14px 12px;
+            border-radius: 12px 0 0 12px;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.05);
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tab-item:hover {
+            padding-right: 20px;
+            background: #fafafa;
+            color: var(--gold);
+        }
+
+        .tab-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: #1a1a1a;
+            white-space: nowrap;
+        }
+
+        .tab-item svg {
+            margin-bottom: 8px;
+            transform: rotate(90deg);
+            color: var(--gold);
+        }
+    </style>
+</head>
+<body class="bg-pattern">
+
+    <!-- AUDIO ELEMENT INTEGRATED -->
+    <audio id="main-audio" loop preload="auto">
+        <source src="https://raw.githubusercontent.com/opick8c/Annisa-Bintang/main/sal-priadi-ada-titik-titik-di-ujung-doa_x6a7RHIL~2.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="copy-toast" class="copy-toast">Berhasil disalin ke Clipboard!</div>
+
+    <!-- COVER SECTION -->
+    <div id="cover" class="fixed inset-0 z-[120] flex items-center justify-center text-center bg-white transition-all duration-[1000ms] ease-in-out">
+        <div class="absolute inset-0">
+            <img src="https://lh3.googleusercontent.com/u/0/d/14gH9bNF-gfzUkzcMIEoiOG7YdWIPtoWA" class="w-full h-full object-cover opacity-30" alt="Cover BG">
+        </div>
+        <div class="relative z-10 px-8">
+            <p class="text-[9px] tracking-[0.5em] uppercase mb-6 text-neutral-400 font-bold">The Wedding Celebration</p>
+            <h1 class="text-5xl font-serif text-neutral-900 mb-12">Bintang <br>& Anisa</h1>
+            <div class="mb-12">
+                <p class="text-[9px] tracking-[0.2em] text-neutral-400 uppercase mb-3">Yth. Bapak/Ibu/Saudara/i</p>
+                <h2 id="guest-name-display" class="text-2xl font-serif italic text-neutral-800">Tamu Undangan</h2>
+            </div>
+            <button onclick="startInvitation()" class="btn-primary">Buka Undangan</button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="content" class="hidden opacity-0 transition-opacity duration-1000">
+        
+        <!-- SIDE SHORTCUT TAB -->
+        <div id="side-shortcut" class="shortcut-tab opacity-0 transition-opacity duration-700">
+            <div onclick="scrollToAccessCard()" class="tab-item">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M15 5l-7 7 7 7"></path>
+                </svg>
+                <span class="tab-label">Kartu Akses</span>
+            </div>
+        </div>
+
+        <!-- HERO SECTION -->
+        <section id="hero-target" class="reveal">
+            <div class="hero-section">
+                <div class="hero-image-wrapper">
+                    <img src="https://lh3.googleusercontent.com/u/0/d/1vlJ_pl56qxth-WpenNJ2BUTTTBhdtGlQ" class="hero-image" alt="Hero">
+                </div>
+                <div class="hero-content text-center z-10 px-4">
+                    <p class="text-[10px] tracking-[0.6em] font-serif italic mb-8 text-[#D4AF37]">#SatuBINTANGuntukANISA</p>
+                    <p class="text-[10px] tracking-[0.6em] uppercase font-bold mb-4 text-[#D4AF37]">Save The Date</p>
+                    <h2 class="text-5xl font-serif italic mb-4 text-[#D4AF37]">Bintang & Anisa</h2>
+                    <p class="text-xs tracking-[0.3em] uppercase font-bold mb-8 text-[#D4AF37]">Senin, 25 Mei 2026</p>
+                    
+                    <div id="countdown" class="flex justify-center gap-4 mt-4 py-6 px-4 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30">
+                        <div class="countdown-item"><span id="days" class="countdown-val">00</span><span class="countdown-label">Days</span></div>
+                        <div class="countdown-item"><span id="hours" class="countdown-val">00</span><span class="countdown-label">Hours</span></div>
+                        <div class="countdown-item"><span id="mins" class="countdown-val">00</span><span class="countdown-label">Mins</span></div>
+                        <div class="countdown-item"><span id="secs" class="countdown-val">00</span><span class="countdown-label">Secs</span></div>
+                    
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="px-8 space-y-24 my-32">
+            <div class="text-center reveal-left">
+                <h4 class="font-serif italic text-3xl mb-1">the Groom</h4>
+                <div class="w-48 h-64 mx-auto rounded-2xl overflow-hidden shadow-xl mb-6 border-4 border-white">
+                    <img src="https://lh3.googleusercontent.com/u/0/d/1FNDluu00XXwPZjojzHrj7VyInSxEECsw" class="w-full h-full object-cover">
+                </div>
+                <h4 class="font-serif italic text-3xl mb-1">Bintang Zahlahar Trijati</h4>
+                <p class="text-[9px] font-medium uppercase tracking-[0.2em] opacity-60 leading-loose mb-4">Putra ke-4 dari Bp. Nana Herna Sutisna <br>& Almh. Ibu Eva Refliana</p>
+                <a href="https://instagram.com/bintangzt" target="_blank" class="inline-flex items-center gap-2 text-[9px] font-bold tracking-widest text-neutral-400 border border-neutral-200 px-4 py-2 rounded-full">@BINTANGZT</a>
+            </div>
+            
+            <div class="text-center reveal-right">
+                <h4 class="font-serif italic text-3xl mb-1">the Bride</h4>
+                <div class="w-48 h-64 mx-auto rounded-2xl overflow-hidden shadow-xl mb-6 border-4 border-white">
+                    <img src="https://lh3.googleusercontent.com/d/1ihzu9HM_r7ChyXktNlOZb5ARkIZTknjd" class="w-full h-full object-cover">
+                </div>
+                <h4 class="font-serif italic text-3xl mb-1">Anisa Nur Fitria</h4>
+                <p class="text-[9px] font-medium uppercase tracking-[0.2em] opacity-60 leading-loose mb-4">Putri ke-1 dari Bp. Udin Jaenudin <br>& Ibu Susi Yamayanti</p>
+                <a href="https://instagram.com/anisanrf" target="_blank" class="inline-flex items-center gap-2 text-[9px] font-bold tracking-widest text-neutral-400 border border-neutral-200 px-4 py-2 rounded-full">@ANISANRF</a>
+            </div>
+        </section>
+
+        <!-- WEDDING EVENTS -->
+        <section class="py-24 px-8 bg-neutral-50/50 text-center">
+            <div class="max-w-xl mx-auto space-y-16">
+                <h3 class="text-2xl font-serif italic mb-4 reveal">Wedding Events</h3>
+                
+                <div class="reveal bg-white p-8 rounded-3xl shadow-sm border border-neutral-100">
+                    <div class="aspect-[4/5] w-full rounded-2xl overflow-hidden mb-6">
+                        <img src="https://lh3.googleusercontent.com/d/1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz" class="w-full h-full object-cover" alt="Foto Akad Nikah">
+                    </div>
+                    <p class="text-[11px] font-bold tracking-[0.3em] mb-3 uppercase text-[#D4AF37]">Akad Nikah</p>
+                    <p class="text-lg font-serif mb-4">08.00 WIB - Selesai</p>
+                    <p class="text-[11px] uppercase tracking-widest text-neutral-500 leading-relaxed mb-8">Lingkungan Marga Mulya RT. 10 RW 04 <br> Kelurahan Babakan Jawa, Majalengka</p>
+                    <a href="https://maps.app.goo.gl/JkyBKp5tJn5yNDx78" target="_blank" class="inline-block px-10 py-4 border border-[#D4AF37] rounded-full text-[9px] uppercase tracking-widest font-bold text-[#D4AF37]">Petunjuk Lokasi</a>
+                </div>
+
+                <div class="reveal bg-white p-8 rounded-3xl shadow-sm border border-neutral-100">
+                    <div class="aspect-[4/5] w-full rounded-2xl overflow-hidden mb-6">
+                        <img src="https://lh3.googleusercontent.com/d/1eKbny1NdR_7sfjqvglG5aQJ_X4zFFB37" class="w-full h-full object-cover" alt="Foto Resepsi">
+                    </div>
+                    <p class="text-[11px] font-bold tracking-[0.3em] mb-3 uppercase text-[#D4AF37]">Resepsi</p>
+                    <p class="text-lg font-serif mb-4">12.30 WIB - Selesai</p>
+                    <p class="text-[11px] uppercase tracking-widest text-neutral-500 leading-relaxed mb-8">Lingkungan Marga Mulya RT. 10 RW 04 <br> Kelurahan Babakan Jawa, Majalengka</p>
+                    <a href="https://maps.app.goo.gl/JkyBKp5tJn5yNDx78" target="_blank" class="inline-block px-10 py-4 border border-[#D4AF37] rounded-full text-[9px] uppercase tracking-widest font-bold text-[#D4AF37]">Petunjuk Lokasi</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- QR SECTION -->
+        <section id="access-card-section" class="py-24 px-8 bg-neutral-50/50 text-center">
+            <div class="max-w-md mx-auto space-y-20">
+                <div class="reveal space-y-10">
+                    <h3 class="text-2xl font-serif italic">Kartu Akses</h3>
+                    <p class="text-[9px] tracking-[0.3em] text-neutral-400 uppercase">Mohon tunjukkan QR Code ini kepada petugas agar data Anda otomatis terintegrasi ke dalam sistem buku tamu digital kami.</p>
+                    <div class="w-48 h-48 mx-auto p-3 bg-white border border-neutral-100 rounded-3xl shadow-lg">
+                        <img id="qr-code" src="" class="w-full h-full object-contain">
+                    </div>
+                    <p id="guest-id-label" class="text-[10px] font-bold tracking-widest text-neutral-300"></p>
+                    <a id="rsvp-link" href="#" target="_blank" class="block w-full py-5 bg-neutral-900 text-white rounded-full text-[10px] font-bold uppercase tracking-[0.3em]">Konfirmasi Kehadiran</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- GIFT SECTION -->
+        <section class="py-24 px-8 bg-white text-center">
+            <div class="max-w-md mx-auto">
+                <div class="reveal mb-12">
+                    <h3 class="text-2xl font-serif italic mb-2">Wedding Gift</h3>
+                    <p class="text-[9px] tracking-[0.3em] text-neutral-400 uppercase">Tanda Kasih</p>
+                </div>
+                <div class="reveal space-y-4">
+                    <div class="gift-card">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2e/BRI_2020.svg" class="h-6 mx-auto mb-6 grayscale opacity-80" alt="BRI">
+                        <p class="text-lg font-serif text-neutral-800 mb-1">0046 0101 6863 537</p>
+                        <p class="text-[9px] uppercase tracking-widest text-neutral-400 mb-6">Atas Nama: Bintang Zahlahar Trijati</p>
+                        <button onclick="copyToClipboard('004601016863537')" class="px-8 py-3 border border-neutral-200 rounded-full text-[8px] uppercase tracking-widest font-bold text-neutral-400 hover:bg-neutral-50">Salin No. Rekening</button>
+                    </div>
+                    <div class="gift-card">
+                        <img src="https://ridergalau.id/wp-content/uploads/2026/01/Logo-Bank-BJB.png" class="h-8 mx-auto mb-6 grayscale opacity-80" alt="BJB">
+                        <p class="text-lg font-serif text-neutral-800 mb-1">0150614368104</p>
+                        <p class="text-[9px] uppercase tracking-widest text-neutral-400 mb-6">Atas Nama: Anisa Nur Fitria</p>
+                        <button onclick="copyToClipboard('0150614368104')" class="px-8 py-3 border border-neutral-200 rounded-full text-[8px] uppercase tracking-widest font-bold text-neutral-400 hover:bg-neutral-50">Salin No. Rekening</button>
+                    </div>
+                    <!-- DANA -->
+                    <div class="gift-card">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Logo_dana_blue.svg/1280px-Logo_dana_blue.svg.png" class="h-6 mx-auto mb-6 grayscale opacity-80" alt="DANA">
+                        <p class="text-lg font-serif text-neutral-800 mb-1">082246379369</p>
+                        <p class="text-[9px] uppercase tracking-widest text-neutral-400 mb-6">Atas Nama: Anisa Nur Fitria</p>
+                        <button onclick="copyToClipboard('082246379369')" class="px-8 py-3 border border-neutral-200 rounded-full text-[8px] uppercase tracking-widest font-bold text-neutral-400 hover:bg-neutral-50 transition-colors">Salin No. HP</button>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- WISHES SECTION -->
+        <section class="py-24 px-8 bg-neutral-50/30 text-center">
+            <div class="max-w-md mx-auto">
+                <div class="reveal mb-12">
+                    <h3 class="text-2xl font-serif italic mb-2">Wishes & Prayers</h3>
+                    <p class="text-[9px] tracking-[0.3em] text-neutral-400 uppercase">Kirimkan Doa & Ucapan Anda</p>
+                </div>
+                <div class="reveal bg-white p-8 rounded-3xl mb-12 shadow-sm border border-neutral-100 text-left">
+                    <input id="wish-name" type="text" placeholder="Nama Anda" class="w-full px-4 py-3 bg-neutral-50 border border-neutral-100 rounded-xl text-xs mb-3 focus:outline-none">
+                    <textarea id="wish-text" rows="3" placeholder="Tulis ucapan & doa..." class="w-full px-4 py-3 bg-neutral-50 border border-neutral-100 rounded-xl text-xs mb-4 focus:outline-none"></textarea>
+                    <button onclick="sendWish()" id="btn-wish" class="w-full py-4 bg-neutral-900 text-white rounded-full text-[9px] font-bold uppercase tracking-widest">Kirim Ucapan</button>
+                </div>
+                <div id="wishes-container" class="space-y-4 max-h-[500px] overflow-y-auto px-2 reveal"></div>
+            </div>
+        </section>
+
+        <!-- GALLERY -->
+        <section class="py-24 overflow-hidden reveal">
+            <h3 class="text-2xl font-serif italic mb-12 text-center">Our Gallery</h3>
+            <div class="carousel-container">
+                <div class="carousel-track">
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/1BhJSV6aA-tluZSf8mA_LztoZ-leqHeGZ" class="w-full h-full object-cover"></div>
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/1vlJ_pl56qxth-WpenNJ2BUTTTBhdtGlQ" class="w-full h-full object-cover"></div>
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/1FNDluu00XXwPZjojzHrj7VyInSxEECsw" class="w-full h-full object-cover"></div>
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/1ihzu9HM_r7ChyXktNlOZb5ARkIZTknjd" class="w-full h-full object-cover"></div>
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/1Ok5yfJHsCAefOaPzo2vGacmkttvMNZXC" class="w-full h-full object-cover"></div>
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/14gH9bNF-gfzUkzcMIEoiOG7YdWIPtoWA" class="w-full h-full object-cover"></div>
+                    <!-- Duplicate for loop -->
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/1BhJSV6aA-tluZSf8mA_LztoZ-leqHeGZ" class="w-full h-full object-cover"></div>
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/1vlJ_pl56qxth-WpenNJ2BUTTTBhdtGlQ" class="w-full h-full object-cover"></div>
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/1FNDluu00XXwPZjojzHrj7VyInSxEECsw" class="w-full h-full object-cover"></div>
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/1ihzu9HM_r7ChyXktNlOZb5ARkIZTknjd" class="w-full h-full object-cover"></div>
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/1Ok5yfJHsCAefOaPzo2vGacmkttvMNZXC" class="w-full h-full object-cover"></div>
+                    <div class="carousel-card"><img src="https://lh3.googleusercontent.com/u/0/d/14gH9bNF-gfzUkzcMIEoiOG7YdWIPtoWA" class="w-full h-full object-cover"></div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="py-32 px-8 text-center bg-white reveal">
+            <h3 class="text-3xl font-serif italic mb-6">Thank You</h3>
+            <h2 class="text-5xl font-serif italic text-neutral-900 mb-4">Bintang & Anisa</h2>
+            <p class="text-[8px] font-bold uppercase tracking-[0.8em] mt-24 text-[#D4AF37]">Design by SapaTamu.Ku</p>
+        </footer>
+    </div>
+
+    <!-- MUSIC PLAYER UI -->
+    <div id="music-btn" class="fixed z-[110] bottom-8 right-8 hidden opacity-0 transition-all duration-500">
+        <button onclick="toggleMusic()" class="w-14 h-14 bg-white border shadow-2xl rounded-full flex flex-col items-center justify-center gap-1">
+            <div id="visualizer" class="music-bars paused">
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            </div>
+            <p id="music-txt" class="text-[7px] font-bold uppercase tracking-tighter text-neutral-400">PLAY</p>
+        </button>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const guestName = decodeURIComponent(urlParams.get('u') || "Tamu Undangan");
+        const guestId = urlParams.get('id') || "STK-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+        const audio = document.getElementById('main-audio');
+        let isPlaying = false;
+
+        function copyToClipboard(text) {
+            const tempInput = document.createElement("input");
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            
+            const toast = document.getElementById('copy-toast');
+            if(toast) {
+                toast.style.opacity = '1';
+                setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+            }
+        }
+
+        function scrollToAccessCard() {
+            const section = document.getElementById('access-card-section');
+            if (section) section.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function updateCountdown() {
+            const weddingDate = new Date("May 25, 2026 08:00:00").getTime();
+            const now = new Date().getTime();
+            const gap = weddingDate - now;
+            if (gap > 0) {
+                const d = Math.floor(gap / (1000 * 60 * 60 * 24));
+                const h = Math.floor((gap % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((gap % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((gap % (1000 * 60)) / 1000);
+                document.getElementById("days").innerText = d.toString().padStart(2, '0');
+                document.getElementById("hours").innerText = h.toString().padStart(2, '0');
+                document.getElementById("mins").innerText = m.toString().padStart(2, '0');
+                document.getElementById("secs").innerText = s.toString().padStart(2, '0');
+            }
+        }
+        setInterval(updateCountdown, 1000);
+
+        window.onload = () => {
+            updateCountdown();
+            document.getElementById('guest-name-display').innerText = guestName;
+            if(document.getElementById('wish-name')) document.getElementById('wish-name').value = guestName !== "Tamu Undangan" ? guestName : "";
+            document.getElementById('qr-code').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${guestId}`;
+            document.getElementById('guest-id-label').innerText = `ID: ${guestId}`;
+            const waMsg = `Halo Bintang & Anisa, saya ${guestName} mengonfirmasi akan hadir.`;
+            document.getElementById('rsvp-link').href = `https://wa.me/6282214578132?text=${encodeURIComponent(waMsg)}`;
+        };
+
+        window.startInvitation = function() {
+            audio.play().then(() => { 
+                isPlaying = true; 
+                updateMusicUI(); 
+            }).catch(e => console.warn("Audio play blocked:", e));
+
+            document.getElementById('cover').style.transform = 'translateY(-100%)';
+            const content = document.getElementById('content');
+            content.classList.remove('hidden');
+            setTimeout(() => {
+                content.style.opacity = '1';
+                const mBtn = document.getElementById('music-btn');
+                mBtn.classList.remove('hidden');
+                setTimeout(() => mBtn.style.opacity = '1', 100);
+
+                const sTab = document.getElementById('side-shortcut');
+                setTimeout(() => sTab.style.opacity = '1', 500);
+
+                initObserver();
+                document.getElementById('hero-target').scrollIntoView({ behavior: 'smooth' });
+            }, 600);
+        };
+
+        window.toggleMusic = function() {
+            isPlaying ? audio.pause() : audio.play();
+            isPlaying = !isPlaying;
+            updateMusicUI();
+        };
+
+        function updateMusicUI() {
+            const visualizer = document.getElementById('visualizer');
+            if(visualizer) isPlaying ? visualizer.classList.remove('paused') : visualizer.classList.add('paused');
+            const musicTxt = document.getElementById('music-txt');
+            if(musicTxt) musicTxt.innerText = isPlaying ? "PAUSE" : "PLAY";
+        }
+
+        function initObserver() {
+            const obs = new IntersectionObserver((entries) => {
+                entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('active'); });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => obs.observe(el));
+        }
+
+        window.sendWish = async function() {
+            const name = document.getElementById('wish-name').value;
+            const text = document.getElementById('wish-text').value;
+            if(!name || !text || !window.db) return;
+
+            const btn = document.getElementById('btn-wish');
+            btn.disabled = true;
+            btn.innerText = "Mengirim...";
+
+            try {
+                await addDoc(collection(window.db, 'artifacts', window.appId, 'public', 'data', 'wishes'), {
+                    name, text, timestamp: serverTimestamp()
+                });
+                document.getElementById('wish-text').value = "";
+                btn.innerText = "Terkirim!";
+                setTimeout(() => { btn.innerText = "Kirim Ucapan"; btn.disabled = false; }, 2000);
+            } catch (e) {
+                btn.innerText = "Gagal";
+                setTimeout(() => { btn.innerText = "Kirim Ucapan"; btn.disabled = false; }, 2000);
+            }
+        };
+
+        window.loadWishes = function() {
+            if(!window.db) return;
+            const q = query(collection(window.db, 'artifacts', window.appId, 'public', 'data', 'wishes'));
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('wishes-container');
+                if(!container) return;
+                const wishes = [];
+                snapshot.forEach(doc => wishes.push(doc.data()));
+                wishes.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+                container.innerHTML = '';
+                const adminDiv = document.createElement('div');
+                adminDiv.className = "wish-card border-l-4 border-[#D4AF37]";
+                adminDiv.innerHTML = `<p class="text-[11px] font-bold text-neutral-800 mb-1">Admin SapaTamu.Ku ✨</p>
+                    <p class="text-[10px] text-neutral-500">Selamat menempuh hidup baru untuk Bintang & Anisa!</p>`;
+                container.appendChild(adminDiv);
+
+                wishes.forEach(wish => {
+                    const div = document.createElement('div');
+                    div.className = "wish-card";
+                    div.innerHTML = `<p class="text-[11px] font-bold text-neutral-800 mb-1">${wish.name || 'Tamu'}</p>
+                        <p class="text-[10px] text-neutral-500">${wish.text}</p>`;
+                    container.appendChild(div);
+                });
+            }, (err) => console.error("Firestore Listen Error:", err));
+        }
+    </script>
+</body>
+</html>

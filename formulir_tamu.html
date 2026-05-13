@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu.Ku - Digital Guestbook V7.6</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --primary: #1a1a1a; --bg: #ffffff; --gold: #D4AF37; }
+        
+        /* PERTAHANAN BANNER WEEBLY */
+        div#weebly-footer-signup-container, .weebly-footer-signup-container, 
+        #weebly-footer, .weebly-footer, .weebly-footer-mobile, 
+        iframe[src*="weebly.com"], .w-footer {
+            display: none !important; visibility: hidden !important; 
+            height: 0 !important; opacity: 0 !important; pointer-events: none !important;
+        }
+
+        body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--primary); margin: 0; overflow-x: hidden; user-select: none; }
+        
+        /* FULLSCREEN WRAPPER */
+        #sapatamu-master-wrapper { background: #fff; min-height: 100vh; transition: opacity 0.3s ease; }
+        body.is-fullscreen #sapatamu-master-wrapper {
+            width: 100vw; height: 100vh; overflow-y: auto;
+        }
+
+        /* MODAL POPUP STYLES - GLASSMORPHISM */
+        #editModalOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.7);
+            width: 100%;
+            max-width: 450px;
+            border-radius: 35px;
+            padding: 35px;
+            position: relative;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #1a1a1a;
+            opacity: 0.5;
+            transition: 0.3s;
+        }
+        .close-modal:hover { opacity: 1; }
+
+        .modal-content .sapatamu-input {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+            border-radius: 12px;
+            padding: 12px 15px;
+            font-size: 13px;
+        }
+
+        #sapatamu-app { max-width: 600px; margin: 0 auto; background: #FFFFFF; min-height: 100vh; padding-bottom: 80px; }
+        
+        .input-group { border-bottom: 1.5px solid #F0F0F0; margin-bottom: 25px; display: block; }
+        label { display: block; font-size: 8px; font-weight: 900; color: #BBB; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; }
+        input, select { width: 100%; border: none; background: transparent; padding: 10px 0; font-size: 15px; font-weight: 700; color: #000; outline: none; }
+        
+        .btn-save { width: 100%; background: #000; color: #FFF; border: none; border-radius: 18px; padding: 22px; font-size: 11px; font-weight: 900; letter-spacing: 2.5px; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .btn-save:active { transform: scale(0.96); }
+
+        .qty-control { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
+        .qty-btn { width: 35px; height: 35px; border-radius: 50%; border: 1.5px solid #EEE; background: #FFF; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        
+        #fs-toggle { position: fixed; bottom: 20px; right: 20px; z-index: 2147483645; background: #1A1A1A; color: #FFF; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+
+        #v3-draft-list-container { max-height: 550px; overflow-y: auto; margin-top: 25px; padding-right: 5px; transition: all 0.3s ease; }
+        #v3-draft-list-container::-webkit-scrollbar { width: 4px; }
+        #v3-draft-list-container::-webkit-scrollbar-thumb { background: #EEE; border-radius: 10px; }
+
+        #v3-draft-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        @media (max-width: 480px) {
+            #v3-draft-list { gap: 8px; }
+        }
+        .delete-guest-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 22px;
+            height: 22px;
+            background: rgba(255, 77, 77, 0.1);
+            color: #ff4d4d;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            border: none;
+            z-index: 20;
+        }
+        .delete-guest-btn:hover {
+            background: #ff4d4d;
+            color: white;
+            transform: scale(1.1);
+        }
+        .guest-item-card { position: relative; transition: all 0.3s ease; }
+
+        .static-edit-box {
+            border: 1.5px solid var(--gold);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(212, 175, 55, 0.05);
+        }
+        .static-edit-box:active { transform: scale(0.98); background: rgba(212, 175, 55, 0.1); }
+        .static-edit-box span { font-size: 10px; font-weight: 900; letter-spacing: 1px; color: #1a1a1a; text-transform: uppercase; }
+        .static-edit-box .icon { font-size: 16px; color: var(--gold); }
+
+        /* LOADING & OVERLAY BLOCKER */
+        .loading-overlay { 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(255,255,255,0.7); 
+            backdrop-filter: blur(4px);
+            z-index: 1000000; 
+            display: none; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 900; 
+            color: var(--gold); 
+            letter-spacing: 2px;
+            pointer-events: all; /* Kunci semua klik */
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(212, 175, 55, 0.1);
+            border-left-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .sapatamu-btn { width: 100%; padding: 18px; border-radius: 15px; font-weight: 800; font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: 0.3s; color: #fff; border: none; }
+        
+        /* REDUPKAN AREA SAAT PROSES */
+        .is-processing { opacity: 0.4; filter: grayscale(0.5); pointer-events: none; }
+    </style>
+</head>
+<body id="main-body">
+
+<!-- MODAL LOADING GLOBAL -->
+<div id="loading-global" class="loading-overlay">
+    <div class="spinner"></div>
+    <span id="loading-text">SYNCING DATA...</span>
+</div>  
+
+<button id="fs-toggle" onclick="toggleFullScreen()">
+    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+</button>
+
+<div id="sapatamu-master-wrapper">
+    
+    <div id="sapatamu-app">
+        <!-- Header Event -->
+        <div style="padding: 45px 25px 30px; background: #1A1A1A; border-radius: 0 0 45px 45px; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
+            <p style="font-size: 8.5px; font-weight: 900; color: rgba(255,255,255,0.6); letter-spacing: 4px; margin-bottom: 12px; text-transform: uppercase;">PRESTIGE EVENT MANAGEMENT</p>
+            <h2 id="view-wedding-name" style="color: #FFFFFF; font-size: 26px; font-weight: 700; margin: 0;">Memuat...</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 20px;">
+                <div>
+                    <p style="font-size: 9px; font-weight: 800; color: #D4AF37; text-transform: uppercase; margin-bottom: 6px;">Schedule</p>
+                    <p id="view-schedule" style="color: #FFFFFF; font-size: 11px; font-weight: 600; margin: 0;">-</p>
+                </div>
+                <div>
+                    <p style="font-size: 9px; font-weight: 800; color: #D4AF37; text-transform: uppercase; margin-bottom: 6px;">Venue</p>
+                    <p id="view-location" style="color: #FFFFFF; font-size: 11px; font-weight: 600; margin: 0;">-</p>
+                </div>
+            </div>
+            <span id="view-link" style="display:none;"></span>
+        </div>
+
+        <!-- Form Entry -->
+        <div id="form-container" style="padding: 40px 30px 20px;">
+            <div class="static-edit-box" onclick="bukaHalamanEdit()">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="icon">⚙️</span>
+                    <span>Edit Detail Acara</span>
+                </div>
+                <span style="color: #BBB;">➔</span>
+            </div>
+
+            <h3 style="font-size: 11px; font-weight: 900; color: #000; letter-spacing: 2px; margin-bottom: 30px; text-transform: uppercase;">New Guest Entry</h3>
+            
+            <div class="input-group"><label>Nama Lengkap</label><input type="text" id="in-c7-nama" placeholder="Masukkan nama tamu..." autocomplete="off"></div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div class="input-group"><label>WhatsApp Number</label><input type="tel" id="in-d7-wa" placeholder="08..."></div>
+                <div class="input-group">
+                    <label>Category</label>
+                    <select id="in-e7-kategori">
+                        <option value="Umum">Umum</option>
+                        <option value="VIP">VIP</option>
+                        <option value="VVIP">VVIP</option>
+                        <option value="Keluarga">Keluarga</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div class="input-group">
+                    <label>Inviter Side</label>
+                    <select id="in-l7-pengundang">
+                        <option value="PENGANTIN PRIA">Pengantin Pria</option>
+                        <option value="PENGANTIN WANITA">Pengantin Wanita</option>
+                        <option value="KELUARGA AYAH PENGANTIN PRIA">Keluarga Ayah CPP</option>
+                        <option value="KELUARGA IBU PENGANTIN PRIA">Keluarga Ibu CPP</option>
+                        <option value="KELUARGA AYAH PENGANTIN WANITA">Keluarga Ayah CPW</option>
+                        <option value="KELUARGA IBU PENGANTIN WANITA">Keluarga Ibu CPW</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Souvenir</label>
+                    <select id="in-k7-souvenir">
+                        <option value="ya">Ya</option>
+                        <option value="tidak">Tidak</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                 <div class="input-group">
+                    <label id="label-sesi">Sesi Undangan</label>
+                    <select id="in-sesi-undangan">
+                        <option value="">Memuat sesi...</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Jumlah Pax</label>
+                    <div class="qty-control">
+                        <button type="button" class="qty-btn" onclick="changeQty(-1)">-</button>
+                        <input type="number" id="in-h7-rencana" value="1" style="text-align:center; width:40px; font-weight:700;" readonly>
+                        <button type="button" class="qty-btn" onclick="changeQty(1)">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="input-group"><label>Alamat / Instansi</label><input type="text" id="in-m7-alamat" placeholder="Kota atau Instansi..."></div>
+            <button onclick="handleV3Submit()" id="btn-submit" class="btn-save">ADD TO COLLECTION</button>
+        </div>
+
+        <!-- Draft List -->
+        <div id="list-section" style="background: #F9F9F9; padding: 40px 30px; border-radius: 50px 50px 0 0; min-height: 400px; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <p style="font-size: 10px; font-weight: 900; color: #BBB; letter-spacing: 2px;">COLLECTION DRAFT</p>
+                <span id="draft-count" style="background: #D4AF37; color: #FFF; padding: 6px 14px; border-radius: 12px; font-size: 9px; font-weight: 900;">0 GUESTS</span>
+            </div>
+            <input type="text" id="guest-search" oninput="filterGuestList()" placeholder="□ Cari Nama, WA, Kategori, atau Status..." 
+                   style="width: 100%; padding: 15px 20px; border-radius: 15px; border: 2px solid #EEE; font-size: 13px; font-weight: 600; background: #FFF; outline: none; box-sizing: border-box; box-shadow: 0 5px 15px rgba(0,0,0,0.02);">
+            <div id="v3-draft-list-container">
+                <div id="v3-draft-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INTEGRATED EDIT POPUP -->
+    <div id="editModalOverlay">
+        <div class="modal-content">
+            <span class="close-modal" onclick="tutupModalEdit()">&times;</span>
+            <div style="margin-bottom: 25px;">
+                <h2 style="font-size: 20px; font-weight: 800; color: #1a1a1a;">Edit Detail Acara</h2>
+                <p style="font-size: 10px; font-weight: 600; color: #666; margin-top: 5px;">Update metadata acara ke Google Sheets</p>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="color: #666;">Username / Klien</label>
+                <input type="text" id="edit_user" class="sapatamu-input" readonly style="background: rgba(0,0,0,0.05); font-weight: 800; border: none; width: 100%;">
+            </div>
+            <div style="background: rgba(212, 175, 55, 0.1); padding: 20px; border-radius: 20px; margin-bottom: 25px; border: 1px solid rgba(212, 175, 55, 0.2);">
+                <div class="input-group" style="border-bottom-color: rgba(0,0,0,0.05);"><label>Tanggal Acara</label><input type="text" id="edit_ev_date"></div>
+                <div class="input-group" style="border-bottom-color: rgba(0,0,0,0.05);"><label>Lokasi</label><input type="text" id="edit_ev_loc"></div>
+                <div class="input-group" style="border-bottom-color: rgba(0,0,0,0.05);"><label>Waktu</label><input type="text" id="edit_ev_time"></div>
+                <div class="input-group" style="border-bottom-color: rgba(0,0,0,0.05);"><label>Link Undangan</label><input type="text" id="edit_ev_link"></div>
+                <label style="margin-top: 15px;">Sesi Waktu (Opsional)</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 5px;">
+                    <input type="text" id="edit_ev_s1" class="sapatamu-input" placeholder="S1" style="font-size: 11px; margin-bottom: 0;">
+                    <input type="text" id="edit_ev_s2" class="sapatamu-input" placeholder="S2" style="font-size: 11px; margin-bottom: 0;">
+                    <input type="text" id="edit_ev_s3" class="sapatamu-input" placeholder="S3" style="font-size: 11px; margin-bottom: 0;">
+                </div>
+            </div>
+            <input type="hidden" id="edit_ssid">
+            <button onclick="prosesUpdateData()" id="btn_update" class="sapatamu-btn" style="background: #1a1a1a;">SIMPAN PERUBAHAN</button>
+        </div>
+    </div>
+
+    <!-- CUSTOM ALERT DIALOG (FOR DELETE CONFIRMATION) -->
+    <div id="sapatamu-custom-alert" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: white; width: 85%; max-width: 320px; border-radius: 25px; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+            <div style="background: rgba(255, 77, 77, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                <span style="font-size: 24px;">□️</span>
+            </div>
+            <div id="alert-title" style="font-weight: 900; font-size: 14px; margin-bottom: 10px; color: #000; text-transform: uppercase; letter-spacing: 1px;">Konfirmasi Hapus</div>
+            <div id="alert-msg" style="font-size: 13px; color: #666; margin-bottom: 25px; line-height: 1.5;">Apakah Anda yakin ingin menghapus tamu ini dari koleksi?</div>
+            <div style="display: flex; gap: 12px;">
+                <button id="btn-dialog-cancel" style="flex: 1; padding: 15px; border-radius: 15px; border: 1.5px solid #eee; background: #fff; color: #666; font-weight: 800; font-size: 11px; cursor: pointer;">BATAL</button>
+                <button id="btn-dialog-confirm" style="flex: 1; padding: 15px; border-radius: 15px; border: none; background: #ff4d4d; color: white; font-weight: 800; font-size: 11px; cursor: pointer; box-shadow: 0 5px 15px rgba(255, 77, 77, 0.3);">HAPUS</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCj4W8OvxkwO32zE7aDo5uqgUjNaamxSSJHOFEWhjT5jGiTrQuCrDNLRp87jFh9-rV-w/exec";
+    const BACKEND_EDIT_URL = "https://script.google.com/macros/s/AKfycbw8Wu-in8QxomB098kJrj7F49Fx7QOePMR7ey1aEfioVvNa6ClM0JJ5czowwmgPD2H7/exec";
+    const BACKEND_DELETE_URL = "https://script.google.com/macros/s/AKfycbwS0FSn0CKTb4tmNgju55CHpVUxM81EJ4ifjqhH4AYXK7CWzMEoZRFcD2-TXzpfuCZL/exec";
+
+    const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+    if (!session || !session.ssId) {
+        window.location.href = "https://sapatamu.weebly.com/";
+        return;
+    }
+    const CURRENT_SS_ID = session.ssId;
+    let MASTER_LIST = [];
+
+    // --- UTILITIES ---
+    window.toggleFullScreen = function() {
+        const wrapper = document.getElementById('sapatamu-master-wrapper');
+        if (!document.fullscreenElement) {
+            wrapper.requestFullscreen().then(() => document.body.classList.add('is-fullscreen'));
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
+    window.changeQty = function(val) {
+        const input = document.getElementById('in-h7-rencana');
+        let current = parseInt(input.value);
+        if(current + val >= 1) input.value = current + val;
+    };
+
+    function toggleProcessing(isStart, text = "PROCESSING...") {
+        const overlay = document.getElementById('loading-global');
+        const loadingText = document.getElementById('loading-text');
+        const appWrapper = document.getElementById('sapatamu-app');
+        
+        if(isStart) {
+            loadingText.innerText = text;
+            overlay.style.display = 'flex';
+            appWrapper.classList.add('is-processing');
+        } else {
+            overlay.style.display = 'none';
+            appWrapper.classList.remove('is-processing');
+        }
+    }
+
+    // --- CORE FUNCTIONS ---
+    async function refreshApp() {
+        toggleProcessing(true, "SYNCING DATA...");
+        try {
+            const response = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "getMasterData", ssId: CURRENT_SS_ID })
+            });
+            const result = await response.json();
+            MASTER_LIST = result.guestList || [];
+            
+            if(result.eventMeta) {
+                document.getElementById('view-wedding-name').innerText = result.eventMeta.pengantin || "Event Guestbook";
+                document.getElementById('view-schedule').innerHTML = (result.eventMeta.tanggal || "") + "<br>" + (result.eventMeta.waktu || "");
+                document.getElementById('view-location').innerText = result.eventMeta.lokasi || "";
+                document.getElementById('view-link').innerText = result.eventMeta.link || "";
+                
+                document.getElementById('edit_ev_date').value = result.eventMeta.tanggal || "";
+                document.getElementById('edit_ev_loc').value = result.eventMeta.lokasi || "";
+                document.getElementById('edit_ev_time').value = result.eventMeta.waktu || "";
+                document.getElementById('edit_ev_link').value = result.eventMeta.link || "";
+
+                if(result.eventMeta.sesiOptions && result.eventMeta.sesiOptions.length > 0) {
+                    const sesiSelect = document.getElementById('in-sesi-undangan');
+                    sesiSelect.innerHTML = result.eventMeta.sesiOptions.map((val, index) => {
+                        if(index < 3) document.getElementById(`edit_ev_s${index+1}`).value = val;
+                        return `<option value="${val}">Sesi ${index + 1} (${val})</option>`;
+                    }).join('');
+                }
+            }
+            render(MASTER_LIST);
+        } catch(err) { 
+            console.error(err); 
+        } finally {
+            toggleProcessing(false);
+        }
+    }
+
+    window.handleV3Submit = async function() {
+        const payload = {
+            action: "submitCollection",
+            ssId: CURRENT_SS_ID,
+            nama: document.getElementById('in-c7-nama').value,
+            whatsapp: document.getElementById('in-d7-wa').value,
+            kategori: document.getElementById('in-e7-kategori').value,
+            pihak: document.getElementById('in-l7-pengundang').value,
+            souvenir: document.getElementById('in-k7-souvenir').value,
+            alamat: document.getElementById('in-m7-alamat').value,
+            rencana: document.getElementById('in-h7-rencana').value,
+            sesi: document.getElementById('in-sesi-undangan').value
+        };
+
+        if(!payload.nama || !payload.whatsapp) return alert("Isi Nama & WA");
+        
+        toggleProcessing(true, "SAVING GUEST...");
+        try {
+            await fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            document.getElementById('in-c7-nama').value = "";
+            document.getElementById('in-d7-wa').value = "";
+            document.getElementById('in-m7-alamat').value = "";
+            refreshApp(); 
+        } catch(e) { 
+            alert("Gagal menyimpan!"); 
+            toggleProcessing(false);
+        }
+    };
+
+    window.executeBlast = function(row, phone, name, code) {
+        const guest = MASTER_LIST.find(g => g.row == row);
+        if(!guest) return;
+        
+        const sesi = guest.sesi || "-";
+        const weddingName = document.getElementById('view-wedding-name').innerText;
+        const schedule = document.getElementById('view-schedule').innerText.replace(/\n/g, ' ');
+        const location = document.getElementById('view-location').innerText;
+        const baseUrl = document.getElementById('view-link').innerText;
+        const personalLink = `${baseUrl}?id=${encodeURIComponent(code)}&u=${encodeURIComponent(name)}`;
+        const qrCodeLink = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(code)}&size=400x400`;
+        
+        let cleanPhone = String(phone).replace(/\D/g, ''); 
+        if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+
+        let msg = `Kepada Yth. Bapak/Ibu/Saudara/i\n*${name.toUpperCase()}*\n\n` +
+                  `Tanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami. *Tepat pada pukul [${sesi}]*\n\n` +
+                  `*${weddingName}*\n` +
+                  `□ ${schedule}\n` +
+                  `□ ${location}\n\n` +
+                  `Informasi lengkap dapat diakses melalui tautan berikut:\n${personalLink}\n\n` +
+                  `Mohon simpan QR Code ini untuk akses masuk:\n${qrCodeLink}\n\n` +
+                  `Terima kasih.`;
+
+        window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`, '_blank');
+        
+        fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "markSent", ssId: CURRENT_SS_ID, row: row })
+        }).then(() => setTimeout(refreshApp, 2000));
+    };
+
+    window.filterGuestList = function() {
+        const query = document.getElementById('guest-search').value.trim().toLowerCase();
+        if (!query) { render(MASTER_LIST); return; }
+        const filtered = MASTER_LIST.filter(g => {
+            const isSent = g.statusWA && (g.statusWA.includes("✅") || g.statusWA.includes("SENT"));
+            const searchableText = [g.nama, g.whatsapp, g.kategori, g.pihak, g.alamat, isSent ? "sent" : "blast"].join(" ").toLowerCase();
+            return searchableText.includes(query);
+        });
+        render(filtered);
+    };
+
+    function render(list) {
+        const listContainer = document.getElementById('v3-draft-list');
+        document.getElementById('draft-count').innerText = list.length + " GUESTS";
+        
+        if (list.length === 0) {
+            listContainer.innerHTML = `<div style="grid-column: span 2; text-align:center; color:#BBB; font-size:11px; padding:40px;">No guest data found</div>`;
+            return;
+        }
+
+        listContainer.innerHTML = list.map(g => {
+            const isSent = g.statusWA && (g.statusWA.includes("✅") || g.statusWA.includes("SENT"));
+            const souvenirIcon = g.souvenir === 'ya' ? '□' : '⚪';
+            
+            return `
+                <div class="guest-item-card" 
+                    style="border: 1.5px solid ${isSent ? '#2ed573':'#EEE'}; background: ${isSent ? '#f0fff4':'#FFF'}; padding:12px; border-radius:18px; display: flex; flex-direction: column; justify-content: space-between; cursor:pointer; transition:0.2s; min-height: 125px;">
+                    ${!isSent ? `<button class="delete-guest-btn" onclick="confirmDeleteGuest(event, '${g.kode}', '${g.nama}')">✕</button>` : ''}
+                    <div onclick="executeBlast('${g.row}','${g.whatsapp}','${g.nama}','${g.kode}')">
+                        <div>
+                            <div style="font-weight:800; font-size:12px; color:#1a1a1a; line-height:1.2; padding-right:15px;">${g.nama}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top:4px;">
+                                <div style="font-size:8px; color:#D4AF37; font-weight:700; text-transform: uppercase;">${g.kategori}</div>
+                                <div style="font-size:8px; color:#666; font-weight:700;">${g.whatsapp || '-'}</div>
+                            </div>
+                            <!-- TAMBAHAN INFO PENGUNDANG & ALAMAT -->
+                            <div style="font-size:7.5px; color:#999; font-weight:600; margin-top:5px; line-height:1.4;">
+                                □ ${g.pihak || 'Umum'}<br>
+                                □ ${g.alamat || '-'}
+                            </div>
+                        </div>
+                        <div style="border-top: 1px solid #F2F2F2; padding-top: 8px; margin-top: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-size:9px; color:#999; font-weight:600;">⏰ ${g.sesi || '-'}</div>
+                                <div style="font-size:9px; color:#D4AF37;">${souvenirIcon}</div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top:3px;">
+                                <span style="font-size:9px; color:#666; font-weight:800;">Pax: ${g.rencanaHadir || 1}</span>
+                                <span style="font-size: 7px; font-weight: 900; color: ${isSent ? '#2ed573':'#000'};">
+                                    ${isSent ? '● SENT':'○ BLAST'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    // --- MODAL & DELETE LOGIC ---
+    window.bukaHalamanEdit = function() {
+        const sessionStr = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
+        const sessionObj = JSON.parse(sessionStr);
+        document.getElementById('edit_user').value = sessionObj.username || "User";
+        document.getElementById('edit_ssid').value = sessionObj.ssId;
+        document.getElementById('editModalOverlay').style.display = 'flex';
+    };
+
+    window.tutupModalEdit = () => document.getElementById('editModalOverlay').style.display = 'none';
+
+    window.prosesUpdateData = async function() {
+        const ssid = document.getElementById('edit_ssid').value;
+        toggleProcessing(true, "UPDATING EVENT...");
+        try {
+            const payload = {
+                action: "updateClientData",
+                ssId: ssid,
+                eventData: {
+                    tgl: document.getElementById('edit_ev_date').value,
+                    lokasi: document.getElementById('edit_ev_loc').value,
+                    waktu: document.getElementById('edit_ev_time').value,
+                    link: document.getElementById('edit_ev_link').value,
+                    s1: document.getElementById('edit_ev_s1').value,
+                    s2: document.getElementById('edit_ev_s2').value,
+                    s3: document.getElementById('edit_ev_s3').value
+                }
+            };
+            await fetch(BACKEND_EDIT_URL, { method: "POST", body: JSON.stringify(payload) });
+            tutupModalEdit();
+            refreshApp(); 
+        } catch (e) {
+            alert("Gagal update data.");
+            toggleProcessing(false);
+        }
+    };
+
+    window.confirmDeleteGuest = function(event, kodeUnik, nama) {
+        event.stopPropagation();
+        const alertBox = document.getElementById('sapatamu-custom-alert');
+        const msgBox = document.getElementById('alert-msg');
+        const btnConfirm = document.getElementById('btn-dialog-confirm');
+        const btnCancel = document.getElementById('btn-dialog-cancel');
+
+        msgBox.innerHTML = `Apakah Anda yakin ingin menghapus <b>${nama}</b> secara permanen?`;
+        alertBox.style.display = 'flex';
+
+        btnConfirm.onclick = async () => {
+            alertBox.style.display = 'none';
+            await executeDelete(kodeUnik);
+        };
+
+        btnCancel.onclick = () => {
+            alertBox.style.display = 'none';
+        };
+    };
+
+    async function executeDelete(kodeUnik) {
+        toggleProcessing(true, "DELETING GUEST...");
+        try {
+            const response = await fetch(BACKEND_DELETE_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'deleteGuest',
+                    ssId: CURRENT_SS_ID,
+                    kodeUnik: kodeUnik
+                })
+            });
+            const result = await response.json();
+            if (result.success) {
+                refreshApp();
+            } else {
+                alert("Gagal hapus: " + result.message);
+                toggleProcessing(false);
+            }
+        } catch (e) {
+            alert("Error saat menghapus!");
+            toggleProcessing(false);
+        }
+    }
+
+    // Initialize App
+    window.onload = refreshApp;
+
+})();
+</script>
+</body>
+</html>

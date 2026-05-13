@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu.Ku - Redirecting...</title>
+    <script>
+        const SESSION_KEY = 'sapatamu_session';
+        const LOCAL_DB = 'sapatamu_db';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const session = sessionStorage.getItem(SESSION_KEY);
+            const localData = localStorage.getItem(LOCAL_DB);
+
+            if (session) {
+                const data = JSON.parse(session);
+                if (data.ssId) {
+                    window.location.replace("dashboard.html?ssId=" + data.ssId);
+                    return;
+                }
+            } else if (localData) {
+                const data = JSON.parse(localData);
+                if (data.ssId) {
+                    sessionStorage.setItem(SESSION_KEY, localData);
+                    window.location.replace("dashboard.html?ssId=" + data.ssId);
+                    return;
+                }
+            }
+            
+            // Fallback ke login jika tidak ada sesi
+            window.location.replace("login.html");
+        });
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #f8fafc;
+            font-family: sans-serif;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <p>SapaTamu.Ku - Sedang mengalihkan...</p>
+</body>
+</html>
