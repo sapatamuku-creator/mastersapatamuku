@@ -151,6 +151,10 @@ function handleMainPost(payload) {
       case "deleteGuest":
         result = deleteGuest(ssId, payload.kodeUnik);
         break;
+        
+      case "uploadSelfie":
+        result = handleSelfiePost(payload);
+        break;
       
       default:
         result = { status: "error", message: "Action unknown" };

@@ -16,8 +16,10 @@ function handleSelfiePost(data) {
     if (!base64String) throw new Error("Data gambar tidak ditemukan.");
 
     const weddingUsername = getWeddingUsername(SPREADSHEET_ID);
-    const cleanNama = namaTamu.replace(/[\\\/\:\*\?\"\<\>\|]/g, "");
-    const fileName = `${weddingUsername}_${kategori}_${cleanNama}_${kodeUnik}.jpg`;
+    const cleanWedding = weddingUsername.replace(/\s+/g, '_');
+    const cleanNama = namaTamu.replace(/\s+/g, '_').replace(/[\\\/\:\*\?\"\<\>\|]/g, "");
+    const cleanKategori = kategori.replace(/\s+/g, '_');
+    const fileName = `${cleanWedding}_${cleanKategori}_${cleanNama}_${kodeUnik}.jpg`;
 
     let rawData = base64String;
     if (base64String.includes(",")) {
@@ -26,7 +28,7 @@ function handleSelfiePost(data) {
     const bytes = Utilities.base64Decode(rawData);
     const blob = Utilities.newBlob(bytes, "image/jpeg", fileName);
 
-    // TARGET_FOLDER_ID didefinisikan secara global atau di sini
+    // TARGET_FOLDER_ID (Provided by User)
     const TARGET_FOLDER_ID = "1yqHqIf6prjKWs5HxSVjw3t3zOLykJn7S";
     const folder = DriveApp.getFolderById(TARGET_FOLDER_ID);
     const file = folder.createFile(blob);
@@ -50,9 +52,21 @@ function handleSelfiePost(data) {
 
 function getWeddingUsername(clientSsId) {
   try {
+    // Coba ambil dari Nama Wedding di B1 client spreadsheet dulu (permintaan User)
+    const ss = SpreadsheetApp.openById(clientSsId);
+    const sheet = ss.getSheetByName("Sheet1");
+    if (sheet) {
+      const b1Value = sheet.getRange("B1").getValue();
+      if (b1Value) {
+        // Bersihkan nama dari spasi dan karakter aneh
+        return b1Value.toString().trim().replace(/\s+/g, '_').replace(/[\\\/\:\*\?\"\<\>\|]/g, "");
+      }
+    }
+
+    // Jika gagal, coba cari di Master Database
     const masterSs = SpreadsheetApp.openById(MASTER_SS_ID);
-    const sheet = masterSs.getSheets()[0];
-    const range = sheet.getDataRange().getValues();
+    const mSheet = masterSs.getSheets()[0];
+    const range = mSheet.getDataRange().getValues();
     
     for (let i = 1; i < range.length; i++) {
       if (String(range[i][2]).trim() === String(clientSsId).trim()) {
@@ -61,7 +75,8 @@ function getWeddingUsername(clientSsId) {
     }
     return "UnknownWedding";
   } catch (err) {
-    return "SystemError";
+    console.error("getWeddingUsername error:", err);
+    return "UnknownWedding";
   }
 }
 

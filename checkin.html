@@ -83,8 +83,22 @@
         .guest-cat { font-size: 8px; background: #fdf8f4; padding: 4px 10px; border-radius: 6px; font-weight: 800; color: var(--gold); border: 1px solid #f0e6de; }
         .guest-status { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        .modal { display: none; position: fixed; z-index: 20000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.35); backdrop-filter: blur(12px); align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: rgba(255,255,255,0.9); width: 100%; max-width: 350px; border-radius: 28px; padding: 22px; border: 1px solid white; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 100000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-card { background: white; width: 100%; max-width: 350px; border-radius: 30px; padding: 25px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); }
+        .modal-video-box { width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 20px; overflow: hidden; margin: 15px 0; border: 3px solid #f0f0f0; position: relative; }
+        #confirm-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-cancel { background: #eee; color: #666; border: none; flex: 1; padding: 14px; border-radius: 16px; font-weight: 700; cursor: pointer; font-size: 11px; }
+        .btn-confirm { background: var(--gold); color: white; border: none; flex: 2; padding: 14px; border-radius: 16px; font-weight: 800; cursor: pointer; font-size: 11px; box-shadow: 0 4px 15px rgba(212,175,55,0.3); }
+
+        .tag-row { display: flex; gap: 8px; margin: 10px 0; }
+        .tag-item { flex: 1; padding: 10px; border-radius: 10px; background: #f5f5f5; border: 1px solid #eee; font-size: 9px; font-weight: 800; text-align: center; cursor: pointer; color: #888; }
+        .tag-item.active { background: var(--gold); color: white; border-color: var(--gold); }
+
+        .counter-wrapper { display: flex; align-items: center; background: #f0f0f0; border-radius: 10px; padding: 2px; height: 40px; }
+        .btn-step { width: 40px; height: 100%; border: none; background: white; border-radius: 8px; font-size: 18px; font-weight: bold; color: var(--text-main); cursor: pointer; }
+        .counter-value { flex: 1; text-align: center; font-weight: 800; font-size: 14px; color: var(--text-main); }
         
         .fab-fullscreen { position: fixed; bottom: 25px; right: 25px; width: 45px; height: 45px; background: rgba(26,26,26,0.9); color: white; border-radius: 50%; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; z-index: 1000; cursor: pointer; }
         .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); z-index: 30000; display: none; align-items: center; justify-content: center; font-weight: 700; color: var(--gold); }
@@ -218,30 +232,48 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
     </div>
 
-    <div id="modalConfirm" class="modal">
-        <div class="modal-content">
-            <h3 style="margin: 0 0 15px 0; color: var(--brand-warm); font-size: 14px; font-weight: 800; text-align: center; text-transform: uppercase; letter-spacing: 1px;">Konfirmasi Kedatangan</h3>
+    <div id="modalConfirm" class="modal-overlay">
+        <div class="modal-card">
+            <h3 id="m-nama" style="margin: 0; color: var(--text-main); font-size: 15px; font-weight: 800; text-align: center; text-transform: uppercase;">Konfirmasi Kedatangan</h3>
+            <p id="m-info" style="font-size: 10px; color: var(--text-muted); margin: 5px 0 15px;">Pilih Pax & Ambil Dokumentasi</p>
             
-            <div id="cards-container" style="max-height: 40vh; overflow-y: auto; padding-right: 5px;"></div>
+            <div id="cards-container" style="max-height: 25vh; overflow-y: auto; padding: 5px; margin-bottom: 10px; border-radius: 15px; background: #fafafa;"></div>
             
-            <div id="selfie-section">
-                <p style="font-size: 8px; font-weight: 800; color: var(--gold); margin-bottom: 8px;">DOKUMENTASI VIP/KELUARGA</p>
+            <div class="modal-video-box">
                 <video id="camera-preview" autoplay playsinline muted></video>
                 <canvas id="capture-canvas" style="display:none;"></canvas>
-                <button type="button" class="btn-capture" id="btn-snap" onclick="takeSelfie()">Ambil Foto</button>
-                <div id="capture-msg" class="capture-success-msg">✓ FOTO BERHASIL DIAMBIL (FREEZE)</div>
             </div>
 
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button onclick="closeModal()" style="flex:1; padding:14px; border-radius:16px; border:none; background:#eee; font-weight:700; font-size:11px; color:#666;">BATAL</button>
-                <button onclick="executeCheckin()" style="flex:2; padding:14px; border-radius:16px; border:none; background:var(--gold); color:white; font-weight:800; font-size:11px; box-shadow: 0 4px 15px rgba(212,175,55,0.3);">CHECK-IN SEKARANG</button>
+            <button type="button" id="btn-snap" onclick="takeSelfie()" style="background: none; border: 1px solid var(--gold); color: var(--gold); padding: 8px 20px; border-radius: 30px; font-size: 10px; font-weight: 800; cursor: pointer; margin-bottom: 15px;">AMBIL FOTO</button>
+
+            <div class="form-row" style="display: flex; gap: 10px; text-align: left;">
+                <div class="form-group" style="flex: 1;">
+                    <label style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">Jumlah Pax</label>
+                    <div class="counter-wrapper">
+                        <button type="button" class="btn-step" onclick="updatePax('m-pax', -1)">-</button>
+                        <div id="m-pax" class="counter-value">1</div>
+                        <button type="button" class="btn-step" onclick="updatePax('m-pax', 1)">+</button>
+                    </div>
+                </div>
+                <div class="form-group" style="flex: 1.5;">
+                    <label style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">Pemberian</label>
+                    <div class="tag-row" style="margin: 0;">
+                        <div class="tag-item" id="tag-angpao" onclick="this.classList.toggle('active')">ANGPAO</div>
+                        <div class="tag-item" id="tag-kado" onclick="this.classList.toggle('active')">KADO</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-cancel" onclick="closeModal()">BATAL</button>
+                <button class="btn-confirm" id="btn-final-confirm" onclick="executeCheckin()" style="opacity: 0.5;" disabled>CHECK-IN SEKARANG</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDrkYErU1cAiC8-Hq9zhLGHjOt_c7KE3AjugCX4DVsmQbgOyTQnrDR-2bZTUkG_oH_/exec"; 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhCnHvzHn8cH9WhyQDkOJYX1aun5fl3-A0iDEiXjHBV-FSz0Lsp4z2ueLlQez0Nv5k/exec"; 
     const WA_ENGINE_URL = SCRIPT_URL;
     const SELFIE_URL = SCRIPT_URL;
 
@@ -447,81 +479,77 @@
         
         capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
         
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
-        }
-        
-        document.getElementById('capture-msg').style.display = 'block';
         const btnSnap = document.getElementById('btn-snap');
-        btnSnap.style.background = "var(--success)";
-        btnSnap.innerText = "FOTO TERKUNCI";
+        btnSnap.style.background = "#666";
+        btnSnap.innerText = "ULANGI FOTO";
+        btnSnap.onclick = resetSnapshot;
+
+        document.getElementById('btn-final-confirm').disabled = false;
+        document.getElementById('btn-final-confirm').style.opacity = "1";
+    };
+
+    window.resetSnapshot = function() {
+        const video = document.getElementById('camera-preview');
+        video.play();
+        capturedBase64 = null;
+        
+        const btnSnap = document.getElementById('btn-snap');
+        btnSnap.style.background = "none";
+        btnSnap.innerText = "AMBIL FOTO";
+        btnSnap.onclick = takeSelfie;
+
+        // Jika VIP wajib foto, matikan tombol. Jika tidak, bisa tetap nyala.
+        // Untuk amannya kita samakan dengan onsite
+        document.getElementById('btn-final-confirm').disabled = true;
+        document.getElementById('btn-final-confirm').style.opacity = "0.5";
     };
 
     window.openConfirmModal = function() {
         const container = document.getElementById('cards-container');
         const selectedList = Array.from(selectedIDs).map(id => masterData.find(r => r.kode === id));
         
+        if (selectedList.length === 0) return;
+
         capturedBase64 = null;
-        document.getElementById('capture-msg').style.display = 'none';
-        document.getElementById('btn-snap').style.background = "var(--dark)";
-        document.getElementById('btn-snap').innerText = "AMBIL FOTO";
+        const firstGuest = selectedList[0];
+        document.getElementById('m-nama').innerText = selectedList.length > 1 ? "Konfirmasi Masal" : firstGuest.nama;
+        document.getElementById('m-pax').innerText = firstGuest.rencanaHadir || 1;
 
         container.innerHTML = selectedList.map(g => `
-            <div style="background:white; border-radius:18px; padding:15px; margin-bottom:12px; border:1px solid #eee;">
-                <div style="font-size:11px; font-weight:800; margin-bottom:10px; color:var(--dark)">${g.nama}</div>
-                <div style="display:flex; align-items:center; justify-content:space-between;">
-                    <div style="display:flex; gap:8px; background:#f5f5f5; padding:4px; border-radius:12px;">
-                        <button style="border:none; background:white; width:32px; height:32px; border-radius:10px; font-weight:900;" onclick="adjustPax('${g.kode}', -1)">-</button>
-                        <div style="font-size:16px; font-weight:900; min-width:30px; text-align:center; line-height:32px;" id="val-${g.kode}">${g.rencanaHadir || 1}</div>
-                        <button style="border:none; background:white; width:32px; height:32px; border-radius:10px; font-weight:900;" onclick="adjustPax('${g.kode}', 1)">+</button>
-                    </div>
-                    <div style="display:flex; gap:6px;">
-                        <div class="tag-btn" style="font-size:8px; font-weight:800; padding:10px; border-radius:10px; background:#f5f5f5; border:1px solid #eee;" onclick="toggleTag(this)" id="tag-angpao-${g.kode}">ANGPAO</div>
-                        <div class="tag-btn" style="font-size:8px; font-weight:800; padding:10px; border-radius:10px; background:#f5f5f5; border:1px solid #eee;" onclick="toggleTag(this)" id="tag-kado-${g.kode}">KADO</div>
-                    </div>
-                </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
+                <div style="font-size:11px; font-weight:700;">${g.nama}</div>
+                <div style="font-size:10px; color:var(--gold); font-weight:800;">${g.kategori || 'REGULER'}</div>
             </div>
         `).join('');
 
         const isPriority = selectedList.some(g => ["VIP", "KELUARGA", "VVIP", "PANITIA"].includes(g.kategori?.toUpperCase()));
-        if(isPriority) {
-            document.getElementById('selfie-section').style.display = 'flex';
-            startSelfieCamera();
-        } else {
-            document.getElementById('selfie-section').style.display = 'none';
-        }
+        
+        // Reset Button
+        const btnSnap = document.getElementById('btn-snap');
+        btnSnap.style.background = "none";
+        btnSnap.innerText = "AMBIL FOTO";
+        btnSnap.onclick = takeSelfie;
+        
+        document.getElementById('btn-final-confirm').disabled = isPriority;
+        document.getElementById('btn-final-confirm').style.opacity = isPriority ? "0.5" : "1";
+
         document.getElementById('modalConfirm').style.display = 'flex';
+        startSelfieCamera();
     };
 
-    window.toggleTag = function(el) {
-        el.classList.toggle('active');
-        if(el.classList.contains('active')) {
-            el.style.background = 'var(--gold)'; el.style.color = 'white'; el.style.borderColor = 'var(--gold)';
-        } else {
-            el.style.background = '#f5f5f5'; el.style.color = 'black'; el.style.borderColor = '#eee';
-        }
-    };
-
-    window.adjustPax = function(id, delta) {
-        const el = document.getElementById(`val-${id}`);
+    window.updatePax = function(id, delta) {
+        const el = document.getElementById(id);
         let cur = parseInt(el.innerText);
         if (cur + delta >= 1) el.innerText = cur + delta;
     };
 
     window.closeModal = async function() { 
         document.getElementById('modalConfirm').style.display = 'none'; 
-        
         if (currentStream) {
             currentStream.getTracks().forEach(t => t.stop());
             currentStream = null;
         }
-        
-        const video = document.getElementById('camera-preview');
-        video.srcObject = null;
-
-        setTimeout(() => {
-            initScanner();
-        }, 300);
+        setTimeout(() => initScanner(), 300);
     };
 
     window.executeCheckin = async function() {
@@ -530,14 +558,13 @@
         document.getElementById('loading').style.display = 'flex';
         
         try {
+            const pax = document.getElementById('m-pax').innerText;
+            const gift = (document.getElementById('tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('tag-kado').classList.contains('active') ? "KADO" : "");
             const list = Array.from(selectedIDs);
+
             for (const id of list) {
-                const guest = masterData.find(r => r.kode === id);
-                const pax = document.getElementById(`val-${id}`).innerText;
-                const gift = (document.getElementById(`tag-angpao-${id}`).classList.contains('active') ? "ANGPAO " : "") + (document.getElementById(`tag-kado-${id}`).classList.contains('active') ? "KADO" : "");
-                
                 // 1. Jalankan Check-in Master (Database)
-                const mainCheckin = fetch(SCRIPT_URL, { 
+                await fetch(SCRIPT_URL, { 
                     method: 'POST', 
                     body: JSON.stringify({ 
                         action: "confirm_checkin", 
@@ -548,8 +575,8 @@
                     }) 
                 });
 
-                // 2. Jalankan WA Engine secara PARALEL (Stand-alone)
-                const waBlast = fetch(WA_ENGINE_URL, {
+                // 2. Jalankan WA Engine secara PARALEL
+                fetch(WA_ENGINE_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     body: JSON.stringify({
@@ -558,24 +585,21 @@
                         kodeUnik: id
                     })
                 });
+            }
 
-                // 3. Jalankan Selfie jika ada
-                let selfieUpload = Promise.resolve();
-                if (capturedBase64) {
-                    selfieUpload = fetch(SELFIE_URL, {
-                        method: 'POST', mode: 'no-cors',
-                        body: JSON.stringify({ 
-                            action: "uploadSelfie",
-                            image: capturedBase64, 
-                            nama: guest.nama, 
-                            kategori: guest.kategori, 
-                            kode: id,
-                            ssId: CURRENT_SS_ID 
-                        })
-                    });
-                }
-
-                await mainCheckin; 
+            // 3. Jalankan Selfie jika ada (Hanya upload satu foto untuk grup)
+            if (capturedBase64 && list.length > 0) {
+                await fetch(SELFIE_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        action: "uploadSelfie",
+                        image: capturedBase64,
+                        nama: masterData.find(r => r.kode === list[0]).nama,
+                        kode: list[0],
+                        ssId: CURRENT_SS_ID
+                    })
+                });
             }
 
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
@@ -590,7 +614,8 @@
         } finally { 
             isBusy = false; 
             document.getElementById('loading').style.display = 'none'; 
-        }};
+        }
+    };
 </script>
 </body>
 </html>
