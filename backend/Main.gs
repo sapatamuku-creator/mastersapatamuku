@@ -255,9 +255,10 @@ function getMasterDataV3(ssId) {
       kode: row[5],          // Kolom F
       barcode: row[6],       // Kolom G
       rencanaHadir: row[7],  // Kolom H
-      statusHadir: String(row[8]), // Kolom H (Status Hadir di Index 8) - DISESUAIKAN
-      jamDatang: row[9],     // Kolom I - DISESUAIKAN
-      pihak: row[11],        // Kolom L
+      statusHadir: String(row[8]), // Kolom I
+      jamDatang: row[9],     // Kolom J
+      souvenir: row[10],     // Kolom K
+      pihakPengundang: row[11], // Kolom L
       alamat: row[12],       // Kolom M
       realHadir: row[13],    // Kolom N
       statusWA: row[15],     // Kolom P
