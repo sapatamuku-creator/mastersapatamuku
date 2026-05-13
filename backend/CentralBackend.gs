@@ -4,9 +4,9 @@
  * Migrated to New Drive Environment
  */
 
-const MASTER_SS_ID = "12z2fqewIamIRpVJ4zocMDp-8CwjZsjsrQRh3dXx-VAw"; // Master Database ID Client (Corrected)
-const CLIENT_MASTER_ID = "1eJhbMfrErp9KtHxU0qN2IV4fyhxMTW8tfRooxBwv950"; // Master Draft SapaTamu.Ku (Updated)
-const FOLDER_KLIEN_ID = "16rNOcoR_PYQYkn7jq7gLgospii5gw2Dn"; 
+const MASTER_SS_ID = "1R99hDczYr4_OW7l41_DDrYuQRwZx30rhhaRHbJfRq1I"; // New Master Database (Sapatamu Account)
+const CLIENT_MASTER_ID = "10H7oTK0ehhiba9Ire4tUTAV1Hye7RXrNdX6jQJYw20A"; // New Master Template (Sapatamu Account)
+const FOLDER_KLIEN_ID = "1vKXjrfkPLHctEHc_RqK8hSDizpBjph4P"; // New Storage Folder (Sapatamu Account)
 const MASTER_SHEET_NAME = "Sheet1";
 const ADMIN_WA = "6285111567829";
 const ADMIN_EMAIL = "sapatamuku@gmail.com";
