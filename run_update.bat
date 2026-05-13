@@ -32,14 +32,15 @@ if %ERRORLEVEL% NEQ 0 (
 echo OK: Kode backend terkirim.
 echo.
 
-:: 3. New Deployment (Optional but recommended for Web Apps)
-echo [STEP 3] Membuat Versi Deployment Baru di Google...
-call clasp deploy --description "Update via Auto-Sync %date% %time%"
+:: 3. Update Existing Deployment (URL stays the same)
+echo [STEP 3] Memperbarui Deployment di Google (URL TETAP)...
+call clasp deploy -i AKfycby6NbBUliD3si7LcGOuOe3kQF7etddQzocQO-oh_ZkOXw7GC9hEs5yWFqkqxxJxo7vd0A -d "SapaTamu Master Unified Update %date% %time%"
 cd ..
 
 echo.
 echo ==================================================
 echo    SUKSES! Ekosistem SapaTamu.Ku Telah Terupdate.
+echo    URL: https://script.google.com/macros/s/AKfycby6NbBUliD3si7LcGOuOe3kQF7etddQzocQO-oh_ZkOXw7GC9hEs5yWFqkqxxJxo7vd0A/exec
 echo ==================================================
 echo.
 pause
