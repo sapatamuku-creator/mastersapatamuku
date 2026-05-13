@@ -117,19 +117,30 @@
             width: 100%;
             max-width: 900px;
             margin: 0 auto;
-            padding: 100px 20px 40px;
+            padding: 20px 20px 40px;
         }
 
-        /* UNIFIED NAVBAR STYLES */
-        .sapatamu-navbar {
+        /* HEADER AREA (FIXED) */
+        .fixed-header {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            padding: 15px 20px 5px;
+            z-index: 10000;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* UNIFIED NAVBAR STYLES */
+        .sapatamu-navbar {
+            width: 100%;
             display: flex;
             justify-content: center;
-            z-index: 10000;
+            margin-bottom: 10px;
         }
         .nav-container {
             background: #FFFDFB;
@@ -146,6 +157,21 @@
             scrollbar-width: none;
         }
         .nav-container::-webkit-scrollbar { display: none; }
+        
+        /* TABS UNDER NAVBAR */
+        .nav-tabs-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 0 20px 15px;
+        }
+        .nav-tabs { 
+            display: flex; 
+            background: #f0f0f0; 
+            border-radius: 12px; 
+            padding: 4px; 
+            gap: 4px; 
+        }
+
         .nav-group { display: flex; align-items: center; gap: 4px; }
         .nav-link {
             text-decoration: none;
@@ -162,6 +188,8 @@
         .nav-link.active { background: var(--primary); color: white !important; }
         .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
         .nav-divider-bold { width: 1.5px; height: 22px; background: #D6C7BC; margin: 0 12px; }
+
+        .main-content { margin-top: 140px; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
     </style>
 </head>
 <body onload="initApp()">
@@ -185,94 +213,99 @@
             to { transform: scale(1); opacity: 1; }
         }
     </style>
-    <nav class="sapatamu-navbar">
-        <div class="nav-container">
-            <div class="nav-group">
-                <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
-                <div class="nav-divider"></div>
-                <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
-                <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
-                <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+    <div class="fixed-header">
+        <nav class="sapatamu-navbar">
+            <div class="nav-container">
+                <div class="nav-group">
+                    <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+                    <div class="nav-divider"></div>
+                    <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
+                    <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+                    <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+                </div>
+                <div class="nav-divider-bold"></div>
+                <div class="nav-group">
+                    <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                    <a href="onsite.html" class="nav-link active" id="nav-onsite">On-Site</a>
+                    <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+                    <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+                    <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+                    <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+                    <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+                </div>
             </div>
-            <div class="nav-divider-bold"></div>
-            <div class="nav-group">
-                <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
-                <a href="onsite.html" class="nav-link active" id="nav-onsite">On-Site</a>
-                <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
-                <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
-                <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
-                <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
-                <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+        </nav>
+        <div class="nav-tabs-container">
+            <div class="nav-tabs">
+                <button class="tab-btn active" id="tab-scan" onclick="switchMode('scan')">QR Scan</button>
+                <button class="tab-btn" id="tab-onsite" onclick="switchMode('onsite')">On-Site Reg</button>
             </div>
-        </div>
-    </nav>
-        <div class="nav-tabs">
-            <button class="tab-btn active" id="tab-scan" onclick="switchMode('scan')">QR Scan</button>
-            <button class="tab-btn" id="tab-onsite" onclick="switchMode('onsite')">On-Site Reg</button>
         </div>
     </div>
 
     <div class="main-content">
-        <div id="media-container">
-            <div id="reader"></div>
-            <video id="onsite-video" autoplay playsinline muted></video>
-            <canvas id="capture-preview-onsite" style="display:none;"></canvas>
-        </div>
-
-        <div id="panel-scan" class="card-panel">
-            <div class="search-box"><input type="text" id="search-input" class="form-control" placeholder="Cari Nama / Kode / Pihak Pengundang..." oninput="renderGuestList()"></div>
-            <div id="guest-list-container"></div>
-        </div>
-
-        <div id="panel-onsite" class="card-panel" style="display: none; overflow-y: auto;">
-            <div class="form-group" style="margin-bottom:10px;">
-                <label class="form-label">Nama Lengkap</label>
-                <input type="text" id="reg-nama" class="form-control" placeholder="Nama tamu">
+        <div class="main-container">
+            <div id="media-container">
+                <div id="reader"></div>
+                <video id="onsite-video" autoplay playsinline muted></video>
+                <canvas id="capture-preview-onsite" style="display:none;"></canvas>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Alamat / Instansi</label>
-                    <input type="text" id="reg-alamat" class="form-control" placeholder="Asal kota/kantor">
+
+            <div id="panel-scan" class="card-panel">
+                <div class="search-box"><input type="text" id="search-input" class="form-control" placeholder="Cari Nama / Kode / Pihak Pengundang..." oninput="renderGuestList()"></div>
+                <div id="guest-list-container"></div>
+            </div>
+
+            <div id="panel-onsite" class="card-panel" style="display: none; overflow-y: auto;">
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label">Nama Lengkap</label>
+                    <input type="text" id="reg-nama" class="form-control" placeholder="Nama tamu">
                 </div>
-                <div class="form-group" style="flex: 0.4;">
-                    <label class="form-label">Pax</label>
-                    <div class="counter-wrapper">
-                        <button type="button" class="btn-step" onclick="updatePax('reg-pax', -1)">-</button>
-                        <div id="reg-pax" class="counter-value">1</div>
-                        <button type="button" class="btn-step" onclick="updatePax('reg-pax', 1)">+</button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Alamat / Instansi</label>
+                        <input type="text" id="reg-alamat" class="form-control" placeholder="Asal kota/kantor">
+                    </div>
+                    <div class="form-group" style="flex: 0.4;">
+                        <label class="form-label">Pax</label>
+                        <div class="counter-wrapper">
+                            <button type="button" class="btn-step" onclick="updatePax('reg-pax', -1)">-</button>
+                            <div id="reg-pax" class="counter-value">1</div>
+                            <button type="button" class="btn-step" onclick="updatePax('reg-pax', 1)">+</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">WhatsApp</label>
-                    <input type="tel" id="reg-wa" class="form-control" placeholder="0812...">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">WhatsApp</label>
+                        <input type="tel" id="reg-wa" class="form-control" placeholder="0812...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Kategori</label>
+                        <select id="reg-kategori" class="form-control">
+                            <option value="REGULER">REGULER</option>
+                            <option value="VIP">VIP</option>
+                            <option value="VVIP">VVIP</option>
+                            <option value="KELUARGA">KELUARGA</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Kategori</label>
-                    <select id="reg-kategori" class="form-control">
-                        <option value="REGULER">REGULER</option>
-                        <option value="VIP">VIP</option>
-                        <option value="VVIP">VVIP</option>
-                        <option value="KELUARGA">KELUARGA</option>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label">Pihak Pengundang</label>
+                    <select id="reg-host" class="form-control">
+                        <option value="Pengantin Pria">Pengantin Pria</option>
+                        <option value="Pengantin Wanita">Pengantin Wanita</option>
+                        <option value="Orang Tua Pria">Orang Tua Pria</option>
+                        <option value="Orang Tua Wanita">Orang Tua Wanita</option>
                     </select>
                 </div>
+                <div class="tag-row">
+                    <div class="tag-item" id="tag-angpao" onclick="this.classList.toggle('active')">ANGPAO</div>
+                    <div class="tag-item" id="tag-kado" onclick="this.classList.toggle('active')">KADO</div>
+                </div>
+                <button type="button" onclick="takeOnsiteSnapshot()" id="btn-onsite-snap" style="background: none; border: 1px solid var(--gold); color: var(--gold); padding: 8px; border-radius: 20px; font-size: 10px; font-weight: 800; cursor: pointer; width: 100%; margin-bottom: 10px;">AMBIL SELFIE</button>
+                <button id="btn-final-onsite" class="btn-main" onclick="submitOnsite()" style="opacity: 0.5;" disabled>Daftarkan Tamu</button>
             </div>
-            <div class="form-group" style="margin-bottom:10px;">
-                <label class="form-label">Pihak Pengundang</label>
-                <select id="reg-host" class="form-control">
-                    <option value="Pengantin Pria">Pengantin Pria</option>
-                    <option value="Pengantin Wanita">Pengantin Wanita</option>
-                    <option value="Orang Tua Pria">Orang Tua Pria</option>
-                    <option value="Orang Tua Wanita">Orang Tua Wanita</option>
-                </select>
-            </div>
-            <div class="tag-row">
-                <div class="tag-item" id="tag-angpao" onclick="this.classList.toggle('active')">ANGPAO</div>
-                <div class="tag-item" id="tag-kado" onclick="this.classList.toggle('active')">KADO</div>
-            </div>
-            <button type="button" onclick="takeOnsiteSnapshot()" id="btn-onsite-snap" style="background: none; border: 1px solid var(--gold); color: var(--gold); padding: 8px; border-radius: 20px; font-size: 10px; font-weight: 800; cursor: pointer; width: 100%; margin-bottom: 10px;">AMBIL SELFIE</button>
-            <button id="btn-final-onsite" class="btn-main" onclick="submitOnsite()" style="opacity: 0.5;" disabled>Daftarkan Tamu</button>
         </div>
     </div>
 </div>
