@@ -82,10 +82,17 @@ function createResponse(data) {
  * JALANKAN FUNGSI INI DI EDITOR (KLIK RUN) UNTUK MEMBERIKAN IZIN AKSES
  */
 function triggerAuth() {
-  Logger.log("Memicu izin akses...");
-  DriveApp.getRootFolder();
-  SpreadsheetApp.getActiveSpreadsheet();
-  UrlFetchApp.fetch("https://google.com");
-  Logger.log("Izin berhasil diberikan!");
+  Logger.log("Memicu izin akses Drive secara penuh...");
+  try {
+    DriveApp.getRootFolder();
+    // Memaksa Google mendeteksi kebutuhan izin menulis/duplikat
+    const dummy = DriveApp.createFile("DUMMY_AUTH_TEST", "Pemicu Izin", MimeType.PLAIN_TEXT);
+    dummy.setTrashed(true); // Langsung hapus
+    SpreadsheetApp.getActiveSpreadsheet();
+    UrlFetchApp.fetch("https://google.com");
+    Logger.log("Izin DRIVE dan SPREADSHEET berhasil dipicu!");
+  } catch(e) {
+    Logger.log("Error saat memicu izin: " + e.toString());
+  }
 }
 

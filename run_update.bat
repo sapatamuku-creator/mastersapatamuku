@@ -31,7 +31,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [STEP 3] Memperbarui Deployment (URL) agar menggunakan kode terbaru...
-call clasp deploy --deploymentId AKfycbzIfY3HDb7qF-zpgKX_86g2cK6wm_J1-9IdjDDC_He0pmx_qPGTSiZCoQPyiRClZzBm --description "Auto Updated by Antigravity"
+call clasp deploy --deploymentId AKfycbyJ8biF1h3tjehSK88lDLxoQopTG8pJoWZNSBvh3YwFVX0Sow-7hCcZX4_eVqWWgdH4 --description "Auto Updated by Antigravity"
 cd ..
 if %errorlevel% neq 0 (
     echo [WARNING] Gagal update deployment otomatis.
