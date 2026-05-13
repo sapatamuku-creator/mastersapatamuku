@@ -309,11 +309,20 @@
             });
             const res = await response.json();
             if (res.status === "success") {
-                document.getElementById('reg_ssid').value = res.data.fileId;
+                const fileId = res.data.fileId || res.data.id;
+                console.log("File ID diterima:", fileId);
+                
+                const inputSsid = document.getElementById('reg_ssid');
+                if (inputSsid) {
+                    inputSsid.value = fileId;
+                    inputSsid.classList.add('success-highlight');
+                }
+
                 document.getElementById('reg_user').readOnly = true; 
                 document.getElementById('btn_gen_sheet').disabled = true;
                 document.getElementById('btn_reg').disabled = false;
-                alert("Spreadsheet Berhasil Dibuat!");
+                
+                alert("Spreadsheet Berhasil Dibuat!\nID: " + fileId);
             } else {
                 alert("Gagal dari Google: " + (res.message || "Tanpa pesan detail"));
             }

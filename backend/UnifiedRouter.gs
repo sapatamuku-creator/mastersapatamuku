@@ -59,6 +59,11 @@ function doPost(e) {
 
       // WA Form Submission (WhatsAppFormulir.gs)
       case 'submitWAForm':
+      case 'saveMasterToken':
+      case 'updateMasterToken':
+      case 'remoteFonnte':
+      case 'toggleStatus':
+      case 'executeFonnteBlast':
         return handleWAFormPost(payload);
 
       // Core Guestbook Actions (Main.gs)
@@ -83,16 +88,12 @@ function createResponse(data) {
  */
 function triggerAuth() {
   Logger.log("Memicu izin akses Drive secara penuh...");
-  try {
-    DriveApp.getRootFolder();
-    // Memaksa Google mendeteksi kebutuhan izin menulis/duplikat
-    const dummy = DriveApp.createFile("DUMMY_AUTH_TEST", "Pemicu Izin", MimeType.PLAIN_TEXT);
-    dummy.setTrashed(true); // Langsung hapus
-    SpreadsheetApp.getActiveSpreadsheet();
-    UrlFetchApp.fetch("https://google.com");
-    Logger.log("Izin DRIVE dan SPREADSHEET berhasil dipicu!");
-  } catch(e) {
-    Logger.log("Error saat memicu izin: " + e.toString());
-  }
+  DriveApp.getRootFolder();
+  // Memaksa Google mendeteksi kebutuhan izin menulis/duplikat
+  const dummy = DriveApp.createFile("DUMMY_AUTH_TEST", "Pemicu Izin", MimeType.PLAIN_TEXT);
+  dummy.setTrashed(true); // Langsung hapus
+  SpreadsheetApp.getActiveSpreadsheet();
+  UrlFetchApp.fetch("https://google.com");
+  Logger.log("Izin DRIVE dan SPREADSHEET berhasil dipicu!");
 }
 
