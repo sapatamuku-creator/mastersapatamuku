@@ -1,10 +1,8 @@
 /**
- * STAND-ALONE WHATSAPP ENGINE - SAPATAMU.KU
- * (Fonnte Token diambil dari CentralBackend secara Global)
+ * SAPATAMU.KU - WHATSAPP ENGINE (Unified Version)
  */
 
 function handleWAEnginePost(data) {
-  // --- DELAY 2 DETIK UNTUK SINKRONISASI DATA ONSITE ---
   Utilities.sleep(2000); 
 
   try {
@@ -21,9 +19,9 @@ function handleWAEnginePost(data) {
     SpreadsheetApp.flush();
     const values = sheet.getDataRange().getValues();
 
-    const COL_NAME = 2;   // Kolom C
-    const COL_PHONE = 3;  // Kolom D
-    const COL_KODE = 5;   // Kolom F
+    const COL_NAME = 2;   
+    const COL_PHONE = 3;  
+    const COL_KODE = 5;   
 
     let guest = null;
     for (let i = 1; i < values.length; i++) {
