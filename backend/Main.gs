@@ -399,10 +399,11 @@ function registerNewOnsite(data) {
     let cleanPhone = String(data.whatsapp || "").replace(/\D/g, ''); 
     if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
     const giftVal = data.catatan || "-";
+    const souvenirVal = data.souvenir === "tidak" ? 0 : 1;
 
     const newRow = [
       "=ROW()-" + (START_ROW - 1), nowFormatted, data.namaTamu || "Tanpa Nama", "'" + cleanPhone, 
-      data.kategori || "UMUM", kodeUnik, qrUrl, 0, 1, timeOnly, 1, data.host || "-", 
+      data.kategori || "UMUM", kodeUnik, qrUrl, 0, 1, timeOnly, souvenirVal, data.host || "-", 
       data.alamat || "-", data.realHadir || 1, giftVal, timestampP, "-", 0, data.sesi || "-"
     ];
     sheet.appendRow(newRow);
