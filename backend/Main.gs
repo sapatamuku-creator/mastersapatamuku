@@ -459,8 +459,9 @@ function getWelcomeData(ssId) {
   try {
     const ss = getSS(ssId);
     const sheet = ss.getSheetByName(SHEET_DATA);
-    const meta = sheet.getRange("A1:B6").getValues();
+    if (!sheet) throw new Error("Sheet '" + SHEET_DATA + "' tidak ditemukan.");
     
+    const meta = sheet.getRange("A1:B6").getValues();
     const weddingName = meta[0][1] || "SapaTamu.Ku";
     const weddingDate = meta[1][1] || "-";
     
@@ -469,8 +470,7 @@ function getWelcomeData(ssId) {
     let latestGuest = { nama: "", kategori: "", alamat: "" };
     
     if (lastRow >= START_ROW) {
-      const guestData = sheet.getRange(START_ROW, 1, lastRow - (START_ROW - 1), 13).getValues(); // Ambil s/d kolom M
-      // Cari yang statusnya 1 (Index 8) dan ambil yang paling bawah
+      const guestData = sheet.getRange(START_ROW, 1, lastRow - (START_ROW - 1), 13).getValues(); 
       for (let i = guestData.length - 1; i >= 0; i--) {
         if (String(guestData[i][8]) === "1") {
           latestGuest = {
@@ -483,18 +483,31 @@ function getWelcomeData(ssId) {
       }
     }
 
-    // Ambil Rundown
+    // Ambil Rundown secara Aman
     let rundown = [];
     const rundownSheet = ss.getSheetByName("Rundown");
     if (rundownSheet) {
       const rdLast = rundownSheet.getLastRow();
       if (rdLast >= 2) {
         const rdData = rundownSheet.getRange(2, 1, rdLast - 1, 3).getValues();
-        rundown = rdData.map(r => ({
-          syncTime: Utilities.formatDate(new Date(r[0]), "GMT+7", "HH:mm"),
-          displayTime: r[1],
-          eventName: r[2]
-        }));
+        rundown = rdData.map(r => {
+          let sTime = "00:00";
+          try {
+            // Cek apakah r[0] adalah Date, jika bukan coba konversi
+            const d = (r[0] instanceof Date) ? r[0] : new Date(r[0]);
+            if (!isNaN(d.getTime())) {
+              sTime = Utilities.formatDate(d, "GMT+7", "HH:mm");
+            } else if (typeof r[0] === 'string' && r[0].includes(':')) {
+              sTime = r[0].substring(0, 5); // Ambil HH:mm jika string
+            }
+          } catch(e) { console.warn("Rundown time parse error:", e); }
+
+          return {
+            syncTime: sTime,
+            displayTime: String(r[1] || ""),
+            eventName: String(r[2] || "")
+          };
+        });
       }
     }
 
@@ -508,6 +521,7 @@ function getWelcomeData(ssId) {
       displayDuration: 10000
     };
   } catch (err) {
-    return { status: "error", message: err.toString() };
+    console.error("getWelcomeData Error:", err);
+    return { status: "error", error: err.toString(), message: err.toString() };
   }
 }
