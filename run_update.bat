@@ -31,7 +31,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [STEP 3] Memperbarui Deployment (URL) agar menggunakan kode terbaru...
-call clasp deploy --deploymentId AKfycbyJ8biF1h3tjehSK88lDLxoQopTG8pJoWZNSBvh3YwFVX0Sow-7hCcZX4_eVqWWgdH4 --description "Auto Updated by Antigravity"
+call clasp deploy --deploymentId AKfycbw2P-eJYni_mvNFqsa6_rDjvCBoIiv3qli10MWmsTtZAYwUcduSrSAbxv4hJ5kY6ICz --description "Auto Updated by Antigravity"
 cd ..
 if %errorlevel% neq 0 (
     echo [WARNING] Gagal update deployment otomatis.
@@ -42,13 +42,13 @@ echo.
 
 :: 3. Update Existing Deployment (URL stays the same)
 echo [STEP 3] Memperbarui Deployment di Google (URL TETAP)...
-call clasp deploy -i AKfycby6NbBUliD3si7LcGOuOe3kQF7etddQzocQO-oh_ZkOXw7GC9hEs5yWFqkqxxJxo7vd0A -d "SapaTamu Master Unified Update %date% %time%"
+call clasp deploy -i AKfycbw2P-eJYni_mvNFqsa6_rDjvCBoIiv3qli10MWmsTtZAYwUcduSrSAbxv4hJ5kY6ICz -d "SapaTamu Master Unified Update %date% %time%"
 cd ..
 
 echo.
 echo ==================================================
 echo    SUKSES! Ekosistem SapaTamu.Ku Telah Terupdate.
-echo    URL: https://script.google.com/macros/s/AKfycby6NbBUliD3si7LcGOuOe3kQF7etddQzocQO-oh_ZkOXw7GC9hEs5yWFqkqxxJxo7vd0A/exec
+echo    URL: https://script.google.com/macros/s/AKfycbw2P-eJYni_mvNFqsa6_rDjvCBoIiv3qli10MWmsTtZAYwUcduSrSAbxv4hJ5kY6ICz/exec
 echo ==================================================
 echo.
 pause
