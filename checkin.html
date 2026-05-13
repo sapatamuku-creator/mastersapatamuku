@@ -553,9 +553,9 @@
             const gift = (document.getElementById('tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('tag-kado').classList.contains('active') ? "KADO" : "");
             const list = Array.from(selectedIDs);
 
-            for (const id of list) {
-                // 1. Jalankan Check-in Master (Database)
-                await fetch(SCRIPT_URL, { 
+            // 1. Eksekusi Database Update secara Paralel (CRITICAL)
+            const checkinPromises = list.map(id => 
+                fetch(SCRIPT_URL, { 
                     method: 'POST', 
                     body: JSON.stringify({ 
                         action: "confirm_checkin", 
@@ -564,23 +564,20 @@
                         realHadir: pax, 
                         statusAngpao: gift || "-" 
                     }) 
-                });
+                })
+            );
 
-                // 2. Jalankan WA Engine secara PARALEL
+            // 2. Kirim WA & Selfie di latar belakang (NON-CRITICAL for UI Speed)
+            list.forEach(id => {
                 fetch(WA_ENGINE_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    body: JSON.stringify({
-                        action: "broadcastWA",
-                        ssId: CURRENT_SS_ID,
-                        kodeUnik: id
-                    })
+                    body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: id })
                 });
-            }
+            });
 
-            // 3. Jalankan Selfie jika ada (Hanya upload satu foto untuk grup)
             if (capturedBase64 && list.length > 0) {
-                await fetch(SELFIE_URL, {
+                fetch(SELFIE_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     body: JSON.stringify({
@@ -593,14 +590,33 @@
                 });
             }
 
+            // Tunggu Database utama selesai saja
+            await Promise.all(checkinPromises);
+
+            // 3. UI Feedback Instan
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            
+            // Update status lokal agar tidak perlu refresh data berat
+            list.forEach(id => {
+                const idx = masterData.findIndex(r => r.kode === id);
+                if (idx !== -1) {
+                    masterData[idx].jamDatang = "Tadi"; 
+                    masterData[idx].realHadir = pax;
+                }
+            });
+
             selectedIDs.clear();
             document.getElementById('selected-count').innerText = "0";
             document.getElementById('bulk-btn').style.display = 'none';
-            await closeModal();
-            await fetchData();
             
+            await closeModal();
+            renderUI(); // Render ulang dari data lokal (Instan)
+            
+            // Refresh data asli di background tanpa mematikan loading
+            fetchData(); 
+
         } catch (e) { 
+            console.error(e);
             alert("Gagal memproses check-in. Cek internet."); 
         } finally { 
             isBusy = false; 

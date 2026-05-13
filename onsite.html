@@ -545,32 +545,27 @@
             
             if (json.status === "success") {
                 fetch(WA_ENGINE_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        action: "broadcastWA",
-                        ssId: CURRENT_SS_ID,
-                        kodeUnik: selectedGuest.kode
-                    })
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: selectedGuest.kode })
                 });
 
-                fetch(SELFIE_URL, { 
-                    method: 'POST', 
-                    mode: 'no-cors', 
-                    body: JSON.stringify({ 
-                        action: "uploadSelfie",
-                        image: capturedPhoto, 
-                        nama: selectedGuest.nama, 
-                        kode: selectedGuest.kode,
-                        ssId: CURRENT_SS_ID 
-                    }) 
-                });
+                if (capturedPhoto) {
+                    fetch(SELFIE_URL, { 
+                        method: 'POST', mode: 'no-cors', 
+                        body: JSON.stringify({ action: "uploadSelfie", image: capturedPhoto, nama: selectedGuest.nama, kode: selectedGuest.kode, ssId: CURRENT_SS_ID }) 
+                    });
+                }
 
                 confetti({ particleCount: 150, spread: 70 });
+                const idx = masterData.findIndex(g => g.kode === selectedGuest.kode);
+                if(idx !== -1) {
+                    masterData[idx].statusHadir = "1";
+                    masterData[idx].realHadir = p;
+                    masterData[idx].jamDatang = "Tadi";
+                }
                 closeConfirm(); 
-                await fetchMasterData();
                 renderGuestList();
-                syncNavbar();
+                fetchMasterData();
             }
         } catch (e) {
             console.error("Error checkin:", e);
@@ -619,34 +614,24 @@
 
             if (json.status === "success") {
                 fetch(WA_ENGINE_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        action: "broadcastWA",
-                        ssId: CURRENT_SS_ID,
-                        kodeUnik: json.kode 
-                    })
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: json.kode })
                 });
 
-                fetch(SELFIE_URL, { 
-                    method: 'POST', 
-                    mode: 'no-cors', 
-                    body: JSON.stringify({ 
-                        action: "uploadSelfie",
-                        image: capturedOnsitePhoto, 
-                        nama: payload.namaTamu, 
-                        kode: json.kode,
-                        ssId: CURRENT_SS_ID
-                    }) 
-                });
+                if (capturedOnsitePhoto) {
+                    fetch(SELFIE_URL, { 
+                        method: 'POST', mode: 'no-cors', 
+                        body: JSON.stringify({ action: "uploadSelfie", image: capturedOnsitePhoto, nama: payload.namaTamu, kode: json.kode, ssId: CURRENT_SS_ID }) 
+                    });
+                }
 
                 confetti({ particleCount: 100, spread: 50 });
                 resetOnsiteSnapshot(); 
                 document.getElementById('reg-nama').value = ""; 
                 document.getElementById('reg-alamat').value = ""; 
                 document.getElementById('reg-wa').value = "";
-                fetchMasterData(); 
                 switchMode('scan');
+                fetchMasterData(); 
             }
         } catch (e) {
             console.error("Error onsite registration:", e);
