@@ -341,9 +341,9 @@
 
 <script>
 (function() {
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCj4W8OvxkwO32zE7aDo5uqgUjNaamxSSJHOFEWhjT5jGiTrQuCrDNLRp87jFh9-rV-w/exec";
-    const BACKEND_EDIT_URL = "https://script.google.com/macros/s/AKfycbw8Wu-in8QxomB098kJrj7F49Fx7QOePMR7ey1aEfioVvNa6ClM0JJ5czowwmgPD2H7/exec";
-    const BACKEND_DELETE_URL = "https://script.google.com/macros/s/AKfycbwS0FSn0CKTb4tmNgju55CHpVUxM81EJ4ifjqhH4AYXK7CWzMEoZRFcD2-TXzpfuCZL/exec";
+    // GANTI URL DIBAWAH INI DENGAN URL MASTER BACKEND ANDA
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycb_MASTER_BACKEND_ID/exec"; 
+
 
     const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
     if (!session || !session.ssId) {
@@ -388,7 +388,7 @@
     async function refreshApp() {
         toggleProcessing(true, "SYNCING DATA...");
         try {
-            const response = await fetch(APPS_SCRIPT_URL, {
+            const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: "getMasterData", ssId: CURRENT_SS_ID })
             });
@@ -440,7 +440,7 @@
         
         toggleProcessing(true, "SAVING GUEST...");
         try {
-            await fetch(APPS_SCRIPT_URL, {
+            await fetch(SCRIPT_URL, {
                 method: "POST",
                 body: JSON.stringify(payload)
             });
@@ -480,7 +480,7 @@
 
         window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`, '_blank');
         
-        fetch(APPS_SCRIPT_URL, {
+        fetch(SCRIPT_URL, {
             method: "POST",
             body: JSON.stringify({ action: "markSent", ssId: CURRENT_SS_ID, row: row })
         }).then(() => setTimeout(refreshApp, 2000));
@@ -572,7 +572,7 @@
                     s3: document.getElementById('edit_ev_s3').value
                 }
             };
-            await fetch(BACKEND_EDIT_URL, { method: "POST", body: JSON.stringify(payload) });
+            await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
             tutupModalEdit();
             refreshApp(); 
         } catch (e) {
@@ -604,7 +604,7 @@
     async function executeDelete(kodeUnik) {
         toggleProcessing(true, "DELETING GUEST...");
         try {
-            const response = await fetch(BACKEND_DELETE_URL, {
+            const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({
                     action: 'deleteGuest',

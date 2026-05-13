@@ -2,7 +2,7 @@
  * BACKEND SAPATAMU.KU - WELCOME SIGN ENGINE (Dynamic ssId Version)
  */
 
-function doGet(e) {
+function handleWelcomeGet(e) {
   const ssId = e.parameter.ssId || "1l4NNvzl-9GpVqoVWlIha9POQLKGzSA8ByF1dTLp6SYc";
   const action = e.parameter.action;
 
@@ -10,11 +10,9 @@ function doGet(e) {
   if (action === "getWelcomeData") {
     try {
       const data = getWelcomeData(ssId); 
-      return ContentService.createTextOutput(JSON.stringify(data))
-        .setMimeType(ContentService.MimeType.JSON);
+      return createResponse(data);
     } catch (err) {
-      return ContentService.createTextOutput(JSON.stringify({ error: err.toString() }))
-        .setMimeType(ContentService.MimeType.JSON);
+      return createResponse({ error: err.toString() });
     }
   }
   

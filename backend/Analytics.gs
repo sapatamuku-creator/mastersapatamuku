@@ -3,7 +3,7 @@
  * Update: 2026-05-04
  */
 
-function doGet(e) {
+function handleAnalyticsGet(e) {
   try {
     // 1. GET SPREADSHEET ID (Prioritaskan parameter URL)
     const ssId = e.parameter.ssId || "1l4NNvzl-9GpVqoVWlIha9POQLKGzSA8ByF1dTLp6SYc";
@@ -114,12 +114,10 @@ function doGet(e) {
       flowRaw: stats.flowRaw 
     };
 
-    return ContentService.createTextOutput(JSON.stringify(output))
-      .setMimeType(ContentService.MimeType.JSON);
+    return createResponse(output);
 
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ "error": error.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return createResponse({ "error": error.message });
   }
 }
 

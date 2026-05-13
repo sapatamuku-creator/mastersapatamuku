@@ -25,7 +25,7 @@ function getSS(id) {
 }
 
 // --- 1. ROUTING GET ---
-function doGet(e) {
+function handleMainGet(e) {
   const action = e.parameter.action;
   const row = e.parameter.row;
   const ssId = e.parameter.ssId; 
@@ -103,13 +103,8 @@ function doGet(e) {
 }
 
 // --- 2. ROUTING POST (Centralized Logic) ---
-function doPost(e) {
+function handleMainPost(payload) {
   try {
-    if (!e || !e.postData || !e.postData.contents) {
-      return createResponse({ status: "error", message: "No payload received" });
-    }
-
-    const payload = JSON.parse(e.postData.contents);
     const action = payload.action;
     const ssId = payload.ssId;
 
@@ -149,6 +144,10 @@ function doPost(e) {
       case "update_tanda_kasih": 
         result = updateTandaKasih(ssId, payload.kodeUnik, payload.nominal); 
         break;
+
+      case "deleteGuest":
+        result = deleteGuest(ssId, payload.kodeUnik);
+        break;
       
       default:
         result = { status: "error", message: "Action unknown" };
@@ -161,10 +160,27 @@ function doPost(e) {
   }
 }
 
-function createResponse(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+function deleteGuest(ssId, kodeUnik) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < START_ROW) return { status: "error", message: "Data kosong" };
+    
+    const data = sheet.getRange(START_ROW, COL_KODE_UNIK, lastRow - (START_ROW - 1), 1).getValues();
+    for (let i = 0; i < data.length; i++) {
+      if (String(data[i][0]) === String(kodeUnik)) {
+        sheet.deleteRow(i + START_ROW);
+        return { status: "success", message: "Tamu berhasil dihapus" };
+      }
+    }
+    return { status: "error", message: "Kode tidak ditemukan" };
+  } catch (err) {
+    return { status: "error", message: err.toString() };
+  }
 }
+
+// createResponse removed (using UnifiedRouter version)
 
 // --- 3. CORE FUNCTIONS ---
 

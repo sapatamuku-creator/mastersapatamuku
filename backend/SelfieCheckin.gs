@@ -6,11 +6,8 @@
 const TARGET_FOLDER_ID = "1yqHqIf6prjKWs5HxSVjw3t3zOLykJn7S";
 const MASTER_DB_ID = "12z2fqewIamIRpVJ4zocMDp-8CwjZsjsrQRh3dXx-VAw"; // Database Pusat (Updated to New ID)
 
-function doPost(e) {
+function handleSelfiePost(data) {
   try {
-    const data = JSON.parse(e.postData.contents);
-    
-    // Ambil ssId dinamis dari payload login
     const SPREADSHEET_ID = data.ssId; 
     
     if (!SPREADSHEET_ID) throw new Error("Spreadsheet ID (ssId) diperlukan untuk identifikasi client.");
@@ -25,7 +22,7 @@ function doPost(e) {
     // 1. Ambil Username Wedding dari Master Database berdasarkan ssId
     const weddingUsername = getWeddingUsername(SPREADSHEET_ID);
 
-    // 2. Sanitasi Nama dan Susun Nama File: "Username_KATEGORI_Nama_Kode.jpg"
+    // 2. Sanitasi Nama dan Susun Nama File
     const cleanNama = namaTamu.replace(/[\\\/\:\*\?\"\<\>\|]/g, "");
     const fileName = `${weddingUsername}_${kategori}_${cleanNama}_${kodeUnik}.jpg`;
 
@@ -37,7 +34,7 @@ function doPost(e) {
     const bytes = Utilities.base64Decode(rawData);
     const blob = Utilities.newBlob(bytes, "image/jpeg", fileName);
 
-    // 4. Simpan ke Folder Statis
+    // 4. Simpan ke Folder
     const folder = DriveApp.getFolderById(TARGET_FOLDER_ID);
     const file = folder.createFile(blob);
     const fileUrl = file.getUrl();
@@ -45,17 +42,17 @@ function doPost(e) {
     // 5. Update Link Foto ke Spreadsheet Client (Kolom Q)
     updateSpreadsheetPhoto(SPREADSHEET_ID, kodeUnik, fileUrl);
 
-    return ContentService.createTextOutput(JSON.stringify({
+    return createResponse({
       status: "success",
       fileName: fileName,
       fileUrl: fileUrl
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
 
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
+    return createResponse({
       status: "error",
       message: error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
   }
 }
 
@@ -64,7 +61,7 @@ function doPost(e) {
  */
 function getWeddingUsername(clientSsId) {
   try {
-    const masterSs = SpreadsheetApp.openById(MASTER_DB_ID);
+    const masterSs = SpreadsheetApp.openById(MASTER_SS_ID);
     const sheet = masterSs.getSheets()[0]; // Mengambil sheet pertama (index 0)
     const range = sheet.getDataRange().getValues();
     

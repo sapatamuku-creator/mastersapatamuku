@@ -5,17 +5,16 @@
 
 const FONNTE_TOKEN = "fRx1Canf4GYroBZZNfo7";
 
-function doPost(e) {
+function handleWAEnginePost(data) {
   // --- DELAY 2 DETIK UNTUK SINKRONISASI DATA ONSITE ---
   Utilities.sleep(2000); 
 
   try {
-    const data = JSON.parse(e.postData.contents);
     const ssId = data.ssId;
     const kodeUnik = data.kodeUnik;
 
     if (!ssId || !kodeUnik) {
-      return response({"status": "error", "message": "Missing ssId or kodeUnik"});
+      return createResponse({"status": "error", "message": "Missing ssId or kodeUnik"});
     }
 
     const ss = SpreadsheetApp.openById(ssId);
@@ -50,11 +49,11 @@ function doPost(e) {
       
       return sendToFonnte(cleanedPhone, message);
     } else {
-      return response({"status": "skipped", "message": "No phone number found for this code"});
+      return createResponse({"status": "skipped", "message": "No phone number found for this code"});
     }
 
   } catch (err) {
-    return response({"status": "error", "message": err.toString()});
+    return createResponse({"status": "error", "message": err.toString()});
   }
 }
 
@@ -74,9 +73,7 @@ function sendToFonnte(target, message) {
   };
 
   const res = UrlFetchApp.fetch(url, options);
-  return response(JSON.parse(res.getContentText()));
+  return createResponse(JSON.parse(res.getContentText()));
 }
 
-function response(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
+// response helper removed

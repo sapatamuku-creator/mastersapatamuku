@@ -330,7 +330,8 @@
 
 <script>
 (function() {
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbztsrya7gYVdgsfwG08e1y5SAmM35NWEl-X-d5w_QIC0TIP_NfVmhiICeAbEl1QUsZR6A/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycb_MASTER_BACKEND_ID/exec"; 
+
     const urlParams = new URLSearchParams(window.location.search);
     const CURRENT_SS_ID = urlParams.get("ssId") || localStorage.getItem("st_saved_ssid");
 
@@ -366,7 +367,7 @@
 
     window.refreshData = async function(isInitial = false) {
         try {
-            const response = await fetch(API_ENDPOINT);
+            const response = await fetch(SCRIPT_URL + "?action=getWAForm&ssId=" + CURRENT_SS_ID);
             localData = await response.json();
             
             document.getElementById('connectionStatus').innerText = "ONLINE";
@@ -438,15 +439,12 @@
             const isConnect = found.statusConnect === "connect";
             toggle.checked = isConnect;
 
-            // --- BAGIAN YANG DIUBAH PADA updateClientView ---
-                if (isConnect) {
-                // ... logika online lainnya
+            if (isConnect) {
                 btnBlast.disabled = false;
-                btnBlast.className = "st-btn btn-green"; // Menjadi Hijau
+                btnBlast.className = "st-btn btn-green"; 
             } else {
-                // ... logika offline lainnya
                 btnBlast.disabled = true;
-                btnBlast.className = "st-btn btn-disabled"; // Kembali Abu-abu
+                btnBlast.className = "st-btn btn-disabled";
             }
         } else {
             document.getElementById('clientPhone').value = "";
@@ -460,7 +458,7 @@
 
     window.saveMasterToken = async function() {
         const tokenEl = document.getElementById('masterToken');
-        const token = tokenEl.value.trim(); // Gunakan trim() untuk menghindari spasi tak sengaja
+        const token = tokenEl.value.trim(); 
         
         if (!token) {
             showToast("⚠️ Token tidak boleh kosong!");
@@ -470,9 +468,8 @@
         toggleProcessing(true, "SAVING MASTER TOKEN...");
         
         try {
-            const response = await fetch(API_ENDPOINT, {
+            const response = await fetch(SCRIPT_URL, {
                 method: "POST",
-                // Penting: Apps Script terkadang butuh header ini untuk membaca text body dengan benar
                 mode: "cors", 
                 cache: "no-cache",
                 headers: {
@@ -489,13 +486,11 @@
             
             if (result.status === "success") {
                 showToast("✅ Token Master berhasil disimpan!");
-                // Refresh data agar tampilan input tetap sinkron dengan database
                 await refreshData();
             } else {
                 showToast("❌ Gagal: " + (result.msg || "Terjadi kesalahan sistem"));
             }
         } catch (e) {
-            // Jika error "unexpected token <", itu biasanya karena redirect Apps Script
             showToast("❌ Gagal terhubung ke server.");
             console.error("SaveMasterToken Error:", e);
         } finally {
@@ -516,7 +511,7 @@
 
         toggleProcessing(true, "UPDATING STATUS...");
         try {
-            await fetch(API_ENDPOINT, {
+            await fetch(SCRIPT_URL, {
                 method: "POST",
                 body: JSON.stringify({ action: "toggleStatus", ssId: CURRENT_SS_ID, kategori: kat, status: newStatus })
             });
@@ -533,7 +528,7 @@
 
         toggleProcessing(true, "SYNCING DEVICE...");
         try {
-            const res = await fetch(API_ENDPOINT, {
+            const res = await fetch(SCRIPT_URL, {
                 method: "POST",
                 body: JSON.stringify({ action: "remoteFonnte", ssId: CURRENT_SS_ID, kategori: kat, targetNumber: phone })
             });
@@ -551,13 +546,11 @@
         const kat = document.getElementById('kategoriSelect').value;
         const token = document.getElementById('displayToken').value;
         
-        // Mengambil data detail acara dari localData (doGet)
         const meta = {
             pengantin: localData.weddingTitle || "Kedua Mempelai",
             hariTanggal: localData.hariTanggal || "",
             lokasi: localData.lokasiAcara || "",
             linkBase: localData.linkInvitation || "",
-            // Baris 4 di Sheet1 biasanya berisi jam detail Akad & Resepsi
             detailWaktu: "Akad: 08.00 / Resepsi: 10.30" 
         };
 
@@ -582,7 +575,7 @@
         });
 
         try {
-            const res = await fetch(API_ENDPOINT, {
+            const res = await fetch(SCRIPT_URL, {
                 method: "POST",
                 body: JSON.stringify({ 
                     action: "executeFonnteBlast", 

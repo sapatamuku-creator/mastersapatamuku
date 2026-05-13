@@ -4,9 +4,9 @@
  */
 
 // --- FUNGSI DOGET (Dashboard Data) ---
-function doGet(e) {
+function handleWAFormGet(e) {
   const ssId = e.parameter.ssId;
-  if (!ssId) return ContentService.createTextOutput("Error: Missing ssId").setMimeType(ContentService.MimeType.TEXT);
+  if (!ssId) return createResponse({ status: "error", message: "Missing ssId" });
 
   const ss = SpreadsheetApp.openById(ssId);
   const sheet1 = ss.getSheetByName("Sheet1");
@@ -54,13 +54,12 @@ function doGet(e) {
     liveUsage: liveDeviceCount, categories: categoryMap, tamu: listTamu 
   };
   
-  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+  return createResponse(result);
 }
 
 // --- FUNGSI DOPOST (Handle Action) ---
-function doPost(e) {
+function handleWAFormPost(data) {
   try {
-    const data = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.openById(data.ssId);
     const settings = ss.getSheetByName("Settings");
     const sheet1 = ss.getSheetByName("Sheet1");
@@ -70,7 +69,7 @@ function doPost(e) {
     if (action === "saveMasterToken" || action === "updateMasterToken") {
       settings.getRange("E2").setValue(data.token);
       SpreadsheetApp.flush();
-      return responseJSON({ status: "success" });
+      return createResponse({ status: "success" });
     }
 
     // 2. REMOTE FONNTE (ADD DEVICE)
@@ -79,7 +78,7 @@ function doPost(e) {
       const deviceValues = settings.getRange("A3:A8").getValues();
       let rowIndex = deviceValues.findIndex(row => row[0] === data.kategori);
 
-      if (rowIndex === -1) return responseJSON({ status: "failed", msg: "Kategori tidak ditemukan" });
+      if (rowIndex === -1) return createResponse({ status: "failed", msg: "Kategori tidak ditemukan" });
 
       const resAdd = directFonnteSend("https://api.fonnte.com/add-device", { name: data.kategori, device: data.targetNumber }, masterToken);
       
@@ -93,9 +92,9 @@ function doPost(e) {
         settings.getRange(rowIndex + 3, 4).setValue(statusFinal);
 
         SpreadsheetApp.flush();
-        return responseJSON({ status: "success", token: newToken, deviceStatus: statusFinal });
+        return createResponse({ status: "success", token: newToken, deviceStatus: statusFinal });
       }
-      return responseJSON({ status: "failed", msg: resAdd.msg });
+      return createResponse({ status: "failed", msg: resAdd.msg });
     }
 
     // 3. TOGGLE STATUS
@@ -110,7 +109,7 @@ function doPost(e) {
         }
       }
       SpreadsheetApp.flush();
-      return responseJSON({ status: "success" });
+      return createResponse({ status: "success" });
     }
 
     // 4. EXECUTE BLAST
@@ -128,11 +127,11 @@ function doPost(e) {
         }
       });
       SpreadsheetApp.flush(); 
-      return responseJSON({ status: "success", sent: successCount });
+      return createResponse({ status: "success", sent: successCount });
     }
 
   } catch (err) {
-    return responseJSON({ status: "error", msg: err.toString() });
+    return createResponse({ status: "error", msg: err.toString() });
   }
 }
 
@@ -153,6 +152,4 @@ function directFonnteSend(url, payload, token) {
   } catch (e) { return { status: false, msg: "Error" }; }
 }
 
-function responseJSON(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
+// responseJSON removed

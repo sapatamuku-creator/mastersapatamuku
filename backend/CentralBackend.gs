@@ -12,24 +12,17 @@ const ADMIN_WA = "6285111567829";
 const ADMIN_EMAIL = "sapatamuku@gmail.com";
 const FONNTE_TOKEN = "fRx1Canf4GYroBZZNfo7";
 
-function doPost(e) {
-  let request;
-  try {
-    request = JSON.parse(e.postData.contents);
-  } catch (err) {
-    return createResponse("error", "Format JSON tidak valid");
-  }
-
+function handleCentralPost(request) {
   const action = request.action;
   
   switch(action) {
     case 'copyMaster': return handleCopyMaster(request); 
     case 'register': return handleRegister(request); 
     case 'login': return handleLogin(request);
-    case 'forgotPassword': return handleForgotPassword(request); // Action disesuaikan frontend
+    case 'forgotPassword': return handleForgotPassword(request); 
     case 'changePassword': return handleChangePassword(request);
     case 'updateClientData': return handleUpdateClientData(request);  
-    default: return createResponse("error", "Action tidak dikenali");
+    default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
 }
 
@@ -41,7 +34,7 @@ function handleRegister(data) {
     const values = sheet.getDataRange().getValues();
     
     for (let i = 1; i < values.length; i++) {
-      if (values[i][0] == data.username) return createResponse("error", "Username sudah terdaftar");
+      if (values[i][0] == data.username) return createResponse({ status: "error", message: "Username sudah terdaftar" });
     }
 
     const file = DriveApp.getFileById(data.ssId);
@@ -60,9 +53,9 @@ function handleRegister(data) {
       data.email         // G (Kolom Baru)
     ]);
 
-    return createResponse("success", "Pendaftaran berhasil");
+    return createResponse({ status: "success", message: "Pendaftaran berhasil" });
   } catch (err) {
-    return createResponse("error", "Gagal pendaftaran: " + err.toString());
+    return createResponse({ status: "error", message: "Gagal pendaftaran: " + err.toString() });
   }
 }
 
@@ -124,7 +117,7 @@ function handleForgotPassword(data) {
       }
     }
 
-    if (!userData) return createResponse("error", "Data akun tidak ditemukan.");
+    if (!userData) return createResponse({ status: "error", message: "Data akun tidak ditemukan." });
 
     const formalMsg = 
       `Yth. Bapak/Ibu *${userData.name}*,\n\n` +
@@ -147,9 +140,9 @@ function handleForgotPassword(data) {
       MailApp.sendEmail(userData.email, "Pemulihan Akses SapaTamu.ku", formalMsg.replace(/\*/g, ''));
     }
 
-    return createResponse("success", "Detail akun telah dikirimkan secara otomatis via WhatsApp & Email.");
+    return createResponse({ status: "success", message: "Detail akun telah dikirimkan secara otomatis via WhatsApp & Email." });
   } catch (err) {
-    return createResponse("error", "Terjadi gangguan sistem. Silakan hubungi Admin.");
+    return createResponse({ status: "error", message: "Terjadi gangguan sistem. Silakan hubungi Admin." });
   }
 }
 
@@ -163,12 +156,12 @@ function handleChangePassword(data) {
     for (let i = 1; i < values.length; i++) {
       if (values[i][0] == data.username && values[i][2] == data.currentPass) {
         sheet.getRange(i + 1, 3).setValue(data.newPass); // Update Kolom C
-        return createResponse("success", "Password berhasil diperbarui secara permanen.");
+        return createResponse({ status: "success", message: "Password berhasil diperbarui secara permanen." });
       }
     }
-    return createResponse("error", "Password saat ini tidak cocok.");
+    return createResponse({ status: "error", message: "Password saat ini tidak cocok." });
   } catch (err) {
-    return createResponse("error", "Gagal memperbarui database.");
+    return createResponse({ status: "error", message: "Gagal memperbarui database." });
   }
 }
 
@@ -188,9 +181,9 @@ function handleCopyMaster(data) {
     targetSS.getRange("A4:B4").setValues([["Waktu Acara :", data.eventData.waktu]]);
     targetSS.getRange("A5:B5").setValues([["Link Invitation :", data.eventData.link]]);
 
-    return createResponse("success", "Spreadsheet berhasil dibuat", { fileId: newId });
+    return createResponse({ status: "success", message: "Spreadsheet berhasil dibuat", data: { fileId: newId } });
   } catch (err) {
-    return createResponse("error", "Gagal Copy: " + err.toString());
+    return createResponse({ status: "error", message: "Gagal Copy: " + err.toString() });
   }
 }
 
@@ -202,17 +195,17 @@ function handleLogin(data) {
 
     for (let i = 1; i < values.length; i++) {
       if (values[i][0] == data.username && values[i][2] == data.password) {
-        return createResponse("success", "Login Berhasil", {
+        return createResponse({ status: "success", message: "Login Berhasil", data: {
           username: values[i][0],
           ssId: values[i][1],
           whatsapp: values[i][3],
           email: values[i][6]
-        });
+        } });
       }
     }
-    return createResponse("error", "Username atau Password salah");
+    return createResponse({ status: "error", message: "Username atau Password salah" });
   } catch (err) {
-    return createResponse("error", "Kesalahan Login");
+    return createResponse({ status: "error", message: "Kesalahan Login" });
   }
 }
 
@@ -225,13 +218,10 @@ function handleUpdateClientData(data) {
     targetSS.getRange("A3:B3").setValues([["Lokasi Acara :", data.eventData.lokasi]]);
     targetSS.getRange("A4:B4").setValues([["Waktu Acara :", data.eventData.waktu]]);
     targetSS.getRange("A5:B5").setValues([["Link Invitation :", data.eventData.link]]);
-    return createResponse("success", "Data berhasil diperbarui");
+    return createResponse({ status: "success", message: "Data berhasil diperbarui" });
   } catch (err) {
-    return createResponse("error", "Update gagal.");
+    return createResponse({ status: "error", message: "Update gagal." });
   }
 }
 
-function createResponse(status, message, data = null) {
-  const result = { status: status, message: message, data: data };
-  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
-}
+// createResponse removed (using UnifiedRouter version)
