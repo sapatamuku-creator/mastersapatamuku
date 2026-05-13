@@ -30,20 +30,12 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-echo [STEP 3] Memperbarui Deployment (URL) agar menggunakan kode terbaru...
-call clasp deploy --deploymentId AKfycbw2P-eJYni_mvNFqsa6_rDjvCBoIiv3qli10MWmsTtZAYwUcduSrSAbxv4hJ5kY6ICz --description "Auto Updated by Antigravity"
-cd ..
-if %errorlevel% neq 0 (
-    echo [WARNING] Gagal update deployment otomatis.
-)
-
-echo OK: Kode backend terkirim.
-echo.
-
-:: 3. Update Existing Deployment (URL stays the same)
-echo [STEP 3] Memperbarui Deployment di Google (URL TETAP)...
+echo [STEP 3] Memperbarui Deployment di Google agar menggunakan kode terbaru...
 call clasp deploy -i AKfycbw2P-eJYni_mvNFqsa6_rDjvCBoIiv3qli10MWmsTtZAYwUcduSrSAbxv4hJ5kY6ICz -d "SapaTamu Master Unified Update %date% %time%"
 cd ..
+
+echo OK: Kode backend terupdate.
+echo.
 
 echo.
 echo ==================================================
