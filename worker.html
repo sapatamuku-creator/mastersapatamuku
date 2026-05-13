@@ -296,10 +296,16 @@
           `QRCODE 380,60,H,9,A,0,"${rawKode}"\r\n`,
           `SET BOLD 0\r\n`,
           `TEXT 380,315,"2",0,1,1,"ID: ${rawKode}"\r\n`,
-          
           `PRINT 1,1\r\n`
         ].join('');
-        await printCharacteristic.writeValue(encoder.encode(tspl));
+        
+        // CHUNKING LOGIC: Kirim data dalam potongan kecil (max 100 byte per chunk) agar tidak error > 512 byte
+        const dataArray = encoder.encode(tspl);
+        const chunkSize = 100;
+        for (let i = 0; i < dataArray.length; i += chunkSize) {
+          const chunk = dataArray.slice(i, i + chunkSize);
+          await printCharacteristic.writeValue(chunk);
+        }
       } else {
         // Fallback ESC/POS
         let esc = `\x1B@\x1Ba\x01\x1BE\x01${rawNama}\n${kategori}\n${rawKode}\n\n\n`;
