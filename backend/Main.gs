@@ -242,11 +242,16 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan) {
 function getMasterDataV3(ssId) {
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_DATA);
-  const meta = sheet.getRange("A1:B6").getValues();
+  
+  // Metadata dari Sheet1 (B1 & B2)
+  const meta = sheet.getRange("B1:B2").getValues();
+  const weddingName = meta[0][0] || "SapaTamu.Ku";
+  const weddingDate = meta[1][0] || "-";
+
   const sesiMeta = sheet.getRange("D1:G1").getValues()[0];
 
   const eventMeta = {
-    pengantin: meta[0][1], tanggal: meta[1][1], lokasi: meta[2][1], waktu: meta[3][1], link: meta[4][1],
+    pengantin: weddingName, tanggal: weddingDate, 
     labelSesi: sesiMeta[0], 
     sesiOptions: [sesiMeta[1], sesiMeta[2], sesiMeta[3]]
   };
@@ -515,31 +520,35 @@ function getWelcomeData(ssId) {
     const sheet = ss.getSheetByName(SHEET_DATA);
     if (!sheet) throw new Error("Sheet '" + SHEET_DATA + "' tidak ditemukan.");
     
-    const meta = sheet.getRange("A1:B6").getValues();
-    const weddingName = meta[0][1] || "SapaTamu.Ku";
-    const weddingDate = meta[1][1] || "-";
+    // Metadata dari Sheet1 (B1 & B2) sesuai screenshot
+    const meta = sheet.getRange("B1:B2").getValues();
+    const weddingName = meta[0][0] || "SapaTamu.Ku";
+    const weddingDate = meta[1][0] || "-";
     
-    // Cari Tamu Terakhir Check-in (Status 1)
-    const lastRow = sheet.getLastRow();
+    // Cari Tamu Terakhir dari sheet Rundown (Bukan Sheet1)
     let latestGuest = { nama: "", kategori: "", alamat: "" };
+    const rundownSheet = ss.getSheetByName("Rundown");
     
-    if (lastRow >= START_ROW) {
-      const guestData = sheet.getRange(START_ROW, 1, lastRow - (START_ROW - 1), 13).getValues(); 
-      for (let i = guestData.length - 1; i >= 0; i--) {
-        if (String(guestData[i][8]) === "1") {
-          latestGuest = {
-            nama: guestData[i][2],     // Kolom C
-            kategori: guestData[i][4], // Kolom E
-            alamat: guestData[i][12]   // Kolom M
-          };
-          break;
+    if (rundownSheet) {
+      const rdLast = rundownSheet.getLastRow();
+      if (rdLast >= 2) {
+        // Scan dari bawah di kolom E (Kode Unik) untuk cari data terakhir
+        const logDataFull = rundownSheet.getRange(2, 5, rdLast - 1, 6).getValues(); 
+        for (let i = logDataFull.length - 1; i >= 0; i--) {
+          if (logDataFull[i][0]) { // Jika Kode Unik (Kolom E) ada isinya
+            latestGuest = {
+              nama: logDataFull[i][1],     // Kolom F (Index 1 di logDataFull)
+              kategori: logDataFull[i][4], // Kolom I (Index 4 di logDataFull)
+              alamat: logDataFull[i][5]    // Kolom J (Index 5 di logDataFull)
+            };
+            break;
+          }
         }
       }
     }
 
     // Ambil Rundown secara Aman
     let rundown = [];
-    const rundownSheet = ss.getSheetByName("Rundown");
     if (rundownSheet) {
       const rdLast = rundownSheet.getLastRow();
       if (rdLast >= 2) {
