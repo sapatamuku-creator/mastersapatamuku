@@ -290,6 +290,15 @@
     const SESSION_KEY = 'sapatamu_session';
     const LOCAL_DB = 'sapatamu_db';
 
+    // CLEAR STORAGE IMMEDIATELY IF SIGNOUT PARAMETER IS PRESENT
+    const _initUrlParams = new URLSearchParams(window.location.search);
+    if (_initUrlParams.get('signout') === 'true') {
+        localStorage.clear();
+        sessionStorage.clear();
+        // Bersihkan URL agar rapi
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+
     async function initLogin() {
         if (!window.SAPATAMU_RESOLVED) {
             setTimeout(initLogin, 100);
@@ -299,14 +308,8 @@
         const session = sessionStorage.getItem(SESSION_KEY);
         const localData = localStorage.getItem(LOCAL_DB);
         
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('signout') === 'true') {
-            sessionStorage.removeItem(SESSION_KEY);
-            localStorage.removeItem(LOCAL_DB);
-            // Bersihkan URL agar tidak loop
-            window.history.replaceState({}, '', window.location.pathname);
-            return;
-        }
+        // Cek lagi jika butuh return awal (opsional karena sudah di atas)
+        if (new URLSearchParams(window.location.search).get('signout') === 'true') return;
 
         let targetSsId = window.CURRENT_SS_ID;
 

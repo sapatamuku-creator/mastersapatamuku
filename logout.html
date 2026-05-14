@@ -4,114 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu.ku - Keluar Sesi</title>
-    <script src="subdomain_resolver.js?v=1.3"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --primary: #E07B7B; 
-            --text-main: #4A3F35; 
-            --bg: #FFF9F5;
-        }
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg);
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            color: var(--text-main);
-        }
-        .logout-card {
-            background: white;
-            padding: 40px;
-            border-radius: 30px;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(74, 63, 53, 0.1);
-            max-width: 400px;
-            width: 90%;
-            border: 1px solid #F0E6DE;
-        }
+        :root { --primary: #E07B7B; --text-main: #4A3F35; --bg: #FFF9F5; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; color: var(--text-main); }
+        .logout-card { background: white; padding: 40px; border-radius: 30px; text-align: center; box-shadow: 0 20px 50px rgba(74, 63, 53, 0.1); max-width: 400px; width: 90%; border: 1px solid #F0E6DE; }
         h2 { font-family: 'Lora', serif; font-size: 24px; margin-bottom: 10px; }
         p { color: #8C7560; font-size: 14px; margin-bottom: 30px; line-height: 1.6; }
-        .btn-confirm {
-            background: #4A3F35;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 15px;
-            font-weight: 700;
-            font-size: 12px;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 10px;
-            letter-spacing: 1px;
-        }
-        .btn-cancel {
-            background: none;
-            color: #8C7560;
-            border: 1px solid #F0E6DE;
-            padding: 12px;
-            border-radius: 15px;
-            font-size: 11px;
-            cursor: pointer;
-            width: 100%;
-        }
+        .btn-confirm { background: #4A3F35; color: white; border: none; padding: 15px 30px; border-radius: 15px; font-weight: 700; font-size: 12px; cursor: pointer; width: 100%; margin-bottom: 10px; letter-spacing: 1px; }
+        .btn-cancel { background: none; color: #8C7560; border: 1px solid #F0E6DE; padding: 12px; border-radius: 15px; font-size: 11px; cursor: pointer; width: 100%; }
     </style>
 </head>
 <body>
 
-    <div id="sapa-confirm-modal">
+    <div id="modal-confirm">
         <div class="logout-card">
             <div style="font-size: 40px; margin-bottom: 20px;">👋</div>
             <h2>Keluar Sesi?</h2>
-            <p id="confirm-msg">Apakah Anda yakin ingin mengakhiri sesi SapaTamu.ku saat ini?</p>
-            <button onclick="executeLogout()" class="btn-confirm">YA, KELUAR SEKARANG</button>
-            <button onclick="cancelLogout()" class="btn-cancel">BATAL</button>
-        </div>
-    </div>
-
-    <div id="logging-out" style="display: none;">
-        <div class="logout-card">
-            <div style="margin-bottom: 20px;">⌛</div>
-            <h2>Mengakhiri Sesi...</h2>
-            <p>Mohon tunggu sebentar.</p>
+            <p>Anda akan dialihkan kembali ke halaman login utama.</p>
+            <button onclick="executeLogout()" class="btn-confirm">YA, KELUAR</button>
+            <button onclick="window.location.replace('dashboard.html')" class="btn-cancel">BATAL</button>
         </div>
     </div>
 
     <script>
-        const SESSION_KEY = 'sapatamu_session';
-        const LOCAL_DB = 'sapatamu_db';
-
-        async function executeLogout() {
-            document.getElementById('sapa-confirm-modal').style.display = 'none';
-            document.getElementById('logging-out').style.display = 'block';
-
-            // BERSIHKAN SEMUA MEMORI LOKAL SEGERA
-            const username = JSON.parse(localStorage.getItem(LOCAL_DB) || "{}").username;
-            sessionStorage.clear();
+        function executeLogout() {
+            // 1. BERSIHKAN LOKAL SUBDOMAIN
             localStorage.clear();
+            sessionStorage.clear();
 
-            // REDIRECT VIA BACKEND AGAR URL BERSIH & KELUAR DARI FRAME
-            const redirectUrl = encodeURIComponent("https://sapatamu.id/login.html?signout=true");
-            const logoutUrl = `${window.SCRIPT_URL}?action=logout&username=${encodeURIComponent(username || "guest")}&redirect=${redirectUrl}`;
-            
-            setTimeout(() => {
-                window.location.href = logoutUrl;
-            }, 100);
-        }
-
-        function cancelLogout() {
-            window.location.replace("dashboard.html");
-        }
-
-        // Tampilkan nama user di pesan konfirmasi jika ada
-        const localData = localStorage.getItem(LOCAL_DB);
-        if (localData) {
-            const currentData = JSON.parse(localData);
-            if (currentData.username) {
-                document.getElementById('confirm-msg').innerText = `Halo ${currentData.username}, yakin ingin keluar? Semua data sesi di perangkat ini akan dibersihkan.`;
-            }
+            // 2. LANGSUNG TEMBAK KE LOGIN UTAMA (BAWA SINYAL BERSIH-BERSIH)
+            window.location.replace("https://sapatamu.id/login.html?signout=true");
         }
     </script>
 </body>
