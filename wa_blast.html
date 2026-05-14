@@ -608,7 +608,9 @@
     };
 
     window.executeMassBlast = async function() {
-        alert("Sistem: Sinyal Klik Diterima!");
+        // Kunci proses segera untuk menghentikan auto-refresh latar belakang
+        isProcessing = true;
+        
         try {
             console.log("Blast All Initiated");
             const katSelect = document.getElementById('kategoriSelect');
@@ -617,11 +619,13 @@
             
             if(!kat) {
                 alert("⚠️ Peringatan: Pilih kategori pengundang terlebih dahulu!");
+                isProcessing = false;
                 return;
             }
 
             if (!localData.tamu || !Array.isArray(localData.tamu)) {
                 alert("❌ Error: Data tamu tidak ditemukan atau rusak.");
+                isProcessing = false;
                 return;
             }
 
@@ -633,12 +637,16 @@
             });
 
             if(!targets.length) {
-                alert("ℹ️ Info: Tidak ada tamu di kategori [" + kat + "] yang perlu dikirim (Semua sudah terkirim ✅).");
+                alert("ℹ️ Info: Tidak ada tamu di kategori [" + kat + "] yang perlu dikirim.");
+                isProcessing = false;
                 return;
             }
             
             const confirmMsg = `MESIN BLAST READY\n-------------------\nTarget: ${targets.length} Tamu\nKategori: ${kat}\n\nKlik OK untuk mulai mengirim.`;
-            if(!confirm(confirmMsg)) return;
+            if(!confirm(confirmMsg)) {
+                isProcessing = false;
+                return;
+            }
 
             toggleProcessing(true, "Menyiapkan Jalur Blast...");
 
@@ -706,10 +714,12 @@
     // Global Click Delegation (Lebih Aman)
     document.addEventListener('click', function(e) {
         if (e.target && e.target.id === 'btnBlastAction') {
+            e.preventDefault();
+            e.stopImmediatePropagation();
             console.log("Global Catch: Blast Action Clicked");
             window.executeMassBlast();
         }
-    });
+    }, true); // Menggunakan capturing phase agar lebih diprioritaskan
 
     setInterval(() => { 
         if (!isProcessing && document.visibilityState === 'visible') refreshData(); 
