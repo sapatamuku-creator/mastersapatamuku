@@ -398,27 +398,41 @@
     let onsiteStream = null;
     let confirmStream = null;
 
-    // Use URL from subdomain_resolver if available, otherwise fallback
-    const API_URL = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbzJdAGMyhDHfyWJTq2IrEzCVVBMxEuwlaflv4_xBdbeVIzrQRG1SfCnBGz-XXbDjM3C/exec";
-
     async function initApp() {
+        console.log("App Initializing...");
         // Wait for subdomain resolution if needed
         if (!window.SAPATAMU_RESOLVED) {
-            console.log("Waiting for resolution...");
             await new Promise(r => {
+                let timer = 0;
                 const check = setInterval(() => {
-                    if (window.SAPATAMU_RESOLVED) { clearInterval(check); r(); }
+                    timer += 100;
+                    if (window.SAPATAMU_RESOLVED || timer > 3000) { clearInterval(check); r(); }
                 }, 100);
             });
         }
+        
+        // Fallback session logic
+        if (!window.CURRENT_SS_ID) {
+            const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+            window.CURRENT_SS_ID = session ? session.ssId : null;
+        }
+
+        if (!window.CURRENT_SS_ID) {
+            console.error("SS_ID NOT FOUND");
+            return;
+        }
+
         await fetchMasterData();
     }
 
     async function fetchMasterData() {
-        if (!window.CURRENT_SS_ID) return;
+        const ssId = window.CURRENT_SS_ID;
+        const api = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbzJdAGMyhDHfyWJTq2IrEzCVVBMxEuwlaflv4_xBdbeVIzrQRG1SfCnBGz-XXbDjM3C/exec";
+        
         try {
-            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "get_master_data", ssId: window.CURRENT_SS_ID }) });
+            const res = await fetch(api, { method: 'POST', body: JSON.stringify({ action: "get_master_data", ssId: ssId }) });
             const data = await res.json();
+            console.log("Data Received:", data.guestList ? data.guestList.length : 0);
             masterData = data.guestList || [];
             
             const hostSelect = document.getElementById('reg-host');
@@ -469,12 +483,11 @@
         document.getElementById('scanner-overlay').style.display = 'block';
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
         
-        // Dynamic QR Box (1:1 Square)
         const qrBoxSize = Math.min(window.innerWidth, window.innerHeight) * 0.7;
         
         html5QrCode.start(
             { facingMode: "environment" }, 
-            { fps: 20, qrbox: { width: qrBoxSize, height: qrBoxSize } }, 
+            { fps: 25, qrbox: { width: qrBoxSize, height: qrBoxSize }, aspectRatio: 1.0 }, 
             (txt) => {
                 console.log("QR Scanned Raw:", txt);
                 let scCode = txt.trim();
