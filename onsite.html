@@ -476,12 +476,28 @@
             { facingMode: "environment" }, 
             { fps: 20, qrbox: { width: qrBoxSize, height: qrBoxSize } }, 
             (txt) => {
-            const t = masterData.find(g => String(g.kode) === String(txt));
-            if (t && String(t.statusHadir)!=="1") {
-                closeScanner();
-                openConfirm(t.kode, t.nama, t.alamat, t.kategori);
+                console.log("QR Scanned Raw:", txt);
+                let scCode = txt.trim();
+                
+                // Handle jika yang di-scan adalah URL (Personal Link)
+                if (scCode.includes("id=")) {
+                    scCode = scCode.split("id=")[1].split("&")[0];
+                }
+                
+                const t = masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase());
+                
+                if (t) {
+                    if (String(t.statusHadir) === "1") {
+                        alert("TAMU SUDAH HADIR:\n" + t.nama + " (" + t.kategori + ")");
+                    } else {
+                        closeScanner();
+                        openConfirm(t.kode, t.nama, t.alamat, t.kategori);
+                    }
+                } else {
+                    alert("KODE TIDAK DIKENAL:\n" + scCode + "\n\nPastikan QR Code sesuai dengan data di spreadsheet.");
+                }
             }
-        }).catch(err => console.error(err));
+        ).catch(err => console.error(err));
     };
 
     window.closeScanner = async function() {
