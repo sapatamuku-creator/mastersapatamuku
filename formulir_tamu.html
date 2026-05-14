@@ -21,13 +21,6 @@
             --gold: #C8962E;
         }
         
-        /* PERTAHANAN BANNER WEEBLY */
-        div#weebly-footer-signup-container, .weebly-footer-signup-container, 
-        #weebly-footer, .weebly-footer, .weebly-footer-mobile, 
-        iframe[src*="weebly.com"], .w-footer {
-            display: none !important; visibility: hidden !important; 
-            height: 0 !important; opacity: 0 !important; pointer-events: none !important;
-        }
 
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -523,7 +516,7 @@
     </style>
 
     <script>(function() {
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmKkz41efmBz1-1NnOcyoftxfQAtrHQy41WRrZnbsY0Y66zA4ZdxLPZF5UHemUROwN/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNb_E4Vq202Gj1XdKUwiIkTbMKVm1TRn0JcmsxilBkDeAjDUcr44VvayDI-lNmV9Xn/exec";
 
         function syncNavbar() {
             const links = document.querySelectorAll('.nav-link');
@@ -597,6 +590,20 @@
             });
             const result = await response.json();
             MASTER_LIST = result.guestList || [];
+            
+            // Sync Dynamic Dropdown
+            const ddRes = await fetch(SCRIPT_URL + "?action=getDropdownOptions&ssId=" + CURRENT_SS_ID);
+            const ddData = await ddRes.json();
+            if (ddData.status === "success" && ddData.options.length > 0) {
+                const select = document.getElementById('in-l7-pengundang');
+                select.innerHTML = "";
+                ddData.options.forEach(opt => {
+                    const el = document.createElement('option');
+                    el.value = opt.toUpperCase();
+                    el.innerText = opt;
+                    select.appendChild(el);
+                });
+            }
             
             if(result.eventMeta) {
                 document.getElementById('view-wedding-name').innerText = result.eventMeta.pengantin || "Event Guestbook";

@@ -23,11 +23,6 @@
             --danger: #E74C3C;
         }
         
-        /* BLOKIR FOOTER WEEBLY */
-        .weebly-footer, .w-footer, [class*="weebly"], #weebly-footer-signup-container, 
-        div[style*="position: fixed; bottom: 0;"], .footer-wrap, div[class*="powered-by"] { 
-            display: none !important; visibility: hidden !important; z-index: -1 !important; height: 0 !important;
-        }
 
         html, body { min-height: 100%; width: 100%; margin: 0; padding: 0; background: var(--bg); font-family: 'Plus Jakarta Sans', sans-serif; }
         
@@ -447,7 +442,7 @@
     </div>
 </div>
 
-<script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmKkz41efmBz1-1NnOcyoftxfQAtrHQy41WRrZnbsY0Y66zA4ZdxLPZF5UHemUROwN/exec";
+<script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNb_E4Vq202Gj1XdKUwiIkTbMKVm1TRn0JcmsxilBkDeAjDUcr44VvayDI-lNmV9Xn/exec";
  
     const WA_ENGINE_URL = SCRIPT_URL;
     const SELFIE_URL = SCRIPT_URL;
@@ -487,19 +482,32 @@
                 return;
             }
             syncNavbar();
+
+            // Sync Dynamic Dropdown
+            try {
+                const ddRes = await fetch(SCRIPT_URL + "?action=getDropdownOptions&ssId=" + CURRENT_SS_ID);
+                const ddData = await ddRes.json();
+                if (ddData.status === "success" && ddData.options.length > 0) {
+                    const select = document.getElementById('onsite-host');
+                    if (select) {
+                        select.innerHTML = "";
+                        ddData.options.forEach(opt => {
+                            const el = document.createElement('option');
+                            el.value = opt.toUpperCase();
+                            el.innerText = opt;
+                            select.appendChild(el);
+                        });
+                    }
+                }
+            } catch (e) { console.error("Gagal load dropdown:", e); }
+
             startScanner(); 
             fetchMasterData(); 
-            startExtremeWeeblyKiller();
         } else {
             setTimeout(initApp, 100);
         }
     }
 
-    function startExtremeWeeblyKiller() {
-        setInterval(() => {
-            document.querySelectorAll('.weebly-footer, .w-footer, [class*="weebly"], #weebly-footer-signup-container').forEach(el => el.remove());
-        }, 500);
-    }
 
     window.updatePax = function(id, step) {
         const el = document.getElementById(id);

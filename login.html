@@ -137,7 +137,18 @@
         </div>
         
         <div class="form-group">
-            <label>Nama Klien / Wedding</label>
+            <label>Kategori Acara</label>
+            <select id="reg_category" class="sapatamu-input" onchange="updateCategoryTheme()" style="background-color: #fff; cursor: pointer; border: 2px solid #E0D5C9;">
+                <option value="wedding">💍 Wedding (Pernikahan)</option>
+                <option value="birthday">🎂 Birthday (Ulang Tahun)</option>
+                <option value="anniversary">✨ Anniversary (Hari Jadi)</option>
+                <option value="corporate">🏢 Corporate (Formal / Meeting)</option>
+                <option value="gathering">🤝 Gathering (Reuni / Komunitas)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label id="lbl_client_name">Nama Klien / Wedding</label>
             <div style="display: flex; gap: 8px;">
                 <input type="text" id="reg_user" class="sapatamu-input" placeholder="Gildan & Mita">
                 <button onclick="generateSheet()" id="btn_gen_sheet" class="gen-btn">
@@ -264,7 +275,7 @@
     </style>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmKkz41efmBz1-1NnOcyoftxfQAtrHQy41WRrZnbsY0Y66zA4ZdxLPZF5UHemUROwN/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNb_E4Vq202Gj1XdKUwiIkTbMKVm1TRn0JcmsxilBkDeAjDUcr44VvayDI-lNmV9Xn/exec";
  
 
     // --- CUSTOM NOTIFICATION SYSTEM ---
@@ -353,6 +364,26 @@
         });
     };
 
+    window.updateCategoryTheme = function() {
+        const cat = document.getElementById('reg_category').value;
+        const lbl = document.getElementById('lbl_client_name');
+        const input = document.getElementById('reg_user');
+        const emailInput = document.getElementById('reg_email');
+        
+        const themes = {
+            wedding: { label: "Nama Klien / Wedding", placeholder: "Gildan & Mita", email: "wedding@gmail.com" },
+            birthday: { label: "Nama Klien / Birthday", placeholder: "Clara's 17th Birthday", email: "birthday@gmail.com" },
+            anniversary: { label: "Nama Klien / Perusahaan", placeholder: "Anniversary 10th SapaTamu", email: "anniversary@gmail.com" },
+            corporate: { label: "Nama Perusahaan / Acara", placeholder: "Annual Meeting 2026", email: "corporate@gmail.com" },
+            gathering: { label: "Nama Komunitas / Acara", placeholder: "Reuni Akbar 2026", email: "gathering@gmail.com" }
+        };
+        
+        const theme = themes[cat] || themes.wedding;
+        lbl.innerText = theme.label;
+        input.placeholder = theme.placeholder;
+        emailInput.placeholder = theme.email;
+    };
+
     function setLoading(btnId, isLoad) {
         const btn = document.getElementById(btnId);
         const text = document.getElementById(btnId.replace('btn', 'text'));
@@ -386,7 +417,7 @@
                 // LEMPAR KE SUBDOMAIN DENGAN MEMBAWA DATA
                 const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
                 const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
-                const targetUrl = `https://${cleanUser}.sapatamu.id/${targetPage}?ssId=${res.data.ssId}&user=${encodeURIComponent(res.data.username)}`;
+                const targetUrl = `https://${cleanUser}.sapatamu.id/${targetPage}?ssId=${res.data.ssId}&user=${encodeURIComponent(res.data.username)}&category=${res.data.category || 'wedding'}`;
                 window.location.replace(targetUrl);
             } else {
                 showSapaModal("Login Gagal", res.message, "❌");
@@ -407,6 +438,7 @@
             const payload = { 
                 action: "copyMaster", 
                 clientName: user,
+                category: document.getElementById('reg_category').value,
                 eventData: {
                     nama: user,
                     tgl: document.getElementById('ev_date_text').value,
@@ -454,6 +486,7 @@
             action: "register",
             username: document.getElementById('reg_user').value,
             ssId: document.getElementById('reg_ssid').value,
+            category: document.getElementById('reg_category').value,
             password: document.getElementById('reg_pass').value,
             whatsapp: document.getElementById('reg_wa').value,
             email: document.getElementById('reg_email').value,

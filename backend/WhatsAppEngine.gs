@@ -36,8 +36,29 @@ function handleWAEnginePost(data) {
 
     if (guest && guest.phone) {
       let cleanedPhone = guest.phone.toString().replace(/[^0-9]/g, '');
-      const message = `*SELAMAT DATANG* 🌟\n\nHalo *${guest.nama}*,\n\nTerima kasih telah melakukan check-in di acara kami. \n\n📸 *Informasi:* \nFoto dokumentasi Anda dapat diakses secara berkala melalui scan QR-Code AI gallery yang tersedia selama acara berlangsung.\n\nSelamat menikmati acara!\n— *SapaTamu.ku x Knowhere Studio*`;
-      return sendToFonnte(cleanedPhone, message);
+      
+      // Ambil Nama Acara & Kategori untuk Pesan Dinamis
+      const eventName = sheet.getRange("B1").getValue() || "Acara Kami";
+      const category = String(sheet.getRange("B6").getValue() || "wedding").toLowerCase();
+      
+      let greeting = "*SELAMAT DATANG* 🌟";
+      let body = `Halo *${guest.nama}*,\n\nTerima kasih telah melakukan check-in di acara *${eventName}*.`;
+      
+      if (category.includes("wedding")) {
+        greeting = "💍 *HAPPY WEDDING*";
+        body = `Halo *${guest.nama}*,\n\nTerima kasih telah hadir dan memberikan doa restu di pernikahan *${eventName}*.`;
+      } else if (category.includes("corporate")) {
+        greeting = "🏢 *WELCOME TO EVENT*";
+        body = `Halo *${guest.nama}*,\n\nSelamat datang di acara *${eventName}*. Terima kasih atas partisipasi Anda.`;
+      } else if (category.includes("birthday")) {
+        greeting = "🎂 *HAPPY BIRTHDAY*";
+        body = `Halo *${guest.nama}*,\n\nTerima kasih telah hadir merayakan hari spesial *${eventName}*.`;
+      }
+
+      const footer = `\n\n📸 *Informasi:* \nFoto dokumentasi dapat diakses secara berkala melalui scan QR-Code AI gallery yang tersedia.\n\nSelamat menikmati acara!\n— *SapaTamu.ku x Knowhere Studio*`;
+      const finalMessage = `${greeting}\n\n${body}${footer}`;
+      
+      return sendToFonnte(cleanedPhone, finalMessage);
     } else {
       return createResponse({"status": "skipped", "message": "No phone number found for this code"});
     }

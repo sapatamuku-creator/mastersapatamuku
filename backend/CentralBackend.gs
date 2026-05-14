@@ -4,10 +4,18 @@
  * Migrated to New Drive Environment
  */
 
-const MASTER_SS_ID = "1R99hDczYr4_OW7l41_DDrYuQRwZx30rhhaRHbJfRq1I"; // New Master Database (Sapatamu Account)
-const CLIENT_MASTER_ID = "10H7oTK0ehhiba9Ire4tUTAV1Hye7RXrNdX6jQJYw20A"; // New Master Template (Sapatamu Account)
-const FOLDER_KLIEN_ID = "1vKXjrfkPLHctEHc_RqK8hSDizpBjph4P"; // New Storage Folder (Sapatamu Account)
+const MASTER_SS_ID = "1R99hDczYr4_OW7l41_DDrYuQRwZx30rhhaRHbJfRq1I"; 
+const FOLDER_KLIEN_ID = "1vKXjrfkPLHctEHc_RqK8hSDizpBjph4P"; 
 const MASTER_SHEET_NAME = "Sheet1";
+
+// MAPPING TEMPLATE PER KATEGORI
+const MASTER_TEMPLATES = {
+  "wedding": "10H7oTK0ehhiba9Ire4tUTAV1Hye7RXrNdX6jQJYw20A",
+  "birthday": "16qigm_cMOhBf0w5x8FOF26YHraKSfFYSlg574JIa0ew",
+  "anniversary": "1e6BMa01k8dTs5uyMWBYaKGY6W7zxziLmVhJ_YfjO8q8",
+  "corporate": "1g25_lGhscLxelq5Wa1Sft_QDGu0LOxbd3pNAtmWzt5I",
+  "gathering": "1Q-QTWqSx5G2VbQfLoqneMPUIK4f29zz0uaPyAaMREsY"
+};
 const ADMIN_WA = "6285111567829";
 const ADMIN_EMAIL = "sapatamuku@gmail.com";
 const FONNTE_TOKEN = "fRx1Canf4GYroBZZNfo7";
@@ -43,7 +51,7 @@ function handleRegister(data) {
     const finalName = (data.weddingDate || "NoDate") + " - " + cleanUser;
     file.setName(finalName);
 
-    // Append Row ke Master (Kolom G untuk Email, Kolom H untuk Status)
+    // Append Row ke Master (Kolom G untuk Email, Kolom H untuk Status, Kolom I untuk Kategori)
     sheet.appendRow([
       data.username,     // A
       data.ssId,         // B
@@ -52,7 +60,8 @@ function handleRegister(data) {
       data.weddingDate,  // E
       new Date(),        // F
       data.email,        // G
-      "Active"           // H (Status Otomatis)
+      "Active",          // H
+      data.category || "wedding" // I: Kategori Event
     ]);
 
     return createResponse({ status: "success", message: "Pendaftaran berhasil" });
@@ -170,18 +179,39 @@ function handleChangePassword(data) {
 // --- FUNGSI LAINNYA ---
 function handleCopyMaster(data) {
   try {
-    const folder = DriveApp.getFolderById(FOLDER_KLIEN_ID);
-    const template = DriveApp.getFileById(CLIENT_MASTER_ID);
-    const newFile = template.makeCopy("TEMP_" + data.clientName, folder);
-    const newId = newFile.getId();
-    const targetSS = SpreadsheetApp.openById(newId).getSheets()[0];
+    const category = (data.category || "wedding").toLowerCase();
+    const templateId = MASTER_TEMPLATES[category] || MASTER_TEMPLATES["wedding"];
     
-    targetSS.getRange("A1:B1").setValues([["Nama Pengantin :", data.eventData.nama]]);
-    targetSS.getRange("D1:G1").setValues([["Sesi Undangan :", data.eventData.s1, data.eventData.s2, data.eventData.s3]]);
-    targetSS.getRange("A2:B2").setValues([["Hari & Tanggal :", data.eventData.tgl]]);
-    targetSS.getRange("A3:B3").setValues([["Lokasi Acara :", data.eventData.lokasi]]);
-    targetSS.getRange("A4:B4").setValues([["Waktu Acara :", data.eventData.waktu]]);
-    targetSS.getRange("A5:B5").setValues([["Link Invitation :", data.eventData.link]]);
+    const folder = DriveApp.getFolderById(FOLDER_KLIEN_ID);
+    const template = DriveApp.getFileById(templateId);
+    const newFile = template.makeCopy("[" + category.toUpperCase() + "] " + data.clientName, folder);
+    const newId = newFile.getId();
+    const targetSS = SpreadsheetApp.openById(newId);
+    const targetSheet = targetSS.getSheetByName(MASTER_SHEET_NAME);
+    
+    // Simpan Kategori di Sheet Config (B3)
+    let configSheet = targetSS.getSheetByName("Config");
+    if (!configSheet) {
+      configSheet = targetSS.insertSheet("Config");
+      configSheet.getRange("A1:A3").setValues([["URL_FOTO"], ["PRESET_STYLE"], ["CATEGORY"]]);
+    }
+    configSheet.getRange("B3").setValue(category.toUpperCase());
+
+    const themes = {
+      wedding: { client: "Nama Pengantin :", date: "Hari & Tanggal :", loc: "Lokasi Acara :", time: "Waktu Acara :", link: "Link Invitation :" },
+      birthday: { client: "Nama Klien :", date: "Hari & Tanggal :", loc: "Lokasi Acara :", time: "Waktu Acara :", link: "Link Invitation :" },
+      anniversary: { client: "Nama Klien :", date: "Hari & Tanggal :", loc: "Lokasi Acara :", time: "Waktu Acara :", link: "Link Invitation :" },
+      corporate: { client: "Nama Perusahaan :", date: "Hari & Tanggal :", loc: "Lokasi Acara :", time: "Waktu Acara :", link: "Link Invitation :" },
+      gathering: { client: "Nama Komunitas :", date: "Hari & Tanggal :", loc: "Lokasi Acara :", time: "Waktu Acara :", link: "Link Invitation :" }
+    };
+    const t = themes[category] || themes.wedding;
+
+    targetSheet.getRange("A1:B1").setValues([[t.client, data.eventData.nama]]);
+    targetSheet.getRange("D1:G1").setValues([["Sesi Undangan :", data.eventData.s1, data.eventData.s2, data.eventData.s3]]);
+    targetSheet.getRange("A2:B2").setValues([[t.date, data.eventData.tgl]]);
+    targetSheet.getRange("A3:B3").setValues([[t.loc, data.eventData.lokasi]]);
+    targetSheet.getRange("A4:B4").setValues([[t.time, data.eventData.waktu]]);
+    targetSheet.getRange("A5:B5").setValues([[t.link, data.eventData.link]]);
 
     return createResponse({ status: "success", message: "Spreadsheet berhasil dibuat", data: { fileId: newId } });
   } catch (err) {
@@ -206,7 +236,8 @@ function handleLogin(data) {
           username: values[i][0],
           ssId: values[i][1],
           whatsapp: values[i][3],
-          email: values[i][6]
+          email: values[i][6],
+          category: values[i][8] || "wedding" // Kolom I
         } });
       }
     }
@@ -288,7 +319,8 @@ function handleResolveSubdomain(data) {
         return createResponse({ 
           status: "success", 
           ssId: values[i][1],
-          clientName: values[i][0]
+          clientName: values[i][0],
+          category: values[i][8] || "wedding" // Kolom I
         });
       }
     }

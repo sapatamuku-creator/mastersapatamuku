@@ -156,6 +156,22 @@ function handleMainPost(payload) {
         result = handleSelfiePost(payload);
         break;
       
+      case "getDropdownOptions":
+        result = getDropdownOptions(ssId);
+        break;
+      
+      case "saveDropdownOptions":
+        result = saveDropdownOptions(ssId, payload.options);
+        break;
+        
+      case "getSettings":
+        result = getSettings(ssId);
+        break;
+      
+      case "saveSettings":
+        result = saveSettings(ssId, payload.settings);
+        break;
+        
       default:
         result = { status: "error", message: "Action unknown" };
     }
@@ -488,14 +504,34 @@ function submitGuestCollection(formData) {
   const sheet = ss.getSheetByName(SHEET_DATA);
   const nowFormatted = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss");
   const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
-  const kodeUnik = "STK-" + randomPart;
+  
+  // LOGIC KODE DINAMIS
+  let category = "wedding";
+  const configSheet = ss.getSheetByName("Config");
+  if (configSheet) {
+    category = String(configSheet.getRange("B3").getValue() || "wedding").toLowerCase();
+  }
+  let prefix = "STK-"; // Default fallback
+  
+  if (formData.source === "onsite") {
+    prefix = "ONS-";
+  } else {
+    if (category.includes("wedding")) prefix = "WDG-";
+    else if (category.includes("birthday")) prefix = "BTH-";
+    else if (category.includes("anniversary")) prefix = "ANV-";
+    else if (category.includes("corporate")) prefix = "CPT-";
+    else if (category.includes("gathering")) prefix = "GTH-";
+  }
+
+  const kodeUnik = prefix + randomPart;
   const baseLink = sheet.getRange("B5").getValue();
   let cleanPhone = String(formData.whatsapp || "").replace(/\D/g, ''); 
   if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
   const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?data=" + kodeUnik + "&size=400x400";
+  
   const newRow = [
     "=ROW()-" + (START_ROW - 1), nowFormatted, formData.nama, "'" + cleanPhone, 
-    formData.kategori, kodeUnik, qrUrl, formData.rencana || 1, 0, "-", 0, 
+    formData.kategori, kodeUnik, qrUrl, formData.pax || formData.rencana || 1, 0, "-", 0, 
     formData.pihak, formData.alamat, 0, "-", "BELUM TERKIRIM", "-", 0, formData.sesi || "-"
   ];
   sheet.appendRow(newRow);
@@ -583,6 +619,13 @@ function getWelcomeData(ssId) {
       }
     }
 
+    // Ambil Background Photos dari Config (B1)
+    let urlFoto = "";
+    const configSheet = ss.getSheetByName("Config");
+    if (configSheet) {
+        urlFoto = configSheet.getRange("B1").getValue() || "";
+    }
+
     return {
       status: "success",
       weddingName,
@@ -590,6 +633,7 @@ function getWelcomeData(ssId) {
       latestGuest,
       rundown,
       log: guestLog.toUpperCase(),
+      urlFoto: urlFoto,
       displayDuration: 10000
     };
   } catch (err) {
@@ -624,4 +668,134 @@ function formatTime(timeVal) {
   if (isAM && hours === 12) hours = 0;
   
   return hours.toString().padStart(2, '0') + ":" + mins.padStart(2, '0');
+}
+function getSettings(ssId) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    const configSheet = ss.getSheetByName("Config");
+    const settingsSheet = ss.getSheetByName("Settings");
+    
+    const meta = sheet.getRange("B1:B5").getValues();
+    const sesi = sheet.getRange("E1:G1").getValues()[0];
+    
+    let apiToken = "";
+    if (settingsSheet) {
+      apiToken = settingsSheet.getRange("E2").getValue();
+    }
+
+    let urlFoto = "";
+    let presetKode = "1";
+    if (configSheet) {
+      urlFoto = configSheet.getRange("B1").getValue();
+      presetKode = configSheet.getRange("B2").getValue() || "1";
+    }
+
+    return {
+      status: "success",
+      data: {
+        namaAcara: meta[0][0],
+        tanggal: meta[1][0],
+        lokasi: meta[2][0],
+        waktu: meta[3][0],
+        link: meta[4][0],
+        sesi1: sesi[0],
+        sesi2: sesi[1],
+        sesi3: sesi[2],
+        apiToken: apiToken,
+        urlFoto: urlFoto,
+        presetKode: presetKode
+      }
+    };
+  } catch (e) { return { status: "error", message: e.toString() }; }
+}
+
+function saveSettings(ssId, s) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    let configSheet = ss.getSheetByName("Config");
+    const settingsSheet = ss.getSheetByName("Settings");
+
+    // 1. Konfigurasi Acara (Sheet1)
+    sheet.getRange("B1:B5").setValues([
+      [s.namaAcara], [s.tanggal], [s.lokasi], [s.waktu], [s.link]
+    ]);
+    sheet.getRange("E1:G1").setValues([[s.sesi1, s.sesi2, s.sesi3]]);
+
+    // 2. Integrasi & Display (Config)
+    if (!configSheet) {
+      configSheet = ss.insertSheet("Config");
+      configSheet.getRange("A1:A2").setValues([["URL_FOTO"], ["PRESET_STYLE"]]);
+    }
+    configSheet.getRange("B1").setValue(s.urlFoto);
+    configSheet.getRange("B2").setValue(s.presetKode);
+
+    // 3. API Token (Settings!E2)
+    if (settingsSheet && s.apiToken) {
+      settingsSheet.getRange("E2").setValue(s.apiToken);
+    }
+
+    return { status: "success", message: "Pengaturan berhasil disimpan" };
+  } catch (e) { return { status: "error", message: e.toString() }; }
+}
+
+function getDropdownOptions(ssId) {
+  try {
+    const ss = getSS(ssId);
+    let sheet = ss.getSheetByName("Config_Dropdown");
+    
+    // Jika sheet belum ada, buat dan isi dengan default berdasarkan kategori
+    if (!sheet) {
+      sheet = ss.insertSheet("Config_Dropdown");
+      sheet.getRange("A1").setValue("Pilihan Dropdown");
+      
+      // Deteksi Kategori dari Sheet1!B6 (atau default ke wedding)
+      const mainSheet = ss.getSheetByName(SHEET_DATA);
+      const category = String(mainSheet.getRange("B6").getValue() || "wedding").toLowerCase();
+      
+      let defaultOptions = [];
+      
+      if (category.includes("wedding")) {
+        defaultOptions = [
+          "PENGANTIN PRIA", "PENGANTIN WANITA", 
+          "KELUARGA AYAH PENGANTIN PRIA", "KELUARGA IBU PENGANTIN PRIA",
+          "KELUARGA AYAH PENGANTIN WANITA", "KELUARGA IBU PENGANTIN WANITA"
+        ];
+      } else if (category.includes("birthday")) {
+        defaultOptions = ["Keluarga Inti", "Teman Sekolah/Kuliah", "Teman Kerja", "Kerabat/Tetangga"];
+      } else if (category.includes("corporate")) {
+        defaultOptions = ["Direksi / Management", "Staff / Karyawan", "Klien / Partner Bisnis", "Vendor / Supplier"];
+      } else if (category.includes("anniversary")) {
+        defaultOptions = ["Keluarga Besar", "Kolega Bisnis", "Sahabat", "Umum"];
+      } else {
+        defaultOptions = ["Panitia", "Peserta Utama", "Tamu Undangan", "Media / VIP"];
+      }
+
+      const rowData = defaultOptions.map(opt => [opt.toUpperCase()]);
+      sheet.getRange(2, 1, rowData.length, 1).setValues(rowData);
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return { status: "success", options: [] };
+    
+    const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    const options = values.map(r => r[0]).filter(v => v !== "");
+    return { status: "success", options: options };
+  } catch (e) { return { status: "error", message: e.toString() }; }
+}
+
+function saveDropdownOptions(ssId, options) {
+  try {
+    const ss = getSS(ssId);
+    let sheet = ss.getSheetByName("Config_Dropdown") || ss.insertSheet("Config_Dropdown");
+    sheet.clear();
+    sheet.getRange("A1").setValue("Pilihan Dropdown");
+    
+    if (options && options.length > 0) {
+      const rowData = options.map(opt => [opt]);
+      sheet.getRange(2, 1, rowData.length, 1).setValues(rowData);
+    }
+    return { status: "success", message: "Dropdown berhasil diperbarui" };
+  } catch (e) { return { status: "error", message: e.toString() }; }
 }

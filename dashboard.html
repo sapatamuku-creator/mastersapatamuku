@@ -238,9 +238,6 @@
         .gold-accent .desc-text { color: var(--gold) !important; }
         .gold-border { border-bottom: 2px solid rgba(212, 175, 55, 0.4) !important; }
         .gold-bg { background: rgba(212, 175, 55, 0.03) !important; }
-        #weebly-footer-signup-container, .weebly-footer-signup-container, .w-footer, .weebly-footer { 
-            display: none !important; 
-        }
         .logout-pill {
             position: fixed;
             top: 20px;
@@ -280,6 +277,7 @@
             <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
             <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
             <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+            <a href="config.html" class="nav-link" id="nav-config" style="color: var(--gold); font-weight: 800;">⚙️ Config</a>
             <div class="nav-divider"></div>
             <a href="logout.html" class="nav-link logout-pill" id="nav-logout" style="color: #ef4444; font-weight: 700;">Sign Out</a>
         </div>
@@ -288,9 +286,9 @@
 
 <div class="main-wrapper">
     <header>
-        <h1 class="brand-title">SapaTamu.Ku</h1>
+        <h1 class="brand-title" id="display_wedding_name">SapaTamu.Ku</h1>
         <div class="tagline-box">
-            <p class="tagline-main">All in One Digital Guestbook Management</p>
+            <p class="tagline-main" id="display_category_label">All in One Digital Guestbook Management</p>
             <p class="tagline-sub">
                 Sentuhan teknologi <b>AI Experience</b> Collaboration with <b>Knowhere Studio</b> to serving you 
                 <span class="tagline-highlight">Instant AI Gallery Face Finder with QR Code.</span>
@@ -409,6 +407,17 @@
             </div>
         </div>
 
+        <!-- Configuration Settings -->
+        <div class="nav-item" onclick="nav('config.html')" style="background: linear-gradient(to right, #fff, #FFFDFB); border: 1.5px dashed var(--gold);">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/C8962E/settings.png" class="icon-mono" style="filter:none; opacity:1;"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text" style="color: var(--gold) !important;">Event Config</span>
+                <p class="desc-text">Manage Settings & Categories</p>
+            </div>
+        </div>
+
     </div>
 
     <footer class="mt-20 text-center pb-10">
@@ -477,6 +486,20 @@
             }
 
             // 3. JALANKAN DASHBOARD
+            const parsed = JSON.parse(localData);
+            const cat = window.CURRENT_CATEGORY || "wedding";
+            const name = parsed.username || "Client";
+            
+            document.getElementById('display_wedding_name').innerText = name;
+            const labels = {
+                wedding: "Wedding Guestbook Management",
+                birthday: "Birthday Event Management",
+                anniversary: "Anniversary Event Management",
+                corporate: "Corporate Meeting Management",
+                gathering: "Community Gathering Management"
+            };
+            document.getElementById('display_category_label').innerText = labels[cat] || labels.wedding;
+
             initHub();
         } else {
             setTimeout(checkResolved, 100);

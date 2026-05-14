@@ -4,7 +4,7 @@
 
 window.SAPATAMU_RESOLVED = false;
 window.CURRENT_SS_ID = null;
-window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmKkz41efmBz1-1NnOcyoftxfQAtrHQy41WRrZnbsY0Y66zA4ZdxLPZF5UHemUROwN/exec";
+window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNb_E4Vq202Gj1XdKUwiIkTbMKVm1TRn0JcmsxilBkDeAjDUcr44VvayDI-lNmV9Xn/exec";
 
 async function resolveSapatamuSubdomain() {
     console.log("Resolving subdomain...");
@@ -18,12 +18,15 @@ async function resolveSapatamuSubdomain() {
     const _urlUser = _urlParams.get('user');
 
     if (_urlSsid && _urlUser) {
+        const _urlCat = _urlParams.get('category') || "wedding";
         console.log("Bekal login ditemukan di URL, membongkar...");
-        localStorage.setItem('sapatamu_db', JSON.stringify({ ssId: _urlSsid, username: _urlUser }));
+        localStorage.setItem('sapatamu_db', JSON.stringify({ ssId: _urlSsid, username: _urlUser, category: _urlCat }));
         window.CURRENT_SS_ID = _urlSsid;
+        window.CURRENT_CATEGORY = _urlCat;
         const _newUrl = new URL(window.location.href);
         _newUrl.searchParams.delete('ssId');
         _newUrl.searchParams.delete('user');
+        _newUrl.searchParams.delete('category');
         window.history.replaceState({}, '', _newUrl);
     }
 
@@ -36,7 +39,8 @@ async function resolveSapatamuSubdomain() {
                 const _parsed = JSON.parse(_localData);
                 if (_parsed.ssId) {
                     window.CURRENT_SS_ID = _parsed.ssId;
-                    console.log("Sesi lokal ditemukan:", _parsed.username);
+                    window.CURRENT_CATEGORY = _parsed.category || "wedding";
+                    console.log("Sesi lokal ditemukan:", _parsed.username, "Kategori:", window.CURRENT_CATEGORY);
                 }
             } catch(e) {}
         }
@@ -49,6 +53,8 @@ async function resolveSapatamuSubdomain() {
                 const res = await response.json();
                 if (res.status === "success") {
                     window.CURRENT_SS_ID = res.ssId;
+                    window.CURRENT_CATEGORY = res.category || "wedding";
+                    localStorage.setItem('sapatamu_db', JSON.stringify({ ssId: res.ssId, username: res.clientName, category: window.CURRENT_CATEGORY }));
                     console.log("Subdomain Resolved dari Server:", sub);
                 }
             } catch (e) {

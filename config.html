@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konfigurasi Acara - SapaTamu.Ku</title>
+    <script src="subdomain_resolver.js?v=3.2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #E07B7B; --bg: #FFF9F5; --text: #4A3F35; --border: #F0E6DE; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); }
+        .sapatamu-container { width: 100%; max-width: 600px; margin: 80px auto 40px; padding: 20px; }
+        .sapatamu-card { background: white; border-radius: 30px; padding: 40px; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(74, 63, 53, 0.05); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #8C7560; margin-bottom: 8px; }
+        .sapatamu-input { width: 100%; padding: 15px 20px; border-radius: 15px; border: 2px solid var(--border); background: #FCF8F5; font-size: 14px; transition: 0.3s; }
+        .sapatamu-input:focus { border-color: var(--primary); outline: none; background: #fff; }
+        .sapatamu-btn { width: 100%; padding: 18px; border-radius: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-size: 12px; transition: 0.3s; cursor: pointer; border: none; }
+        .save-btn { background: var(--primary); color: white; margin-top: 20px; }
+        .save-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(224, 123, 123, 0.2); }
+        .section-title { font-size: 14px; font-weight: 900; color: var(--text); border-bottom: 2.5px solid var(--primary); display: inline-block; padding-bottom: 4px; margin-bottom: 25px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+<div class="sapatamu-container">
+    <div class="sapatamu-card">
+        <h2 class="section-title">Konfigurasi Acara</h2>
+        
+        <div class="form-group">
+            <label id="lbl_acara">Nama Acara / Pengantin</label>
+            <input type="text" id="cfg_nama" class="sapatamu-input" placeholder="...">
+        </div>
+
+        <div class="form-group">
+            <label>Hari & Tanggal</label>
+            <input type="text" id="cfg_tgl" class="sapatamu-input" placeholder="...">
+        </div>
+
+        <div class="form-group">
+            <label>Lokasi Acara (Gedung/Ruangan)</label>
+            <input type="text" id="cfg_lokasi" class="sapatamu-input" placeholder="...">
+        </div>
+
+        <div class="form-group">
+            <label>Waktu Acara</label>
+            <input type="text" id="cfg_waktu" class="sapatamu-input" placeholder="...">
+        </div>
+
+        <div class="form-group">
+            <label>Link Undangan Digital</label>
+            <input type="text" id="cfg_link" class="sapatamu-input" placeholder="...">
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 mb-8">
+            <div class="form-group">
+                <label>Sesi 1</label>
+                <input type="text" id="cfg_s1" class="sapatamu-input text-center" placeholder="...">
+            </div>
+            <div class="form-group">
+                <label>Sesi 2</label>
+                <input type="text" id="cfg_s2" class="sapatamu-input text-center" placeholder="...">
+            </div>
+            <div class="form-group">
+                <label>Sesi 3</label>
+                <input type="text" id="cfg_s3" class="sapatamu-input text-center" placeholder="...">
+            </div>
+        </div>
+
+        <h2 class="section-title mt-4">Integrasi & Display</h2>
+
+        <div class="form-group">
+            <label>API Token Fonnte (Untuk WA Blast)</label>
+            <input type="password" id="cfg_token" class="sapatamu-input" placeholder="Masukkan token API Fonnte Anda...">
+        </div>
+
+        <h2 class="section-title mt-4">Foto Background (Welcome Sign)</h2>
+        <p style="font-size: 10px; color: #8C7560; margin-bottom: 15px;">Masukkan satu atau beberapa URL foto untuk dijadikan slideshow background.</p>
+        
+        <div id="photo_list" class="space-y-2 mb-4">
+            <!-- URL Foto akan muncul di sini -->
+        </div>
+        
+        <div class="flex flex-col gap-2 mb-8">
+            <div class="flex gap-2">
+                <input type="text" id="new_photo" class="sapatamu-input" placeholder="Masukkan Link Google Drive / Image URL..." style="flex: 1;">
+                <button onclick="addPhoto()" class="sapatamu-btn" style="width: 80px; background: var(--text); color: white;">+</button>
+            </div>
+            <button onclick="convertDriveLink()" class="text-[10px] font-bold text-blue-500 hover:text-blue-700 text-left px-2">✨ Klik untuk Auto-Convert link Google Drive</button>
+        </div>
+
+        <div class="form-group">
+            <label>Style Penomoran (1=Formal, 2=Casual)</label>
+            <select id="cfg_preset" class="sapatamu-input">
+                <option value="1">1 - Formal (Yth. Bapak/Ibu/Sdr/i)</option>
+                <option value="2">2 - Casual (Halo Kak...)</option>
+            </select>
+        </div>
+
+        <h2 class="section-title mt-4">Kategori Pihak Pengundang</h2>
+        <p style="font-size: 10px; color: #8C7560; margin-bottom: 15px;">Sesuaikan pilihan dropdown "Pihak Pengundang" di formulir Anda.</p>
+        
+        <div id="dropdown_list" class="space-y-2 mb-4">
+            <!-- Pilihan akan muncul di sini -->
+        </div>
+        
+        <div class="flex gap-2 mb-8">
+            <input type="text" id="new_opt" class="sapatamu-input" placeholder="Tambah pilihan baru..." style="flex: 1;">
+            <button onclick="addOption()" class="sapatamu-btn" style="width: 80px; background: var(--text); color: white;">+</button>
+        </div>
+
+        <button onclick="saveAll()" id="btn_save" class="sapatamu-btn save-btn">Simpan Perubahan</button>
+        <button onclick="window.location.href='dashboard.html'" class="sapatamu-btn mt-4" style="background: #eee; color: #888;">Kembali</button>
+    </div>
+</div>
+
+<script>
+    let currentDropdownOptions = [];
+    let currentPhotos = [];
+
+    async function loadSettings() {
+        if (!window.SAPATAMU_RESOLVED) { setTimeout(loadSettings, 100); return; }
+        
+        // Update label based on category
+        const cat = window.CURRENT_CATEGORY || "wedding";
+        if (cat !== "wedding") {
+            document.getElementById('lbl_acara').innerText = "Nama Klien / Instansi / Acara";
+        }
+
+        try {
+            // Load Basic Settings
+            const response = await fetch(window.SCRIPT_URL + "?action=getSettings&ssId=" + window.CURRENT_SS_ID);
+            const res = await response.json();
+            if (res.status === "success") {
+                const s = res.data;
+                document.getElementById('cfg_nama').value = s.namaAcara || "";
+                document.getElementById('cfg_tgl').value = s.tanggal || "";
+                document.getElementById('cfg_lokasi').value = s.lokasi || "";
+                document.getElementById('cfg_waktu').value = s.waktu || "";
+                document.getElementById('cfg_link').value = s.link || "";
+                document.getElementById('cfg_s1').value = s.sesi1 || "";
+                document.getElementById('cfg_s2').value = s.sesi2 || "";
+                document.getElementById('cfg_s3').value = s.sesi3 || "";
+                document.getElementById('cfg_token').value = s.apiToken || "";
+                document.getElementById('cfg_preset').value = s.presetKode || "1";
+                
+                // Handle Photos
+                if (s.urlFoto) {
+                    currentPhotos = s.urlFoto.split(",").map(url => url.trim()).filter(url => url !== "");
+                }
+                renderPhotos();
+            }
+
+            // Load Dropdown Options
+            const ddRes = await fetch(window.SCRIPT_URL + "?action=getDropdownOptions&ssId=" + window.CURRENT_SS_ID);
+            const ddData = await ddRes.json();
+            if (ddData.status === "success") {
+                currentDropdownOptions = ddData.options || [];
+                renderOptions();
+            }
+        } catch (e) { console.error("Load Settings Gagal:", e); }
+    }
+
+    function renderOptions() {
+        const container = document.getElementById('dropdown_list');
+        container.innerHTML = "";
+        currentDropdownOptions.forEach((opt, idx) => {
+            container.innerHTML += `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <span class="text-xs font-bold text-gray-700">${opt}</span>
+                    <button onclick="removeOption(${idx})" class="text-red-400 hover:text-red-600 text-xs font-bold">Hapus</button>
+                </div>
+            `;
+        });
+    }
+
+    function renderPhotos() {
+        const container = document.getElementById('photo_list');
+        container.innerHTML = "";
+        currentPhotos.forEach((url, idx) => {
+            container.innerHTML += `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 gap-4">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <img src="${url}" class="w-10 h-10 object-cover rounded-lg flex-shrink-0 bg-zinc-200">
+                        <span class="text-[10px] text-gray-500 truncate">${url}</span>
+                    </div>
+                    <button onclick="removePhoto(${idx})" class="text-red-400 hover:text-red-600 text-xs font-bold flex-shrink-0">Hapus</button>
+                </div>
+            `;
+        });
+    }
+
+    window.addOption = function() {
+        const input = document.getElementById('new_opt');
+        if (input.value.trim()) {
+            currentDropdownOptions.push(input.value.trim());
+            input.value = "";
+            renderOptions();
+        }
+    }
+
+    window.removeOption = function(idx) {
+        currentDropdownOptions.splice(idx, 1);
+        renderOptions();
+    }
+
+    window.addPhoto = function() {
+        const input = document.getElementById('new_photo');
+        if (input.value.trim()) {
+            currentPhotos.push(input.value.trim());
+            input.value = "";
+            renderPhotos();
+        }
+    }
+
+    window.removePhoto = function(idx) {
+        currentPhotos.splice(idx, 1);
+        renderPhotos();
+    }
+
+    window.convertDriveLink = function() {
+        const input = document.getElementById('new_photo');
+        let url = input.value.trim();
+        if (!url) return;
+        
+        // Regex for Google Drive File ID
+        const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+        const match = url.match(driveRegex);
+        
+        if (match && match[1]) {
+            const fileId = match[1];
+            const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+            input.value = directUrl;
+            alert("Berhasil! Link Google Drive telah dikonversi ke link Gambar Direct.");
+        } else {
+            alert("Link tidak dikenali sebagai Google Drive. Pastikan link sudah diset 'Anyone with the link can view'.");
+        }
+    }
+
+    async function saveAll() {
+        const btn = document.getElementById('btn_save');
+        btn.disabled = true;
+        btn.innerText = "MENYIMPAN...";
+
+        const settingsPayload = {
+            action: "saveSettings",
+            ssId: window.CURRENT_SS_ID,
+            settings: {
+                namaAcara: document.getElementById('cfg_nama').value,
+                tanggal: document.getElementById('cfg_tgl').value,
+                lokasi: document.getElementById('cfg_lokasi').value,
+                waktu: document.getElementById('cfg_waktu').value,
+                link: document.getElementById('cfg_link').value,
+                sesi1: document.getElementById('cfg_s1').value,
+                sesi2: document.getElementById('cfg_s2').value,
+                sesi3: document.getElementById('cfg_s3').value,
+                apiToken: document.getElementById('cfg_token').value,
+                urlFoto: currentPhotos.join(","),
+                presetKode: document.getElementById('cfg_preset').value,
+                namaGedung: document.getElementById('cfg_lokasi').value
+            }
+        };
+
+        const dropdownPayload = {
+            action: "saveDropdownOptions",
+            ssId: window.CURRENT_SS_ID,
+            options: currentDropdownOptions
+        };
+
+        try {
+            // Save Settings
+            await fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(settingsPayload) });
+            // Save Dropdown
+            const res = await fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(dropdownPayload) });
+            const data = await res.json();
+            alert("Seluruh konfigurasi berhasil diperbarui!");
+        } catch (e) {
+            alert("Gagal menyimpan: " + e.toString());
+        }
+        btn.disabled = false;
+        btn.innerText = "SIMPAN PERUBAHAN";
+    }
+
+    document.addEventListener('DOMContentLoaded', loadSettings);
+</script>
+
+</body>
+</html>
