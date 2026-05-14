@@ -100,6 +100,10 @@
         .btn-step { width: 35px; height: 100%; border: none; background: white; border-radius: 8px; font-size: 16px; font-weight: bold; color: var(--text-main); cursor: pointer; }
         .counter-value { flex: 1; text-align: center; font-weight: 800; font-size: 13px; color: var(--text-main); }
 
+        .tag-row { display: flex; gap: 8px; margin: 10px 0; }
+        .tag-item { flex: 1; padding: 10px; border-radius: 10px; background: #f5f5f5; border: 1px solid #eee; font-size: 9px; font-weight: 800; text-align: center; cursor: pointer; color: #888; transition: 0.3s; }
+        .tag-item.active { background: var(--gold); color: white; border-color: var(--gold); }
+
         .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 1000000; display: none; align-items: center; justify-content: center; font-weight: 800; color: var(--primary); }
 
         /* UNIFIED NAVBAR STYLES (FIXED WRAPPING) */
@@ -239,38 +243,57 @@
     </div>
 </div>
 
-<!-- MODAL CONFIRM (CLONE FROM CHECKIN) -->
+<!-- MODAL CONFIRM (FULL CLONE FROM CHECKIN) -->
 <div id="modalConfirm" class="modal-overlay">
     <div class="modal-card">
         <h3 id="m-nama" style="margin: 0; color: var(--text-main); font-size: 15px; font-weight: 800; text-align: center; text-transform: uppercase;">Konfirmasi</h3>
         <p id="m-info" style="font-size: 10px; color: var(--text-muted); margin: 5px 0 15px;">Pilih Pax & Ambil Foto (Opsional)</p>
         
+        <div id="guest-info-card" style="background: #fafafa; padding: 12px; border-radius: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee;">
+            <div id="m-card-nama" style="font-size: 12px; font-weight: 700; color: var(--text-main);">Nama Tamu</div>
+            <div id="m-card-cat" style="font-size: 9px; font-weight: 800; color: var(--gold); text-transform: uppercase;">Kategori</div>
+        </div>
+
         <div class="modal-video-box">
             <video id="camera-preview" autoplay playsinline muted></video>
             <canvas id="capture-canvas" style="display:none;"></canvas>
         </div>
         <button id="btn-snap" onclick="takeSelfie()" style="background: none; border: 1px solid var(--gold); color: var(--gold); padding: 8px 20px; border-radius: 30px; font-size: 10px; font-weight: 800; cursor: pointer; margin-bottom: 15px;">AMBIL FOTO</button>
 
-        <div class="pax-row">
-            <span class="pax-label">Dewasa</span>
-            <div class="counter-wrapper">
-                <button type="button" class="btn-step" onclick="updatePax('adult', -1)">-</button>
-                <div id="m-pax-adult" class="counter-value">1</div>
-                <button type="button" class="btn-step" onclick="updatePax('adult', 1)">+</button>
+        <div style="display: flex; gap: 15px; text-align: left;">
+            <div style="flex: 1.2;">
+                <label style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">KEHADIRAN PAX</label>
+                <div class="pax-row" style="margin: 8px 0;">
+                    <span class="pax-label" style="font-size: 10px; font-weight: 700;">DEWASA</span>
+                    <div class="counter-wrapper" style="width: 80px; height: 32px;">
+                        <button type="button" class="btn-step" onclick="updatePax('adult', -1)">-</button>
+                        <div id="m-pax-adult" class="counter-value" style="font-size: 11px;">1</div>
+                        <button type="button" class="btn-step" onclick="updatePax('adult', 1)">+</button>
+                    </div>
+                </div>
+                <div class="pax-row" style="margin: 8px 0;">
+                    <span class="pax-label" style="font-size: 10px; font-weight: 700;">ANAK</span>
+                    <div class="counter-wrapper" style="width: 80px; height: 32px;">
+                        <button type="button" class="btn-step" onclick="updatePax('child', -1)">-</button>
+                        <div id="m-pax-child" class="counter-value" style="font-size: 11px;">0</div>
+                        <button type="button" class="btn-step" onclick="updatePax('child', 1)">+</button>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="pax-row">
-            <span class="pax-label">Anak</span>
-            <div class="counter-wrapper">
-                <button type="button" class="btn-step" onclick="updatePax('child', -1)">-</button>
-                <div id="m-pax-child" class="counter-value">0</div>
-                <button type="button" class="btn-step" onclick="updatePax('child', 1)">+</button>
+            <div style="flex: 0.8;">
+                <label style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">PEMBERIAN</label>
+                <div class="tag-row" style="flex-direction: column;">
+                    <div class="tag-item" id="tag-angpao" onclick="this.classList.toggle('active')">ANGPAO</div>
+                    <div class="tag-item" id="tag-kado" onclick="this.classList.toggle('active')">KADO</div>
+                </div>
             </div>
         </div>
 
+        <div id="m-pax-total-label" style="font-size:9px; font-weight:800; color:var(--gold); text-align:center; margin-top:10px; text-transform:uppercase;">TOTAL: <span id="m-pax-total">1</span> PAX</div>
+
         <div class="btn-group">
             <button class="btn-cancel" onclick="closeModal()">BATAL</button>
-            <button class="btn-confirm" id="btn-final-confirm" onclick="executeCheckin()">CHECK-IN</button>
+            <button class="btn-confirm" id="btn-final-confirm" onclick="executeCheckin()">CHECK-IN SEKARANG</button>
         </div>
     </div>
 </div>
@@ -384,14 +407,21 @@
     async function openConfirm(guest) {
         selectedGuest = guest;
         document.getElementById('m-nama').innerText = guest.nama;
-        document.getElementById('m-info').innerText = `${guest.kategori} | ${guest.alamat}`;
+        document.getElementById('m-info').innerText = `${guest.kategori || 'UMUM'} | ${guest.alamat || '-'}`;
+        document.getElementById('m-card-nama').innerText = guest.nama;
+        document.getElementById('m-card-cat').innerText = guest.kategori || 'UMUM';
         document.getElementById('modalConfirm').style.display = 'flex';
         capturedBase64 = null;
         
+        // Reset tags
+        document.getElementById('tag-angpao').classList.remove('active');
+        document.getElementById('tag-kado').classList.remove('active');
+
         // Reset pax based on plan
         const initialAdult = parseInt(guest.rencanaHadir) || 1;
         document.getElementById('m-pax-adult').innerText = initialAdult;
         document.getElementById('m-pax-child').innerText = "0";
+        document.getElementById('m-pax-total').innerText = initialAdult;
 
         try {
             if (html5QrCode) await html5QrCode.stop();
@@ -412,6 +442,10 @@
         if (type === 'adult' && val < 1) val = 1;
         if (type === 'child' && val < 0) val = 0;
         el.innerText = val;
+        
+        const adult = parseInt(document.getElementById('m-pax-adult').innerText);
+        const child = parseInt(document.getElementById('m-pax-child').innerText);
+        document.getElementById('m-pax-total').innerText = adult + child;
     };
 
     function takeSelfie() {
@@ -431,10 +465,12 @@
         document.getElementById('loading').style.display = 'flex';
         const adult = document.getElementById('m-pax-adult').innerText;
         const child = document.getElementById('m-pax-child').innerText;
-        const paxString = `${parseInt(adult)+parseInt(child)} ( ${adult}D + ${child}A )`;
+        const total = document.getElementById('m-pax-total').innerText;
+        const paxString = `${total} ( ${adult}D + ${child}A )`;
+        const gift = (document.getElementById('tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('tag-kado').classList.contains('active') ? "KADO" : "");
 
         try {
-            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "confirm_checkin", ssId: CURRENT_SS_ID, kodeUnik: selectedGuest.kode, realHadir: paxString, catatan: "-" }) });
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "confirm_checkin", ssId: CURRENT_SS_ID, kodeUnik: selectedGuest.kode, realHadir: paxString, statusAngpao: gift || "-" }) });
             if (capturedBase64) fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: JSON.stringify({ action:"uploadSelfie", image:capturedBase64, nama:selectedGuest.nama, kode:selectedGuest.kode, ssId:CURRENT_SS_ID }) });
             
             confetti({ particleCount: 100, spread: 70 });
