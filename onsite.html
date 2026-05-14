@@ -178,9 +178,10 @@
 
         #scanner-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: black; z-index: 4000; display: none; flex-direction: column;
+            background: black; z-index: 4000; display: none;
         }
-        #reader { flex: 1; }
+        #reader { width: 100%; height: 100%; }
+        #reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
         .scanner-header {
             position: absolute; top: 40px; left: 0; right: 0;
             display: flex; justify-content: space-between; padding: 0 20px; z-index: 10;
@@ -465,9 +466,16 @@
     };
 
     window.openScanner = function() {
-        document.getElementById('scanner-overlay').style.display = 'flex';
+        document.getElementById('scanner-overlay').style.display = 'block';
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (txt) => {
+        
+        // Dynamic QR Box (1:1 Square)
+        const qrBoxSize = Math.min(window.innerWidth, window.innerHeight) * 0.7;
+        
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            { fps: 20, qrbox: { width: qrBoxSize, height: qrBoxSize } }, 
+            (txt) => {
             const t = masterData.find(g => String(g.kode) === String(txt));
             if (t && String(t.statusHadir)!=="1") {
                 closeScanner();
