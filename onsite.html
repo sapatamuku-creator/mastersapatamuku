@@ -75,11 +75,15 @@
         .guest-cat { font-size: 8px; background: #fdf8f4; padding: 4px 10px; border-radius: 6px; font-weight: 800; color: var(--gold); border: 1px solid #f0e6de; }
 
         /* REGISTRATION FORM STYLES */
-        .reg-pane { flex: 1; background: white; padding: 25px; overflow-y: auto; display: none; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 10px; font-weight: 800; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; }
-        .form-group input, .form-group select { width: 100%; padding: 14px; border-radius: 14px; border: 1.5px solid var(--border); background: #fafafa; font-size: 13px; font-weight: 600; outline: none; }
-        .btn-submit { width: 100%; padding: 20px; background: var(--primary); color: white; border: none; border-radius: 18px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 20px rgba(224,123,123,0.3); cursor: pointer; }
+        .reg-pane { flex: 1; background: white; padding: 20px; overflow-y: auto; display: none; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 10px; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select { width: 100%; padding: 15px; border-radius: 14px; border: 1.5px solid var(--border); background: #fafafa; font-size: 13px; font-weight: 600; outline: none; transition: 0.3s; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); background: white; }
+        .form-row { display: flex; gap: 15px; margin-bottom: 5px; }
+        .form-row .form-group { flex: 1; margin-bottom: 15px; }
+        
+        .btn-submit { width: 100%; padding: 20px; background: var(--primary); color: white; border: none; border-radius: 18px; font-weight: 800; font-size: 14px; box-shadow: 0 10px 25px rgba(224,123,123,0.3); cursor: pointer; margin-top: 10px; }
 
         /* MODAL STYLES */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 100000; display: none; align-items: center; justify-content: center; padding: 20px; }
@@ -166,29 +170,59 @@
                 <label>Nama Lengkap</label>
                 <input type="text" id="reg-nama" placeholder="Masukkan nama tamu...">
             </div>
-            <div style="display:flex; gap:10px;">
-                <div class="form-group" style="flex:1">
-                    <label>WhatsApp</label>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>WhatsApp Number</label>
                     <input type="tel" id="reg-wa" placeholder="08...">
                 </div>
-                <div class="form-group" style="flex:1">
-                    <label>Kategori</label>
+                <div class="form-group">
+                    <label>Category</label>
                     <select id="reg-kategori"><option>Umum</option><option>VIP</option><option>VVIP</option><option>Keluarga</option></select>
                 </div>
             </div>
-            <div style="display:flex; gap:10px;">
-                <div class="form-group" style="flex:1">
-                    <label>Pihak Pengundang</label>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Inviter Side</label>
                     <select id="reg-host"></select>
                 </div>
-                <div class="form-group" style="flex:1">
-                    <label>Sesi</label>
+                <div class="form-group">
+                    <label>Souvenir</label>
+                    <select id="reg-souvenir">
+                        <option value="1">Ya</option>
+                        <option value="0">Tidak</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Sesi Undangan</label>
                     <select id="reg-sesi"></select>
+                </div>
+                <div class="form-group">
+                    <label>Jumlah Pax</label>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div class="pax-row" style="margin: 0; padding: 8px 12px;">
+                            <span style="font-size: 10px; font-weight: 700;">Dewasa</span>
+                            <div class="counter-wrapper" style="width: 80px; height: 32px;">
+                                <button type="button" class="btn-step" onclick="updateRegPax('adult', -1)">-</button>
+                                <div id="reg-pax-adult" class="counter-value" style="font-size: 11px;">1</div>
+                                <button type="button" class="btn-step" onclick="updateRegPax('adult', 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="pax-row" style="margin: 0; padding: 8px 12px;">
+                            <span style="font-size: 10px; font-weight: 700;">Anak</span>
+                            <div class="counter-wrapper" style="width: 80px; height: 32px;">
+                                <button type="button" class="btn-step" onclick="updateRegPax('child', -1)">-</button>
+                                <div id="reg-pax-child" class="counter-value" style="font-size: 11px;">0</div>
+                                <button type="button" class="btn-step" onclick="updateRegPax('child', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="form-group">
                 <label>Alamat / Instansi</label>
-                <input type="text" id="reg-alamat" placeholder="Kota / Instansi...">
+                <input type="text" id="reg-alamat" placeholder="Kota atau Instansi...">
             </div>
 
             <!-- SELFIE OPTION FOR REGISTRATION -->
@@ -409,6 +443,14 @@
         } catch(e) { alert("Error!"); } finally { document.getElementById('loading').style.display = 'none'; }
     }
 
+    window.updateRegPax = function(type, delta) {
+        const el = document.getElementById('reg-pax-' + type);
+        let val = parseInt(el.innerText) + delta;
+        if (type === 'adult' && val < 1) val = 1;
+        if (type === 'child' && val < 0) val = 0;
+        el.innerText = val;
+    };
+
     async function toggleRegSelfie() {
         const box = document.getElementById('reg-preview-container');
         const btn = document.getElementById('btn-reg-snap');
@@ -443,9 +485,9 @@
         if (!nama) return alert("Nama wajib diisi!");
         document.getElementById('loading').style.display = 'flex';
         
-        const adult = 1; 
-        const child = 0;
-        const paxString = `1 ( 1D + 0A )`;
+        const adult = document.getElementById('reg-pax-adult').innerText;
+        const child = document.getElementById('reg-pax-child').innerText;
+        const paxString = `${parseInt(adult)+parseInt(child)} ( ${adult}D + ${child}A )`;
 
         try {
             const payload = { 
@@ -457,7 +499,7 @@
                 kategori: document.getElementById('reg-kategori').value, 
                 host: document.getElementById('reg-host').value, 
                 sesi: document.getElementById('reg-sesi').value, 
-                souvenir: "1", 
+                souvenir: document.getElementById('reg-souvenir').value, 
                 realHadir: paxString,
                 prefix: "ONS"
             };
@@ -480,6 +522,10 @@
                 document.getElementById('reg-kategori').selectedIndex = 0;
                 document.getElementById('reg-host').selectedIndex = 0;
                 document.getElementById('reg-sesi').selectedIndex = 0;
+                document.getElementById('reg-souvenir').selectedIndex = 0;
+                document.getElementById('reg-pax-adult').innerText = "1";
+                document.getElementById('reg-pax-child').innerText = "0";
+                
                 capturedBase64 = null;
                 document.getElementById('btn-reg-snap').innerText = "📸 AMBIL SELFIE (OPSIONAL)";
                 document.getElementById('btn-reg-snap').style.background = "white";
