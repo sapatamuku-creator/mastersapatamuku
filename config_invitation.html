@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Config Invitation - SapaTamu.Ku</title>
+    <script src="subdomain_resolver.js?v=3.2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --primary: #E07B7B; --bg: #FFF9F5; --text: #4A3F35; --border: #F0E6DE; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; overflow: hidden; }
+        
+        .main-wrapper { display: grid; grid-template-columns: 450px 1fr; height: calc(100vh - 80px); margin-top: 80px; }
+        
+        /* LEFT SIDE: SETTINGS */
+        .settings-panel { 
+            background: white; border-right: 1px solid var(--border); 
+            padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px;
+        }
+        .section-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #8C7560; margin-bottom: 8px; }
+        .stk-input { width: 100%; padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--border); background: #FCF8F5; font-size: 14px; font-weight: 600; transition: 0.3s; }
+        .stk-input:focus { border-color: var(--primary); outline: none; background: #fff; }
+        
+        /* RIGHT SIDE: PREVIEW */
+        .preview-panel { background: #F0E6DE; padding: 40px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .preview-frame-container { 
+            width: 100%; max-width: 400px; height: 100%; max-height: 800px; 
+            background: white; border-radius: 40px; overflow: hidden; 
+            box-shadow: 0 40px 100px rgba(74, 63, 53, 0.2); border: 8px solid #1a1a1a;
+            position: relative;
+        }
+        .preview-frame { width: 100%; height: 100%; border: none; }
+        
+        .floating-save { position: fixed; bottom: 30px; left: 30px; width: 390px; z-index: 100; }
+        .btn-save { background: #1a1a1a; color: white; width: 100%; padding: 20px; border-radius: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; font-size: 12px; cursor: pointer; transition: 0.3s; }
+        .btn-save:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.2); }
+
+        /* NAVBAR CLONE */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; background: var(--bg); }
+        .nav-outer-wrapper { position: relative; max-width: 95%; display: flex; align-items: center; background: #FFFDFB; border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08); border: 1px solid var(--border); overflow: hidden; }
+        .nav-scroll-container { display: flex; align-items: center; gap: 5px; padding: 6px 15px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: #8C7560; padding: 10px 18px; border-radius: 30px; transition: 0.3s; }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
+    </style>
+</head>
+<body>
+
+    <nav class="sapatamu-navbar">
+        <div class="nav-outer-wrapper">
+            <div class="nav-scroll-container" id="nav-scroll">
+                <div class="nav-group flex items-center">
+                    <a href="dashboard.html" class="nav-link">Dashboard</a>
+                    <div class="nav-divider"></div>
+                    <a href="formulir_tamu.html" class="nav-link">Formulir</a>
+                    <a href="wa_blast.html" class="nav-link">WA Blast</a>
+                    <a href="config_invitation.html" class="nav-link active">Undangan</a>
+                </div>
+                <div class="nav-divider"></div>
+                <div class="nav-group flex items-center">
+                    <a href="checkin.html" class="nav-link">Check-in</a>
+                    <a href="onsite.html" class="nav-link">On-Site</a>
+                    <a href="config.html" class="nav-link">Config</a>
+                </div>
+                <div class="nav-divider"></div>
+                <a href="logout.html" class="nav-link" style="color: #E07B7B;">Sign Out</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-wrapper">
+        <!-- SIDEBAR: SETTINGS -->
+        <div class="settings-panel">
+            <div class="pb-24">
+                <div class="section-title">Invitation Theme</div>
+                <div class="grid grid-cols-2 gap-3 mb-8">
+                    <button id="theme_classic" onclick="selectTheme('classic')" class="theme-btn p-4 border-2 border-primary rounded-2xl bg-primary/5 text-xs font-black text-primary">Classic Alice</button>
+                    <button id="theme_modern" onclick="selectTheme('modern')" class="theme-btn p-4 border-2 border-transparent bg-neutral-100 rounded-2xl text-xs font-bold text-neutral-400">Modern Glass</button>
+                </div>
+
+                <div class="section-title">Main Details</div>
+                <div class="form-group">
+                    <label>Judul Undangan (Header)</label>
+                    <input type="text" id="inv_header" class="stk-input" placeholder="Misal: The Wedding of..." oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Nama Pengantin</label>
+                    <input type="text" id="inv_names" class="stk-input" placeholder="Bintang & Anisa" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Tanggal & Waktu</label>
+                    <input type="text" id="inv_date" class="stk-input" placeholder="Senin, 25 Mei 2026" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Lokasi Acara</label>
+                    <textarea id="inv_loc" class="stk-input" rows="3" placeholder="Alamat lengkap..." oninput="updatePreview()"></textarea>
+                </div>
+
+                <div class="section-title">RSVP & Music</div>
+                <div class="form-group">
+                    <label>Nomor WhatsApp Konfirmasi</label>
+                    <input type="tel" id="inv_wa" class="stk-input" placeholder="628..." oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Link Musik (MP3)</label>
+                    <input type="text" id="inv_music" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                </div>
+
+                <div class="section-title">Gallery & Background</div>
+                <div class="form-group">
+                    <label>URL Foto Utama (Cover)</label>
+                    <input type="text" id="inv_cover" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN AREA: LIVE PREVIEW -->
+        <div class="preview-panel">
+            <div class="preview-frame-container">
+                <iframe id="preview-iframe" src="undangan.html" class="preview-frame"></iframe>
+            </div>
+            
+            <!-- Mobile Badge -->
+            <div class="absolute top-10 right-10 bg-white/80 backdrop-blur-md px-6 py-3 rounded-full border border-white shadow-xl flex items-center gap-3">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-[10px] font-black tracking-widest text-neutral-500 uppercase">Live Preview</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-save">
+        <button onclick="saveInvitationConfig()" class="btn-save">SIMPAN KONFIGURASI UNDANGAN</button>
+    </div>
+
+    <script>
+        let currentTheme = "classic";
+
+        async function initApp() {
+            if (!window.SAPATAMU_RESOLVED) { setTimeout(initApp, 100); return; }
+            syncNavbar();
+            loadInvitationSettings();
+        }
+
+        function selectTheme(theme) {
+            currentTheme = theme;
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('border-primary', 'bg-primary/5', 'text-primary');
+                btn.classList.add('border-transparent', 'bg-neutral-100', 'text-neutral-400');
+            });
+            const selected = document.getElementById('theme_' + theme);
+            selected.classList.remove('border-transparent', 'bg-neutral-100', 'text-neutral-400');
+            selected.classList.add('border-primary', 'bg-primary/5', 'text-primary');
+            updatePreview();
+        }
+
+        function syncNavbar() {
+            const ssId = window.CURRENT_SS_ID || "";
+            document.querySelectorAll('.nav-link').forEach(link => {
+                const base = link.href.split('?')[0];
+                link.href = `${base}?ssId=${ssId}`;
+            });
+        }
+
+        async function loadInvitationSettings() {
+            const ssId = window.CURRENT_SS_ID;
+            if (!ssId) return;
+
+            try {
+                const res = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`);
+                const result = await res.json();
+                if (result.status === "success") {
+                    const s = result.data;
+                    document.getElementById('inv_names').value = s.namaAcara || "";
+                    document.getElementById('inv_date').value = s.tanggal || "";
+                    document.getElementById('inv_loc').value = s.lokasi || "";
+                    document.getElementById('inv_wa').value = s.waPhone || "6282214578132";
+                    document.getElementById('inv_cover').value = s.link || "";
+                    
+                    if (s.theme) selectTheme(s.theme);
+                    
+                    // Initial Preview update
+                    setTimeout(updatePreview, 1000);
+                }
+            } catch (e) { console.error("Load Invitation Error:", e); }
+        }
+
+        function updatePreview() {
+            const iframe = document.getElementById('preview-iframe');
+            if (!iframe.contentWindow) return;
+
+            const data = {
+                namaAcara: document.getElementById('inv_names').value,
+                tanggal: document.getElementById('inv_date').value,
+                lokasi: document.getElementById('inv_loc').value,
+                waPhone: document.getElementById('inv_wa').value,
+                musicUrl: document.getElementById('inv_music').value,
+                coverUrl: document.getElementById('inv_cover').value
+            };
+
+            // Kirim data ke iframe via postMessage atau langsung manipulasi DOM jika di domain yang sama
+            // Karena ini masih dalam satu domain lokal/deployment, kita coba manipulasi langsung
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                if (doc.getElementById('wedding-names-text')) {
+                    const nameEls = doc.querySelectorAll('.wedding-names-text');
+                    nameEls.forEach(el => el.innerText = data.namaAcara);
+                    
+                    const dateEls = doc.querySelectorAll('#wedding-date-text');
+                    dateEls.forEach(el => el.innerText = data.tanggal);
+
+                    const locEls = doc.querySelectorAll('.wedding-location-text');
+                    locEls.forEach(el => el.innerText = data.lokasi);
+
+                    // Update Music jika ada
+                    const audio = doc.getElementById('main-audio');
+                    if (audio && data.musicUrl) {
+                        audio.src = data.musicUrl;
+                        audio.load();
+                    }
+                }
+            } catch (e) {
+                console.warn("Iframe manipulation blocked or not ready yet.");
+            }
+        }
+
+        async function saveInvitationConfig() {
+            const ssId = window.CURRENT_SS_ID;
+            if (!ssId) return;
+
+            const btn = document.querySelector('.btn-save');
+            btn.innerText = "MENYIMPAN...";
+            btn.disabled = true;
+
+            const payload = {
+                action: "updateClientData",
+                ssId: ssId,
+                eventData: {
+                    nama: document.getElementById('inv_names').value,
+                    tgl: document.getElementById('inv_date').value,
+                    lokasi: document.getElementById('inv_loc').value,
+                    waktu: "", 
+                    link: document.getElementById('inv_cover').value, 
+                    waPhone: document.getElementById('inv_wa').value,
+                    theme: currentTheme
+                }
+            };
+
+            try {
+                const res = await fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+                const result = await res.json();
+                if (result.status === "success") {
+                    alert("Konfigurasi Undangan Berhasil Disimpan!");
+                } else {
+                    alert("Gagal menyimpan: " + result.message);
+                }
+            } catch (e) {
+                alert("Error koneksi server.");
+            } finally {
+                btn.innerText = "SIMPAN KONFIGURASI UNDANGAN";
+                btn.disabled = false;
+            }
+        }
+
+        initApp();
+    </script>
+</body>
+</html>

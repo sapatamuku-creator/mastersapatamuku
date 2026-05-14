@@ -286,6 +286,14 @@ function handleUpdateClientData(data) {
     targetSS.getRange("A3:B3").setValues([["Lokasi Acara :", data.eventData.lokasi]]);
     targetSS.getRange("A4:B4").setValues([["Waktu Acara :", data.eventData.waktu]]);
     targetSS.getRange("A5:B5").setValues([["Link Invitation :", data.eventData.link]]);
+    
+    // Simpan ke Config juga
+    const ss = SpreadsheetApp.openById(data.ssId);
+    let configSheet = ss.getSheetByName("Config");
+    if (configSheet) {
+      if (data.eventData.waPhone) configSheet.getRange("B5").setValue(data.eventData.waPhone);
+      if (data.eventData.theme) configSheet.getRange("B6").setValue(data.eventData.theme);
+    }
     return createResponse({ status: "success", message: "Data berhasil diperbarui" });
   } catch (err) {
     return createResponse({ status: "error", message: "Update gagal." });

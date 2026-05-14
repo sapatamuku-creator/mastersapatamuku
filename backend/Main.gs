@@ -698,9 +698,13 @@ function getSettings(ssId) {
 
     let urlFoto = "";
     let presetKode = "1";
+    let waPhone = "6282214578132";
+    let theme = "classic";
     if (configSheet) {
       urlFoto = configSheet.getRange("B1").getValue();
       presetKode = configSheet.getRange("B2").getValue() || "1";
+      waPhone = configSheet.getRange("B5").getValue() || "6282214578132";
+      theme = configSheet.getRange("B6").getValue() || "classic";
     }
 
     return {
@@ -716,7 +720,9 @@ function getSettings(ssId) {
         sesi3: sesi[2],
         apiToken: apiToken,
         urlFoto: urlFoto,
-        presetKode: presetKode
+        presetKode: presetKode,
+        waPhone: waPhone,
+        theme: theme
       }
     };
   } catch (e) { return { status: "error", message: e.toString() }; }
