@@ -243,19 +243,17 @@
  
 
     function syncNavbar() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const ssId = urlParams.get('ssId') || getActiveSession()?.ssId;
-        if(ssId) {
-            const links = document.querySelectorAll('.nav-link');
-            links.forEach(link => {
-                const baseHref = link.getAttribute('href').split('?')[0];
-                link.href = baseHref;
-            });
-        }
+        const ssId = window.CURRENT_SS_ID || "";
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            const baseHref = link.getAttribute('href').split('?')[0];
+            link.href = `${baseHref}?ssId=${ssId}`;
+        });
     }
 
     async function initLucky() {
         if (window.SAPATAMU_RESOLVED) {
+            CURRENT_SS_ID = window.CURRENT_SS_ID;
             syncNavbar();
             initNavScroll();
             await refreshData(true);
