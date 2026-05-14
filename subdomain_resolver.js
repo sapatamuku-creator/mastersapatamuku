@@ -40,16 +40,20 @@ async function resolveSapatamuSubdomain() {
 
     // Jika tidak ada di URL, cek di storage lokal subdomain ini
     const _localData = localStorage.getItem('sapatamu_db');
-    if (_localData) {
-        try {
-            const _parsed = JSON.parse(_localData);
-            if (_parsed.ssId) {
-                window.CURRENT_SS_ID = _parsed.ssId;
-                window.SAPATAMU_RESOLVED = true;
-                return window.CURRENT_SS_ID;
-            }
-        } catch(e) {}
+    if (!_localData) {
+        console.warn("Tidak ada sesi login lokal. Menghentikan resolusi.");
+        window.SAPATAMU_RESOLVED = true; // Tandai selesai agar tidak menunggu selamanya
+        return null;
     }
+
+    try {
+        const _parsed = JSON.parse(_localData);
+        if (_parsed.ssId) {
+            window.CURRENT_SS_ID = _parsed.ssId;
+            window.SAPATAMU_RESOLVED = true;
+            return window.CURRENT_SS_ID;
+        }
+    } catch(e) {}
 
     // Deteksi Subdomain (misal: clara.sapatamu.id)
     if (parts.length >= 3 && parts[0] !== 'www') {

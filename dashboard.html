@@ -451,16 +451,21 @@
     function checkResolved() {
         if (window.SAPATAMU_RESOLVED) {
             const hn = window.location.hostname;
+            const localData = localStorage.getItem('sapatamu_db');
+            
+            // JIKA TIDAK ADA DATA LOGIN LOKAL, TENDANG KE LOGIN (Berlaku di semua domain)
+            if (!localData) {
+                console.warn("Akses ditolak: Sesi tidak ditemukan.");
+                window.location.replace("https://sapatamu.id/login.html");
+                return;
+            }
+
             if (hn === "sapatamu.id" || hn === "www.sapatamu.id") {
-                // Jangan langsung ke login, cek dulu apakah punya sesi
-                const localData = localStorage.getItem('sapatamu_db');
-                if (localData) {
-                    const parsed = JSON.parse(localData);
-                    if (parsed.username) {
-                        const sub = parsed.username.toLowerCase().replace(/\s+/g, '');
-                        window.location.replace("https://" + sub + ".sapatamu.id/dashboard.html");
-                        return;
-                    }
+                const parsed = JSON.parse(localData);
+                if (parsed.username) {
+                    const sub = parsed.username.toLowerCase().replace(/\s+/g, '');
+                    window.location.replace("https://" + sub + ".sapatamu.id/dashboard.html");
+                    return;
                 }
                 window.location.replace("login.html");
                 return;
