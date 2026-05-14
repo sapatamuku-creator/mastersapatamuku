@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="subdomain_resolver.js?v=2.0"></script>
+  <script src="subdomain_resolver.js?v=2.1"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700&display=swap');
     
@@ -210,12 +210,14 @@
       if (!CURRENT_SS_ID) return;
       try {
         TAB_ID = document.getElementById('tabIdInput').value;
-        const targetUrl = `${SCRIPT_URL}?action=getPrintQueue&ssId=${CURRENT_SS_ID}&station=${TAB_ID}`;
+        const ts = new Date().getTime();
+        const targetUrl = `${SCRIPT_URL}?action=getPrintQueue&ssId=${CURRENT_SS_ID}&station=${TAB_ID}&_=${ts}`;
         
+        console.log("Attempting fetch to:", targetUrl);
         const response = await fetch(targetUrl, { 
             method: 'GET',
             mode: 'cors',
-            referrerPolicy: 'no-referrer'
+            referrerPolicy: 'strict-origin-when-cross-origin'
         });
         
         if (!response.ok) {
@@ -232,9 +234,7 @@
         }
       } catch (e) { 
         log(`Fetch Error: ${e.message}`, true);
-        if (e.message === "Failed to fetch") {
-            log("TIPS: Matikan AdBlocker/VPN atau coba Chrome.", true);
-        }
+        console.error("DEBUG FETCH:", e);
       }
     }
 
