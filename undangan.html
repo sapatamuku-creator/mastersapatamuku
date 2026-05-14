@@ -204,7 +204,7 @@
         </div>
         <div class="relative z-10 px-8">
             <p class="text-[9px] tracking-[0.5em] uppercase mb-6 text-neutral-400 font-bold">The Wedding Celebration</p>
-            <h1 id="wedding-names-text" class="text-5xl font-serif text-neutral-900 mb-12">Bintang <br>& Anisa</h1>
+            <h1 class="wedding-names-text text-5xl font-serif text-neutral-900 mb-12">Bintang <br>& Anisa</h1>
             <div class="mb-12">
                 <p class="text-[9px] tracking-[0.2em] text-neutral-400 uppercase mb-3">Yth. Bapak/Ibu/Saudara/i</p>
                 <h2 id="guest-name-display" class="text-2xl font-serif italic text-neutral-800">Tamu Undangan</h2>
@@ -235,7 +235,7 @@
                 <div class="hero-content text-center z-10 px-4">
                     <p class="text-[10px] tracking-[0.6em] font-serif italic mb-8 text-[#D4AF37]">#SatuBINTANGuntukANISA</p>
                     <p class="text-[10px] tracking-[0.6em] uppercase font-bold mb-4 text-[#D4AF37]">Save The Date</p>
-                    <h2 class="text-5xl font-serif italic mb-4 text-[#D4AF37]">Bintang & Anisa</h2>
+                    <h2 class="wedding-names-text text-5xl font-serif italic mb-4 text-[#D4AF37]">Bintang & Anisa</h2>
                     <p id="wedding-date-text" class="text-xs tracking-[0.3em] uppercase font-bold mb-8 text-[#D4AF37]">Senin, 25 Mei 2026</p>
                     
                     <div id="countdown" class="flex justify-center gap-4 mt-4 py-6 px-4 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30">
@@ -385,7 +385,7 @@
 
         <footer class="py-32 px-8 text-center bg-white reveal">
             <h3 class="text-3xl font-serif italic mb-6">Thank You</h3>
-            <h2 class="text-5xl font-serif italic text-neutral-900 mb-4">Bintang & Anisa</h2>
+            <h2 class="wedding-names-text text-5xl font-serif italic text-neutral-900 mb-4">Bintang & Anisa</h2>
             <p class="text-[8px] font-bold uppercase tracking-[0.8em] mt-24 text-[#D4AF37]">Design by SapaTamu.Ku</p>
         </footer>
     </div>
@@ -399,6 +399,10 @@
             <p id="music-txt" class="text-[7px] font-bold uppercase tracking-tighter text-neutral-400">PLAY</p>
         </button>
     </div>
+    
+    <audio id="main-audio" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+    </audio>
 
     <script>const urlParams = new URLSearchParams(window.location.search);
         const guestName = decodeURIComponent(urlParams.get('u') || "Tamu Undangan");
@@ -427,7 +431,8 @@
         }
 
         function updateCountdown() {
-            const weddingDate = new Date("May 25, 2026 08:00:00").getTime();
+            const dateStr = window.EVENT_META?.rawDate || "May 25, 2026 08:00:00";
+            const weddingDate = new Date(dateStr).getTime();
             const now = new Date().getTime();
             const gap = weddingDate - now;
             if (gap > 0) {
@@ -456,10 +461,12 @@
         };
 
         window.startInvitation = function() {
-            audio.play().then(() => { 
-                isPlaying = true; 
-                updateMusicUI(); 
-            }).catch(e => console.warn("Audio play blocked:", e));
+            if (audio) {
+                audio.play().then(() => { 
+                    isPlaying = true; 
+                    updateMusicUI(); 
+                }).catch(e => console.warn("Audio play blocked:", e));
+            }
 
             document.getElementById('cover').style.transform = 'translateY(-100%)';
             const content = document.getElementById('content');
@@ -521,11 +528,14 @@
                 const result = await res.json();
                 if (result.status === "success") {
                     const s = result.data;
-                    window.EVENT_META = { waPhone: s.waPhone || "6282214578132" };
+                    window.EVENT_META = { 
+                        waPhone: s.waPhone || "6282214578132",
+                        rawDate: s.tanggal || "May 25, 2026 08:00:00"
+                    };
                     
                     // Update UI
                     if (document.getElementById('page-title')) document.getElementById('page-title').innerText = s.namaAcara + " - SapaTamu.Ku";
-                    if (document.getElementById('wedding-names-text')) document.getElementById('wedding-names-text').innerText = s.namaAcara;
+                    document.querySelectorAll('.wedding-names-text').forEach(el => el.innerText = s.namaAcara);
                     if (document.getElementById('wedding-date-text')) document.getElementById('wedding-date-text').innerText = s.tanggal;
                     document.querySelectorAll('.wedding-location-text').forEach(el => el.innerText = s.lokasi);
                 }
