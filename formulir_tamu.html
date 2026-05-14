@@ -232,82 +232,32 @@
         /* REDUPKAN AREA SAAT PROSES */
         .is-processing { opacity: 0.4; filter: grayscale(0.5); pointer-events: none; }
 
-        /* UNIFIED NAVBAR STYLES */
-        .sapatamu-navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 20px 20px 0;
-            display: flex;
-            justify-content: center;
-            z-index: 10000;
-        }
-        .sapatamu-nav-container {
-            background: #FFFDFB;
-            padding: 6px 10px;
-            border-radius: 50px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08);
-            border: 1px solid var(--border);
-            max-width: 95%;
-            overflow-x: auto;
-            white-space: nowrap;
-            scrollbar-width: none;
-            position: relative;
-        }
-        .sapatamu-nav-container::-webkit-scrollbar { display: none; }
+        /* ADVANCED NAVBAR STYLES (CLONE FROM ONSITE) */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
+        .nav-outer-wrapper { position: relative; max-width: 95%; display: flex; align-items: center; background: #FFFDFB; border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08); border: 1px solid var(--border); overflow: hidden; }
         
-        /* SCROLL INDICATORS */
-        .sapatamu-nav-container::before,
-        .sapatamu-nav-container::after {
-            content: '';
-            position: sticky;
-            top: 0;
-            min-width: 40px;
-            height: 32px;
-            z-index: 10;
-            pointer-events: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: bold;
-            color: var(--text-muted);
-            opacity: 0.5;
+        .nav-scroll-container { 
+            display: flex; align-items: center; gap: 5px; padding: 6px 15px;
+            overflow-x: auto; white-space: nowrap; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none;
         }
-        .sapatamu-nav-container::before {
-            left: 0;
-            background: linear-gradient(to right, #FFFDFB 70%, transparent);
-            content: '‹';
-            margin-right: -40px;
-        }
-        .sapatamu-nav-container::after {
-            right: 0;
-            background: linear-gradient(to left, #FFFDFB 70%, transparent);
-            content: '›';
-            margin-left: -40px;
-        }
-        .nav-group { display: flex; align-items: center; gap: 4px; }
-        .nav-group:first-child { padding-left: 20px; }
-        .nav-group:last-child { padding-right: 20px; }
-        .nav-link {
-            text-decoration: none;
-            font-size: 10.5px;
-            font-weight: 700;
-            color: var(--text-muted);
-            padding: 10px 18px;
-            border-radius: 30px;
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
-        }
+        .nav-scroll-container::-webkit-scrollbar { display: none; }
+        
+        .nav-fade { position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none; z-index: 2; transition: opacity 0.3s; opacity: 0; }
+        .nav-fade-left { left: 0; background: linear-gradient(to right, #FFFDFB 20%, transparent); }
+        .nav-fade-right { right: 0; background: linear-gradient(to left, #FFFDFB 20%, transparent); }
+        .nav-fade.visible { opacity: 1; }
+
+        .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; font-size: 10px; color: var(--text-muted); opacity: 0.5; pointer-events: none; transition: 0.3s; }
+        .nav-arrow-left { left: 8px; }
+        .nav-arrow-right { right: 8px; }
+
+        .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: 0.3s; display: flex; align-items: center; white-space: nowrap; }
         .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
         .nav-link.active { background: var(--primary); color: white !important; }
-        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
-        .nav-divider-bold { width: 1.5px; height: 22px; background: #D6C7BC; margin: 0 12px; }
+        .nav-link.sign-out { color: #E07B7B !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
     </style>
 </head>
 <body id="main-body">
@@ -324,26 +274,34 @@
 
 <div id="sapatamu-master-wrapper">
     <nav class="sapatamu-navbar">
-        <div class="sapatamu-nav-container">
-            <div class="nav-group">
-                <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+        <div class="nav-outer-wrapper">
+            <div class="nav-fade nav-fade-left" id="fade-left"></div>
+            <div class="nav-arrow nav-arrow-left">‹</div>
+            
+            <div class="nav-scroll-container" id="nav-scroll">
+                <div class="nav-group">
+                    <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+                    <div class="nav-divider"></div>
+                    <a href="formulir_tamu.html" class="nav-link active" id="nav-formulir">Formulir</a>
+                    <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+                    <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+                </div>
                 <div class="nav-divider"></div>
-                <a href="formulir_tamu.html" class="nav-link active" id="nav-formulir">Formulir</a>
-                <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
-                <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
-            </div>
-            <div class="nav-divider-bold"></div>
-            <div class="nav-group">
-                <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
-                <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
-                <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
-                <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
-                <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
-                <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
-                <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+                <div class="nav-group">
+                    <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                    <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                    <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+                    <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+                    <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+                    <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+                    <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+                </div>
                 <div class="nav-divider"></div>
-                <a href="logout.html" class="nav-link" id="nav-logout" style="color: #ef4444;">Sign Out</a>
+                <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
             </div>
+
+            <div class="nav-arrow nav-arrow-right">›</div>
+            <div class="nav-fade nav-fade-right" id="fade-right"></div>
         </div>
     </nav>
     
@@ -578,7 +536,31 @@
     // --- CORE FUNCTIONS ---
     async function initApp() {
         syncNavbar();
+        initNavScroll();
         await refreshApp();
+    }
+
+    function initNavScroll() {
+        const container = document.getElementById('nav-scroll');
+        const fLeft = document.getElementById('fade-left');
+        const fRight = document.getElementById('fade-right');
+        
+        const updateFades = () => {
+            const scrollLeft = container.scrollLeft;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            fLeft.classList.toggle('visible', scrollLeft > 10);
+            fRight.classList.toggle('visible', scrollLeft < maxScroll - 10);
+        };
+        
+        container.addEventListener('scroll', updateFades);
+        window.addEventListener('resize', updateFades);
+        setTimeout(updateFades, 500);
+
+        // Auto-scroll to active link
+        const active = container.querySelector('.nav-link.active');
+        if (active) {
+            container.scrollLeft = active.offsetLeft - (container.clientWidth / 2) + (active.clientWidth / 2);
+        }
     }
 
     async function refreshApp() {
