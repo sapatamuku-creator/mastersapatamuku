@@ -7,7 +7,7 @@ window.SAPATAMU_RESOLVED = false;
 window.CURRENT_SS_ID = new URLSearchParams(window.location.search).get('ssId');
 
 async function resolveSapatamuSubdomain() {
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzZM0KEscGYuUVXhrzDFBZMe0TvZJWlUJtytqQ6O-bmzm3nQifOLDPp21s9NHC01vkP/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTfj68S4HlfGiFRqKlaZHe4aTwkn-j4RUan5wxDo1uCYjZbjjj4T-t757JTO7rCjtL/exec";
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
     
