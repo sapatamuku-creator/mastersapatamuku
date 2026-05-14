@@ -399,7 +399,12 @@
                 <div id="list-section" style="background: transparent; padding: 40px 30px; border-radius: 40px; min-height: 400px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                         <p style="font-size: 11px; font-weight: 900; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase;">Collection Draft</p>
-                        <span id="draft-count" style="background: var(--gold); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 GUESTS</span>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button onclick="refreshApp()" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; padding: 5px;" title="Refresh Data">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+                            </button>
+                            <span id="draft-count" style="background: var(--gold); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 GUESTS</span>
+                        </div>
                     </div>
                     <input type="text" id="guest-search" oninput="filterGuestList()" placeholder="□ Cari Nama, WA, Kategori, atau Status..." 
                            style="width: 100%; padding: 18px 25px; border-radius: 18px; border: 1.5px solid var(--border); font-size: 14px; font-weight: 600; background: #FFF; outline: none; box-sizing: border-box; box-shadow: 0 10px 20px rgba(140, 117, 96, 0.03);">
@@ -474,7 +479,7 @@
     </style>
 
     <script>(function() {
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJdAGMyhDHfyWJTq2IrEzCVVBMxEuwlaflv4_xBdbeVIzrQRG1SfCnBGz-XXbDjM3C/exec";
+        const SCRIPT_URL = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbzJdAGMyhDHfyWJTq2IrEzCVVBMxEuwlaflv4_xBdbeVIzrQRG1SfCnBGz-XXbDjM3C/exec";
 
         function syncNavbar() {
             const ssId = window.CURRENT_SS_ID || "";
@@ -572,20 +577,27 @@
                 body: JSON.stringify({ action: "getMasterData", ssId: CURRENT_SS_ID })
             });
             const result = await response.json();
+            
+            if (result.status === "error") {
+                showSapaModal("Server Error", result.message || "Gagal mengambil data.", "❌");
+                toggleProcessing(false);
+                return;
+            }
+
             MASTER_LIST = result.guestList || [];
             
-            // Sync Dynamic Dropdown
-            const ddRes = await fetch(SCRIPT_URL + "?action=getDropdownOptions&ssId=" + CURRENT_SS_ID);
-            const ddData = await ddRes.json();
-            if (ddData.status === "success" && ddData.options.length > 0) {
+            // Sync Dynamic Dropdown from result
+            if (result.dropdownOptions && result.dropdownOptions.length > 0) {
                 const select = document.getElementById('in-l7-pengundang');
-                select.innerHTML = "";
-                ddData.options.forEach(opt => {
-                    const el = document.createElement('option');
-                    el.value = opt.toUpperCase();
-                    el.innerText = opt;
-                    select.appendChild(el);
-                });
+                if (select) {
+                    select.innerHTML = "";
+                    result.dropdownOptions.forEach(opt => {
+                        const el = document.createElement('option');
+                        el.value = opt.toUpperCase();
+                        el.innerText = opt;
+                        select.appendChild(el);
+                    });
+                }
             }
             
             if(result.eventMeta) {
@@ -609,7 +621,8 @@
             }
             render(MASTER_LIST);
         } catch(err) { 
-            console.error(err); 
+            console.error(err);
+            showSapaModal("Connection Error", "Gagal menghubungi server. Pastikan Anda online.", "⚠️");
         } finally {
             toggleProcessing(false);
         }
@@ -696,7 +709,12 @@
         document.getElementById('draft-count').innerText = list.length + " GUESTS";
         
         if (list.length === 0) {
-            listContainer.innerHTML = `<div style="grid-column: span 2; text-align:center; color:#BBB; font-size:11px; padding:40px;">No guest data found</div>`;
+            listContainer.innerHTML = `
+                <div style="grid-column: span 2; text-align:center; color:#BBB; font-size:11px; padding:60px 20px; background: #FDFBF9; border-radius: 30px; border: 2px dashed #EEE0D5;">
+                    <div style="font-size: 30px; margin-bottom: 15px; opacity: 0.5;">📋</div>
+                    <div style="font-weight: 800; color: var(--text-main); margin-bottom: 5px;">Belum ada data tamu</div>
+                    <div>Silakan tambah tamu baru atau pastikan Spreadsheet ID sudah benar.</div>
+                </div>`;
             return;
         }
 
@@ -829,9 +847,16 @@
         if (window.SAPATAMU_RESOLVED) {
             CURRENT_SS_ID = window.CURRENT_SS_ID;
             if (!CURRENT_SS_ID) {
+                const urlParams = new URLSearchParams(window.location.search);
+                CURRENT_SS_ID = urlParams.get("ssId") || localStorage.getItem("st_saved_ssid");
+            }
+            
+            if (!CURRENT_SS_ID) {
                 window.location.href = "login.html";
                 return;
             }
+
+            localStorage.setItem("st_saved_ssid", CURRENT_SS_ID);
             initApp();
         } else {
             setTimeout(startApp, 100);
