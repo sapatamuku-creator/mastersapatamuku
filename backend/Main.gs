@@ -92,6 +92,7 @@ function handleMainGet(e) {
   if (action === "getMasterData") return createResponse({ status: "success", data: getMasterDataV3(ssId) });
   if (action === "getMasterDataAngpao") return createResponse({ status: "success", guestList: getMasterDataV3(ssId) });
   if (action === "getSettings") return createResponse(getSettings(ssId));
+  if (action === "getDropdownOptions") return createResponse(getDropdownOptions(ssId));
   
   // WELCOME SIGN HANDSHAKE
   if (action === "getWelcome") return createResponse(getWelcomeData(ssId));
