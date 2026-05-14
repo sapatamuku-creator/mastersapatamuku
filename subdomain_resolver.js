@@ -46,6 +46,11 @@ async function resolveSapatamuSubdomain() {
                     window.CURRENT_SS_ID = res.ssId;
                     sessionStorage.setItem('resolved_ssid_' + sub, res.ssId);
                     console.log("Subdomain Resolved:", sub, "->", res.ssId);
+                } else {
+                    // Jika error (misal: Expired atau Tidak Terdaftar)
+                    alert(res.message || "Akses ditolak. Silakan login kembali.");
+                    window.location.replace("https://sapatamu.id/login.html");
+                    return;
                 }
             } catch (e) {
                 console.error("Gagal resolve subdomain:", e);

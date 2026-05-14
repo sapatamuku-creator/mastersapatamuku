@@ -197,6 +197,9 @@ function handleLogin(data) {
 
     for (let i = 1; i < values.length; i++) {
       if (values[i][0] == data.username && values[i][2] == data.password) {
+        // SET STATUS KE ACTIVE SAAT LOGIN (KOLOM H)
+        sheet.getRange(i + 1, 8).setValue("Active");
+
         return createResponse({ status: "success", message: "Login Berhasil", data: {
           username: values[i][0],
           ssId: values[i][1],
@@ -207,7 +210,26 @@ function handleLogin(data) {
     }
     return createResponse({ status: "error", message: "Username atau Password salah" });
   } catch (err) {
-    return createResponse({ status: "error", message: "Kesalahan Login" });
+    return createResponse({ status: "error", message: "Kesalahan Login: " + err.toString() });
+  }
+}
+
+function handleLogout(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const values = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < values.length; i++) {
+      if (values[i][0] == data.username) {
+        // SET STATUS KE EXPIRED SAAT LOGOUT
+        sheet.getRange(i + 1, 8).setValue("Expired"); 
+        return createResponse({ status: "success", message: "Logout berhasil" });
+      }
+    }
+    return createResponse({ status: "error", message: "User tidak ditemukan" });
+  } catch (err) {
+    return createResponse({ status: "error", message: err.toString() });
   }
 }
 

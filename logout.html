@@ -93,12 +93,29 @@
         const SESSION_KEY = 'sapatamu_session';
         const LOCAL_DB = 'sapatamu_db';
         const SIGNOUT_SIGNAL = 'sapatamu_signout_broadcast';
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzZM0KEscGYuUVXhrzDFBZMe0TvZJWlUJtytqQ6O-bmzm3nQifOLDPp21s9NHC01vkP/exec";
 
-        function executeLogout() {
+        async function executeLogout() {
             document.getElementById('sapa-confirm-modal').style.display = 'none';
             document.getElementById('logging-out').style.display = 'block';
 
-            const currentData = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_DB) || "{}");
+            const sessionData = sessionStorage.getItem(SESSION_KEY);
+            const localData = localStorage.getItem(LOCAL_DB);
+            const currentData = JSON.parse(sessionData || localData || "{}");
+
+            // HIT BACKEND LOGOUT (SET STATUS TO EXPIRED)
+            if (currentData.username) {
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: "POST",
+                        mode: "no-cors",
+                        body: JSON.stringify({ action: "logout", username: currentData.username })
+                    });
+                } catch (e) {
+                    console.error("Gagal update status logout di backend:", e);
+                }
+            }
+
             if (currentData.username && currentData.ssId) {
                 localStorage.setItem(SIGNOUT_SIGNAL, JSON.stringify({
                     username: currentData.username,
@@ -113,16 +130,20 @@
             
             setTimeout(() => {
                 window.location.replace("login.html");
-            }, 1500);
+            }, 1000);
         }
 
         function cancelLogout() {
-            const currentData = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_DB) || "{}");
+            const sessionData = sessionStorage.getItem(SESSION_KEY);
+            const localData = localStorage.getItem(LOCAL_DB);
+            const currentData = JSON.parse(sessionData || localData || "{}");
             const ssId = currentData.ssId ? `?ssId=${currentData.ssId}` : "";
             window.location.replace("dashboard.html" + ssId);
         }
 
-        const currentData = JSON.parse(sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LOCAL_DB) || "{}");
+        const sessionData = sessionStorage.getItem(SESSION_KEY);
+        const localData = localStorage.getItem(LOCAL_DB);
+        const currentData = JSON.parse(sessionData || localData || "{}");
         if (currentData.username) {
             document.getElementById('confirm-msg').innerText = `Halo ${currentData.username}, apakah Anda yakin ingin keluar dari sistem SapaTamu.ku?`;
         }

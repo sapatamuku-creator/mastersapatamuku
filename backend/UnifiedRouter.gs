@@ -40,6 +40,7 @@ function doPost(e) {
     switch(action) {
       // Auth & Management (CentralBackend.gs)
       case 'login':
+      case 'logout':
       case 'register':
       case 'copyMaster':
       case 'forgotPassword':
