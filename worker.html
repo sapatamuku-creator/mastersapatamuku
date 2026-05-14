@@ -63,7 +63,7 @@
     
     <!-- HEADER -->
     <div class="flex flex-col items-center mb-10">
-      <img src="https://drive.google.com/file/d/1_s9STgzJy9ahOekn_zMqhM8LyDNAt3zl" alt="SapaTamu.Ku" class="h-14 mb-3 object-contain">
+      <img src="https://drive.google.com/uc?id=1_s9STgzJy9ahOekn_zMqhM8LyDNAt3zl" alt="SapaTamu.Ku" class="h-14 mb-3 object-contain">
       <div class="flex items-center gap-2">
         <p class="text-[10px] tracking-[0.5em] text-emerald-500 font-bold uppercase">System Worker v3.5</p>
         <span class="text-zinc-600">|</span>
@@ -112,13 +112,15 @@
 
   </div>
 
-  <script>// --- CONFIG ---
+  <script>
+    // --- CONFIG ---
+    const urlParams = new URLSearchParams(window.location.search);
     const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+    
     let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
-    let TAB_ID = urlParams.get('tabId') || "STATION-1";
+    let TAB_ID = urlParams.get('tabId') || "REGISTRASI";
 
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJJxmhqjS_gZ7xdS98-13alRxnbTUHSKROyvfjmVoagl9zu1PTgQay2oW5k4oOzeI5/exec";
-
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJJxmhqjS_gZ7xdS98-13alRxnbTUHSKROyvfjmVoagl9zu1PTgQay2oW5k4oOzeI5/exec";
     
     let printCharacteristic = null;
     let isProcessing = false;
@@ -127,13 +129,14 @@
 
     const tabInput = document.getElementById('tabIdInput');
 
-    function initApp() {
+    async function initApp() {
       if (window.SAPATAMU_RESOLVED) {
         CURRENT_SS_ID = window.CURRENT_SS_ID || CURRENT_SS_ID;
         tabInput.value = TAB_ID;
         if (!CURRENT_SS_ID) {
-          log("CRITICAL ERROR: ssId tidak ditemukan!", true);
+          log("CRITICAL ERROR: ssId tidak ditemukan! Harap login ulang.", true);
           document.getElementById('connectBtn').disabled = true;
+          document.getElementById('connectBtn').style.opacity = "0.5";
         } else {
           log(`Worker Active | Session: ${CURRENT_SS_ID.substring(0, 8)}...`);
         }
