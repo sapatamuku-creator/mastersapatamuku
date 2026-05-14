@@ -226,8 +226,8 @@ function handleLogout(data) {
     for (let i = 1; i < values.length; i++) {
       const dbUser = String(values[i][0] || "").toLowerCase().trim();
       if (dbUser === targetUser) {
-        // JANGAN LAGI SET EXPIRED DI SPREADSHEET AGAR TIDAK MENGUNCI USER LAIN (PARALEL)
-        // Cukup biarkan redirect menangani pembersihan di sisi client
+        // STATUS TETAP AKTIF (Kolom H tidak diubah)
+        // Keamanan logout dikelola oleh pembersihan session di browser
         
         if (data.redirect) {
           return HtmlService.createHtmlOutput("<script>window.top.location.replace('" + data.redirect + "');</script>");
@@ -263,7 +263,7 @@ function handleUpdateClientData(data) {
 
 // createResponse removed (using UnifiedRouter version)
 
-// --- FUNGSI RESOLVE SUBDOMAIN (MULTI-USER SECURE) ---
+// --- FUNGSI RESOLVE SUBDOMAIN (VERSI SEDERHANA) ---
 function handleResolveSubdomain(data) {
   try {
     const ss = SpreadsheetApp.openById(MASTER_SS_ID);
@@ -271,40 +271,25 @@ function handleResolveSubdomain(data) {
     const values = sheet.getDataRange().getValues();
     const sub = data.subdomain.toLowerCase().trim();
     
-    // Token/Credentials dari perangkat
-    const authUser = String(data.username || "").toLowerCase().trim();
-    const authPass = String(data.password || "");
-
     for (let i = 1; i < values.length; i++) {
-      // Hilangkan spasi dari username di DB agar cocok dengan format subdomain URL
       const dbUserRaw = String(values[i][0] || "");
       const dbUserCleaned = dbUserRaw.toLowerCase().replace(/\s+/g, '').trim();
-      const dbPass = String(values[i][2]);
       const status = String(values[i][7] || "").toLowerCase().trim(); // Kolom H (Index 7)
 
       if (dbUserCleaned === sub) {
-        // Cek apakah akun aktif (Langganan)
+        // CEK APAKAH AKUN DIBLOKIR/EXPIRED OLEH ADMIN
         if (status !== "active") {
           return createResponse({ 
             status: "error", 
-            message: "Akun ini dinonaktifkan oleh Admin." 
+            message: "Akun ini telah dinonaktifkan oleh Admin. Silakan hubungi pusat." 
           });
         }
 
-        // VALIDASI KUNCI INDIVIDU (Perangkat harus kirim username & pass yang benar)
-        if (authUser === dbUserRaw.toLowerCase().trim() && authPass === dbPass) {
-          return createResponse({ 
-            status: "success", 
-            ssId: values[i][1],
-            clientName: values[i][0]
-          });
-        } else {
-          return createResponse({ 
-            status: "error", 
-            message: "Sesi tidak valid. Silakan login kembali.",
-            needLogin: true 
-          });
-        }
+        return createResponse({ 
+          status: "success", 
+          ssId: values[i][1],
+          clientName: values[i][0]
+        });
       }
     }
     return createResponse({ status: "error", message: "Subdomain tidak terdaftar" });
