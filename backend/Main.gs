@@ -296,7 +296,10 @@ function getMasterDataV3(ssId) {
       sesi: row[18]          // Kolom S
     })).filter(g => g.nama !== "").reverse(); 
   }
-  return { eventMeta, guestList };
+  const dropdownData = getDropdownOptions(ssId);
+  const dropdownOptions = dropdownData.options || [];
+
+  return { eventMeta, guestList, dropdownOptions };
 }
 
 // --- 4. PRINT & QUEUE FUNCTIONS ---
@@ -750,9 +753,12 @@ function getDropdownOptions(ssId) {
       sheet = ss.insertSheet("Config_Dropdown");
       sheet.getRange("A1").setValue("Pilihan Dropdown");
       
-      // Deteksi Kategori dari Sheet1!B6 (atau default ke wedding)
-      const mainSheet = ss.getSheetByName(SHEET_DATA);
-      const category = String(mainSheet.getRange("B6").getValue() || "wedding").toLowerCase();
+      // Deteksi Kategori dari Config!B3 (atau default ke wedding)
+      const configSheet = ss.getSheetByName("Config");
+      let category = "wedding";
+      if (configSheet) {
+        category = String(configSheet.getRange("B3").getValue() || "wedding").toLowerCase();
+      }
       
       let defaultOptions = [];
       

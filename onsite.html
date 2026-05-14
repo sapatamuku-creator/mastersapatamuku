@@ -198,9 +198,13 @@
         .btn-step { width: 40px; height: 40px; border: none; background: white; border-radius: 12px; font-size: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 3px 6px rgba(0,0,0,0.05); }
 
         .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: none; align-items: center; justify-content: center; font-weight: 800; color: var(--primary); }
+        
+        .selfie-box { width: 100%; aspect-ratio: 1/1; background: black; border-radius: 25px; overflow: hidden; border: 4px solid var(--border); margin-bottom: 20px; position: relative; }
+        .selfie-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .selfie-canvas { width: 100%; height: 100%; object-fit: cover; display: none; }
     </style>
 </head>
-<body>
+<body onload="initApp()">
 
 <div id="app-root">
     <div id="loading" class="loading-overlay">MEMPROSES...</div>
@@ -283,12 +287,9 @@
                 </div>
 
                 <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <button onclick="takeOnsiteSnapshot()" id="btn-snap-onsite" style="width:100%; padding:18px; border-radius:18px; border:2px solid var(--primary); background:white; color:var(--primary); font-weight:800;">AMBIL SELFIE</button>
+                    <button onclick="openOnsiteSelfie()" id="btn-trigger-onsite-selfie" style="width:100%; padding:18px; border-radius:18px; border:2px solid var(--primary); background:white; color:var(--primary); font-weight:800;">AMBIL SELFIE (OPSIONAL)</button>
                     <button onclick="submitOnsite()" style="width:100%; padding:20px; border-radius:20px; background:var(--primary); color:white; font-weight:800; border:none; box-shadow: 0 10px 25px rgba(224, 123, 123, 0.3);">DAFTARKAN TAMU</button>
                 </div>
-
-                <video id="onsite-video" autoplay playsinline muted style="display:none; width:100%; border-radius:25px; margin-top:20px; transform: scaleX(-1);"></video>
-                <canvas id="capture-preview-onsite" style="display:none; width:100%; border-radius:25px; margin-top:20px;"></canvas>
             </div>
         </div>
     </main>
@@ -316,9 +317,9 @@
         <h2 id="m-nama" style="font-size:24px; font-weight:800; text-align:center; margin-bottom:5px;">NAMA TAMU</h2>
         <p id="m-info" style="text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:20px;">Kategori | Alamat</p>
         
-        <div style="width:100%; aspect-ratio:1/1; background:black; border-radius:25px; overflow:hidden; border:4px solid var(--border); margin-bottom:20px; position:relative;">
-            <video id="confirm-video" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
-            <canvas id="preview-canvas" style="display:none; width:100%; height:100%; object-fit:cover;"></canvas>
+        <div class="selfie-box">
+            <video id="confirm-video" class="selfie-video" autoplay playsinline muted></video>
+            <canvas id="preview-canvas" class="selfie-canvas"></canvas>
         </div>
 
         <div style="display:flex; justify-content:center; margin-bottom:25px;">
@@ -356,6 +357,27 @@
     </div>
 </div>
 
+<!-- ONSITE SELFIE MODAL -->
+<div id="onsite-selfie-modal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <h2 style="font-size:20px; font-weight:800; text-align:center; margin-bottom:20px;">Selfie Tamu On-site</h2>
+        
+        <div class="selfie-box">
+            <video id="onsite-video" class="selfie-video" autoplay playsinline muted></video>
+            <canvas id="capture-preview-onsite" class="selfie-canvas"></canvas>
+        </div>
+
+        <div style="display:flex; justify-content:center; margin-bottom:25px;">
+            <button onclick="takeOnsiteSnapshot()" id="btn-snap-onsite" style="padding:12px 30px; border-radius:15px; border:2px solid var(--primary); background:white; color:var(--primary); font-weight:800;">AMBIL FOTO</button>
+        </div>
+
+        <div style="display:flex; gap:15px;">
+            <button onclick="closeOnsiteSelfie()" style="flex:1; padding:15px; border-radius:15px; background:#eee; color:#666; font-weight:800; border:none;">BATAL</button>
+            <button onclick="closeOnsiteSelfie()" style="flex:1; padding:15px; border-radius:15px; background:var(--success); color:white; font-weight:800; border:none;">GUNAKAN FOTO</button>
+        </div>
+    </div>
+</div>
+
 <div id="scanner-overlay">
     <div class="scanner-header">
         <button class="close-scanner" onclick="closeScanner()">BATAL</button>
@@ -375,14 +397,26 @@
     let onsiteStream = null;
     let confirmStream = null;
 
+    // Use URL from subdomain_resolver if available, otherwise fallback
+    const API_URL = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbzJdAGMyhDHfyWJTq2IrEzCVVBMxEuwlaflv4_xBdbeVIzrQRG1SfCnBGz-XXbDjM3C/exec";
+
     async function initApp() {
+        // Wait for subdomain resolution if needed
+        if (!window.SAPATAMU_RESOLVED) {
+            console.log("Waiting for resolution...");
+            await new Promise(r => {
+                const check = setInterval(() => {
+                    if (window.SAPATAMU_RESOLVED) { clearInterval(check); r(); }
+                }, 100);
+            });
+        }
         await fetchMasterData();
-        // Scanner does NOT start automatically now
     }
 
     async function fetchMasterData() {
+        if (!window.CURRENT_SS_ID) return;
         try {
-            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "get_master_data", ssId: CURRENT_SS_ID }) });
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "get_master_data", ssId: window.CURRENT_SS_ID }) });
             const data = await res.json();
             masterData = data.guestList || [];
             
@@ -396,13 +430,18 @@
                 sesiSelect.innerHTML = '<option value="">Pilih Sesi</option>' + data.eventMeta.sesiOptions.map(s => `<option value="${s}">${s}</option>`).join('');
             }
             renderGuestList();
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Fetch Error:", e); }
     }
 
     window.renderGuestList = function() {
         const container = document.getElementById('guest-list-container');
         const term = document.getElementById('search-input').value.toLowerCase();
         const filtered = masterData.filter(g => (g.nama||"").toLowerCase().includes(term) || (g.kode||"").toLowerCase().includes(term));
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted); font-size:12px;">Tidak ada data tamu ditemukan.</div>';
+            return;
+        }
 
         container.innerHTML = filtered.map(g => {
             const isHadir = String(g.statusHadir) === "1";
@@ -444,21 +483,12 @@
         document.getElementById('scanner-overlay').style.display = 'none';
     };
 
-    window.switchMode = async function(m) {
+    window.switchMode = function(m) {
         currentMode = m;
         document.getElementById('tab-scan').classList.toggle('active', m==='scan');
         document.getElementById('tab-onsite').classList.toggle('active', m==='onsite');
         document.getElementById('panel-scan').style.display = m==='scan'?'block':'none';
         document.getElementById('panel-onsite').style.display = m==='onsite'?'block':'none';
-        
-        if (m === 'onsite') {
-            document.getElementById('onsite-video').style.display = 'block';
-            onsiteStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            document.getElementById('onsite-video').srcObject = onsiteStream;
-        } else {
-            if (onsiteStream) onsiteStream.getTracks().forEach(t => t.stop());
-            document.getElementById('onsite-video').style.display = 'none';
-        }
     };
 
     window.openConfirm = async function(kode, nama, alamat, kategori) {
@@ -467,13 +497,29 @@
         document.getElementById('m-info').innerText = `${kategori} | ${alamat}`;
         document.getElementById('confirm-modal').style.display = 'flex';
         resetSnapshot();
-        confirmStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-        document.getElementById('confirm-video').srcObject = confirmStream;
+        try {
+            confirmStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            document.getElementById('confirm-video').srcObject = confirmStream;
+        } catch(e) { console.error("Camera Error:", e); }
     };
 
     window.closeConfirm = function() {
-        if (confirmStream) confirmStream.getTracks().forEach(t => t.stop());
+        if (confirmStream) { confirmStream.getTracks().forEach(t => t.stop()); confirmStream = null; }
         document.getElementById('confirm-modal').style.display = 'none';
+    };
+
+    window.openOnsiteSelfie = async function() {
+        document.getElementById('onsite-selfie-modal').style.display = 'flex';
+        resetOnsiteSnapshot();
+        try {
+            onsiteStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            document.getElementById('onsite-video').srcObject = onsiteStream;
+        } catch(e) { console.error("Camera Error:", e); }
+    };
+
+    window.closeOnsiteSelfie = function() {
+        if (onsiteStream) { onsiteStream.getTracks().forEach(t => t.stop()); onsiteStream = null; }
+        document.getElementById('onsite-selfie-modal').style.display = 'none';
     };
 
     window.updatePax = function(pfx, type, val) {
@@ -484,7 +530,11 @@
         el.innerText = cur;
     };
 
-    window.toggleTag = function(btn) { btn.classList.toggle('active'); btn.style.background = btn.classList.contains('active') ? 'var(--gold)' : 'white'; btn.style.color = btn.classList.contains('active') ? 'white' : 'var(--text-muted)'; };
+    window.toggleTag = function(btn) { 
+        btn.classList.toggle('active'); 
+        btn.style.background = btn.classList.contains('active') ? 'var(--gold)' : 'white'; 
+        btn.style.color = btn.classList.contains('active') ? 'white' : 'var(--text-muted)'; 
+    };
 
     window.takeSnapshot = function() {
         const v = document.getElementById('confirm-video'), c = document.getElementById('preview-canvas'), ctx = c.getContext('2d');
@@ -497,7 +547,12 @@
         document.getElementById('btn-snap').innerText = "ULANGI";
     };
 
-    function resetSnapshot() { document.getElementById('confirm-video').style.display = 'block'; document.getElementById('preview-canvas').style.display = 'none'; capturedPhoto = null; document.getElementById('btn-snap').innerText = "AMBIL SELFIE"; }
+    function resetSnapshot() { 
+        document.getElementById('confirm-video').style.display = 'block'; 
+        document.getElementById('preview-canvas').style.display = 'none'; 
+        capturedPhoto = null; 
+        document.getElementById('btn-snap').innerText = "AMBIL SELFIE"; 
+    }
 
     window.executeCheckIn = async function() {
         document.getElementById('loading').style.display = 'flex';
@@ -507,10 +562,10 @@
         const note = (document.getElementById('m-tag-angpao').classList.contains('active')?"ANGPAO ":"") + (document.getElementById('m-tag-kado').classList.contains('active')?"KADO":"");
         
         try {
-            const res = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action: "confirm_checkin", ssId: CURRENT_SS_ID, kodeUnik: selectedGuest.kode, realHadir: paxString, catatan: note||"-" }) });
+            const res = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action: "confirm_checkin", ssId: window.CURRENT_SS_ID, kodeUnik: selectedGuest.kode, realHadir: paxString, catatan: note||"-" }) });
             const json = await res.json();
             if (json.status === "success") {
-                if (capturedPhoto) fetch(SELFIE_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "uploadSelfie", image: capturedPhoto, nama: selectedGuest.nama, kode: selectedGuest.kode, ssId: CURRENT_SS_ID }) });
+                if (capturedPhoto) fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "uploadSelfie", image: capturedPhoto, nama: selectedGuest.nama, kode: selectedGuest.kode, ssId: window.CURRENT_SS_ID }) });
                 confetti({ particleCount: 150, spread: 70 });
                 closeConfirm();
                 fetchMasterData();
@@ -527,23 +582,42 @@
         capturedOnsitePhoto = c.toDataURL('image/jpeg', 0.8);
         v.style.display = 'none'; c.style.display = 'block';
         document.getElementById('btn-snap-onsite').innerText = "ULANGI SELFIE";
+        document.getElementById('btn-trigger-onsite-selfie').innerText = "SELFIE DIAMBIL ✓";
+        document.getElementById('btn-trigger-onsite-selfie').style.borderColor = 'var(--success)';
+        document.getElementById('btn-trigger-onsite-selfie').style.color = 'var(--success)';
     };
 
-    function resetOnsiteSnapshot() { document.getElementById('onsite-video').style.display = 'block'; document.getElementById('capture-preview-onsite').style.display = 'none'; capturedOnsitePhoto = null; document.getElementById('btn-snap-onsite').innerText = "AMBIL SELFIE"; }
+    function resetOnsiteSnapshot() { 
+        document.getElementById('onsite-video').style.display = 'block'; 
+        document.getElementById('capture-preview-onsite').style.display = 'none'; 
+        capturedOnsitePhoto = null; 
+        document.getElementById('btn-snap-onsite').innerText = "AMBIL FOTO"; 
+        document.getElementById('btn-trigger-onsite-selfie').innerText = "AMBIL SELFIE (OPSIONAL)";
+        document.getElementById('btn-trigger-onsite-selfie').style.borderColor = 'var(--primary)';
+        document.getElementById('btn-trigger-onsite-selfie').style.color = 'var(--primary)';
+    }
 
     window.submitOnsite = async function() {
+        if (!document.getElementById('reg-nama').value) { alert("Nama wajib diisi!"); return; }
         document.getElementById('loading').style.display = 'flex';
         const adult = document.getElementById('reg-pax-adult').innerText;
         const child = document.getElementById('reg-pax-child').innerText;
         const paxString = `${parseInt(adult)+parseInt(child)} ( ${adult}D + ${child}A )`;
-        const payload = { action: "register_new_onsite", ssId: CURRENT_SS_ID, namaTamu: document.getElementById('reg-nama').value, alamat: document.getElementById('reg-alamat').value, whatsapp: document.getElementById('reg-wa').value, kategori: document.getElementById('reg-kategori').value, host: document.getElementById('reg-host').value, sesi: document.getElementById('reg-sesi').value, souvenir: document.getElementById('reg-souvenir').value, realHadir: paxString };
+        const payload = { action: "register_new_onsite", ssId: window.CURRENT_SS_ID, namaTamu: document.getElementById('reg-nama').value, alamat: document.getElementById('reg-alamat').value, whatsapp: document.getElementById('reg-wa').value, kategori: document.getElementById('reg-kategori').value, host: document.getElementById('reg-host').value, sesi: document.getElementById('reg-sesi').value, souvenir: document.getElementById('reg-souvenir').value, realHadir: paxString };
 
         try {
-            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
             const json = await res.json();
             if (json.status === "success") {
-                if (capturedOnsitePhoto) fetch(SELFIE_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "uploadSelfie", image: capturedOnsitePhoto, nama: payload.namaTamu, kode: json.kode, ssId: CURRENT_SS_ID }) });
+                if (capturedOnsitePhoto) fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "uploadSelfie", image: capturedOnsitePhoto, nama: payload.namaTamu, kode: json.kode, ssId: window.CURRENT_SS_ID }) });
                 confetti({ particleCount: 100, spread: 50 });
+                
+                // Clear Form
+                document.getElementById('reg-nama').value = "";
+                document.getElementById('reg-wa').value = "";
+                document.getElementById('reg-alamat').value = "";
+                resetOnsiteSnapshot();
+                
                 switchMode('scan');
                 fetchMasterData();
             }

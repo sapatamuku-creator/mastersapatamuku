@@ -1,5 +1,5 @@
-$oldUrl = "AKfycbxmKkz41efmBz1-1NnOcyoftxfQAtrHQy41WRrZnbsY0Y66zA4ZdxLPZF5UHemUROwN"
-$newUrl = "AKfycbwNb_E4Vq202Gj1XdKUwiIkTbMKVm1TRn0JcmsxilBkDeAjDUcr44VvayDI-lNmV9Xn"
+$oldUrl = "AKfycbwNb_E4Vq202Gj1XdKUwiIkTbMKVm1TRn0JcmsxilBkDeAjDUcr44VvayDI-lNmV9Xn"
+$newUrl = "AKfycbzJdAGMyhDHfyWJTq2IrEzCVVBMxEuwlaflv4_xBdbeVIzrQRG1SfCnBGz-XXbDjM3C"
 
 Get-ChildItem -Include *.html, *.js, *.bat -Recurse | ForEach-Object {
     $content = Get-Content $_.FullName -Raw
