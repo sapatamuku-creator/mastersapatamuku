@@ -276,11 +276,13 @@ function handleResolveSubdomain(data) {
     const authPass = String(data.password || "");
 
     for (let i = 1; i < values.length; i++) {
-      const dbUser = String(values[i][0]).toLowerCase().trim();
+      // Hilangkan spasi dari username di DB agar cocok dengan format subdomain URL
+      const dbUserRaw = String(values[i][0] || "");
+      const dbUserCleaned = dbUserRaw.toLowerCase().replace(/\s+/g, '').trim();
       const dbPass = String(values[i][2]);
       const status = String(values[i][7] || "").toLowerCase().trim(); // Kolom H (Index 7)
 
-      if (dbUser === sub) {
+      if (dbUserCleaned === sub) {
         // Cek apakah akun aktif (Langganan)
         if (status !== "active") {
           return createResponse({ 
@@ -290,7 +292,7 @@ function handleResolveSubdomain(data) {
         }
 
         // VALIDASI KUNCI INDIVIDU (Perangkat harus kirim username & pass yang benar)
-        if (authUser === dbUser && authPass === dbPass) {
+        if (authUser === dbUserRaw.toLowerCase().trim() && authPass === dbPass) {
           return createResponse({ 
             status: "success", 
             ssId: values[i][1],

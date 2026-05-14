@@ -450,9 +450,18 @@
     // Tunggu resolver selesai baru init
     function checkResolved() {
         if (window.SAPATAMU_RESOLVED) {
-            // JIKA DI DOMAIN UTAMA, JANGAN BOLEH BUKA DASHBOARD
             const hn = window.location.hostname;
             if (hn === "sapatamu.id" || hn === "www.sapatamu.id") {
+                // Jangan langsung ke login, cek dulu apakah punya sesi
+                const localData = localStorage.getItem('sapatamu_db');
+                if (localData) {
+                    const parsed = JSON.parse(localData);
+                    if (parsed.username) {
+                        const sub = parsed.username.toLowerCase().replace(/\s+/g, '');
+                        window.location.replace("https://" + sub + ".sapatamu.id/dashboard.html");
+                        return;
+                    }
+                }
                 window.location.replace("login.html");
                 return;
             }
