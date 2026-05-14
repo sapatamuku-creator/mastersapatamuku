@@ -447,29 +447,34 @@
         syncNavbar();
     }
 
-    // Tunggu resolver selesai baru init
+    // Tunggu resolver selesai baru init (SATPAM UTAMA)
     function checkResolved() {
         if (window.SAPATAMU_RESOLVED) {
             const hn = window.location.hostname;
             const localData = localStorage.getItem('sapatamu_db');
             
-            // JIKA TIDAK ADA DATA LOGIN LOKAL, TENDANG KE LOGIN (Berlaku di semua domain)
-            if (!localData) {
-                console.warn("Akses ditolak: Sesi tidak ditemukan.");
-                window.location.replace("https://sapatamu.id/login.html");
-                return;
-            }
-
+            // 1. CEK DOMAIN UTAMA (Redirect ke Subdomain)
             if (hn === "sapatamu.id" || hn === "www.sapatamu.id") {
-                const parsed = JSON.parse(localData);
-                if (parsed.username) {
-                    const sub = parsed.username.toLowerCase().replace(/\s+/g, '');
-                    window.location.replace("https://" + sub + ".sapatamu.id/dashboard.html");
-                    return;
+                if (localData) {
+                    const parsed = JSON.parse(localData);
+                    if (parsed.username) {
+                        const sub = parsed.username.toLowerCase().replace(/\s+/g, '');
+                        window.location.replace("https://" + sub + ".sapatamu.id/dashboard.html");
+                        return;
+                    }
                 }
                 window.location.replace("login.html");
                 return;
             }
+
+            // 2. CEK SESI (Wajib ada sapatamu_db)
+            if (!localData || !window.CURRENT_SS_ID) {
+                console.warn("Sesi tidak valid, kembali ke login.");
+                window.location.replace("https://sapatamu.id/login.html");
+                return;
+            }
+
+            // 3. JALANKAN DASHBOARD
             initHub();
         } else {
             setTimeout(checkResolved, 100);
