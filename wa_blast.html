@@ -677,22 +677,17 @@
                 const encodedName = encodeURIComponent(guestName).replace(/,/g, '%2C');
                 const inviteLink = inviteBase ? `${inviteBase}${inviteBase.includes('?') ? '&' : '?'}id=${t.kode}&u=${encodedName}` : "";
                 
-                // --- CLOUDINARY ENGINE (Super Stable Version) ---
+                // --- CLOUDINARY ENGINE (Simplified for Stability) ---
                 const cloudName = "dvygmpmir";
                 const publicId = "Blanko_Blast_WA_wzwia1";
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${t.kode}&size=400x400`;
-                let qrBase64 = "";
-                try { 
-                    qrBase64 = btoa(qrUrl).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); 
-                } catch(e) {}
                 
+                // Gunakan hanya Nama Tamu di atas Blanko agar dipastikan muncul
                 const dynamicImageUrl = `https://res.cloudinary.com/${cloudName}/image/upload/` +
-                    (qrBase64 ? `l_fetch:base64:${qrBase64},w_350,g_west,x_135,y_250/` : '') + 
-                    `l_text:Arial_35_bold_italic:${encodedName},co_rgb:C8962E,g_west,x_550,y_220/` + 
-                    `l_text:Arial_24_bold:${encodeURIComponent(t.kategori || '-').replace(/,/g, '%2C')},co_rgb:000000,g_north_east,x_115,y_1070/` + 
+                    `l_text:Arial_40_bold_italic:${encodedName},co_rgb:C8962E,g_center,y_250/` + 
                     `${publicId}.png`;
 
-                // --- FORMAT PESAN LENGKAP (BERDASARKAN B1-B5) ---
+                // --- FORMAT PESAN LENGKAP ---
                 const completeMessage = `Kepada Yth. Bapak/Ibu/Saudara/i\n*${guestNameCaps}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\nTepat pada pukul *[${t.sesi || localData.waktuAcara || '-'}]*\n\n*${localData.weddingTitle || 'Pernikahan Kami'}*\n▫️ ${localData.hariTanggal || '-'}\n▫️ Waktu: ${localData.waktuAcara || '-'}\n▫️ Lokasi: ${localData.lokasiAcara || '-'}\n\nInformasi lengkap mengenai jadwal, lokasi, dan kartu akses digital dapat diakses melalui tautan berikut:\n${inviteLink}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara:\n${qrUrl}\n\nMerupakan suatu kehormatan bagi kami apabila Anda berkenan hadir. Terima kasih.`;
 
                 return {
