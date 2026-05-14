@@ -190,6 +190,16 @@
                 <label>Alamat / Instansi</label>
                 <input type="text" id="reg-alamat" placeholder="Kota / Instansi...">
             </div>
+
+            <!-- SELFIE OPTION FOR REGISTRATION -->
+            <div id="reg-selfie-box" style="margin-bottom: 20px; text-align: center;">
+                <div id="reg-preview-container" style="display:none; width:100%; aspect-ratio:1/1; background:#000; border-radius:15px; overflow:hidden; margin-bottom:10px; border:2px solid var(--border);">
+                    <video id="reg-video" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
+                </div>
+                <button id="btn-reg-snap" onclick="toggleRegSelfie()" style="background: white; border: 1px solid var(--gold); color: var(--gold); padding: 10px 20px; border-radius: 30px; font-size: 11px; font-weight: 800; cursor: pointer; width:100%;">📸 AMBIL SELFIE (OPSIONAL)</button>
+                <canvas id="reg-canvas" style="display:none;"></canvas>
+            </div>
+
             <button class="btn-submit" onclick="submitOnsite()">DAFTARKAN & CHECK-IN</button>
         </div>
     </div>
@@ -241,6 +251,7 @@
     let html5QrCode = null;
     let currentStream = null;
     let capturedBase64 = null;
+    let regStream = null;
     let selectedGuest = null;
 
     async function initApp() {
@@ -398,17 +409,45 @@
         } catch(e) { alert("Error!"); } finally { document.getElementById('loading').style.display = 'none'; }
     }
 
+    async function toggleRegSelfie() {
+        const box = document.getElementById('reg-preview-container');
+        const btn = document.getElementById('btn-reg-snap');
+        const video = document.getElementById('reg-video');
+        
+        if (box.style.display === 'none') {
+            try {
+                regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                video.srcObject = regStream;
+                box.style.display = 'block';
+                btn.innerText = "📸 JEPRET FOTO";
+            } catch(e) { alert("Kamera tidak diizinkan."); }
+        } else {
+            // Take picture
+            const canvas = document.getElementById('reg-canvas'), ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            
+            // Stop stream
+            if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
+            box.style.display = 'none';
+            btn.innerText = "📸 SELFIE BERHASIL (ULANGI?)";
+            btn.style.background = "var(--success)";
+            btn.style.color = "white";
+        }
+    }
+
     async function submitOnsite() {
         const nama = document.getElementById('reg-nama').value;
         if (!nama) return alert("Nama wajib diisi!");
         document.getElementById('loading').style.display = 'flex';
         
-        const adult = 1; // Default for onsite
+        const adult = 1; 
         const child = 0;
         const paxString = `1 ( 1D + 0A )`;
 
         try {
-            // Kita gunakan prefix ONS sesuai permintaan
             const payload = { 
                 action: "register_new_onsite", 
                 ssId: CURRENT_SS_ID, 
@@ -420,17 +459,32 @@
                 sesi: document.getElementById('reg-sesi').value, 
                 souvenir: "1", 
                 realHadir: paxString,
-                prefix: "ONS" // Memastikan backend tau mau pakai ONS
+                prefix: "ONS"
             };
             
             const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
             const json = await res.json();
             
             if (json.status === "success") {
+                // Upload selfie if exists
+                if (capturedBase64) {
+                    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: JSON.stringify({ action:"uploadSelfie", image:capturedBase64, nama:nama, kode:json.kode, ssId:CURRENT_SS_ID }) });
+                }
+
                 alert("Berhasil mendaftarkan tamu " + nama + " (ID: " + json.kode + ")");
+                
+                // RESET FIELDS
                 document.getElementById('reg-nama').value = "";
                 document.getElementById('reg-wa').value = "";
                 document.getElementById('reg-alamat').value = "";
+                document.getElementById('reg-kategori').selectedIndex = 0;
+                document.getElementById('reg-host').selectedIndex = 0;
+                document.getElementById('reg-sesi').selectedIndex = 0;
+                capturedBase64 = null;
+                document.getElementById('btn-reg-snap').innerText = "📸 AMBIL SELFIE (OPSIONAL)";
+                document.getElementById('btn-reg-snap').style.background = "white";
+                document.getElementById('btn-reg-snap').style.color = "var(--gold)";
+
                 switchTab('scan'); fetchData();
             }
         } catch(e) { alert("Gagal koneksi."); } finally { document.getElementById('loading').style.display = 'none'; }
