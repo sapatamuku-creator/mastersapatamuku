@@ -340,7 +340,7 @@
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; margin-bottom: 12px;">
                     <button onclick="remoteSyncDevice()" class="st-btn btn-outline" style="font-size: 10px;">GET TOKEN</button>
-                    <button id="btnBlastAction" onclick="executeMassBlast()" class="st-btn btn-disabled" disabled style="font-size: 10px;">
+                    <button id="btnBlastAction" class="st-btn btn-disabled" disabled style="font-size: 10px;">
                         BLAST ALL
                     </button>
                 </div>
@@ -451,6 +451,7 @@
         document.getElementById('loading-text').innerText = text;
         document.getElementById('loading-global').style.display = isStart ? 'flex' : 'none';
         document.body.style.cursor = isStart ? 'wait' : 'default';
+        document.body.style.pointerEvents = isStart ? 'none' : 'auto';
     }
 
     window.refreshData = async function(isInitial = false) {
@@ -608,6 +609,7 @@
 
     window.executeMassBlast = async function() {
         console.log("Blast All Initiated");
+        
         const katSelect = document.getElementById('kategoriSelect');
         const kat = katSelect.value ? katSelect.value.trim() : "";
         const token = document.getElementById('displayToken').value;
@@ -623,9 +625,11 @@
 
         console.log("Targets found:", targets.length);
         if(!targets.length) return showToast("⚠️ Semua pesan untuk kategori ini sudah terkirim!");
-        if(!confirm(`Kirim undangan untuk ${targets.length} tamu di kategori ${kat}?`)) return;
+        
+        const confirmMsg = `SapaTamu Engine akan mengirim ${targets.length} pesan ke kategori [${kat}]. Lanjutkan?`;
+        if(!confirm(confirmMsg)) return;
 
-        toggleProcessing(true, "Mengambil Mesin Cetak...");
+        toggleProcessing(true, "Menghubungkan ke Mesin Blast...");
 
         try {
             const payload = targets.map(t => {
@@ -687,6 +691,16 @@
     };
 
     window.initBlast();
+    
+    // Binding Event Listener manual untuk tombol blast
+    const btnBlastAction = document.getElementById('btnBlastAction');
+    if(btnBlastAction) {
+        btnBlastAction.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.executeMassBlast();
+        });
+    }
+
     setInterval(() => { 
         if (!isProcessing && document.visibilityState === 'visible') refreshData(); 
     }, 15000);
