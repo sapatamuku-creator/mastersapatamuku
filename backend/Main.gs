@@ -150,6 +150,10 @@ function handleMainPost(payload) {
         result = updateTandaKasih(ssId, payload.kodeUnik, payload.nominal); 
         break;
 
+      case "sendAutomationBlast":
+        result = handleSendAutomationBlast(payload);
+        break;
+
       case "deleteGuest":
         result = deleteGuest(ssId, payload.kodeUnik);
         break;
@@ -251,7 +255,7 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan) {
       processPrintLogic(ssId, updatedRowData, catatan);
       addToRundown(ssId, updatedRowData); // Sinkronisasi ke Welcome Sign Rundown
 
-      return { "status": "success", "row": rowIndex };
+      return { "status": "success", "row": rowIndex, "triggerBlast": true };
     }
   }
   return { "status": "error", "message": "Kode tidak ditemukan" };
@@ -491,7 +495,7 @@ function registerNewOnsite(data) {
     const lastRowData = sheet.getRange(sheet.getLastRow(), 1, 1, 19).getValues()[0];
     processPrintLogic(data.ssId, lastRowData, giftVal);
     addToRundown(data.ssId, lastRowData); // Sinkronisasi ke Welcome Sign
-    return { status: "success", kode: kodeUnik, message: "On-Site Berhasil" };
+    return { status: "success", kode: kodeUnik, message: "On-Site Berhasil", triggerBlast: true };
   } catch (e) { return { status: "error", message: e.toString() }; } finally { lock.releaseLock(); }
 }
 
@@ -547,7 +551,7 @@ function submitGuestCollection(formData) {
     formData.pihak, formData.alamat, 0, "-", "BELUM TERKIRIM", "-", 0, formData.sesi || "-"
   ];
   sheet.appendRow(newRow);
-  return { status: "success", rowID: sheet.getLastRow(), kode: kodeUnik, personalLink: baseLink + "?id=" + kodeUnik + "&u=" + encodeURIComponent(formData.nama) };
+  return { status: "success", rowID: sheet.getLastRow(), kode: kodeUnik, triggerBlast: true, personalLink: baseLink + "?id=" + kodeUnik + "&u=" + encodeURIComponent(formData.nama) };
 }
 
 function markAsSent(ssId, row) {
@@ -828,4 +832,35 @@ function saveDropdownOptions(ssId, options) {
     }
     return { status: "success", message: "Dropdown berhasil diperbarui" };
   } catch (e) { return { status: "error", message: e.toString() }; }
+}
+function handleSendAutomationBlast(data) {
+  try {
+    const ss = getSS(data.ssId);
+    const settingsSheet = ss.getSheetByName("Settings_Event");
+    const apiToken = settingsSheet.getRange("D7").getValue();
+    const namaMempelai = settingsSheet.getRange("D5").getValue();
+    
+    if (!apiToken) return { status: "error", message: "API Token Fonnte belum diatur." };
+
+    let message = "";
+    const guest = data.guestData;
+
+    // Logika pesan otomatis: HANYA untuk Check-in
+    if (data.type === "checkin") {
+      message = `Halo *${guest.nama}*,\nSelamat datang di acara *${namaMempelai}*.\n\nTerima kasih telah hadir dan memberikan doa restu. Silakan menikmati hidangan yang telah kami sediakan.\n\n- SapaTamu.Ku`;
+    } else {
+      // Jika bukan checkin (pendaftaran/onsite), batalkan pengiriman otomatis
+      return { status: "success", message: "Otomasi pendaftaran dilewati (Manual Blast Mode)" };
+    }
+
+    const res = UrlFetchApp.fetch("https://api.fonnte.com/send", {
+      method: "post",
+      headers: { "Authorization": apiToken },
+      payload: { target: guest.whatsapp, message: message }
+    });
+
+    return { status: "success", fonnte: JSON.parse(res.getContentText()) };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
 }

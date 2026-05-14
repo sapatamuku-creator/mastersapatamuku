@@ -290,8 +290,8 @@
                 <div class="nav-group">
                     <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
                     <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
-                    <a href="config.html" class="nav-link" id="nav-config" style="color: var(--gold); font-weight: 800;">⚙️ Config</a>
-                    <a href="config_invitation.html" class="nav-link" id="nav-config-inv" style="color: #6366f1; font-weight: 800;">💌 Config Invitation</a>
+                    
+                    
                     <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
                     <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
                     <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
@@ -394,7 +394,10 @@
                         </div>
                     </div>
                     <div class="input-group"><label>Alamat / Instansi</label><input type="text" id="in-m7-alamat" placeholder="Kota atau Instansi..."></div>
-                    <button onclick="handleV3Submit()" id="btn-submit" class="btn-save">ADD TO COLLECTION</button>
+                    <button onclick="handleV3Submit()" id="btn-submit" class="btn-save">
+                        <div class="spinner" id="submit-spinner"></div>
+                        <span id="btn-text">ADD TO COLLECTION</span>
+                    </button>
                 </div>
 
                 <!-- SISI KANAN: DRAFT LIST -->
@@ -482,7 +485,7 @@
     </style>
 
     <script>(function() {
-        const SCRIPT_URL = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbzQlcitRpVbBafJeq67Pky9ikvt7JU4ULSJT55VBbLWKTDt-Nkd-dboKPeg2tK90ahd/exec";
+        const SCRIPT_URL = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyfJD7Vr_1ALz7LGb_rQ_HE4iH1AuOUZRiwzshRgFppWzBdvtfOpXB7fM9gaEslYwJN/exec";
 
         function syncNavbar() {
             const ssId = window.CURRENT_SS_ID || "";
@@ -633,6 +636,10 @@
     }
 
     window.handleV3Submit = async function() {
+        const btn = document.getElementById('btn-submit');
+        const spinner = document.getElementById('submit-spinner');
+        const btnText = document.getElementById('btn-text');
+
         const payload = {
             action: "submitCollection",
             ssId: CURRENT_SS_ID,
@@ -643,25 +650,55 @@
             souvenir: document.getElementById('in-k7-souvenir').value,
             alamat: document.getElementById('in-m7-alamat').value,
             rencana: document.getElementById('in-h7-rencana').value,
-            sesi: document.getElementById('in-sesi-undangan').value
+            sesi: document.getElementById('in-sesi-undangan').value,
+            fastMode: true 
         };
 
         if(!payload.nama || !payload.whatsapp) return showSapaModal("Data Belum Lengkap", "Silakan isi Nama & Nomor WhatsApp tamu.", "⚠️");
         
-        toggleProcessing(true, "SAVING GUEST...");
+        // --- STEP 1: BLOCK UI (Prevent Double Click) ---
+        btn.disabled = true;
+        spinner.style.display = "block";
+        btnText.innerText = "SAVING...";
+        
+        const blocker = document.createElement('div');
+        blocker.id = "global-blocker";
+        blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
+        document.body.appendChild(blocker);
+
         try {
-            await fetch(SCRIPT_URL, {
-                method: "POST",
+            // --- STEP 2: CORE DATA SAVE (Blocking) ---
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
                 body: JSON.stringify(payload)
             });
-            document.getElementById('in-c7-nama').value = "";
-            document.getElementById('in-d7-wa').value = "";
-            document.getElementById('in-m7-alamat').value = "";
-            showSapaModal("Berhasil!", "Tamu berhasil ditambahkan ke koleksi.", "✅");
-            refreshApp(); 
-        } catch(e) { 
-            showSapaModal("Gagal", "Terjadi kesalahan saat menyimpan data tamu.", "❌"); 
-            toggleProcessing(false);
+            const result = await response.json();
+
+            if (result.status === "success") {
+                // --- STEP 3: INSTANT SUCCESS FEEDBACK ---
+                if(blocker) blocker.remove(); 
+                
+                showSapaModal("Berhasil!", `Tamu <b>${payload.nama}</b> telah terdaftar.`, "✅");
+                
+                document.getElementById('in-c7-nama').value = "";
+                document.getElementById('in-d7-wa').value = "";
+                document.getElementById('in-m7-alamat').value = "";
+                document.getElementById('in-h7-rencana').value = "1";
+                
+                refreshApp();
+                // Blast otomatis pendaftaran dihapus sesuai permintaan (Manual Blast Mode)
+            } else {
+                if(blocker) blocker.remove();
+                showSapaModal("Gagal Simpan", result.message || "Terjadi kesalahan.", "❌");
+            }
+        } catch (err) {
+            if(blocker) blocker.remove();
+            console.error(err);
+            showSapaModal("Connection Error", "Gagal menghubungi server.", "⚠️");
+        } finally {
+            btn.disabled = false;
+            spinner.style.display = "none";
+            btnText.innerText = "ADD TO COLLECTION";
         }
     };
 

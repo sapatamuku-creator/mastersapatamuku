@@ -160,8 +160,8 @@
                     <a href="worker.html" class="nav-link">Worker</a>
                     <a href="welcome.html" class="nav-link">Welcome</a>
                     <div class="nav-divider"></div>
-                    <a href="config.html" class="nav-link" id="nav-config" style="color: var(--gold); font-weight: 800;">⚙️ Config</a>
-                    <a href="config_invitation.html" class="nav-link" id="nav-config-inv" style="color: #6366f1; font-weight: 800;">💌 Config Invitation</a>
+                    
+                    
                 </div>
                 <div class="nav-divider"></div>
                 <a href="#" onclick="logout()" class="nav-link sign-out">Sign Out</a>
@@ -330,7 +330,7 @@
 <div id="loading" class="loading-overlay">MEMPROSES...</div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQlcitRpVbBafJeq67Pky9ikvt7JU4ULSJT55VBbLWKTDt-Nkd-dboKPeg2tK90ahd/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfJD7Vr_1ALz7LGb_rQ_HE4iH1AuOUZRiwzshRgFppWzBdvtfOpXB7fM9gaEslYwJN/exec";
     
     let CURRENT_SS_ID = null;
     let masterData = [];
@@ -525,7 +525,15 @@
     }
 
     async function executeCheckin() {
-        document.getElementById('loading').style.display = 'flex';
+        const loading = document.getElementById('loading');
+        loading.style.display = 'flex';
+        
+        // --- STEP 1: BLOCK UI ---
+        const blocker = document.createElement('div');
+        blocker.id = "global-blocker";
+        blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
+        document.body.appendChild(blocker);
+
         const adult = document.getElementById('m-pax-adult').innerText;
         const child = document.getElementById('m-pax-child').innerText;
         const total = document.getElementById('m-pax-total').innerText;
@@ -533,13 +541,59 @@
         const gift = (document.getElementById('tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('tag-kado').classList.contains('active') ? "KADO" : "");
 
         try {
-            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "confirm_checkin", ssId: CURRENT_SS_ID, kodeUnik: selectedGuest.kode, realHadir: paxString, statusAngpao: gift || "-" }) });
-            if (capturedBase64) fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: JSON.stringify({ action:"uploadSelfie", image:capturedBase64, nama:selectedGuest.nama, kode:selectedGuest.kode, ssId:CURRENT_SS_ID }) });
-            
-            confetti({ particleCount: 100, spread: 70 });
-            closeModal(); 
-            fetchData();
-        } catch(e) { alert("Error!"); } finally { document.getElementById('loading').style.display = 'none'; }
+            // --- STEP 2: CORE CHECKIN (Blocking) ---
+            const res = await fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    action: "confirm_checkin", 
+                    ssId: CURRENT_SS_ID, 
+                    kodeUnik: selectedGuest.kode, 
+                    realHadir: paxString, 
+                    statusAngpao: gift || "-" 
+                }) 
+            });
+            const result = await res.json();
+
+            if (result.status === "success") {
+                // --- STEP 3: FAST FEEDBACK ---
+                if(blocker) blocker.remove();
+                confetti({ particleCount: 100, spread: 70 });
+                closeModal(); 
+                fetchData(); // Refresh UI list
+
+                // --- STEP 4: BACKGROUND TASKS ---
+                // Upload Selfie & Blast WA in background
+                if (capturedBase64) {
+                    fetch(SCRIPT_URL, { 
+                        method:'POST', 
+                        body: JSON.stringify({ 
+                            action:"uploadSelfie", 
+                            image:capturedBase64, 
+                            nama:selectedGuest.nama, 
+                            kode:selectedGuest.kode, 
+                            ssId:CURRENT_SS_ID 
+                        }) 
+                    }).catch(e => console.warn("Selfie upload failed in background:", e));
+                }
+
+                if (result.triggerBlast) {
+                    fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ 
+                            action: "sendAutomationBlast", 
+                            ssId: CURRENT_SS_ID, 
+                            type: "checkin",
+                            guestData: { nama: selectedGuest.nama, whatsapp: selectedGuest.whatsapp } 
+                        })
+                    }).catch(e => console.warn("Background checkin blast failed:", e));
+                }
+            }
+        } catch(e) { 
+            if(blocker) blocker.remove();
+            alert("Error Connection!"); 
+        } finally { 
+            loading.style.display = 'none'; 
+        }
     }
 
     window.updateRegPax = function(type, delta) {
@@ -581,9 +635,18 @@
 
     async function submitOnsite() {
         const nama = document.getElementById('reg-nama').value;
+        const whatsapp = document.getElementById('reg-wa').value;
         if (!nama) return alert("Nama wajib diisi!");
-        document.getElementById('loading').style.display = 'flex';
         
+        const loading = document.getElementById('loading');
+        loading.style.display = 'flex';
+        
+        // --- STEP 1: BLOCK UI ---
+        const blocker = document.createElement('div');
+        blocker.id = "global-blocker";
+        blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
+        document.body.appendChild(blocker);
+
         const adult = document.getElementById('reg-pax-adult').innerText;
         const child = document.getElementById('reg-pax-child').innerText;
         const paxString = `${parseInt(adult)+parseInt(child)} ( ${adult}D + ${child}A )`;
@@ -594,7 +657,7 @@
                 ssId: CURRENT_SS_ID, 
                 namaTamu: nama, 
                 alamat: document.getElementById('reg-alamat').value, 
-                whatsapp: document.getElementById('reg-wa').value, 
+                whatsapp: whatsapp, 
                 kategori: document.getElementById('reg-kategori').value, 
                 host: document.getElementById('reg-host').value, 
                 sesi: document.getElementById('reg-sesi').value, 
@@ -603,36 +666,52 @@
                 prefix: "ONS"
             };
             
+            // --- STEP 2: CORE REGISTER (Blocking) ---
             const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
             const json = await res.json();
             
             if (json.status === "success") {
-                // Upload selfie if exists
-                if (capturedBase64) {
-                    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body: JSON.stringify({ action:"uploadSelfie", image:capturedBase64, nama:nama, kode:json.kode, ssId:CURRENT_SS_ID }) });
-                }
-
+                // --- STEP 3: FAST FEEDBACK ---
+                if(blocker) blocker.remove();
                 alert("Berhasil mendaftarkan tamu " + nama + " (ID: " + json.kode + ")");
                 
                 // RESET FIELDS
                 document.getElementById('reg-nama').value = "";
                 document.getElementById('reg-wa').value = "";
                 document.getElementById('reg-alamat').value = "";
-                document.getElementById('reg-kategori').selectedIndex = 0;
-                document.getElementById('reg-host').selectedIndex = 0;
-                document.getElementById('reg-sesi').selectedIndex = 0;
-                document.getElementById('reg-souvenir').selectedIndex = 0;
                 document.getElementById('reg-pax-adult').innerText = "1";
                 document.getElementById('reg-pax-child').innerText = "0";
                 
+                // --- STEP 4: BACKGROUND TASKS ---
+                if (capturedBase64) {
+                    fetch(SCRIPT_URL, { 
+                        method:'POST', 
+                        body: JSON.stringify({ 
+                            action:"uploadSelfie", 
+                            image:capturedBase64, 
+                            nama:nama, 
+                            kode:json.kode, 
+                            ssId:CURRENT_SS_ID 
+                        }) 
+                    }).catch(e => console.warn("Background selfie upload failed:", e));
+                }
+
+                // Blast otomatis pendaftaran dihapus sesuai permintaan (Manual Blast Mode)
+
                 capturedBase64 = null;
                 document.getElementById('btn-reg-snap').innerText = "📸 AMBIL SELFIE (OPSIONAL)";
                 document.getElementById('btn-reg-snap').style.background = "white";
                 document.getElementById('btn-reg-snap').style.color = "var(--gold)";
 
-                switchTab('scan'); fetchData();
+                switchTab('scan'); 
+                fetchData();
             }
-        } catch(e) { alert("Gagal koneksi."); } finally { document.getElementById('loading').style.display = 'none'; }
+        } catch(e) { 
+            if(blocker) blocker.remove();
+            alert("Gagal koneksi."); 
+        } finally { 
+            loading.style.display = 'none'; 
+        }
     }
     window.initApp();
 </script>

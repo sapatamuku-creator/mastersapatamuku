@@ -158,8 +158,8 @@
                     <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
                     <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
                     <div class="nav-divider"></div>
-                    <a href="config.html" class="nav-link" id="nav-config" style="color: var(--gold); font-weight: 800;">⚙️ Config</a>
-                    <a href="config_invitation.html" class="nav-link" id="nav-config-inv" style="color: #6366f1; font-weight: 800;">💌 Config Invitation</a>
+                    
+                    
                 </div>
                 <div class="nav-divider"></div>
                 <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
@@ -270,7 +270,7 @@
     </div>
 </div>
 
-<script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQlcitRpVbBafJeq67Pky9ikvt7JU4ULSJT55VBbLWKTDt-Nkd-dboKPeg2tK90ahd/exec";
+<script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfJD7Vr_1ALz7LGb_rQ_HE4iH1AuOUZRiwzshRgFppWzBdvtfOpXB7fM9gaEslYwJN/exec";
  
     const WA_ENGINE_URL = SCRIPT_URL;
     const SELFIE_URL = SCRIPT_URL;
@@ -588,20 +588,27 @@
     window.executeCheckin = async function() {
         if (isBusy) return;
         isBusy = true;
-        document.getElementById('loading').style.display = 'flex';
+        const loading = document.getElementById('loading');
+        loading.style.display = 'flex';
         
+        // --- STEP 1: BLOCK UI ---
+        const blocker = document.createElement('div');
+        blocker.id = "global-blocker";
+        blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
+        document.body.appendChild(blocker);
+
         try {
             const adult = document.getElementById('m-pax-adult').innerText;
             const child = document.getElementById('m-pax-child').innerText;
             const total = document.getElementById('m-pax-total').innerText;
             const paxString = `${total} ( ${adult}D + ${child}A )`;
-
             const gift = (document.getElementById('tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('tag-kado').classList.contains('active') ? "KADO" : "");
             const list = Array.from(selectedIDs);
 
-            // 1. Eksekusi Database Update secara Paralel (CRITICAL)
-            const checkinPromises = list.map(id => 
-                fetch(SCRIPT_URL, { 
+            // --- STEP 2: CORE CHECKIN (Blocking) ---
+            // Kita proses satu per satu atau masal ke backend
+            for (let code of list) {
+                const res = await fetch(SCRIPT_URL, { 
                     method: 'POST', 
                     body: JSON.stringify({ 
                         action: "confirm_checkin", 
