@@ -31,6 +31,7 @@ function handleCentralPost(request) {
     case 'changePassword': return handleChangePassword(request);
     case 'updateClientData': return handleUpdateClientData(request);  
     case 'resolveSubdomain': return handleResolveSubdomain(request);
+    case 'uploadFile': return handleUploadFile(request);
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
 }
@@ -351,4 +352,36 @@ function handleResolveSubdomain(data) {
 
 function createResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+function handleUploadFile(data) {
+  try {
+    const folderId = FOLDER_KLIEN_ID; // Default folder parent
+    const ssFile = DriveApp.getFileById(data.ssId);
+    const parentFolders = ssFile.getParents();
+    let targetFolder = parentFolders.hasNext() ? parentFolders.next() : DriveApp.getFolderById(folderId);
+
+    // Buat subfolder assets
+    let assetFolder;
+    const folders = targetFolder.getFoldersByName("InvitationAssets");
+    if (folders.hasNext()) {
+      assetFolder = folders.next();
+    } else {
+      assetFolder = targetFolder.createFolder("InvitationAssets");
+      assetFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    }
+
+    // Decode base64
+    const contentType = data.fileData.split(",")[0].split(":")[1].split(";")[0];
+    const bytes = Utilities.base64Decode(data.fileData.split(",")[1]);
+    const blob = Utilities.newBlob(bytes, contentType, data.fileName);
+    
+    const file = assetFolder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    const url = "https://lh3.googleusercontent.com/d/" + file.getId(); // Direct image link format
+
+    return createResponse({ status: "success", url: url });
+  } catch (err) {
+    return createResponse({ status: "error", message: err.toString() });
+  }
 }
