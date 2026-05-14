@@ -340,7 +340,7 @@
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; margin-bottom: 12px;">
                     <button onclick="remoteSyncDevice()" class="st-btn btn-outline" style="font-size: 10px;">GET TOKEN</button>
-                    <button id="btnBlastAction" class="st-btn btn-disabled" disabled style="font-size: 10px;">
+                    <button id="btnBlastAction" class="st-btn btn-disabled" disabled style="font-size: 10px; position: relative; z-index: 100;">
                         BLAST ALL
                     </button>
                 </div>
@@ -608,6 +608,7 @@
     };
 
     window.executeMassBlast = async function() {
+        alert("Sistem: Sinyal Klik Diterima!");
         try {
             console.log("Blast All Initiated");
             const katSelect = document.getElementById('kategoriSelect');
@@ -702,14 +703,13 @@
 
     window.initBlast();
     
-    // Binding Event Listener manual untuk tombol blast
-    const btnBlastAction = document.getElementById('btnBlastAction');
-    if(btnBlastAction) {
-        btnBlastAction.addEventListener('click', function(e) {
-            e.preventDefault();
+    // Global Click Delegation (Lebih Aman)
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'btnBlastAction') {
+            console.log("Global Catch: Blast Action Clicked");
             window.executeMassBlast();
-        });
-    }
+        }
+    });
 
     setInterval(() => { 
         if (!isProcessing && document.visibilityState === 'visible') refreshData(); 
