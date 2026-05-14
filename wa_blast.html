@@ -608,34 +608,44 @@
     };
 
     window.executeMassBlast = async function() {
-        console.log("Blast All Initiated");
-        
-        const katSelect = document.getElementById('kategoriSelect');
-        const kat = katSelect.value ? katSelect.value.trim() : "";
-        const token = document.getElementById('displayToken').value;
-        
-        if(!kat) return showToast("⚠️ Pilih kategori pengundang!");
-
-        const targets = localData.tamu.filter(t => {
-            const tKat = (t.kategori || "").trim();
-            const isMatch = tKat === kat;
-            const isNotSent = !(t.status && typeof t.status === 'string' && t.status.includes('✅'));
-            return isMatch && isNotSent;
-        });
-
-        console.log("Targets found:", targets.length);
-        if(!targets.length) return showToast("⚠️ Semua pesan untuk kategori ini sudah terkirim!");
-        
-        const confirmMsg = `SapaTamu Engine akan mengirim ${targets.length} pesan ke kategori [${kat}]. Lanjutkan?`;
-        if(!confirm(confirmMsg)) return;
-
-        toggleProcessing(true, "Menghubungkan ke Mesin Blast...");
-
         try {
+            console.log("Blast All Initiated");
+            const katSelect = document.getElementById('kategoriSelect');
+            const kat = katSelect ? katSelect.value.trim() : "";
+            const token = document.getElementById('displayToken').value;
+            
+            if(!kat) {
+                alert("⚠️ Peringatan: Pilih kategori pengundang terlebih dahulu!");
+                return;
+            }
+
+            if (!localData.tamu || !Array.isArray(localData.tamu)) {
+                alert("❌ Error: Data tamu tidak ditemukan atau rusak.");
+                return;
+            }
+
+            const targets = localData.tamu.filter(t => {
+                const tKat = (t.kategori || "").trim();
+                const isMatch = tKat === kat;
+                const isNotSent = !(t.status && typeof t.status === 'string' && t.status.includes('✅'));
+                return isMatch && isNotSent;
+            });
+
+            if(!targets.length) {
+                alert("ℹ️ Info: Tidak ada tamu di kategori [" + kat + "] yang perlu dikirim (Semua sudah terkirim ✅).");
+                return;
+            }
+            
+            const confirmMsg = `MESIN BLAST READY\n-------------------\nTarget: ${targets.length} Tamu\nKategori: ${kat}\n\nKlik OK untuk mulai mengirim.`;
+            if(!confirm(confirmMsg)) return;
+
+            toggleProcessing(true, "Menyiapkan Jalur Blast...");
+
+            const inviteBase = localData.linkInvitation || "";
             const payload = targets.map(t => {
                 const guestName = (t.nama || "Tamu Undangan").toString();
                 const encodedName = encodeURIComponent(guestName).replace(/,/g, '%2C');
-                const inviteLink = `${localData.linkInvitation}${localData.linkInvitation.includes('?') ? '&' : '?'}id=${t.kode}&u=${encodedName}`;
+                const inviteLink = inviteBase ? `${inviteBase}${inviteBase.includes('?') ? '&' : '?'}id=${t.kode}&u=${encodedName}` : "";
                 const qrLink = `https://api.qrserver.com/v1/create-qr-code/?data=${t.kode}&size=400x400`;
 
                 // --- GENERATE DYNAMIC IMAGE URL (CLOUDINARY) ---
@@ -645,7 +655,7 @@
                 let qrBase64 = "";
                 try {
                     qrBase64 = btoa(qrLink).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-                } catch(e) { console.warn("B64 Error for QR", e); }
+                } catch(e) {}
                 
                 const dynamicImageUrl = `https://res.cloudinary.com/${cloudName}/image/upload/` +
                     (qrBase64 ? `l_fetch:${qrBase64},w_350,g_west,x_135,y_250/` : '') + 
@@ -662,20 +672,20 @@
                 };
             });
 
-            console.log("Sending payload to GAS...");
             const res = await fetch(SCRIPT_URL, {
                 method: "POST",
                 body: JSON.stringify({ action: "executeFonnteBlast", ssId: CURRENT_SS_ID, payload: payload })
             });
+            
             const result = await res.json();
             if(result.status === "success") {
-                showToast(`✅ ${result.sent} Pesan Terkirim!`);
+                alert(`✅ BERHASIL!\n${result.sent} Pesan telah masuk antrean pengiriman.`);
             } else {
-                showToast("❌ Gagal: " + (result.msg || "Server Error"));
+                alert("❌ GAGAL SERVER: " + (result.msg || "Unknown Error"));
             }
         } catch (e) { 
             console.error("Blast Error:", e);
-            showToast("❌ Error: " + e.message); 
+            alert("❌ CRITICAL ERROR:\n" + e.toString()); 
         } finally { 
             toggleProcessing(false); 
             await refreshData(); 
