@@ -180,15 +180,6 @@
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    .fullscreen-btn {
-        position: fixed; bottom: 30px; right: 30px; width: 55px; height: 55px;
-        background: var(--card); color: var(--text-muted); border-radius: 18px;
-        display: flex; justify-content: center; align-items: center;
-        cursor: pointer; z-index: 9999; box-shadow: 0 10px 30px rgba(140, 117, 96, 0.15);
-        border: 1px solid var(--border);
-        transition: 0.3s;
-    }
-    .fullscreen-btn:hover { background: var(--primary); color: #fff; transform: scale(1.1); }
 
     .st-modal-overlay {
         position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4);
@@ -239,11 +230,6 @@
 </head>
 <body onload="initBlast()">
 
-<div class="fullscreen-btn" onclick="toggleFullScreen()" title="Toggle Fullscreen">
-    <svg id="fs-icon" viewBox="0 0 24 24" style="width:24px; height:24px; fill:currentColor;">
-        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
-    </svg>
-</div>
 
 <nav class="sapatamu-navbar">
     <div class="nav-outer-wrapper">
@@ -340,7 +326,7 @@
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; margin-bottom: 12px;">
                     <button onclick="remoteSyncDevice()" class="st-btn btn-outline" style="font-size: 10px;">GET TOKEN</button>
-                    <button id="btnBlastAction" class="st-btn btn-disabled" disabled style="font-size: 10px; position: relative; z-index: 100;">
+                    <button id="btnBlastAction" onclick="executeMassBlast()" class="st-btn btn-disabled" disabled style="font-size: 10px; position: relative; z-index: 10000;">
                         BLAST ALL
                     </button>
                 </div>
@@ -608,7 +594,8 @@
     };
 
     window.executeMassBlast = async function() {
-        // Kunci proses segera untuk menghentikan auto-refresh latar belakang
+        alert("SAPA TAMU: Perintah Blast Diterima!");
+        if(isProcessing) return;
         isProcessing = true;
         
         try {
@@ -701,25 +688,8 @@
         }
     };
 
-    window.toggleFullScreen = function() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            if (document.exitFullscreen) document.exitFullscreen();
-        }
-    };
 
     window.initBlast();
-    
-    // Global Click Delegation (Lebih Aman)
-    document.addEventListener('click', function(e) {
-        if (e.target && e.target.id === 'btnBlastAction') {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            console.log("Global Catch: Blast Action Clicked");
-            window.executeMassBlast();
-        }
-    }, true); // Menggunakan capturing phase agar lebih diprioritaskan
 
     setInterval(() => { 
         if (!isProcessing && document.visibilityState === 'visible') refreshData(); 
