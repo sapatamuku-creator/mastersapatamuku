@@ -204,6 +204,40 @@
             transition: 0.3s;
         }
         .logout-pill:hover { background: #fdfdfd; border-color: #ef4444; color: #ef4444; }
+
+    #loading-global {
+        position: fixed; inset: 0;
+        background: rgba(255, 249, 245, 0.95); 
+        display: none; justify-content: center;
+        align-items: center; z-index: 100000; flex-direction: column;
+        backdrop-filter: blur(10px);
+        cursor: wait;
+    }
+    .spinner {
+        width: 45px; height: 45px;
+        border: 4px solid var(--border); border-top: 4px solid var(--primary);
+        border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* MODAL STYLES */
+    .st-modal-overlay {
+        position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4);
+        display: none; justify-content: center; align-items: center;
+        z-index: 100000; backdrop-filter: blur(10px);
+    }
+    .st-modal-content {
+        background: #fff;
+        padding: 50px 40px; border-radius: 32px;
+        text-align: center; max-width: 400px; width: 90%;
+        box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2);
+        border: 1px solid var(--border);
+    }
+    .st-modal-title { font-family: 'Lora', serif; color: var(--text-main); font-size: 24px; margin-bottom: 15px; font-weight:700; }
+    .st-modal-msg { color: var(--text-muted); line-height: 1.6; font-size: 15px; margin-bottom: 35px; white-space: pre-line; }
+    .st-btn { cursor: pointer; padding: 15px; border-radius: 12px; font-weight: 700; font-size: 11px; letter-spacing: 1px; transition: 0.3s; border: none; }
+    .btn-dark { background: var(--text-main); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -241,6 +275,23 @@
         <div class="nav-fade nav-fade-right" id="fade-right"></div>
     </div>
 </nav>
+
+<div id="loading-global">
+    <div class="spinner"></div>
+    <div style="color:var(--primary); font-family:'Lora', serif; font-size: 16px; font-weight:700; letter-spacing: 1px;" id="loading-text">Menyiapkan Sistem...</div>
+</div>
+
+<div id="st-modal" class="st-modal-overlay">
+    <div id="modal-container" class="st-modal-content">
+        <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️</span>
+        <div id="st-modal-title" class="st-modal-title">Notifikasi</div>
+        <div id="st-modal-msg" class="st-modal-msg">Pesan akan muncul di sini.</div>
+        <div id="modal-actions" style="display: flex; gap: 10px; margin-top: 30px;">
+            <button id="modal-cancel-btn" class="st-btn btn-outline" style="flex:1; display:none;">BATAL</button>
+            <button id="modal-ok-btn" class="st-btn btn-dark" style="flex:1;">MENGERTI</button>
+        </div>
+    </div>
+</div>
 
 <div class="main-wrapper">
     <header>
@@ -465,6 +516,51 @@
             setTimeout(checkResolved, 100);
         }
     }
+
+    function toggleProcessing(isStart, text = "Menyiapkan Sistem...") {
+        isProcessing = isStart;
+        const loader = document.getElementById('loading-global');
+        if(loader) {
+            document.getElementById('loading-text').innerText = text;
+            loader.style.display = isStart ? 'flex' : 'none';
+        }
+        document.body.style.cursor = isStart ? 'wait' : 'default';
+    }
+
+    window.showAlert = function(title, msg, icon = "⚠️") {
+        return new Promise(resolve => {
+            document.getElementById('st-modal-icon').innerText = icon;
+            document.getElementById('st-modal-title').innerText = title;
+            document.getElementById('st-modal-msg').innerText = msg;
+            document.getElementById('modal-cancel-btn').style.display = 'none';
+            const okBtn = document.getElementById('modal-ok-btn');
+            okBtn.innerText = "MENGERTI";
+            okBtn.onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(true);
+            };
+            document.getElementById('st-modal').style.display = 'flex';
+        });
+    };
+
+    window.showConfirm = function(title, msg, icon = "🚀") {
+        return new Promise(resolve => {
+            document.getElementById('st-modal-icon').innerText = icon;
+            document.getElementById('st-modal-title').innerText = title;
+            document.getElementById('st-modal-msg').innerText = msg;
+            document.getElementById('modal-cancel-btn').style.display = 'block';
+            document.getElementById('modal-ok-btn').innerText = "LANJUTKAN";
+            document.getElementById('modal-ok-btn').onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(true);
+            };
+            document.getElementById('modal-cancel-btn').onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(false);
+            };
+            document.getElementById('st-modal').style.display = 'flex';
+        });
+    };
 
     function initNavScroll() {
         const container = document.getElementById('nav-scroll');

@@ -673,25 +673,35 @@
             const inviteBase = localData.linkInvitation || "";
             const payload = targets.map(t => {
                 const guestName = (t.nama || "Tamu Undangan").toString();
+                const guestNameCaps = guestName.toUpperCase();
                 const encodedName = encodeURIComponent(guestName).replace(/,/g, '%2C');
                 const inviteLink = inviteBase ? `${inviteBase}${inviteBase.includes('?') ? '&' : '?'}id=${t.kode}&u=${encodedName}` : "";
-                const qrLink = `https://api.qrserver.com/v1/create-qr-code/?data=${t.kode}&size=400x400`;
-
-                // --- CLOUDINARY ENGINE ---
+                
+                // --- CLOUDINARY ENGINE (Optimized) ---
                 const cloudName = "dvygmpmir";
                 const publicId = "Blanko_Blast_WA_wzwia1";
-                let qrBase64 = "";
-                try { qrBase64 = btoa(qrLink).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); } catch(e) {}
                 
+                // URL QR Code yang akan di-fetch oleh Cloudinary
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${t.kode}&size=400x400`;
+                let qrBase64 = "";
+                try { 
+                    // Cloudinary l_fetch base64 harus menggunakan format tertentu
+                    qrBase64 = btoa(qrUrl).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); 
+                } catch(e) { console.error("B64 Error", e); }
+                
+                // Konstruksi URL Gambar dengan Layer QR dan Teks Nama
                 const dynamicImageUrl = `https://res.cloudinary.com/${cloudName}/image/upload/` +
-                    (qrBase64 ? `l_fetch:${qrBase64},w_350,g_west,x_135,y_250/` : '') + 
+                    (qrBase64 ? `l_fetch:base64:${qrBase64},w_350,g_west,x_135,y_250/` : '') + 
                     `l_text:Arial_35_bold_italic:${encodedName},co_rgb:C8962E,g_west,x_550,y_220/` + 
                     `l_text:Arial_24_bold:${encodeURIComponent(t.kategori || '-').replace(/,/g, '%2C')},co_rgb:000000,g_north_east,x_115,y_1070/` + 
                     `${publicId}.png`;
 
                 return {
-                    row: t.row, target: t.nomor, token: token, url: dynamicImageUrl, 
-                    message: `Kepada Yth. Bapak/Ibu/Saudara/i\n*${guestName.toUpperCase()}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\n\n*${localData.weddingTitle || 'Pernikahan Kami'}*\n▫️ ${localData.hariTanggal || '-'}\n▫️ Lokasi: ${localData.lokasiAcara || '-'}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n${inviteLink}\n\n*Mohon simpan QR Code di atas untuk ditunjukkan saat memasuki area acara.*\n\nTerima kasih.`
+                    row: t.row, 
+                    target: t.nomor, 
+                    token: token, 
+                    url: dynamicImageUrl, 
+                    message: `Kepada Yth. Bapak/Ibu/Saudara/i\n*${guestNameCaps}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\n\n*${localData.weddingTitle || 'Pernikahan Kami'}*\n▫️ ${localData.hariTanggal || '-'}\n▫️ Lokasi: ${localData.lokasiAcara || '-'}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n${inviteLink}\n\n*Mohon simpan QR Code di atas untuk ditunjukkan saat memasuki area acara.*\n\nTerima kasih.`
                 };
             });
 
