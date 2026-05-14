@@ -700,11 +700,19 @@ function getSettings(ssId) {
     let presetKode = "1";
     let waPhone = "6282214578132";
     let theme = "classic";
+    let invitationData = {};
+    
     if (configSheet) {
       urlFoto = configSheet.getRange("B1").getValue();
       presetKode = configSheet.getRange("B2").getValue() || "1";
       waPhone = configSheet.getRange("B5").getValue() || "6282214578132";
       theme = configSheet.getRange("B6").getValue() || "classic";
+      
+      const invSheet = ss.getSheetByName("InvConfig");
+      const invRaw = invSheet ? invSheet.getRange("B1").getValue() : "";
+      try {
+        invitationData = JSON.parse(invRaw || "{}");
+      } catch(e) {}
     }
 
     return {
@@ -722,7 +730,8 @@ function getSettings(ssId) {
         urlFoto: urlFoto,
         presetKode: presetKode,
         waPhone: waPhone,
-        theme: theme
+        theme: theme,
+        invitationData: invitationData
       }
     };
   } catch (e) { return { status: "error", message: e.toString() }; }

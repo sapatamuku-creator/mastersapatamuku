@@ -287,13 +287,24 @@ function handleUpdateClientData(data) {
     targetSS.getRange("A4:B4").setValues([["Waktu Acara :", data.eventData.waktu]]);
     targetSS.getRange("A5:B5").setValues([["Link Invitation :", data.eventData.link]]);
     
-    // Simpan ke Config juga
+    // Simpan ke Config
     const ss = SpreadsheetApp.openById(data.ssId);
     let configSheet = ss.getSheetByName("Config");
     if (configSheet) {
       if (data.eventData.waPhone) configSheet.getRange("B5").setValue(data.eventData.waPhone);
       if (data.eventData.theme) configSheet.getRange("B6").setValue(data.eventData.theme);
     }
+    
+    // Simpan ke InvConfig (Sheet Khusus)
+    let invSheet = ss.getSheetByName("InvConfig");
+    if (!invSheet) {
+      invSheet = ss.insertSheet("InvConfig");
+      invSheet.getRange("A1").setValue("JSON_DATA_UNDANGAN :");
+    }
+    if (data.eventData.invitationData) {
+      invSheet.getRange("B1").setValue(JSON.stringify(data.eventData.invitationData));
+    }
+    
     return createResponse({ status: "success", message: "Data berhasil diperbarui" });
   } catch (err) {
     return createResponse({ status: "error", message: "Update gagal." });
