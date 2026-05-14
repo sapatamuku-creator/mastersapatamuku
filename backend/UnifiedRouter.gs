@@ -14,6 +14,8 @@ function doGet(e) {
       return handleWelcomeGet(e);
     case 'getWAForm':
       return handleWAFormGet(e);
+    case 'resolveSubdomain':
+      return handleCentralPost(e.parameter);
     case 'logout':
       return handleLogout(e.parameter);
     case 'getMasterData':

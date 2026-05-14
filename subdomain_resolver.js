@@ -45,10 +45,7 @@ async function resolveSapatamuSubdomain() {
         if (!window.CURRENT_SS_ID && parts.length >= 3 && parts[0] !== 'www') {
             const sub = parts[0].toLowerCase();
             try {
-                const response = await fetch(window.SCRIPT_URL, {
-                    method: "POST",
-                    body: JSON.stringify({ action: "resolveSubdomain", subdomain: sub })
-                });
+                const response = await fetch(`${window.SCRIPT_URL}?action=resolveSubdomain&subdomain=${sub}`);
                 const res = await response.json();
                 if (res.status === "success") {
                     window.CURRENT_SS_ID = res.ssId;
