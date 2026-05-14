@@ -66,6 +66,7 @@
         
         .guest-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f0e6de; padding-bottom: 8px; }
         .guest-name { font-size: 13px; font-weight: 800; color: var(--text-main); line-height: 1.2; text-transform: uppercase; }
+        .guest-wa { font-size: 9px; color: var(--text-muted); font-weight: 700; }
         
         .guest-details { display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 12px; }
         .detail-item { font-size: 9px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
@@ -389,16 +390,26 @@
             return `
                 <div class="guest-item ${isHadir?'checked-in':''}" style="border-top-color: ${isHadir?'var(--success)':'var(--border)'}" onclick="${isHadir?'':'openConfirm('+JSON.stringify(g).replace(/"/g, '&quot;')+')'}">
                     <div class="guest-header">
-                        <div class="guest-name">${g.nama}</div>
-                        <div class="guest-cat">${g.kategori || 'UMUM'}</div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="font-size:16px;">${isHadir ? '✅' : '⬜'}</div>
+                            <div class="guest-name">${g.nama}</div>
+                        </div>
+                        <div class="guest-wa">${g.whatsapp || '-'}</div>
                     </div>
                     <div class="guest-details">
                         <div class="detail-item">🏠 <span>${g.alamat || '-'}</span></div>
                         <div class="detail-item">💌 Inv by: <span>${g.pihakPengundang || '-'}</span></div>
+                        <div class="detail-item">⏰ Sesi: <span>${g.sesi || '-'}</span></div>
                     </div>
                     <div class="guest-footer">
-                        <div style="font-size:8px; color:#ccc">ID: ${g.kode}</div>
-                        <div style="font-size:9px; font-weight:800; color:${isHadir?'var(--success)':'#ccc'}">${isHadir?'✓ HADIR':'● BELUM SCAN'}</div>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <div class="guest-cat" style="display:inline-block">${g.kategori || 'UMUM'}</div>
+                            <div style="font-size:8px; font-weight:800; color:var(--primary); margin-left:2px;">PAX PLAN: ${g.rencanaHadir || '1'}</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-size:9px; font-weight:800; color:${isHadir?'var(--success)':'#ccc'}">${isHadir?`✓ HADIR (${g.realHadir || '1 PAX'})`:'● BELUM SCAN'}</div>
+                            <div style="font-size:8px; color:#ccc; margin-top:4px">ID: ${g.kode}</div>
+                        </div>
                     </div>
                 </div>`;
         }).join('');
