@@ -177,6 +177,14 @@ function handleMainPost(payload) {
       case "saveSettings":
         result = saveSettings(ssId, payload.settings);
         break;
+
+      case "saveMasterToken":
+      case "updateMasterToken":
+      case "remoteFonnte":
+      case "toggleStatus":
+      case "executeFonnteBlast":
+        result = handleWAFormPost(payload);
+        break;
         
       default:
         result = { status: "error", message: "Action unknown" };
