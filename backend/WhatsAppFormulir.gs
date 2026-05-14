@@ -124,13 +124,18 @@ function handleWAFormPost(data) {
       return createResponse({ status: "success" });
     }
 
-    // 4. EXECUTE BLAST
+    // 4. EXECUTE BLAST (Dukungan Gambar Dinamis)
     if (action === "executeFonnteBlast") {
       let successCount = 0;
       const now = Utilities.formatDate(new Date(), "GMT+7", "dd/MM HH:mm");
       
       data.payload.forEach(item => {
-        const res = directFonnteSend("https://api.fonnte.com/send", { target: item.target, message: item.message }, item.token);
+        const body = { 
+          target: item.target, 
+          message: item.message,
+          url: item.url || "" 
+        };
+        const res = directFonnteSend("https://api.fonnte.com/send", body, item.token);
         if (res.status) {
           sheet1.getRange(item.row, 16).setValue(`✅ [${now}]`); 
           successCount++;

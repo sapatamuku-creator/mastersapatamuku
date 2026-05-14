@@ -618,11 +618,28 @@
             const inviteLink = `${localData.linkInvitation}?id=${t.kode}&u=${encodedName}`;
             const qrLink = `https://api.qrserver.com/v1/create-qr-code/?data=${t.kode}&size=400x400`;
 
+            // --- GENERATE DYNAMIC IMAGE URL (CLOUDINARY) ---
+            const cloudName = "dvygmpmir";
+            const publicId = "Blanko_Blast_WA_wzwia1";
+            
+            // Base64 QR Link for Cloudinary Fetch
+            const qrBase64 = btoa(qrLink).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            
+            // Koordinat (Perlu disesuaikan jika posisi kurang pas)
+            // QR: g_west, x_135, y_200 (di kotak putih)
+            // Nama: g_west, x_550, y_150 (area teks)
+            const dynamicImageUrl = `https://res.cloudinary.com/${cloudName}/image/upload/` +
+                `l_fetch:${qrBase64},w_350,g_west,x_135,y_250/` + // QR Code
+                `l_text:Arial_35_bold_italic:${encodedName},co_rgb:C8962E,g_west,x_550,y_220/` + // Nama Tamu
+                `l_text:Arial_24_bold:${encodeURIComponent(t.kategori)},co_rgb:000000,g_north_east,x_115,y_1070/` + // Badge Kategori
+                `${publicId}.png`;
+
             return {
                 row: t.row, 
                 target: t.nomor, 
                 token: token,
-                message: `Kepada Yth. Bapak/Ibu/Saudara/i\n*${t.nama.toUpperCase()}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\n\n*${localData.weddingTitle}*\n▫️ ${localData.hariTanggal}\n▫️ Lokasi: ${localData.lokasiAcara}\n\nInformasi lengkap dan kartu akses digital:\n${inviteLink}\n\n*Mohon simpan QR Code di bawah untuk akses masuk:*\n${qrLink}\n\nTerima kasih.`
+                url: dynamicImageUrl, // Gambar Dinamis
+                message: `Kepada Yth. Bapak/Ibu/Saudara/i\n*${t.nama.toUpperCase()}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\n\n*${localData.weddingTitle}*\n▫️ ${localData.hariTanggal}\n▫️ Lokasi: ${localData.lokasiAcara}\n\nInformasi lengkap mengenai jadwal, lokasi, dan kartu akses digital dapat diakses melalui tautan berikut:\n${inviteLink}\n\n*Mohon simpan QR Code di atas untuk ditunjukkan saat memasuki area acara.*\n\nMerupakan suatu kehormatan bagi kami apabila Anda berkenan hadir. Terima kasih.`
             };
         });
 
