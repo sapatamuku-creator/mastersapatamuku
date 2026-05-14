@@ -316,14 +316,18 @@
         if (session) {
             const data = JSON.parse(session);
             if (data.username) {
-                window.location.replace("https://" + data.username.toLowerCase().replace(/\s+/g, '') + ".sapatamu.id/dashboard.html");
+                const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
+                const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
+                window.location.replace("https://" + data.username.toLowerCase().replace(/\s+/g, '') + ".sapatamu.id/" + targetPage);
                 return;
             }
         } else if (localData) {
             const data = JSON.parse(localData);
             if (data.username) {
                 sessionStorage.setItem(SESSION_KEY, localData);
-                window.location.replace("https://" + data.username.toLowerCase().replace(/\s+/g, '') + ".sapatamu.id/dashboard.html");
+                const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
+                const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
+                window.location.replace("https://" + data.username.toLowerCase().replace(/\s+/g, '') + ".sapatamu.id/" + targetPage);
                 return;
             }
         }
@@ -370,7 +374,9 @@
                 sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
 
                 // LEMPAR KE SUBDOMAIN DENGAN MEMBAWA DATA
-                const targetUrl = `https://${cleanUser}.sapatamu.id/dashboard.html?ssId=${res.data.ssId}&user=${encodeURIComponent(res.data.username)}`;
+                const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
+                const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
+                const targetUrl = `https://${cleanUser}.sapatamu.id/${targetPage}?ssId=${res.data.ssId}&user=${encodeURIComponent(res.data.username)}`;
                 window.location.replace(targetUrl);
             } else {
                 showSapaModal("Login Gagal", res.message, "❌");
