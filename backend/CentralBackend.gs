@@ -226,9 +226,9 @@ function handleLogout(data) {
     for (let i = 1; i < values.length; i++) {
       const dbUser = String(values[i][0] || "").toLowerCase().trim();
       if (dbUser === targetUser) {
-        sheet.getRange(i + 1, 8).setValue("Expired"); 
+        // JANGAN LAGI SET EXPIRED DI SPREADSHEET AGAR TIDAK MENGUNCI USER LAIN (PARALEL)
+        // Cukup biarkan redirect menangani pembersihan di sisi client
         
-        // JIKA ADA PARAMETER REDIRECT, KITA LEMPAR KE URL TERSEBUT
         if (data.redirect) {
           return HtmlService.createHtmlOutput("<script>window.top.location.replace('" + data.redirect + "');</script>");
         }
@@ -263,7 +263,7 @@ function handleUpdateClientData(data) {
 
 // createResponse removed (using UnifiedRouter version)
 
-// --- FUNGSI RESOLVE SUBDOMAIN ---
+// --- FUNGSI RESOLVE SUBDOMAIN (MULTI-USER SECURE) ---
 function handleResolveSubdomain(data) {
   try {
     const ss = SpreadsheetApp.openById(MASTER_SS_ID);
@@ -271,23 +271,38 @@ function handleResolveSubdomain(data) {
     const values = sheet.getDataRange().getValues();
     const sub = data.subdomain.toLowerCase().trim();
     
+    // Token/Credentials dari perangkat
+    const authUser = String(data.username || "").toLowerCase().trim();
+    const authPass = String(data.password || "");
+
     for (let i = 1; i < values.length; i++) {
-      const username = String(values[i][0]).toLowerCase().trim();
+      const dbUser = String(values[i][0]).toLowerCase().trim();
+      const dbPass = String(values[i][2]);
       const status = String(values[i][7] || "").toLowerCase().trim(); // Kolom H (Index 7)
 
-      if (username === sub) {
+      if (dbUser === sub) {
+        // Cek apakah akun aktif (Langganan)
         if (status !== "active") {
           return createResponse({ 
             status: "error", 
-            message: "Akun ini sedang tidak aktif atau sudah kadaluarsa. Silakan hubungi admin." 
+            message: "Akun ini dinonaktifkan oleh Admin." 
           });
         }
 
-        return createResponse({ 
-          status: "success", 
-          ssId: values[i][1],
-          clientName: values[i][0]
-        });
+        // VALIDASI KUNCI INDIVIDU (Perangkat harus kirim username & pass yang benar)
+        if (authUser === dbUser && authPass === dbPass) {
+          return createResponse({ 
+            status: "success", 
+            ssId: values[i][1],
+            clientName: values[i][0]
+          });
+        } else {
+          return createResponse({ 
+            status: "error", 
+            message: "Sesi tidak valid. Silakan login kembali.",
+            needLogin: true 
+          });
+        }
       }
     }
     return createResponse({ status: "error", message: "Subdomain tidak terdaftar" });

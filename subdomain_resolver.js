@@ -1,6 +1,7 @@
 /**
  * SAPATAMU.KU - GLOBAL SUBDOMAIN RESOLVER
  * Menangani deteksi subdomain dan mapping ke Spreadsheet ID secara otomatis.
+ * Mendukung Multi-User (Akses Paralel) via Sesi Per-Perangkat.
  */
 
 window.SAPATAMU_RESOLVED = false;
@@ -15,7 +16,7 @@ if ((_hostname === "sapatamu.id" || _hostname === "www.sapatamu.id") && window.C
 }
 
 async function resolveSapatamuSubdomain() {
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMvrFsdk8LOuPGMmIyDd0YOO0Ay1q21qY6Qxho6_0uaR_AUPlg6STfVCKfgbI4kHYP/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-BdV-ES7CheSMdnAfpZPAHrOYcGxcRBqVUmhRvKMTlF7_xWt-QCzy4UpdCeLoPnS9/exec";
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
     
@@ -25,27 +26,28 @@ async function resolveSapatamuSubdomain() {
         return null;
     }
 
-    // Jika ada ssId di URL, gunakan itu langsung
+    // Jika ada ssId di URL (jarang terjadi sekarang), gunakan itu langsung
     if (window.CURRENT_SS_ID) {
         window.SAPATAMU_RESOLVED = true;
         return window.CURRENT_SS_ID;
     }
 
-    // Cek apakah ada ssId di storage
-    const localData = localStorage.getItem('sapatamu_db');
-    if (localData) {
-        const parsed = JSON.parse(localData);
-        if (parsed.ssId) {
-            window.CURRENT_SS_ID = parsed.ssId;
-            // Tetap lanjut untuk cek subdomain jika hostname cocok
-        }
-    }
-
-    // Deteksi Subdomain (bukan www dan punya minimal 3 part: sub.domain.tld)
+    // Deteksi Subdomain (misal: clara.sapatamu.id)
     if (parts.length >= 3 && parts[0] !== 'www') {
         const sub = parts[0].toLowerCase();
         
-        // Hindari resolve berulang untuk subdomain yang sama dalam satu sesi
+        // AMBIL KREDENSIAL LOKAL (KUNCI INDIVIDU)
+        const localData = localStorage.getItem('sapatamu_db');
+        let auth = { username: "", password: "" };
+        if (localData) {
+            try {
+                const parsed = JSON.parse(localData);
+                auth.username = parsed.username || "";
+                auth.password = parsed.password || "";
+            } catch(e) {}
+        }
+
+        // Cek cache sesi agar tidak hit server terus menerus
         const cachedId = sessionStorage.getItem('resolved_ssid_' + sub);
         if (cachedId) {
             window.CURRENT_SS_ID = cachedId;
@@ -53,27 +55,29 @@ async function resolveSapatamuSubdomain() {
             try {
                 const response = await fetch(SCRIPT_URL, {
                     method: "POST",
-                    body: JSON.stringify({ action: "resolveSubdomain", subdomain: sub })
+                    body: JSON.stringify({ 
+                        action: "resolveSubdomain", 
+                        subdomain: sub,
+                        username: auth.username,
+                        password: auth.password
+                    })
                 });
                 const res = await response.json();
                 if (res.status === "success") {
                     window.CURRENT_SS_ID = res.ssId;
                     sessionStorage.setItem('resolved_ssid_' + sub, res.ssId);
-                    console.log("Subdomain Resolved:", sub, "->", res.ssId);
+                    console.log("Subdomain Verified Individually:", sub);
                 } else {
-                    // Jika error (misal: Expired atau Tidak Terdaftar)
-                    alert(res.message || "Akses ditolak. Silakan login kembali.");
+                    // Jika gagal atau butuh login
+                    console.warn("Akses Ditolak:", res.message);
                     window.location.replace("https://sapatamu.id/login.html");
                     return;
                 }
             } catch (e) {
-                console.error("Gagal resolve subdomain:", e);
+                console.error("Gagal verifikasi sesi:", e);
             }
         }
     }
-
-    // ssId tidak lagi di-inject ke URL untuk keamanan (leakage prevention)
-    // Cukup simpan di memori window.CURRENT_SS_ID
 
     window.SAPATAMU_RESOLVED = true;
     return window.CURRENT_SS_ID;
