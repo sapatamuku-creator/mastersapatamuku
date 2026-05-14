@@ -360,13 +360,15 @@
             });
             const res = await response.json();
             if (res.status === "success") {
-                const authData = { username: res.data.username, ssId: res.data.ssId, time: Date.now() };
-                sessionStorage.setItem(SESSION_KEY, JSON.stringify(authData));
-                localStorage.setItem(LOCAL_DB, JSON.stringify(authData));
-                
-                // REDIREKSI KE SUBDOMAIN (Tanpa mengekspos ssId di URL)
-                const sub = res.data.username.toLowerCase().trim();
-                window.location.replace(`https://${sub}.sapatamu.id/dashboard.html`);
+                const cleanUser = res.data.username.toLowerCase().replace(/\s+/g, '');
+                // SIMPAN LOKAL (UNTUK DOMAIN UTAMA)
+                const userData = { ssId: res.data.ssId, username: res.data.username };
+                localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+
+                // LEMPAR KE SUBDOMAIN DENGAN MEMBAWA DATA
+                const targetUrl = `https://${cleanUser}.sapatamu.id/dashboard.html?ssId=${res.data.ssId}&user=${encodeURIComponent(res.data.username)}`;
+                window.location.replace(targetUrl);
             } else {
                 showSapaModal("Login Gagal", res.message, "❌");
                 setLoading('btn_login', false);
