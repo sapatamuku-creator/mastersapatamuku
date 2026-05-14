@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bintang & Anisa - SapaTamu.Ku</title>
+    <title id="page-title">SapaTamu.Ku - Digital Invitation</title>
     <script src="subdomain_resolver.js?v=3.2"></script>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -204,7 +204,7 @@
         </div>
         <div class="relative z-10 px-8">
             <p class="text-[9px] tracking-[0.5em] uppercase mb-6 text-neutral-400 font-bold">The Wedding Celebration</p>
-            <h1 class="text-5xl font-serif text-neutral-900 mb-12">Bintang <br>& Anisa</h1>
+            <h1 id="wedding-names-text" class="text-5xl font-serif text-neutral-900 mb-12">Bintang <br>& Anisa</h1>
             <div class="mb-12">
                 <p class="text-[9px] tracking-[0.2em] text-neutral-400 uppercase mb-3">Yth. Bapak/Ibu/Saudara/i</p>
                 <h2 id="guest-name-display" class="text-2xl font-serif italic text-neutral-800">Tamu Undangan</h2>
@@ -236,7 +236,7 @@
                     <p class="text-[10px] tracking-[0.6em] font-serif italic mb-8 text-[#D4AF37]">#SatuBINTANGuntukANISA</p>
                     <p class="text-[10px] tracking-[0.6em] uppercase font-bold mb-4 text-[#D4AF37]">Save The Date</p>
                     <h2 class="text-5xl font-serif italic mb-4 text-[#D4AF37]">Bintang & Anisa</h2>
-                    <p class="text-xs tracking-[0.3em] uppercase font-bold mb-8 text-[#D4AF37]">Senin, 25 Mei 2026</p>
+                    <p id="wedding-date-text" class="text-xs tracking-[0.3em] uppercase font-bold mb-8 text-[#D4AF37]">Senin, 25 Mei 2026</p>
                     
                     <div id="countdown" class="flex justify-center gap-4 mt-4 py-6 px-4 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30">
                         <div class="countdown-item"><span id="days" class="countdown-val">00</span><span class="countdown-label">Days</span></div>
@@ -282,7 +282,7 @@
                     </div>
                     <p class="text-[11px] font-bold tracking-[0.3em] mb-3 uppercase text-[#D4AF37]">Akad Nikah</p>
                     <p class="text-lg font-serif mb-4">08.00 WIB - Selesai</p>
-                    <p class="text-[11px] uppercase tracking-widest text-neutral-500 leading-relaxed mb-8">Lingkungan Marga Mulya RT. 10 RW 04 <br> Kelurahan Babakan Jawa, Majalengka</p>
+                    <p class="wedding-location-text text-[11px] uppercase tracking-widest text-neutral-500 leading-relaxed mb-8">Lingkungan Marga Mulya RT. 10 RW 04 <br> Kelurahan Babakan Jawa, Majalengka</p>
                     <a href="https://maps.app.goo.gl/JkyBKp5tJn5yNDx78" target="_blank" class="inline-block px-10 py-4 border border-[#D4AF37] rounded-full text-[9px] uppercase tracking-widest font-bold text-[#D4AF37]">Petunjuk Lokasi</a>
                 </div>
 
@@ -449,8 +449,10 @@
             if(document.getElementById('wish-name')) document.getElementById('wish-name').value = guestName !== "Tamu Undangan" ? guestName : "";
             document.getElementById('qr-code').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${guestId}`;
             document.getElementById('guest-id-label').innerText = `ID: ${guestId}`;
-            const waMsg = `Halo Bintang & Anisa, saya ${guestName} mengonfirmasi akan hadir.`;
-            document.getElementById('rsvp-link').href = `https://wa.me/6282214578132?text=${encodeURIComponent(waMsg)}`;
+            const weddingNames = document.getElementById('wedding-names-text')?.innerText || "Kami";
+            const waMsg = `Halo ${weddingNames}, saya ${guestName} mengonfirmasi akan hadir.`;
+            const rsvpPhone = window.EVENT_META?.waPhone || "6282214578132";
+            document.getElementById('rsvp-link').href = `https://wa.me/${rsvpPhone}?text=${encodeURIComponent(waMsg)}`;
         };
 
         window.startInvitation = function() {
@@ -508,8 +510,31 @@
             document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => obs.observe(el));
         }
 
+        async function initApp() {
+            if (!window.SAPATAMU_RESOLVED) { setTimeout(initApp, 100); return; }
+            
+            const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
+            if (!ssId) return;
+
+            try {
+                const res = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`);
+                const result = await res.json();
+                if (result.status === "success") {
+                    const s = result.data;
+                    window.EVENT_META = { waPhone: s.waPhone || "6282214578132" };
+                    
+                    // Update UI
+                    if (document.getElementById('page-title')) document.getElementById('page-title').innerText = s.namaAcara + " - SapaTamu.Ku";
+                    if (document.getElementById('wedding-names-text')) document.getElementById('wedding-names-text').innerText = s.namaAcara;
+                    if (document.getElementById('wedding-date-text')) document.getElementById('wedding-date-text').innerText = s.tanggal;
+                    document.querySelectorAll('.wedding-location-text').forEach(el => el.innerText = s.lokasi);
+                }
+            } catch (e) { console.error("Gagal memuat metadata:", e); }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             syncNavbar();
+            initApp();
         });
 
 

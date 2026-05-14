@@ -63,7 +63,11 @@ async function resolveSapatamuSubdomain() {
         }
 
         // 3. SATPAM AKHIR (Hanya di Subdomain): Jika masih kosong, tendang ke login
-        if (!window.CURRENT_SS_ID) {
+        // KECUALI untuk halaman publik (undangan, welcome, worker)
+        const publicPages = ["undangan.html", "welcome.html", "worker.html"];
+        const isPublicPage = publicPages.some(page => window.location.pathname.includes(page));
+
+        if (!window.CURRENT_SS_ID && !isPublicPage) {
             console.warn("Akses ditolak: Tidak ada sesi valid di subdomain ini.");
             window.location.replace("https://sapatamu.id/login.html");
             return null;
