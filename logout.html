@@ -93,7 +93,7 @@
         const SESSION_KEY = 'sapatamu_session';
         const LOCAL_DB = 'sapatamu_db';
         const SIGNOUT_SIGNAL = 'sapatamu_signout_broadcast';
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyK-FuzGhbvnW_o0PC8E00IsGcWmWiMLcCHf9DIGOx4TEZ0TcabNj5e2WIuWdDwK5BW/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwPvWH3yZRNO4qijJ6BnNwjtU8GFd2Cu2FkxJvTLmemTUsaRlK8n6DP8jjHSGQ6UrDG/exec";
 
         async function executeLogout() {
             document.getElementById('sapa-confirm-modal').style.display = 'none';
@@ -103,33 +103,30 @@
             const localData = localStorage.getItem(LOCAL_DB);
             const currentData = JSON.parse(sessionData || localData || "{}");
 
-            // HIT BACKEND LOGOUT (SET STATUS TO EXPIRED VIA GET)
-            if (currentData.username) {
-                try {
-                    // Menggunakan cara paling andal untuk GAS: Image request atau fetch GET
-                    const logoutUrl = `${SCRIPT_URL}?action=logout&username=${encodeURIComponent(currentData.username)}`;
-                    await fetch(logoutUrl, { mode: 'no-cors' }); 
-                    console.log("Sinyal logout terkirim ke:", logoutUrl);
-                } catch (e) {
-                    console.error("Gagal update status logout:", e);
-                }
-            }
-
+            // CLEAR LOCAL SESSION FIRST
             if (currentData.username && currentData.ssId) {
                 localStorage.setItem(SIGNOUT_SIGNAL, JSON.stringify({
                     username: currentData.username,
                     ssId: currentData.ssId,
                     timestamp: Date.now()
                 }));
-                setTimeout(() => localStorage.removeItem(SIGNOUT_SIGNAL), 500);
             }
 
             sessionStorage.removeItem(SESSION_KEY);
             localStorage.removeItem(LOCAL_DB);
-            
-            setTimeout(() => {
+
+            // HIT BACKEND LOGOUT VIA DIRECT NAVIGATION (100% RELIABLE)
+            if (currentData.username) {
+                const redirectUrl = encodeURIComponent("https://sapatamu.id/login.html");
+                const logoutUrl = `${SCRIPT_URL}?action=logout&username=${encodeURIComponent(currentData.username)}&redirect=${redirectUrl}`;
+                
+                // Gunakan jeda sebentar agar sinyal broadcast lokal sempat terkirim
+                setTimeout(() => {
+                    window.location.href = logoutUrl;
+                }, 300);
+            } else {
                 window.location.replace("https://sapatamu.id/login.html");
-            }, 1000);
+            }
         }
 
         function cancelLogout() {

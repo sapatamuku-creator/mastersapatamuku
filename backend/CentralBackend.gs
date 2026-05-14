@@ -226,10 +226,19 @@ function handleLogout(data) {
     for (let i = 1; i < values.length; i++) {
       const dbUser = String(values[i][0] || "").toLowerCase().trim();
       if (dbUser === targetUser) {
-        // SET STATUS KE EXPIRED SAAT LOGOUT
         sheet.getRange(i + 1, 8).setValue("Expired"); 
+        
+        // JIKA ADA PARAMETER REDIRECT, KITA LEMPAR KE URL TERSEBUT
+        if (data.redirect) {
+          return HtmlService.createHtmlOutput("<script>window.location.replace('" + data.redirect + "');</script>");
+        }
+        
         return createResponse({ status: "success", message: "Logout berhasil" });
       }
+    }
+    
+    if (data.redirect) {
+      return HtmlService.createHtmlOutput("<script>window.location.replace('" + data.redirect + "');</script>");
     }
     return createResponse({ status: "error", message: "User tidak ditemukan: " + targetUser });
   } catch (err) {
