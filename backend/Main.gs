@@ -231,6 +231,7 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan) {
       
       const updatedRowData = sheet.getRange(rowIndex, 1, 1, 19).getValues()[0];
       processPrintLogic(ssId, updatedRowData, catatan);
+      addToRundown(ssId, updatedRowData); // Sinkronisasi ke Welcome Sign Rundown
 
       return { "status": "success", "row": rowIndex };
     }
@@ -302,6 +303,53 @@ function processPrintLogic(ssId, guestData, giftStatus) {
     } else {
       addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: " + statusUpper);
     }
+  }
+}
+
+/**
+ * Sinkronisasi data tamu ke sheet Rundown untuk display Welcome Sign
+ */
+function addToRundown(ssId, guestRow) {
+  try {
+    const ss = getSS(ssId);
+    const rdSheet = ss.getSheetByName("Rundown");
+    if (!rdSheet) return;
+
+    const lastRow = rdSheet.getLastRow();
+    // Cari baris kosong di kolom E (Kode Unik)
+    let targetRow = 2;
+    if (lastRow >= 2) {
+      const eData = rdSheet.getRange(2, 5, lastRow, 1).getValues();
+      for (let i = 0; i < eData.length; i++) {
+        if (!eData[i][0]) {
+          targetRow = i + 2;
+          break;
+        }
+        if (i === eData.length - 1) targetRow = i + 3;
+      }
+    }
+
+    const now = new Date();
+    const timeOnly = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");
+
+    // E: Kode, F: Nama, G: Jam, H: Status, I: Kategori, J: Alamat
+    const rdData = [
+      guestRow[5],  // Kode Unik (Kolom F di Data)
+      guestRow[2],  // Nama (Kolom C di Data)
+      timeOnly,     // Jam Datang
+      "CHECKED-IN", // Status
+      guestRow[4],  // Kategori (Kolom E di Data)
+      guestRow[12]  // Alamat (Kolom M di Data)
+    ];
+
+    rdSheet.getRange(targetRow, 5, 1, 6).setValues([rdData]);
+    
+    // Optional: Bersihkan antrean lama jika sudah terlalu banyak (> 50)
+    if (targetRow > 60) {
+       // Bisa diimplementasikan rotasi jika perlu
+    }
+  } catch (e) {
+    console.error("addToRundown Error: ", e);
   }
 }
 
@@ -409,6 +457,7 @@ function registerNewOnsite(data) {
     sheet.appendRow(newRow);
     const lastRowData = sheet.getRange(sheet.getLastRow(), 1, 1, 19).getValues()[0];
     processPrintLogic(data.ssId, lastRowData, giftVal);
+    addToRundown(data.ssId, lastRowData); // Sinkronisasi ke Welcome Sign
     return { status: "success", kode: kodeUnik, message: "On-Site Berhasil" };
   } catch (e) { return { status: "error", message: e.toString() }; } finally { lock.releaseLock(); }
 }
@@ -498,21 +547,41 @@ function getWelcomeData(ssId) {
         rundown = rdData.map(r => {
           let sTime = "00:00";
           try {
-            // Cek apakah r[0] adalah Date, jika bukan coba konversi
-            const d = (r[0] instanceof Date) ? r[0] : new Date(r[0]);
+            // Indikator ada di kolom C (r[2])
+            const timeRaw = r[2];
+            const d = (timeRaw instanceof Date) ? timeRaw : new Date(timeRaw);
             if (!isNaN(d.getTime())) {
               sTime = Utilities.formatDate(d, "GMT+7", "HH:mm");
-            } else if (typeof r[0] === 'string' && r[0].includes(':')) {
-              sTime = r[0].substring(0, 5); // Ambil HH:mm jika string
+            } else if (typeof timeRaw === 'string' && timeRaw.includes(':')) {
+              sTime = timeRaw.substring(0, 5); 
             }
           } catch(e) { console.warn("Rundown time parse error:", e); }
 
           return {
             syncTime: sTime,
-            displayTime: String(r[1] || ""),
-            eventName: String(r[2] || "")
+            displayTime: String(r[0] || ""), // Kolom A: Waktu
+            eventName: String(r[1] || "")    // Kolom B: Nama Acara
           };
         });
+      }
+    }
+
+    // Ambil Daftar Tamu Terakhir dari Rundown (Kolom E-J) untuk Marquee
+    let guestLog = "MENUNGGU TAMU...";
+    if (rundownSheet) {
+      const rdLast = rundownSheet.getLastRow();
+      if (rdLast >= 2) {
+        // Ambil 10 baris terakhir dari kolom F (Nama Tamu)
+        const startScan = Math.max(2, rdLast - 10);
+        const logData = rundownSheet.getRange(startScan, 6, (rdLast - startScan) + 1, 1).getValues();
+        const names = logData
+          .map(r => String(r[0] || "").trim())
+          .filter(n => n !== "")
+          .reverse(); // Terbaru di depan
+        
+        if (names.length > 0) {
+          guestLog = "SELAMAT DATANG: " + names.join("  •  ");
+        }
       }
     }
 
@@ -522,7 +591,7 @@ function getWelcomeData(ssId) {
       weddingDate,
       latestGuest,
       rundown,
-      log: latestGuest.nama ? `SELAMAT DATANG, ${latestGuest.nama}` : "MENUNGGU TAMU...",
+      log: guestLog.toUpperCase(),
       displayDuration: 10000
     };
   } catch (err) {
