@@ -3,307 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>sapatamu.ku | TOTAL INTEGRATION V7.6</title>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>sapatamu.ku | ONSITE CHECK-IN</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <script src="subdomain_resolver.js?v=3.2"></script>
 
     <style>
         :root { 
-            --primary: #E07B7B; /* Rose */
-            --bg: #FFF9F5;      /* Warm White */
-            --card: #FFFFFF;
-            --text-main: #4A3F35; 
+            --primary: #E07B7B; 
+            --bg: #FFF9F5; 
+            --text: #4A3F35; 
             --text-muted: #8C7560;
-            --border: #F0E6DE;
-            --input-bg: #FDF8F4;
+            --border: #F0E6DE; 
+            --success: #27ae60;
             --gold: #C8962E;
-            --success: #10B981;
-            --danger: #E74C3C;
         }
         
-
-        html, body { min-height: 100%; width: 100%; margin: 0; padding: 0; background: var(--bg); font-family: 'Plus Jakarta Sans', sans-serif; }
-        
-        #app-root { 
-            display: flex; flex-direction: column; 
-            background: var(--bg); min-height: 100vh;
+        * { box-sizing: border-box; }
+        html, body { 
+            height: 100%; width: 100%; margin: 0; padding: 0; 
+            background: var(--bg); font-family: 'Plus Jakarta Sans', sans-serif; 
+            color: var(--text);
+            overflow: hidden;
         }
 
-        .header { text-align: center; padding: 20px; background: white; border-bottom: 1px solid var(--border); z-index: 100; flex-shrink: 0; }
-        .header h1 { font-family: 'Lora', serif; font-size: 18px; color: var(--text-main); margin: 0; letter-spacing: 1px; font-weight: 700; }
-        .header h1 span { color: var(--primary); }
-
-        .nav-wrapper { padding: 10px 15px; background: white; flex-shrink: 0; }
-        .nav-tabs { display: flex; background: #f0f0f0; border-radius: 12px; padding: 4px; gap: 4px; }
-        .tab-btn { flex: 1; padding: 10px; border-radius: 9px; border: none; background: transparent; font-size: 10px; font-weight: 800; color: #888; text-transform: uppercase; transition: 0.3s; cursor: pointer; }
-        .tab-btn.active { background: white; color: var(--dark); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-
-        .main-content { flex: 1; display: flex; flex-direction: column; padding: 0 10px 10px; overflow: hidden; gap: 10px; }
-
-        #media-container { 
-            position: relative; width: 100%; max-width: 220px; margin: 0 auto; 
-            aspect-ratio: 1 / 1; background: #000; border-radius: 28px; overflow: hidden; 
-            border: 4px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.1); flex-shrink: 0;
-            display: flex; align-items: center; justify-content: center;
-        }
-        #reader { width: 100% !important; height: 100% !important; border: none !important; }
-        #reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
-        #onsite-video, #preview-canvas, #capture-preview-onsite { width: 100% !important; height: 100% !important; object-fit: cover; }
-        #onsite-video { transform: scaleX(-1); display: none; }
-
-        .card-panel { background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; flex: 1; min-height: 0; }
-        #guest-list-container { 
-            flex: 1; overflow-y: auto; padding-right: 2px; -webkit-overflow-scrolling: touch; 
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
-            align-content: start;
+        #app-root {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
         }
 
-        .counter-wrapper { display: flex; align-items: center; background: #f0f0f0; border-radius: 10px; padding: 2px; height: 40px; }
-        .btn-step { width: 40px; height: 100%; border: none; background: white; border-radius: 8px; font-size: 18px; font-weight: bold; color: var(--dark); cursor: pointer; }
-        .counter-value { flex: 1; text-align: center; font-weight: 800; font-size: 14px; color: var(--dark); }
-
-        .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .form-group { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-        .form-label { font-size: 7.5px; font-weight: 900; color: #aaa; text-transform: uppercase; margin-left: 5px; }
-        .form-control { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #eee; background: #fcfcfc; font-size: 12px; font-weight: 600; outline: none; box-sizing: border-box; }
-        
-        .tag-row { display: flex; gap: 8px; margin: 5px 0 15px; }
-        .tag-item { flex: 1; padding: 10px; border-radius: 10px; background: #f5f5f5; border: 1px solid #eee; font-size: 9px; font-weight: 800; text-align: center; cursor: pointer; color: #888; }
-        .tag-item.active { background: var(--gold); color: white; border-color: var(--gold); }
-
-        .btn-main { background: var(--dark); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; cursor: pointer; }
-        
-        .guest-item { padding: 16px; background: #fff; border: 1px solid #f0f0f0; border-radius: 18px; margin-bottom: 0px; display: flex; flex-direction: column; position: relative; transition: 0.3s; }
-        .guest-item:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(140, 117, 96, 0.1); }
-        .guest-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f0e6de; padding-bottom: 8px; }
-        .guest-info h4 { margin: 0; font-size: 13px; color: var(--text-main); font-weight: 800; text-transform: uppercase; line-height: 1.2; }
-        .guest-wa { font-size: 9px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px; }
-        
-        .guest-details { display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 12px; }
-        .detail-item { font-size: 9px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
-        .detail-item span { color: var(--text-main); font-weight: 700; }
-        
-        .guest-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; }
-        .guest-badge { font-size: 8px; padding: 4px 10px; border-radius: 6px; font-weight: 800; text-transform: uppercase; background:#fdf8f4; color:var(--gold); border: 1px solid #f0e6de; }
-        .guest-status-label { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
-        .pax-badge { font-size: 10px; font-weight: 800; color: var(--primary); }
-
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 100000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-card { background: white; width: 100%; max-width: 350px; border-radius: 30px; padding: 20px; text-align: center; }
-        .modal-video-box { width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 20px; overflow: hidden; margin: 15px 0; border: 3px solid #f0f0f0; position: relative; }
-        #confirm-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-
-        .btn-group { display: flex; gap: 10px; margin-top: 15px; }
-        .btn-cancel { background: #eee; color: #666; border: none; flex: 1; padding: 12px; border-radius: 12px; font-weight: 700; cursor: pointer; }
-        .btn-confirm { background: var(--gold); color: white; border: none; flex: 2; padding: 12px; border-radius: 12px; font-weight: 800; cursor: pointer; }
-
-        .loading-overlay { position: fixed; inset: 0; background: white; z-index: 100001; display: none; align-items: center; justify-content: center; font-weight: 800; color: var(--gold); }
-
-        #btn-fullscreen {
-            position: fixed; bottom: 20px; right: 20px; width: 45px; height: 45px;
-            background: var(--text-main); color: white; border: 2px solid var(--gold);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            z-index: 100002; cursor: pointer; transition: 0.3s;
+        .header {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
         }
-        .fade-out { opacity: 0; visibility: hidden; }
+        .header h1 { font-size: 18px; margin: 0; font-weight: 800; color: var(--text); }
+        .header span { color: var(--primary); }
 
-        .main-container {
-            width: 100%;
-            max-width: 900px;
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 15px 120px; 
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 800px;
             margin: 0 auto;
-            padding: 20px 20px 40px;
+            width: 100%;
         }
 
-        /* HEADER AREA (FIXED) */
-        .fixed-header {
-            position: fixed;
+        .mode-tabs {
+            display: flex;
+            background: #F0E6DE;
+            padding: 4px;
+            border-radius: 15px;
+            flex-shrink: 0;
+            margin-bottom: 10px;
+        }
+        .mode-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 800;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .mode-tab.active { background: white; color: var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+        .search-container {
+            position: sticky;
             top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 10000;
+            z-index: 100;
             background: var(--bg);
+            padding-bottom: 10px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 18px;
+            border: 2px solid var(--border);
+            background: white;
+            font-size: 14px;
+            outline: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.02);
+        }
+
+        #guest-list-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .guest-item {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        }
+        .guest-item:active { transform: scale(0.97); }
+        .guest-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; }
+        .guest-badge { font-size: 8px; font-weight: 800; padding: 4px 10px; border-radius: 8px; background: #FCF8F5; color: var(--gold); border: 1px solid var(--border); text-transform: uppercase; }
+        .guest-wa { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+        .guest-item h4 { margin: 0; font-size: 16px; font-weight: 800; color: var(--text); }
+        .guest-details { margin: 12px 0; display: flex; flex-direction: column; gap: 5px; }
+        .detail-item { font-size: 11px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+        .detail-item span { color: var(--text); }
+        .guest-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; border-top: 1px solid var(--bg); padding-top: 10px; }
+        .pax-badge { font-size: 11px; font-weight: 800; color: var(--primary); }
+        .guest-status-label { font-size: 10px; font-weight: 800; text-transform: uppercase; }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 85px;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.05);
+            z-index: 1000;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 15px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .pax-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; background: #fafafa; padding: 10px 15px; border-radius: 15px; border: 1px solid #eee; }
-        .pax-label { font-size: 10px; font-weight: 800; color: #666; text-transform: uppercase; }
-        .pax-total-label { font-size: 10px; font-weight: 800; color: var(--gold); text-align: right; margin-top: 5px; }
-
-        .onsite-input-group { margin-bottom: 20px; border-bottom: 1.5px solid var(--border); padding-bottom: 8px; transition: 0.3s; }
-        .onsite-input-group label { display: block; font-size: 9px; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px; text-align: left; }
-        .onsite-input-group input, .onsite-input-group select { width: 100%; border: none; background: transparent; font-size: 13px; font-weight: 700; color: var(--text-main); outline: none; }
-        
-        .btn-dark-onsite { width: 100%; padding: 18px; border-radius: 15px; background: #4A3F35; color: white; border: none; font-weight: 800; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .btn-dark-onsite:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        /* UNIFIED NAVBAR STYLES */
-        .sapatamu-navbar {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            margin-bottom: 10px;
-        }
-        .sapatamu-nav-container {
-            background: #FFFDFB;
-            padding: 6px 10px;
-            border-radius: 50px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08);
-            border: 1px solid var(--border);
-            max-width: 95%;
-            overflow-x: auto;
-            white-space: nowrap;
-            scrollbar-width: none;
-            position: relative;
-        }
-        .sapatamu-nav-container::-webkit-scrollbar { display: none; }
-        
-        /* SCROLL INDICATORS */
-        .sapatamu-nav-container::before,
-        .sapatamu-nav-container::after {
-            content: '';
-            position: sticky;
-            top: 0;
-            min-width: 40px;
-            height: 32px;
-            z-index: 10;
-            pointer-events: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: bold;
             color: var(--text-muted);
-            opacity: 0.5;
-        }
-        .sapatamu-nav-container::before {
-            left: 0;
-            background: linear-gradient(to right, #FFFDFB 70%, transparent);
-            content: '‹';
-            margin-right: -40px;
-        }
-        .sapatamu-nav-container::after {
-            right: 0;
-            background: linear-gradient(to left, #FFFDFB 70%, transparent);
-            content: '›';
-            margin-left: -40px;
-        }
-        
-        .nav-group { display: flex; align-items: center; gap: 4px; }
-        .nav-group:first-child { padding-left: 20px; }
-        .nav-group:last-child { padding-right: 20px; }
-        
-        /* TABS UNDER NAVBAR */
-        .nav-tabs-container {
-            width: 100%;
-            max-width: 400px;
-            padding: 0 20px 15px;
-        }
-        .nav-tabs { 
-            display: flex; 
-            background: #f0f0f0; 
-            border-radius: 12px; 
-            padding: 4px; 
-            gap: 4px; 
-        }
-
-        .nav-group { display: flex; align-items: center; gap: 4px; }
-        .nav-link {
             text-decoration: none;
-            font-size: 10.5px;
-            font-weight: 700;
-            color: var(--text-muted);
-            padding: 10px 18px;
-            border-radius: 30px;
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
+            font-size: 9px;
+            font-weight: 800;
+            gap: 5px;
+            width: 70px;
         }
-        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
-        .nav-link.active { background: var(--primary); color: white !important; }
-        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
-        .nav-divider-bold { width: 1.5px; height: 22px; background: #D6C7BC; margin: 0 12px; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item svg { width: 24px; height: 24px; }
 
-        .main-content { margin-top: 140px; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        .scan-btn-container { position: relative; width: 85px; height: 85px; display: flex; justify-content: center; align-items: center; margin-top: -55px; }
+        .scan-trigger {
+            width: 75px; height: 75px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            color: white;
+            box-shadow: 0 10px 25px rgba(224, 123, 123, 0.4);
+            border: 6px solid var(--bg);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .scan-trigger:active { transform: scale(0.9); }
+        .scan-trigger svg { width: 32px; height: 32px; }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+            z-index: 3000; display: none; align-items: center; justify-content: center; padding: 15px;
+        }
+        .modal-content {
+            background: white; width: 100%; max-width: 700px; border-radius: 35px;
+            padding: 30px; max-height: 95vh; overflow-y: auto; box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+        }
+
+        #scanner-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: black; z-index: 4000; display: none; flex-direction: column;
+        }
+        #reader { flex: 1; }
+        .scanner-header {
+            position: absolute; top: 40px; left: 0; right: 0;
+            display: flex; justify-content: space-between; padding: 0 20px; z-index: 10;
+        }
+        .close-scanner {
+            background: rgba(255,255,255,0.2); color: white; border: none;
+            padding: 12px 24px; border-radius: 15px; font-weight: 800; backdrop-filter: blur(10px);
+        }
+
+        .onsite-input-group { margin-bottom: 20px; }
+        .onsite-input-group label { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+        .onsite-input-group input, .onsite-input-group select { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--border); outline: none; background: #FCF8F5; font-size: 14px; font-weight: 600; }
+        .pax-row { display: flex; justify-content: space-between; align-items: center; background: #FCF8F5; padding: 15px 20px; border-radius: 18px; border: 1.5px solid var(--border); margin-bottom: 12px; }
+        .counter-wrapper { display: flex; align-items: center; gap: 15px; }
+        .btn-step { width: 40px; height: 40px; border: none; background: white; border-radius: 12px; font-size: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 3px 6px rgba(0,0,0,0.05); }
+
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: none; align-items: center; justify-content: center; font-weight: 800; color: var(--primary); }
     </style>
 </head>
-<body onload="initApp()">
+<body>
 
 <div id="app-root">
     <div id="loading" class="loading-overlay">MEMPROSES...</div>
 
-    <!-- CUSTOM NOTIFICATION MODAL -->
-    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
-        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
-            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
-            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Pesan</h2>
-            <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
-            <button onclick="closeSapaModal()" class="btn-main" style="padding: 15px; border-radius: 15px; font-size: 11px; margin-top: 0; background: var(--text-main); width: 100%; border: none; color: white;">MENGERTI</button>
+    <header class="header">
+        <h1>SapaTamu<span>.ku</span></h1>
+    </header>
+
+    <main class="main-content">
+        <div class="mode-tabs">
+            <div id="tab-scan" class="mode-tab active" onclick="switchMode('scan')">QR SCAN</div>
+            <div id="tab-onsite" class="mode-tab" onclick="switchMode('onsite')">ON-SITE REG</div>
         </div>
-    </div>
 
-    <style>
-        @keyframes modalPop {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-    </style>
-    <div class="fixed-header">
-        <nav class="sapatamu-navbar">
-            <div class="sapatamu-nav-container">
-                <div class="nav-group">
-                    <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
-                    <div class="nav-divider"></div>
-                    <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
-                    <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
-                    <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
-                </div>
-                <div class="nav-divider-bold"></div>
-                <div class="nav-group">
-                    <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
-                    <a href="onsite.html" class="nav-link active" id="nav-onsite">On-Site</a>
-                    <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
-                    <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
-                    <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
-                    <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
-                    <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
-                    <div class="nav-divider"></div>
-                    <a href="logout.html" class="nav-link" id="nav-logout" style="color: #ef4444;">Sign Out</a>
-                </div>
+        <div id="panel-scan">
+            <div class="search-container">
+                <input type="text" id="search-input" class="search-input" placeholder="Cari Nama / Kode..." oninput="renderGuestList()">
             </div>
-        </nav>
-        <div class="nav-tabs-container">
-            <div class="nav-tabs">
-                <button class="tab-btn active" id="tab-scan" onclick="switchMode('scan')">QR Scan</button>
-                <button class="tab-btn" id="tab-onsite" onclick="switchMode('onsite')">On-Site Reg</button>
-            </div>
+            <div id="guest-list-container"></div>
         </div>
-    </div>
 
-    <div class="main-content">
-        <div class="main-container">
-            <div id="media-container">
-                <div id="reader"></div>
-                <video id="onsite-video" autoplay playsinline muted></video>
-                <canvas id="capture-preview-onsite" style="display:none;"></canvas>
-            </div>
-
-            <div id="panel-scan" class="card-panel">
-                <div class="search-box"><input type="text" id="search-input" class="form-control" placeholder="Cari Nama / Kode / Pihak Pengundang..." oninput="renderGuestList()"></div>
-                <div id="guest-list-container"></div>
-            </div>
-
-            <div id="panel-onsite" class="card-panel" style="display: none; overflow-y: auto; text-align: left; padding: 30px 25px;">
-                <h3 style="font-family: 'Lora', serif; font-size: 20px; font-weight: 700; color: var(--text-main); margin-bottom: 25px;">Registrasi Tamu Baru</h3>
-
+        <div id="panel-onsite" style="display:none;">
+            <div style="background:white; border-radius:35px; padding:35px; border:1px solid var(--border);">
+                <h3 style="font-size:22px; margin-bottom:25px; font-weight:800; color:var(--text);">Registrasi Tamu Baru</h3>
+                
                 <div class="onsite-input-group">
                     <label>Nama Lengkap</label>
                     <input type="text" id="reg-nama" placeholder="Masukkan nama tamu...">
@@ -311,68 +233,46 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div class="onsite-input-group">
-                        <label>WhatsApp Number</label>
+                        <label>WhatsApp</label>
                         <input type="tel" id="reg-wa" placeholder="08...">
                     </div>
                     <div class="onsite-input-group">
-                        <label>Category</label>
-                        <select id="reg-kategori">
-                            <option value="Umum">Umum</option>
-                            <option value="VIP">VIP</option>
-                            <option value="VVIP">VVIP</option>
-                            <option value="Keluarga">Keluarga</option>
-                        </select>
+                        <label>Kategori</label>
+                        <select id="reg-kategori"><option>Umum</option><option>VIP</option><option>VVIP</option><option>Keluarga</option></select>
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div class="onsite-input-group">
-                        <label>Inviter Side</label>
-                        <select id="reg-host">
-                            <option value="PENGANTIN PRIA">Pengantin Pria</option>
-                            <option value="PENGANTIN WANITA">Pengantin Wanita</option>
-                            <option value="KELUARGA AYAH CPP">Keluarga Ayah CPP</option>
-                            <option value="KELUARGA IBU CPP">Keluarga Ibu CPP</option>
-                            <option value="KELUARGA AYAH CPW">Keluarga Ayah CPW</option>
-                            <option value="KELUARGA IBU CPW">Keluarga Ibu CPW</option>
-                        </select>
+                        <label>Pihak Pengundang</label>
+                        <select id="reg-host"></select>
                     </div>
                     <div class="onsite-input-group">
                         <label>Souvenir</label>
-                        <select id="reg-souvenir">
-                            <option value="1">Ya</option>
-                            <option value="0">Tidak</option>
-                        </select>
+                        <select id="reg-souvenir"><option value="1">Ya</option><option value="0">Tidak</option></select>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div class="onsite-input-group">
-                        <label>Sesi Undangan</label>
-                        <select id="reg-sesi">
-                            <option value="">Memuat sesi...</option>
-                        </select>
+                <div class="onsite-input-group">
+                    <label>Sesi Undangan</label>
+                    <select id="reg-sesi"><option value="">Memuat sesi...</option></select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="pax-row">
+                        <span class="pax-label">DEWASA</span>
+                        <div class="counter-wrapper">
+                            <button type="button" class="btn-step" onclick="updatePax('reg', 'adult', -1)">-</button>
+                            <div id="reg-pax-adult" style="font-weight:800; min-width:20px; text-align:center;">1</div>
+                            <button type="button" class="btn-step" onclick="updatePax('reg', 'adult', 1)">+</button>
+                        </div>
                     </div>
-                    <div class="onsite-input-group" style="border:none;">
-                        <label>Jumlah Pax</label>
-                        <div style="display:flex; flex-direction:column; gap:5px;">
-                            <div class="pax-row" style="margin:0; padding:5px 10px; height: 35px;">
-                                <span style="font-size:8px; font-weight:800; color:#666;">DEWASA</span>
-                                <div class="counter-wrapper" style="height:28px; width:80px;">
-                                    <button type="button" class="btn-step" onclick="updatePax('reg', 'adult', -1)">-</button>
-                                    <div id="reg-pax-adult" class="counter-value" style="font-size:11px;">1</div>
-                                    <button type="button" class="btn-step" onclick="updatePax('reg', 'adult', 1)">+</button>
-                                </div>
-                            </div>
-                            <div class="pax-row" style="margin:0; padding:5px 10px; height: 35px;">
-                                <span style="font-size:8px; font-weight:800; color:#666;">ANAK</span>
-                                <div class="counter-wrapper" style="height:28px; width:80px;">
-                                    <button type="button" class="btn-step" onclick="updatePax('reg', 'child', -1)">-</button>
-                                    <div id="reg-pax-child" class="counter-value" style="font-size:11px;">0</div>
-                                    <button type="button" class="btn-step" onclick="updatePax('reg', 'child', 1)">+</button>
-                                </div>
-                            </div>
-                            <div class="pax-total-label" style="font-size:8px;">TOTAL: <span id="reg-pax-total">1</span> PAX</div>
+                    <div class="pax-row">
+                        <span class="pax-label">ANAK</span>
+                        <div class="counter-wrapper">
+                            <button type="button" class="btn-step" onclick="updatePax('reg', 'child', -1)">-</button>
+                            <div id="reg-pax-child" style="font-weight:800; min-width:20px; text-align:center;">0</div>
+                            <button type="button" class="btn-step" onclick="updatePax('reg', 'child', 1)">+</button>
                         </div>
                     </div>
                 </div>
@@ -382,213 +282,209 @@
                     <input type="text" id="reg-alamat" placeholder="Kota atau Instansi...">
                 </div>
 
-                <div class="tag-row" style="margin-bottom: 15px;">
-                    <div class="tag-item" id="tag-angpao" onclick="this.classList.toggle('active')" style="flex:1">ANGPAO</div>
-                    <div class="tag-item" id="tag-kado" onclick="this.classList.toggle('active')" style="flex:1">KADO</div>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <button onclick="takeOnsiteSnapshot()" id="btn-snap-onsite" style="width:100%; padding:18px; border-radius:18px; border:2px solid var(--primary); background:white; color:var(--primary); font-weight:800;">AMBIL SELFIE</button>
+                    <button onclick="submitOnsite()" style="width:100%; padding:20px; border-radius:20px; background:var(--primary); color:white; font-weight:800; border:none; box-shadow: 0 10px 25px rgba(224, 123, 123, 0.3);">DAFTARKAN TAMU</button>
                 </div>
 
-                <button type="button" onclick="takeOnsiteSnapshot()" id="btn-onsite-snap" style="background: none; border: 1px solid var(--gold); color: var(--gold); padding: 12px; border-radius: 15px; font-size: 10px; font-weight: 800; cursor: pointer; width: 100%; margin-bottom: 15px; letter-spacing: 1px;">AMBIL SELFIE</button>
-                
-                <button id="btn-final-onsite" class="btn-dark-onsite" onclick="submitOnsite()" disabled>DAFTARKAN TAMU</button>
+                <video id="onsite-video" autoplay playsinline muted style="display:none; width:100%; border-radius:25px; margin-top:20px; transform: scaleX(-1);"></video>
+                <canvas id="capture-preview-onsite" style="display:none; width:100%; border-radius:25px; margin-top:20px;"></canvas>
             </div>
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="dashboard.html" class="nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span>DASHBOARD</span>
+        </a>
+        <div class="scan-btn-container">
+            <div class="scan-trigger" onclick="openScanner()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            </div>
+        </div>
+        <a href="#" class="nav-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span>CHECK-IN</span>
+        </a>
+    </nav>
+</div>
+
+<!-- CHECKIN CONFIRM MODAL -->
+<div id="confirm-modal" class="modal">
+    <div class="modal-content">
+        <h2 id="m-nama" style="font-size:24px; font-weight:800; text-align:center; margin-bottom:5px;">NAMA TAMU</h2>
+        <p id="m-info" style="text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:20px;">Kategori | Alamat</p>
+        
+        <div style="width:100%; aspect-ratio:1/1; background:black; border-radius:25px; overflow:hidden; border:4px solid var(--border); margin-bottom:20px; position:relative;">
+            <video id="confirm-video" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
+            <canvas id="preview-canvas" style="display:none; width:100%; height:100%; object-fit:cover;"></canvas>
+        </div>
+
+        <div style="display:flex; justify-content:center; margin-bottom:25px;">
+            <button onclick="takeSnapshot()" id="btn-snap" style="padding:12px 30px; border-radius:15px; border:2px solid var(--primary); background:white; color:var(--primary); font-weight:800;">AMBIL SELFIE</button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:25px;">
+            <div class="pax-row">
+                <span class="pax-label">DEWASA</span>
+                <div class="counter-wrapper">
+                    <button type="button" class="btn-step" onclick="updatePax('m', 'adult', -1)">-</button>
+                    <div id="m-pax-adult" style="font-weight:800;">1</div>
+                    <button type="button" class="btn-step" onclick="updatePax('m', 'adult', 1)">+</button>
+                </div>
+            </div>
+            <div class="pax-row">
+                <span class="pax-label">ANAK</span>
+                <div class="counter-wrapper">
+                    <button type="button" class="btn-step" onclick="updatePax('m', 'child', -1)">-</button>
+                    <div id="m-pax-child" style="font-weight:800;">0</div>
+                    <button type="button" class="btn-step" onclick="updatePax('m', 'child', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-bottom:25px;">
+            <button id="m-tag-angpao" onclick="toggleTag(this)" style="flex:1; padding:15px; border-radius:15px; border:1px solid var(--border); font-weight:800; color:var(--text-muted);">ANGPAO</button>
+            <button id="m-tag-kado" onclick="toggleTag(this)" style="flex:1; padding:15px; border-radius:15px; border:1px solid var(--border); font-weight:800; color:var(--text-muted);">KADO</button>
+        </div>
+
+        <div style="display:flex; gap:15px;">
+            <button onclick="closeConfirm()" style="flex:1; padding:18px; border-radius:18px; background:#eee; color:#666; font-weight:800; border:none;">BATAL</button>
+            <button id="btn-final-confirm" onclick="executeCheckIn()" style="flex:2; padding:18px; border-radius:18px; background:var(--primary); color:white; font-weight:800; border:none; box-shadow:0 10px 20px rgba(224,123,123,0.3);">KONFIRMASI HADIR</button>
         </div>
     </div>
 </div>
 
-<div id="btn-fullscreen" onclick="toggleFullScreen()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></div>
-
-<div id="modal-confirm" class="modal-overlay">
-    <div class="modal-card">
-        <h4 id="m-nama" style="margin:0; font-size:16px; text-transform:uppercase;">-</h4>
-        <p id="m-info" style="font-size:10px; color:#999; margin:5px 0 10px;">-</p>
-        <div class="modal-video-box">
-            <video id="confirm-video" autoplay playsinline muted></video>
-            <canvas id="preview-canvas" style="display:none;"></canvas>
-        </div>
-        <button onclick="takeSnapshot()" id="btn-snap" style="background:none; border:1px solid var(--gold); color:var(--gold); padding:5px 15px; border-radius:20px; font-size:10px; font-weight:800; margin-bottom:10px;">AMBIL SELFIE</button>
-        <div class="form-row">
-            <div class="form-group" style="flex:1">
-                <label class="form-label">Kehadiran Pax</label>
-                <div class="pax-row">
-                    <span class="pax-label">Dewasa</span>
-                    <div class="counter-wrapper">
-                        <button type="button" class="btn-step" onclick="updatePax('m', 'adult', -1)">-</button>
-                        <div id="m-pax-adult" class="counter-value">1</div>
-                        <button type="button" class="btn-step" onclick="updatePax('m', 'adult', 1)">+</button>
-                    </div>
-                </div>
-                <div class="pax-row">
-                    <span class="pax-label">Anak</span>
-                    <div class="counter-wrapper">
-                        <button type="button" class="btn-step" onclick="updatePax('m', 'child', -1)">-</button>
-                        <div id="m-pax-child" class="counter-value">0</div>
-                        <button type="button" class="btn-step" onclick="updatePax('m', 'child', 1)">+</button>
-                    </div>
-                </div>
-                <div class="pax-total-label">TOTAL: <span id="m-pax-total">1</span> PAX</div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Pemberian</label>
-                <div class="tag-row" style="margin:0">
-                    <div class="tag-item" id="m-tag-angpao" onclick="this.classList.toggle('active')">ANGPAO</div>
-                    <div class="tag-item" id="m-tag-kado" onclick="this.classList.toggle('active')">KADO</div>
-                </div>
-            </div>
-        </div>
-        <div class="btn-group">
-            <button class="btn-cancel" onclick="closeConfirm()">BATAL</button>
-            <button class="btn-confirm" id="btn-final-confirm" onclick="executeCheckIn()" style="opacity:0.5;" disabled>KONFIRMASI</button>
-        </div>
+<div id="scanner-overlay">
+    <div class="scanner-header">
+        <button class="close-scanner" onclick="closeScanner()">BATAL</button>
+        <div style="color:white; font-weight:800; font-size:14px; margin-top:10px;">SCAN QR TAMU</div>
+        <div style="width:60px;"></div>
     </div>
+    <div id="reader"></div>
 </div>
 
-<script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNb_E4Vq202Gj1XdKUwiIkTbMKVm1TRn0JcmsxilBkDeAjDUcr44VvayDI-lNmV9Xn/exec";
- 
-    const WA_ENGINE_URL = SCRIPT_URL;
-    const SELFIE_URL = SCRIPT_URL;
+<script>
+    let masterData = [];
+    let html5QrCode = null;
+    let currentMode = 'scan';
+    let selectedGuest = null;
+    let capturedPhoto = null;
+    let capturedOnsitePhoto = null;
+    let onsiteStream = null;
+    let confirmStream = null;
 
-    function syncNavbar() {
-        const links = document.querySelectorAll('.nav-link');
-        links.forEach(link => {
-            const baseHref = link.getAttribute('href').split('?')[0];
-            link.href = baseHref;
-        });
+    async function initApp() {
+        await fetchMasterData();
+        // Scanner does NOT start automatically now
     }
-
-    // --- CUSTOM NOTIFICATION SYSTEM ---
-    window.showSapaModal = function(title, msg, icon = "✨") {
-        document.getElementById('notify-title').innerText = title;
-        document.getElementById('notify-msg').innerText = msg;
-        document.getElementById('notify-icon').innerText = icon;
-        document.getElementById('sapa-notify-modal').style.display = 'flex';
-    };
-
-    window.closeSapaModal = function() {
-        document.getElementById('sapa-notify-modal').style.display = 'none';
-    };
-    
-    // --- SESSION HANDLER ---
-    const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
-    let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
-
-    let masterData = [], html5QrCode = null, onsiteStream = null, confirmStream = null;
-    let currentMode = 'scan', selectedGuest = null, capturedPhoto = null, capturedOnsitePhoto = null;
-
-    async function initApp() { 
-        if (window.SAPATAMU_RESOLVED) {
-            CURRENT_SS_ID = window.CURRENT_SS_ID || CURRENT_SS_ID;
-            if (!CURRENT_SS_ID) {
-                window.location.href = "login.html";
-                return;
-            }
-            syncNavbar();
-
-            // Sync Dynamic Dropdown
-            try {
-                const ddRes = await fetch(SCRIPT_URL + "?action=getDropdownOptions&ssId=" + CURRENT_SS_ID);
-                const ddData = await ddRes.json();
-                if (ddData.status === "success" && ddData.options.length > 0) {
-                    const select = document.getElementById('onsite-host');
-                    if (select) {
-                        select.innerHTML = "";
-                        ddData.options.forEach(opt => {
-                            const el = document.createElement('option');
-                            el.value = opt.toUpperCase();
-                            el.innerText = opt;
-                            select.appendChild(el);
-                        });
-                    }
-                }
-            } catch (e) { console.error("Gagal load dropdown:", e); }
-
-            startScanner(); 
-            fetchMasterData(); 
-        } else {
-            setTimeout(initApp, 100);
-        }
-    }
-
-
-    window.updatePax = function(id, step) {
-        const el = document.getElementById(id);
-        let val = parseInt(el.innerText) + step;
-        if (val < 1) val = 1; if (val > 20) val = 20;
-        el.innerText = val;
-    };
-
-    window.toggleFullScreen = function() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().then(() => {
-                document.getElementById('btn-fullscreen').classList.add('fade-out');
-            });
-        }
-    };
 
     async function fetchMasterData() {
         try {
-            const res = await fetch(SCRIPT_URL, { 
-                method: 'POST', 
-                body: JSON.stringify({ action: "get_master_data", ssId: CURRENT_SS_ID }) 
-            });
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "get_master_data", ssId: CURRENT_SS_ID }) });
             const data = await res.json();
             masterData = data.guestList || [];
             
-            // Populate Session Options for Onsite
+            const hostSelect = document.getElementById('reg-host');
+            if (hostSelect && data.dropdownOptions) {
+                hostSelect.innerHTML = data.dropdownOptions.map(o => `<option value="${o}">${o}</option>`).join('');
+            }
+            
             const sesiSelect = document.getElementById('reg-sesi');
             if (sesiSelect && data.eventMeta && data.eventMeta.sesiOptions) {
-                sesiSelect.innerHTML = '<option value="">Pilih Sesi</option>' + 
-                    data.eventMeta.sesiOptions.map(s => `<option value="${s}">${s}</option>`).join('');
+                sesiSelect.innerHTML = '<option value="">Pilih Sesi</option>' + data.eventMeta.sesiOptions.map(s => `<option value="${s}">${s}</option>`).join('');
             }
-
             renderGuestList();
-        } catch (e) { console.error("Error fetching master data:", e); }
+        } catch (e) { console.error(e); }
     }
 
     window.renderGuestList = function() {
         const container = document.getElementById('guest-list-container');
         const term = document.getElementById('search-input').value.toLowerCase();
-        const filtered = masterData.filter(g => 
-            (g.nama||"").toLowerCase().includes(term) || 
-            (g.kode||"").toLowerCase().includes(term) ||
-            (g.pihakPengundang||"").toLowerCase().includes(term)
-        );
+        const filtered = masterData.filter(g => (g.nama||"").toLowerCase().includes(term) || (g.kode||"").toLowerCase().includes(term));
 
         container.innerHTML = filtered.map(g => {
-            const isHadir = String(g.statusHadir) === "1" || (g.jamDatang && g.jamDatang !== "-");
+            const isHadir = String(g.statusHadir) === "1";
             return `
-                <div class="guest-item" style="border-top: 4px solid ${isHadir?'var(--success)':'var(--border)'}; opacity:${isHadir?0.7:1}" onclick="${isHadir?"":`openConfirm('${g.kode}','${g.nama}','${g.alamat}','${g.kategori}')`}">
+                <div class="guest-item" style="border-left: 6px solid ${isHadir?'var(--success)':'var(--border)'};" onclick="${isHadir?"":`openConfirm('${g.kode}','${g.nama}','${g.alamat}','${g.kategori}')`}">
                     <div class="guest-header">
-                        <div style="flex:1">
-                            <div class="guest-badge" style="margin-bottom:4px; display:inline-block">${g.kategori || 'REGULER'}</div>
-                            <h4>${g.nama}</h4>
-                        </div>
+                        <div class="guest-badge">${g.kategori || 'UMUM'}</div>
                         <div class="guest-wa">${g.whatsapp || '-'}</div>
                     </div>
-                    
+                    <h4>${g.nama}</h4>
                     <div class="guest-details">
                         <div class="detail-item">🏠 <span>${g.alamat || '-'}</span></div>
-                        <div class="detail-item">💌 Inv by: <span>${g.pihakPengundang || '-'}</span></div>
-                        <div class="detail-item">⏰ Sesi: <span>${g.sesi || g.rencanaJamHadir || g.jamHadir || '-'}</span></div>
+                        <div class="detail-item">💌 <span>${g.pihakPengundang || '-'}</span></div>
                     </div>
-
                     <div class="guest-footer">
-                        <div class="pax-badge">PAX PLAN: ${(g.rencanaHadir !== "" && g.rencanaHadir !== undefined) ? g.rencanaHadir : '1'}</div>
-                        <div class="guest-status-label" style="color:${isHadir?'var(--success)':'var(--text-muted)'}">
-                            ${isHadir ? '✓ HADIR ('+g.realHadir+')' : '● BELUM SCAN'}
-                        </div>
+                        <div class="pax-badge">PLAN: ${g.rencanaHadir || '1'}</div>
+                        <div class="guest-status-label" style="color:${isHadir?'var(--success)':'var(--text-muted)'}">${isHadir ? '✓ HADIR' : '● BELUM SCAN'}</div>
                     </div>
-                    <div style="font-size:7px; color:#ccc; margin-top:5px; text-align:right">ID: ${g.kode}</div>
                 </div>`;
         }).join('');
     };
 
-    async function startScanner() {
+    window.openScanner = function() {
+        document.getElementById('scanner-overlay').style.display = 'flex';
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 220 }, (txt) => {
+        html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (txt) => {
             const t = masterData.find(g => String(g.kode) === String(txt));
-            if (t && String(t.statusHadir)!=="1") openConfirm(t.kode, t.nama, t.alamat, t.kategori);
-        }).catch(()=>{});
-    }
+            if (t && String(t.statusHadir)!=="1") {
+                closeScanner();
+                openConfirm(t.kode, t.nama, t.alamat, t.kategori);
+            }
+        }).catch(err => console.error(err));
+    };
+
+    window.closeScanner = async function() {
+        if (html5QrCode) {
+            try { await html5QrCode.stop(); } catch(e) {}
+        }
+        document.getElementById('scanner-overlay').style.display = 'none';
+    };
+
+    window.switchMode = async function(m) {
+        currentMode = m;
+        document.getElementById('tab-scan').classList.toggle('active', m==='scan');
+        document.getElementById('tab-onsite').classList.toggle('active', m==='onsite');
+        document.getElementById('panel-scan').style.display = m==='scan'?'block':'none';
+        document.getElementById('panel-onsite').style.display = m==='onsite'?'block':'none';
+        
+        if (m === 'onsite') {
+            document.getElementById('onsite-video').style.display = 'block';
+            onsiteStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            document.getElementById('onsite-video').srcObject = onsiteStream;
+        } else {
+            if (onsiteStream) onsiteStream.getTracks().forEach(t => t.stop());
+            document.getElementById('onsite-video').style.display = 'none';
+        }
+    };
+
+    window.openConfirm = async function(kode, nama, alamat, kategori) {
+        selectedGuest = { kode, nama, alamat, kategori };
+        document.getElementById('m-nama').innerText = nama;
+        document.getElementById('m-info').innerText = `${kategori} | ${alamat}`;
+        document.getElementById('confirm-modal').style.display = 'flex';
+        resetSnapshot();
+        confirmStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        document.getElementById('confirm-video').srcObject = confirmStream;
+    };
+
+    window.closeConfirm = function() {
+        if (confirmStream) confirmStream.getTracks().forEach(t => t.stop());
+        document.getElementById('confirm-modal').style.display = 'none';
+    };
+
+    window.updatePax = function(pfx, type, val) {
+        const el = document.getElementById(`${pfx}-pax-${type}`);
+        let cur = parseInt(el.innerText);
+        cur = Math.max(0, cur + val);
+        if (type === 'adult' && cur < 1 && pfx === 'm') cur = 1;
+        el.innerText = cur;
+    };
+
+    window.toggleTag = function(btn) { btn.classList.toggle('active'); btn.style.background = btn.classList.contains('active') ? 'var(--gold)' : 'white'; btn.style.color = btn.classList.contains('active') ? 'white' : 'var(--text-muted)'; };
 
     window.takeSnapshot = function() {
         const v = document.getElementById('confirm-video'), c = document.getElementById('preview-canvas'), ctx = c.getContext('2d');
@@ -599,206 +495,59 @@
         capturedPhoto = c.toDataURL('image/jpeg', 0.8);
         v.style.display = 'none'; c.style.display = 'block';
         document.getElementById('btn-snap').innerText = "ULANGI";
-        document.getElementById('btn-final-confirm').disabled = false; document.getElementById('btn-final-confirm').style.opacity = 1;
     };
 
-    function resetSnapshot() {
-        document.getElementById('confirm-video').style.display = 'block';
-        document.getElementById('preview-canvas').style.display = 'none';
-        capturedPhoto = null; document.getElementById('btn-snap').innerText = "AMBIL SELFIE";
-        document.getElementById('btn-final-confirm').disabled = true; document.getElementById('btn-final-confirm').style.opacity = 0.5;
-        document.getElementById('m-pax-adult').innerText = "1";
-        document.getElementById('m-pax-child').innerText = "0";
-        document.getElementById('m-pax-total').innerText = "1";
-    }
-
-    window.takeOnsiteSnapshot = function() {
-        const v = document.getElementById('onsite-video'), c = document.getElementById('capture-preview-onsite'), ctx = c.getContext('2d');
-        if (v.style.display === 'none') { resetOnsiteSnapshot(); return; }
-        const size = Math.min(v.videoWidth, v.videoHeight);
-        c.width = 600; c.height = 600;
-        const sx = (v.videoWidth - size) / 2;
-        const sy = (v.videoHeight - size) / 2;
-        ctx.translate(c.width, 0); ctx.scale(-1, 1);
-        ctx.drawImage(v, sx, sy, size, size, 0, 0, c.width, c.height);
-        capturedOnsitePhoto = c.toDataURL('image/jpeg', 0.8);
-        v.style.display = 'none'; c.style.display = 'block';
-        document.getElementById('btn-onsite-snap').innerText = "ULANGI";
-        document.getElementById('btn-final-onsite').disabled = false; document.getElementById('btn-final-onsite').style.opacity = 1;
-    };
-
-    function resetOnsiteSnapshot() {
-        document.getElementById('onsite-video').style.display = 'block';
-        document.getElementById('capture-preview-onsite').style.display = 'none';
-        capturedOnsitePhoto = null; document.getElementById('btn-onsite-snap').innerText = "AMBIL SELFIE";
-        document.getElementById('btn-final-onsite').disabled = true; document.getElementById('btn-final-onsite').style.opacity = 0.5;
-        document.getElementById('reg-pax-adult').innerText = "1";
-        document.getElementById('reg-pax-child').innerText = "0";
-        document.getElementById('reg-pax-total').innerText = "1";
-    }
-
-    window.updatePax = function(prefix, type, delta) {
-        const el = document.getElementById(prefix + '-pax-' + type);
-        let val = parseInt(el.innerText) + delta;
-        if (type === 'adult' && val < 1) val = 1;
-        if (type === 'child' && val < 0) val = 0;
-        el.innerText = val;
-        
-        const adult = parseInt(document.getElementById(prefix + '-pax-adult').innerText);
-        const child = parseInt(document.getElementById(prefix + '-pax-child').innerText);
-        document.getElementById(prefix + '-pax-total').innerText = adult + child;
-    };
-
-    window.openConfirm = async function(kode, nama, alamat, kategori) {
-        selectedGuest = masterData.find(g => g.kode === kode);
-        document.getElementById('m-nama').innerText = nama;
-        document.getElementById('m-info').innerText = `${kategori} | ${alamat}`;
-        
-        // Reset counters
-        const initialAdult = parseInt(selectedGuest.rencanaHadir) || 1;
-        document.getElementById('m-pax-adult').innerText = initialAdult;
-        document.getElementById('m-pax-child').innerText = "0";
-        document.getElementById('m-pax-total').innerText = initialAdult;
-
-        document.getElementById('modal-confirm').style.display = 'flex';
-        if (html5QrCode) await html5QrCode.stop();
-        confirmStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-        document.getElementById('confirm-video').srcObject = confirmStream;
-    };
-
-    window.closeConfirm = function() {
-        if (confirmStream) confirmStream.getTracks().forEach(t => t.stop());
-        resetSnapshot(); document.getElementById('modal-confirm').style.display = 'none';
-        if (currentMode === 'scan') startScanner();
-    };
+    function resetSnapshot() { document.getElementById('confirm-video').style.display = 'block'; document.getElementById('preview-canvas').style.display = 'none'; capturedPhoto = null; document.getElementById('btn-snap').innerText = "AMBIL SELFIE"; }
 
     window.executeCheckIn = async function() {
         document.getElementById('loading').style.display = 'flex';
         const adult = document.getElementById('m-pax-adult').innerText;
         const child = document.getElementById('m-pax-child').innerText;
-        const total = document.getElementById('m-pax-total').innerText;
-        const paxString = `${total} ( ${adult}D + ${child}A )`;
-
+        const paxString = `${parseInt(adult)+parseInt(child)} ( ${adult}D + ${child}A )`;
         const note = (document.getElementById('m-tag-angpao').classList.contains('active')?"ANGPAO ":"") + (document.getElementById('m-tag-kado').classList.contains('active')?"KADO":"");
         
         try {
-            const res = await fetch(SCRIPT_URL, { 
-                method:'POST', 
-                body: JSON.stringify({ 
-                    action: "confirm_checkin", 
-                    ssId: CURRENT_SS_ID,
-                    kodeUnik: selectedGuest.kode, 
-                    realHadir: paxString, 
-                    catatan: note||"-" 
-                }) 
-            });
-            
+            const res = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action: "confirm_checkin", ssId: CURRENT_SS_ID, kodeUnik: selectedGuest.kode, realHadir: paxString, catatan: note||"-" }) });
             const json = await res.json();
-            
             if (json.status === "success") {
-                fetch(WA_ENGINE_URL, {
-                    method: 'POST', mode: 'no-cors',
-                    body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: selectedGuest.kode })
-                });
-
-                if (capturedPhoto) {
-                    fetch(SELFIE_URL, { 
-                        method: 'POST', mode: 'no-cors', 
-                        body: JSON.stringify({ action: "uploadSelfie", image: capturedPhoto, nama: selectedGuest.nama, kode: selectedGuest.kode, ssId: CURRENT_SS_ID }) 
-                    });
-                }
-
+                if (capturedPhoto) fetch(SELFIE_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "uploadSelfie", image: capturedPhoto, nama: selectedGuest.nama, kode: selectedGuest.kode, ssId: CURRENT_SS_ID }) });
                 confetti({ particleCount: 150, spread: 70 });
-                const idx = masterData.findIndex(g => g.kode === selectedGuest.kode);
-                if(idx !== -1) {
-                    masterData[idx].statusHadir = "1";
-                    masterData[idx].realHadir = paxString;
-                    masterData[idx].jamDatang = "Tadi";
-                }
-                closeConfirm(); 
-                renderGuestList();
+                closeConfirm();
                 fetchMasterData();
             }
-        } catch (e) {
-            console.error("Error checkin:", e);
-        } finally { 
-            document.getElementById('loading').style.display = 'none'; 
-        }
+        } catch (e) { console.error(e); } finally { document.getElementById('loading').style.display = 'none'; }
     };
 
-    window.switchMode = async function(m) {
-        currentMode = m;
-        document.getElementById('tab-scan').classList.toggle('active', m==='scan');
-        document.getElementById('tab-onsite').classList.toggle('active', m==='onsite');
-        document.getElementById('panel-scan').style.display = m==='scan'?'flex':'none';
-        document.getElementById('panel-onsite').style.display = m==='onsite'?'block':'none';
-        if (m === 'onsite') {
-            if (html5QrCode) await html5QrCode.stop();
-            document.getElementById('reader').style.display = 'none';
-            document.getElementById('onsite-video').style.display = 'block';
-            onsiteStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            document.getElementById('onsite-video').srcObject = onsiteStream;
-        } else {
-            if (onsiteStream) onsiteStream.getTracks().forEach(t => t.stop());
-            document.getElementById('reader').style.display = 'block';
-            document.getElementById('onsite-video').style.display = 'none';
-            startScanner();
-        }
+    window.takeOnsiteSnapshot = function() {
+        const v = document.getElementById('onsite-video'), c = document.getElementById('capture-preview-onsite'), ctx = c.getContext('2d');
+        if (v.style.display === 'none') { resetOnsiteSnapshot(); return; }
+        c.width = v.videoWidth; c.height = v.videoHeight;
+        ctx.translate(c.width, 0); ctx.scale(-1, 1);
+        ctx.drawImage(v, 0, 0, c.width, c.height);
+        capturedOnsitePhoto = c.toDataURL('image/jpeg', 0.8);
+        v.style.display = 'none'; c.style.display = 'block';
+        document.getElementById('btn-snap-onsite').innerText = "ULANGI SELFIE";
     };
+
+    function resetOnsiteSnapshot() { document.getElementById('onsite-video').style.display = 'block'; document.getElementById('capture-preview-onsite').style.display = 'none'; capturedOnsitePhoto = null; document.getElementById('btn-snap-onsite').innerText = "AMBIL SELFIE"; }
 
     window.submitOnsite = async function() {
         document.getElementById('loading').style.display = 'flex';
         const adult = document.getElementById('reg-pax-adult').innerText;
         const child = document.getElementById('reg-pax-child').innerText;
-        const total = document.getElementById('reg-pax-total').innerText;
-        const paxString = `${total} ( ${adult}D + ${child}A )`;
-
-        const giftNote = (document.getElementById('tag-angpao').classList.contains('active')?"ANGPAO ":"") + (document.getElementById('tag-kado').classList.contains('active')?"KADO":"");
-
-        const payload = { 
-            action: "register_new_onsite", 
-            ssId: CURRENT_SS_ID,
-            namaTamu: document.getElementById('reg-nama').value, 
-            alamat: document.getElementById('reg-alamat').value, 
-            whatsapp: document.getElementById('reg-wa').value, 
-            kategori: document.getElementById('reg-kategori').value, 
-            host: document.getElementById('reg-host').value, 
-            sesi: document.getElementById('reg-sesi').value,
-            souvenir: document.getElementById('reg-souvenir').value,
-            catatan: giftNote,
-            realHadir: paxString 
-        };
+        const paxString = `${parseInt(adult)+parseInt(child)} ( ${adult}D + ${child}A )`;
+        const payload = { action: "register_new_onsite", ssId: CURRENT_SS_ID, namaTamu: document.getElementById('reg-nama').value, alamat: document.getElementById('reg-alamat').value, whatsapp: document.getElementById('reg-wa').value, kategori: document.getElementById('reg-kategori').value, host: document.getElementById('reg-host').value, sesi: document.getElementById('reg-sesi').value, souvenir: document.getElementById('reg-souvenir').value, realHadir: paxString };
 
         try {
             const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
             const json = await res.json();
-
             if (json.status === "success") {
-                fetch(WA_ENGINE_URL, {
-                    method: 'POST', mode: 'no-cors',
-                    body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: json.kode })
-                });
-
-                if (capturedOnsitePhoto) {
-                    fetch(SELFIE_URL, { 
-                        method: 'POST', mode: 'no-cors', 
-                        body: JSON.stringify({ action: "uploadSelfie", image: capturedOnsitePhoto, nama: payload.namaTamu, kode: json.kode, ssId: CURRENT_SS_ID }) 
-                    });
-                }
-
+                if (capturedOnsitePhoto) fetch(SELFIE_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "uploadSelfie", image: capturedOnsitePhoto, nama: payload.namaTamu, kode: json.kode, ssId: CURRENT_SS_ID }) });
                 confetti({ particleCount: 100, spread: 50 });
-                resetOnsiteSnapshot(); 
-                document.getElementById('reg-nama').value = ""; 
-                document.getElementById('reg-alamat').value = ""; 
-                document.getElementById('reg-wa').value = "";
                 switchMode('scan');
-                fetchMasterData(); 
+                fetchMasterData();
             }
-        } catch (e) {
-            console.error("Error onsite registration:", e);
-        } finally { 
-            document.getElementById('loading').style.display = 'none'; 
-        }
+        } catch (e) { console.error(e); } finally { document.getElementById('loading').style.display = 'none'; }
     };
 </script>
 </body>
