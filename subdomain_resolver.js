@@ -10,10 +10,45 @@ async function resolveSapatamuSubdomain() {
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
     
-    // ABAIKAN DI DOMAIN UTAMA
-    if (hostname === "sapatamu.id" || hostname === "www.sapatamu.id") {
+    // AGGRESSIVE CLEANUP & TRANSFER: Ambil data dari URL jika ada
+    const _urlParams = new URLSearchParams(window.location.search);
+    const _urlSsid = _urlParams.get('ssId');
+    const _urlUser = _urlParams.get('user');
+
+    if (_urlSsid && _urlUser) {
+        // Simpan ke storage subdomain ini
+        localStorage.setItem('sapatamu_db', JSON.stringify({ ssId: _urlSsid, username: _urlUser }));
+        window.CURRENT_SS_ID = _urlSsid;
+        // Bersihkan URL agar rapi
+        const _newUrl = new URL(window.location.href);
+        _newUrl.searchParams.delete('ssId');
+        _newUrl.searchParams.delete('user');
+        window.history.replaceState({}, '', _newUrl);
+    }
+
+    const _hostname = window.location.hostname;
+    if ((_hostname === "sapatamu.id" || _hostname === "www.sapatamu.id")) {
         window.SAPATAMU_RESOLVED = true;
         return null;
+    }
+
+    // Jika sudah dapat dari URL, tidak perlu fetch
+    if (window.CURRENT_SS_ID) {
+        window.SAPATAMU_RESOLVED = true;
+        return window.CURRENT_SS_ID;
+    }
+
+    // Jika tidak ada di URL, cek di storage lokal subdomain ini
+    const _localData = localStorage.getItem('sapatamu_db');
+    if (_localData) {
+        try {
+            const _parsed = JSON.parse(_localData);
+            if (_parsed.ssId) {
+                window.CURRENT_SS_ID = _parsed.ssId;
+                window.SAPATAMU_RESOLVED = true;
+                return window.CURRENT_SS_ID;
+            }
+        } catch(e) {}
     }
 
     // Deteksi Subdomain (misal: clara.sapatamu.id)
