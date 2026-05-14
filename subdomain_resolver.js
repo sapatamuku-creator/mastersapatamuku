@@ -58,12 +58,8 @@ async function resolveSapatamuSubdomain() {
         }
     }
 
-    // Inject ssId ke URL agar script lain tidak error (tanpa reload)
-    if (window.CURRENT_SS_ID && !new URLSearchParams(window.location.search).has('ssId')) {
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('ssId', window.CURRENT_SS_ID);
-        window.history.replaceState({}, '', newUrl);
-    }
+    // ssId tidak lagi di-inject ke URL untuk keamanan (leakage prevention)
+    // Cukup simpan di memori window.CURRENT_SS_ID
 
     window.SAPATAMU_RESOLVED = true;
     return window.CURRENT_SS_ID;
