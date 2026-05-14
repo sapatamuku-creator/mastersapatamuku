@@ -483,13 +483,17 @@
         document.getElementById('scanner-overlay').style.display = 'block';
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
         
-        const qrBoxSize = Math.min(window.innerWidth, window.innerHeight) * 0.7;
+        // Gunakan integer sederhana untuk qrbox agar kompatibel di semua browser
+        const qrBoxSize = 250;
         
         html5QrCode.start(
             { facingMode: "environment" }, 
-            { fps: 25, qrbox: { width: qrBoxSize, height: qrBoxSize }, aspectRatio: 1.0 }, 
+            { fps: 25, qrbox: qrBoxSize, aspectRatio: 1.0 }, 
             (txt) => {
-                console.log("QR Scanned Raw:", txt);
+                console.log("QR Scanned:", txt);
+                // Alert sementara untuk debug (Hapus setelah berhasil)
+                // alert("QR Terbaca: " + txt); 
+                
                 let scCode = txt.trim();
                 
                 // Handle jika yang di-scan adalah URL (Personal Link)
@@ -503,8 +507,10 @@
                     if (String(t.statusHadir) === "1") {
                         alert("TAMU SUDAH HADIR:\n" + t.nama + " (" + t.kategori + ")");
                     } else {
-                        closeScanner();
-                        openConfirm(t.kode, t.nama, t.alamat, t.kategori);
+                        // Tunggu scanner mati baru buka modal agar tidak rebutan kamera
+                        closeScanner().then(() => {
+                            openConfirm(t.kode, t.nama, t.alamat, t.kategori);
+                        });
                     }
                 } else {
                     alert("KODE TIDAK DIKENAL:\n" + scCode + "\n\nPastikan QR Code sesuai dengan data di spreadsheet.");
