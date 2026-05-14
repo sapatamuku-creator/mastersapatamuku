@@ -4,7 +4,7 @@
 
 window.SAPATAMU_RESOLVED = false;
 window.CURRENT_SS_ID = null;
-window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9ukdBO50YGGgVDbJEoUfzG7InAilggWPoETda8JE2f-tBD0XODJUdiDI8ZYlo3ikV/exec";
+window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXut2gNkm4JDJQP28brh9AblTu_QhugoMr6va3iRzvKjLgZbGZb4xRnNQILE8fW5Y-/exec";
 
 async function resolveSapatamuSubdomain() {
     console.log("Resolving subdomain...");

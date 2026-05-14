@@ -553,25 +553,14 @@ function getWelcomeData(ssId) {
       const rdLast = rundownSheet.getLastRow();
       if (rdLast >= 2) {
         const rdData = rundownSheet.getRange(2, 1, rdLast - 1, 3).getValues();
-        rundown = rdData.map(r => {
-          let sTime = "00:00";
-          try {
-            // Indikator ada di kolom C (r[2])
-            const timeRaw = r[2];
-            const d = (timeRaw instanceof Date) ? timeRaw : new Date(timeRaw);
-            if (!isNaN(d.getTime())) {
-              sTime = Utilities.formatDate(d, "GMT+7", "HH:mm");
-            } else if (typeof timeRaw === 'string' && timeRaw.includes(':')) {
-              sTime = timeRaw.substring(0, 5); 
-            }
-          } catch(e) { console.warn("Rundown time parse error:", e); }
-
-          return {
-            syncTime: sTime,
-            displayTime: String(r[0] || ""), // Kolom A: Waktu
-            eventName: String(r[1] || "")    // Kolom B: Nama Acara
-          };
-        });
+        const rundownRaw = rundownSheet.getRange(2, 1, Math.max(1, rdLast - 1), 3).getValues();
+        rundown = rundownRaw
+          .filter(r => r[0] || r[1]) // Hanya baris yang ada isi Waktu atau Nama Acara
+          .map(row => ({
+            displayTime: String(row[0] || ""),
+            eventName: String(row[1] || ""),
+            syncTime: formatTime(row[2])
+          }));
       }
     }
 
@@ -607,4 +596,17 @@ function getWelcomeData(ssId) {
     console.error("getWelcomeData Error:", err);
     return { status: "error", error: err.toString(), message: err.toString() };
   }
+}
+
+function formatTime(timeVal) {
+  if (!timeVal) return "00:00";
+  if (timeVal instanceof Date) {
+    return Utilities.formatDate(timeVal, "GMT+7", "HH:mm");
+  }
+  const str = String(timeVal);
+  if (str.includes(":")) {
+    const parts = str.split(":");
+    return parts[0].toString().padStart(2, '0') + ":" + parts[1].toString().padStart(2, '0').substring(0, 2);
+  }
+  return str;
 }

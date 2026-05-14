@@ -6,7 +6,7 @@
     <title>SapaTamu.ku - Welcome Sign V7.2 (Multi-Client Support)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
-    <script src="subdomain_resolver.js?v=2.6"></script>
+    <script src="subdomain_resolver.js?v=3.0"></script>
     <style>
         :root { 
             --gold: #D4AF37; 
@@ -157,7 +157,7 @@
     }
 
     let ssId = null;
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9ukdBO50YGGgVDbJEoUfzG7InAilggWPoETda8JE2f-tBD0XODJUdiDI8ZYlo3ikV/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXut2gNkm4JDJQP28brh9AblTu_QhugoMr6va3iRzvKjLgZbGZb4xRnNQILE8fW5Y-/exec";
 
     
     function updateInternalLinks() {
@@ -210,9 +210,18 @@
         }
 
         try {
-            const response = await fetch(`${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData`);
+            const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${new Date().getTime()}`;
+            console.log("Fetching WS Data:", fetchUrl);
+            
+            const response = await fetch(fetchUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
             const data = await response.json();
-            if (data.error) throw new Error(data.error);
+            console.log("WS Data Received:", data);
+            
+            if (data.status === "error" || data.error) {
+                throw new Error(data.message || data.error);
+            }
 
             document.getElementById('couple-name').innerText = data.weddingName;
             document.getElementById('wedding-date').innerText = data.weddingDate; 
@@ -251,6 +260,8 @@
             syncTimer = setTimeout(syncData, data.displayDuration || 12000);
         } catch (e) { 
             console.error("Sync Error:", e);
+            document.getElementById('couple-name').innerText = "ERROR KONEKSI";
+            document.getElementById('marquee-log').innerText = "Koneksi Bermasalah: " + e.message;
             clearTimeout(syncTimer);
             syncTimer = setTimeout(syncData, 5000);
         }
