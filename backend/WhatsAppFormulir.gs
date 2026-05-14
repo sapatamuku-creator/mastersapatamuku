@@ -19,6 +19,7 @@ function handleWAFormGet(e) {
   const weddingTitle = sheet1.getRange("B1").getValue();
   const hariTanggal = sheet1.getRange("B2").getValue();
   const lokasiAcara = sheet1.getRange("B3").getValue();
+  const waktuAcara = sheet1.getRange("B4").getValue() || "-";
   
   let rawLink = sheet1.getRange("B5").getValue();
   const linkInvitation = rawLink.includes("?") ? `${rawLink}&v=3` : `${rawLink}?v=3`;
@@ -50,7 +51,7 @@ function handleWAFormGet(e) {
   }
 
   const result = { 
-    masterToken, weddingTitle, hariTanggal, lokasiAcara, linkInvitation, 
+    masterToken, weddingTitle, hariTanggal, lokasiAcara, waktuAcara, linkInvitation, 
     liveUsage: liveDeviceCount, categories: categoryMap, tamu: listTamu 
   };
   
