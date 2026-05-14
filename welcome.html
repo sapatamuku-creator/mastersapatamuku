@@ -6,7 +6,7 @@
     <title>SapaTamu.ku - Welcome Sign V7.2 (Multi-Client Support)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
-    <script src="subdomain_resolver.js?v=3.0"></script>
+    <script src="subdomain_resolver.js?v=3.1"></script>
     <style>
         :root { 
             --gold: #D4AF37; 
@@ -247,7 +247,13 @@
             (data.rundown || []).forEach((item, i, arr) => {
                 const startVal = convertToTimeValue(item.syncTime);
                 const nextItem = arr[i + 1];
-                let active = nextItem ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime)) : (nowVal >= startVal);
+                let active = false;
+                if (nextItem) {
+                    const nextVal = convertToTimeValue(nextItem.syncTime);
+                    active = (nowVal >= startVal && nowVal < nextVal);
+                } else {
+                    active = (nowVal >= startVal);
+                }
                 rundownHtml += `
                     <div class="rundown-item ${active ? 'active-event' : ''}">
                         <div class="event-time">${item.displayTime}</div>
