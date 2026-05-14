@@ -230,7 +230,7 @@ function handleLogout(data) {
         
         // JIKA ADA PARAMETER REDIRECT, KITA LEMPAR KE URL TERSEBUT
         if (data.redirect) {
-          return HtmlService.createHtmlOutput("<script>window.location.replace('" + data.redirect + "');</script>");
+          return HtmlService.createHtmlOutput("<script>window.top.location.replace('" + data.redirect + "');</script>");
         }
         
         return createResponse({ status: "success", message: "Logout berhasil" });
@@ -238,7 +238,7 @@ function handleLogout(data) {
     }
     
     if (data.redirect) {
-      return HtmlService.createHtmlOutput("<script>window.location.replace('" + data.redirect + "');</script>");
+      return HtmlService.createHtmlOutput("<script>window.top.location.replace('" + data.redirect + "');</script>");
     }
     return createResponse({ status: "error", message: "User tidak ditemukan: " + targetUser });
   } catch (err) {
