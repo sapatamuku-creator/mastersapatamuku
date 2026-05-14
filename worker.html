@@ -138,7 +138,7 @@
           document.getElementById('connectBtn').disabled = true;
           document.getElementById('connectBtn').style.opacity = "0.5";
         } else {
-          log(`Worker Active | Session: ${CURRENT_SS_ID.substring(0, 8)}...`);
+          log(`Worker Active | ID: ${CURRENT_SS_ID}`);
         }
       } else {
         setTimeout(initApp, 100);
@@ -210,7 +210,9 @@
       if (!CURRENT_SS_ID) return;
       try {
         TAB_ID = document.getElementById('tabIdInput').value;
-        const response = await fetch(`${SCRIPT_URL}?action=getPrintQueue&ssId=${CURRENT_SS_ID}&station=${TAB_ID}`);
+        const targetUrl = `${SCRIPT_URL}?action=getPrintQueue&ssId=${CURRENT_SS_ID}&station=${TAB_ID}`;
+        const response = await fetch(targetUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const items = await response.json();
         
         const count = Array.isArray(items) ? items.length : 0;
@@ -219,13 +221,10 @@
         if (count > 0 && !isProcessing) {
           log(`Polling ${TAB_ID}: Menemukan ${count} antrean...`);
           await processItems(items);
-        } else if (count === 0) {
-          // Optional: log every 10 polls or just show a silent tick?
-          // For now, let's just log every successful empty poll to confirm connection
-          console.log(`Polling ${TAB_ID}: 0 antrean.`);
         }
       } catch (e) { 
         log(`Fetch Error: ${e.message}`, true);
+        console.error("Fetch Details:", e);
       }
     }
 
