@@ -31,7 +31,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [STEP 3] Memperbarui Deployment di Google agar menggunakan kode terbaru...
-call clasp deploy -i AKfycbwPvWH3yZRNO4qijJ6BnNwjtU8GFd2Cu2FkxJvTLmemTUsaRlK8n6DP8jjHSGQ6UrDG -d "SapaTamu Master Unified Update %date% %time%"
+call clasp deploy -i AKfycbzMvrFsdk8LOuPGMmIyDd0YOO0Ay1q21qY6Qxho6_0uaR_AUPlg6STfVCKfgbI4kHYP -d "SapaTamu Master Unified Update %date% %time%"
 cd ..
 
 echo OK: Kode backend terupdate.
@@ -40,7 +40,7 @@ echo.
 echo.
 echo ==================================================
 echo    SUKSES! Ekosistem SapaTamu.Ku Telah Terupdate.
-echo    URL: https://script.google.com/macros/s/AKfycbwPvWH3yZRNO4qijJ6BnNwjtU8GFd2Cu2FkxJvTLmemTUsaRlK8n6DP8jjHSGQ6UrDG/exec
+echo    URL: https://script.google.com/macros/s/AKfycbzMvrFsdk8LOuPGMmIyDd0YOO0Ay1q21qY6Qxho6_0uaR_AUPlg6STfVCKfgbI4kHYP/exec
 echo ==================================================
 echo.
 pause
