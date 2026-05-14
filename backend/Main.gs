@@ -4,7 +4,7 @@
  */
 
 const SHEET_DATA = "Sheet1"; 
-const SHEET_PRINT = "printqueue"; 
+const SHEET_PRINT = "PrintQueue"; 
 const START_ROW = 8; 
 
 // Indeks Kolom (1-based untuk Spreadsheet App)
