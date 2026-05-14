@@ -91,6 +91,7 @@ function handleMainGet(e) {
   // Routing Action Get
   if (action === "getMasterData") return createResponse({ status: "success", data: getMasterDataV3(ssId) });
   if (action === "getMasterDataAngpao") return createResponse({ status: "success", guestList: getMasterDataV3(ssId) });
+  if (action === "getSettings") return createResponse(getSettings(ssId));
   
   // WELCOME SIGN HANDSHAKE
   if (action === "getWelcome") return createResponse(getWelcomeData(ssId));
@@ -259,15 +260,22 @@ function getMasterDataV3(ssId) {
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_DATA);
   
-  // Metadata dari Sheet1 (B1 & B2)
-  const meta = sheet.getRange("B1:B2").getValues();
+  // Metadata dari Sheet1 (B1-B5)
+  const meta = sheet.getRange("B1:B5").getValues();
   const weddingName = meta[0][0] || "SapaTamu.Ku";
   const weddingDate = meta[1][0] || "-";
+  const weddingLoc = meta[2][0] || "-";
+  const weddingTime = meta[3][0] || "-";
+  const weddingLink = meta[4][0] || "";
 
   const sesiMeta = sheet.getRange("D1:G1").getValues()[0];
 
   const eventMeta = {
-    pengantin: weddingName, tanggal: weddingDate, 
+    pengantin: weddingName, 
+    tanggal: weddingDate, 
+    lokasi: weddingLoc,
+    waktu: weddingTime,
+    link: weddingLink,
     labelSesi: sesiMeta[0], 
     sesiOptions: [sesiMeta[1], sesiMeta[2], sesiMeta[3]]
   };
