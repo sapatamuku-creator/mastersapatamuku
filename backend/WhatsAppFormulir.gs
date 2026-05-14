@@ -72,7 +72,7 @@ function handleWAFormPost(data) {
       return createResponse({ status: "success" });
     }
 
-    // 2. REMOTE FONNTE (ADD DEVICE)
+    // 2. REMOTE FONNTE (DELETE EXISTING -> ADD NEW)
     if (action === "remoteFonnte") {
       const masterToken = settings.getRange("E2").getValue();
       const deviceValues = settings.getRange("A3:A8").getValues();
@@ -80,6 +80,17 @@ function handleWAFormPost(data) {
 
       if (rowIndex === -1) return createResponse({ status: "failed", msg: "Kategori tidak ditemukan" });
 
+      // A. CEK & HAPUS DEVICE LAMA DI FONNTE (Jika ada)
+      const resList = directFonnteSend("https://api.fonnte.com/get-devices", {}, masterToken);
+      if (resList.status && resList.data.data) {
+        const existingDevice = resList.data.data.find(d => d.name === data.kategori);
+        if (existingDevice) {
+           // Jika ketemu device dengan nama kategori yang sama, hapus dulu
+           directFonnteSend("https://api.fonnte.com/delete-device", { device: existingDevice.device }, masterToken);
+        }
+      }
+
+      // B. ADD DEVICE BARU
       const resAdd = directFonnteSend("https://api.fonnte.com/add-device", { name: data.kategori, device: data.targetNumber }, masterToken);
       
       if (resAdd.status) {
@@ -87,6 +98,7 @@ function handleWAFormPost(data) {
         const resStatus = directFonnteSend("https://api.fonnte.com/device", {}, newToken);
         const statusFinal = (resStatus.data && resStatus.data.status === "connect") ? "connect" : "disconnect";
 
+        // C. UPDATE SPREADSHEET (Kolom B: Nomor, Kolom C: Token, Kolom D: Status)
         settings.getRange(rowIndex + 3, 2).setValue(data.targetNumber);
         settings.getRange(rowIndex + 3, 3).setValue(newToken);
         settings.getRange(rowIndex + 3, 4).setValue(statusFinal);
