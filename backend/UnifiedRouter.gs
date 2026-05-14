@@ -27,7 +27,7 @@ function doGet(e) {
       if (e.parameter.row && e.parameter.ssId) {
         return handleMainGet(e);
       }
-      return createResponse({ status: "success", message: "SapaTamu.Ku API Ready" });
+      return createResponse({ status: "success", message: "SapaTamu.Ku API Ready - v10.2 [2026-05-14]" });
   }
 }
 
