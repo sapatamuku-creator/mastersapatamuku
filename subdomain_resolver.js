@@ -15,8 +15,9 @@ if ((_hostname === "sapatamu.id" || _hostname === "www.sapatamu.id") && window.C
     window.history.replaceState({}, '', _newUrl);
 }
 
+window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-BdV-ES7CheSMdnAfpZPAHrOYcGxcRBqVUmhRvKMTlF7_xWt-QCzy4UpdCeLoPnS9/exec";
+
 async function resolveSapatamuSubdomain() {
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-BdV-ES7CheSMdnAfpZPAHrOYcGxcRBqVUmhRvKMTlF7_xWt-QCzy4UpdCeLoPnS9/exec";
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
     

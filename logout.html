@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu.ku - Keluar Sesi</title>
-    <script src="subdomain_resolver.js?v=1.1"></script>
+    <script src="subdomain_resolver.js?v=1.2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -94,7 +94,11 @@
         const SESSION_KEY = 'sapatamu_session';
         const LOCAL_DB = 'sapatamu_db';
         const SIGNOUT_SIGNAL = 'sapatamu_signout_broadcast';
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-BdV-ES7CheSMdnAfpZPAHrOYcGxcRBqVUmhRvKMTlF7_xWt-QCzy4UpdCeLoPnS9/exec";
+        
+        console.log("Logout initialized. SCRIPT_URL:", window.SCRIPT_URL);
+        if (!window.SCRIPT_URL) {
+            window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-BdV-ES7CheSMdnAfpZPAHrOYcGxcRBqVUmhRvKMTlF7_xWt-QCzy4UpdCeLoPnS9/exec";
+        }
 
         async function executeLogout() {
             document.getElementById('sapa-confirm-modal').style.display = 'none';
@@ -119,7 +123,7 @@
             // HIT BACKEND LOGOUT VIA DIRECT NAVIGATION (100% RELIABLE)
             if (currentData.username) {
                 const redirectUrl = encodeURIComponent("https://sapatamu.id/login.html?signout=true");
-                const logoutUrl = `${SCRIPT_URL}?action=logout&username=${encodeURIComponent(currentData.username)}&redirect=${redirectUrl}`;
+                const logoutUrl = `${window.SCRIPT_URL}?action=logout&username=${encodeURIComponent(currentData.username)}&redirect=${redirectUrl}`;
                 
                 // Gunakan jeda sebentar agar sinyal broadcast lokal sempat terkirim
                 setTimeout(() => {
