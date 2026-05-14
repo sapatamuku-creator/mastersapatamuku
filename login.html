@@ -299,16 +299,25 @@
         const session = sessionStorage.getItem(SESSION_KEY);
         const localData = localStorage.getItem(LOCAL_DB);
         
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('signout') === 'true') {
+            sessionStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem(LOCAL_DB);
+            // Bersihkan URL agar tidak loop
+            window.history.replaceState({}, '', window.location.pathname);
+            return;
+        }
+
         let targetSsId = window.CURRENT_SS_ID;
 
         if (session) {
             const data = JSON.parse(session);
-            if (data.ssId) window.location.replace("dashboard.html?ssId=" + data.ssId);
+            if (data.ssId) window.location.replace("dashboard.html");
         } else if (localData) {
             const data = JSON.parse(localData);
             if (data.ssId) {
                 sessionStorage.setItem(SESSION_KEY, localData);
-                window.location.replace("dashboard.html?ssId=" + data.ssId);
+                window.location.replace("dashboard.html");
             }
         }
     }

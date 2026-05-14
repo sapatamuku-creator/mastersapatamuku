@@ -6,11 +6,25 @@
 window.SAPATAMU_RESOLVED = false;
 window.CURRENT_SS_ID = new URLSearchParams(window.location.search).get('ssId');
 
+// AGGRESSIVE CLEANUP: Jika di domain utama, hapus ssId dari URL segera
+const _hostname = window.location.hostname;
+if ((_hostname === "sapatamu.id" || _hostname === "www.sapatamu.id") && window.CURRENT_SS_ID) {
+    const _newUrl = new URL(window.location.href);
+    _newUrl.searchParams.delete('ssId');
+    window.history.replaceState({}, '', _newUrl);
+}
+
 async function resolveSapatamuSubdomain() {
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwPvWH3yZRNO4qijJ6BnNwjtU8GFd2Cu2FkxJvTLmemTUsaRlK8n6DP8jjHSGQ6UrDG/exec";
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
     
+    // ABAIKAN JIKA DI DOMAIN UTAMA (sapatamu.id atau www.sapatamu.id)
+    if (hostname === "sapatamu.id" || hostname === "www.sapatamu.id") {
+        window.SAPATAMU_RESOLVED = true;
+        return null;
+    }
+
     // Jika ada ssId di URL, gunakan itu langsung
     if (window.CURRENT_SS_ID) {
         window.SAPATAMU_RESOLVED = true;
