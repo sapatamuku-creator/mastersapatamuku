@@ -600,13 +600,28 @@ function getWelcomeData(ssId) {
 
 function formatTime(timeVal) {
   if (!timeVal) return "00:00";
+  
+  // Jika objek Date
   if (timeVal instanceof Date) {
     return Utilities.formatDate(timeVal, "GMT+7", "HH:mm");
   }
-  const str = String(timeVal);
-  if (str.includes(":")) {
-    const parts = str.split(":");
-    return parts[0].toString().padStart(2, '0') + ":" + parts[1].toString().padStart(2, '0').substring(0, 2);
-  }
-  return str;
+  
+  let str = String(timeVal).trim().toUpperCase();
+  
+  // Deteksi AM/PM manual jika string
+  let isPM = str.includes("PM");
+  let isAM = str.includes("AM");
+  
+  // Bersihkan karakter non-digit dan titik dua
+  let cleanTime = str.replace(/[^0-9:]/g, "");
+  if (!cleanTime.includes(":")) return cleanTime;
+  
+  let parts = cleanTime.split(":");
+  let hours = parseInt(parts[0], 10);
+  let mins = parts[1] ? parts[1].substring(0, 2) : "00";
+  
+  if (isPM && hours < 12) hours += 12;
+  if (isAM && hours === 12) hours = 0;
+  
+  return hours.toString().padStart(2, '0') + ":" + mins.padStart(2, '0');
 }
