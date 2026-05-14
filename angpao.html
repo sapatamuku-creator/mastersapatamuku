@@ -7,6 +7,7 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="subdomain_resolver.js"></script>
     
     <style>
         :root { 
@@ -120,12 +121,13 @@
             content: '';
             position: sticky;
             top: 0;
-            min-width: 30px;
+            min-width: 40px;
             height: 32px;
             z-index: 10;
             pointer-events: none;
             display: flex;
             align-items: center;
+            justify-content: center;
             font-size: 16px;
             font-weight: bold;
             color: var(--text-muted);
@@ -133,22 +135,19 @@
         }
         .sapatamu-nav-container::before {
             left: 0;
-            background: linear-gradient(to right, #FFFDFB 60%, transparent);
+            background: linear-gradient(to right, #FFFDFB 70%, transparent);
             content: '‹';
-            margin-right: -30px;
-            padding-left: 10px;
+            margin-right: -40px;
         }
         .sapatamu-nav-container::after {
             right: 0;
-            background: linear-gradient(to left, #FFFDFB 60%, transparent);
+            background: linear-gradient(to left, #FFFDFB 70%, transparent);
             content: '›';
-            margin-left: -30px;
-            justify-content: flex-end;
-            padding-right: 10px;
+            margin-left: -40px;
         }
         .nav-group { display: flex; align-items: center; gap: 4px; }
-        .nav-group:first-child { padding-left: 15px; }
-        .nav-group:last-child { padding-right: 15px; }
+        .nav-group:first-child { padding-left: 20px; }
+        .nav-group:last-child { padding-right: 20px; }
         .nav-link {
             text-decoration: none;
             font-size: 10.5px;
@@ -274,7 +273,8 @@
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1dYBHYpSqFthb8vFLHT5qH4qneA6KfKNq09GaCM5JOh3xmihkFNicuO5Q8Jgbd26y/exec";
  
-    const CURRENT_SS_ID = new URLSearchParams(window.location.search).get('ssId') || JSON.parse(localStorage.getItem('sapatamu_db') || '{}').ssId;
+    const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+    let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
 
     function syncNavbar() {
         const links = document.querySelectorAll('.nav-link');
@@ -322,7 +322,23 @@
     function endDrag() { if (!isDragging) return; isDragging = false; handle.style.transition = 'transform 0.3s'; handle.style.transform = 'translateX(0px)'; }
     function unlockSuccess() { handle.style.backgroundColor = 'var(--success)'; setTimeout(() => { applyFoundUser(pendingUser, true); closeSecurity(); }, 300); }
 
-    window.onload = () => { fetchMasterData(); initScanner(); lucide.createIcons(); };
+    async function initApp() {
+        if (window.SAPATAMU_RESOLVED) {
+            CURRENT_SS_ID = window.CURRENT_SS_ID || CURRENT_SS_ID;
+            if (!CURRENT_SS_ID) {
+                window.location.href = "login.html";
+                return;
+            }
+            syncNavbar();
+            fetchMasterData();
+            initScanner();
+            lucide.createIcons();
+        } else {
+            setTimeout(initApp, 100);
+        }
+    }
+
+    window.onload = initApp;
 
     async function fetchMasterData() {
         const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));

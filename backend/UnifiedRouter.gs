@@ -45,6 +45,7 @@ function doPost(e) {
       case 'forgotPassword':
       case 'changePassword':
       case 'updateClientData':
+      case 'resolveSubdomain':
         return handleCentralPost(payload);
 
       // Media & Selfie (SelfieCheckin.gs)

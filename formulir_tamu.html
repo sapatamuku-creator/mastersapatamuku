@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SapaTamu.Ku - Digital Guestbook V7.6</title>
+    <title>Buku Tamu Digital - SapaTamu.Ku</title>
     
+    <script src="subdomain_resolver.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -272,12 +273,13 @@
             content: '';
             position: sticky;
             top: 0;
-            min-width: 30px;
+            min-width: 40px;
             height: 32px;
             z-index: 10;
             pointer-events: none;
             display: flex;
             align-items: center;
+            justify-content: center;
             font-size: 16px;
             font-weight: bold;
             color: var(--text-muted);
@@ -285,22 +287,19 @@
         }
         .sapatamu-nav-container::before {
             left: 0;
-            background: linear-gradient(to right, #FFFDFB 60%, transparent);
+            background: linear-gradient(to right, #FFFDFB 70%, transparent);
             content: '‹';
-            margin-right: -30px;
-            padding-left: 10px;
+            margin-right: -40px;
         }
         .sapatamu-nav-container::after {
             right: 0;
-            background: linear-gradient(to left, #FFFDFB 60%, transparent);
+            background: linear-gradient(to left, #FFFDFB 70%, transparent);
             content: '›';
-            margin-left: -30px;
-            justify-content: flex-end;
-            padding-right: 10px;
+            margin-left: -40px;
         }
         .nav-group { display: flex; align-items: center; gap: 4px; }
-        .nav-group:first-child { padding-left: 15px; }
-        .nav-group:last-child { padding-right: 15px; }
+        .nav-group:first-child { padding-left: 20px; }
+        .nav-group:last-child { padding-right: 20px; }
         .nav-link {
             text-decoration: none;
             font-size: 10.5px;
@@ -549,11 +548,8 @@
 
 
     const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
-    if (!session || !session.ssId) {
-        window.location.href = "https://sapatamu.weebly.com/";
-        return;
-    }
-    const CURRENT_SS_ID = session.ssId;
+    
+    let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
     let MASTER_LIST = [];
 
     // --- UTILITIES ---
@@ -840,7 +836,19 @@
     }
 
     // Initialize App
-    window.onload = refreshApp;
+    function startApp() {
+        if (window.SAPATAMU_RESOLVED) {
+            CURRENT_SS_ID = window.CURRENT_SS_ID || CURRENT_SS_ID;
+            if (!CURRENT_SS_ID) {
+                window.location.href = "login.html";
+                return;
+            }
+            refreshApp();
+        } else {
+            setTimeout(startApp, 100);
+        }
+    }
+    window.onload = startApp;
 
 })();
 </script>

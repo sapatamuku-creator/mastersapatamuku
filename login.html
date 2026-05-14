@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu.ku - Access Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="subdomain_resolver.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -288,9 +290,16 @@
     const SESSION_KEY = 'sapatamu_session';
     const LOCAL_DB = 'sapatamu_db';
 
-    document.addEventListener('DOMContentLoaded', function() {
+    async function initLogin() {
+        if (!window.SAPATAMU_RESOLVED) {
+            setTimeout(initLogin, 100);
+            return;
+        }
+
         const session = sessionStorage.getItem(SESSION_KEY);
         const localData = localStorage.getItem(LOCAL_DB);
+        
+        let targetSsId = window.CURRENT_SS_ID;
 
         if (session) {
             const data = JSON.parse(session);
@@ -302,7 +311,9 @@
                 window.location.replace("dashboard.html?ssId=" + data.ssId);
             }
         }
-    });
+    }
+
+    document.addEventListener('DOMContentLoaded', initLogin);
 
     window.toggleForm = function(id) {
         const forms = ['loginForm', 'registerForm', 'forgotForm', 'changePassForm'];

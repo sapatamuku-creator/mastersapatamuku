@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SapaTamu.Ku - Hub Management</title>
+    <title>Dashboard - SapaTamu.Ku</title>
+    <script src="subdomain_resolver.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -133,12 +134,13 @@
             content: '';
             position: sticky;
             top: 0;
-            min-width: 30px;
+            min-width: 40px;
             height: 32px;
             z-index: 10;
             pointer-events: none;
             display: flex;
             align-items: center;
+            justify-content: center;
             font-size: 16px;
             font-weight: bold;
             color: var(--text-muted);
@@ -146,23 +148,20 @@
         }
         .sapatamu-nav-container::before {
             left: 0;
-            background: linear-gradient(to right, #FFFDFB 60%, transparent);
+            background: linear-gradient(to right, #FFFDFB 70%, transparent);
             content: '‹';
-            margin-right: -30px;
-            padding-left: 10px;
+            margin-right: -40px;
         }
         .sapatamu-nav-container::after {
             right: 0;
-            background: linear-gradient(to left, #FFFDFB 60%, transparent);
+            background: linear-gradient(to left, #FFFDFB 70%, transparent);
             content: '›';
-            margin-left: -30px;
-            justify-content: flex-end;
-            padding-right: 10px;
+            margin-left: -40px;
         }
 
         .nav-group { display: flex; align-items: center; gap: 4px; }
-        .nav-group:first-child { padding-left: 15px; }
-        .nav-group:last-child { padding-right: 15px; }
+        .nav-group:first-child { padding-left: 20px; }
+        .nav-group:last-child { padding-right: 20px; }
         .nav-link {
             text-decoration: none;
             font-size: 10.5px;
@@ -436,36 +435,39 @@
     </style>
 
 <script>
-    const CURRENT_SS_ID = localStorage.getItem('sapatamu_db') ? JSON.parse(localStorage.getItem('sapatamu_db')).ssId : null;
-
     function syncNavbar() {
+        if (!window.CURRENT_SS_ID) return;
         const links = document.querySelectorAll('.nav-link');
         links.forEach(link => {
             const baseHref = link.getAttribute('href').split('?')[0];
-            link.href = `${baseHref}?ssId=${CURRENT_SS_ID}`;
+            link.href = `${baseHref}?ssId=${window.CURRENT_SS_ID}`;
         });
     }
 
     function initHub() {
         syncNavbar();
     }
-    
-    initHub();
 
-    const sessionData = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
-    const session = sessionData ? JSON.parse(sessionData) : null;
-    const SSID = session ? session.ssId : '';
+    // Tunggu resolver selesai baru init
+    function checkResolved() {
+        if (window.SAPATAMU_RESOLVED) {
+            initHub();
+        } else {
+            setTimeout(checkResolved, 100);
+        }
+    }
+    checkResolved();
 
     window.showSapaModal = function() {
         document.getElementById('sapa-notify-modal').style.display = 'flex';
     };
 
     function nav(target) {
-        if (!SSID && target !== 'undangan.html') {
+        if (!window.CURRENT_SS_ID && target !== 'undangan.html') {
             showSapaModal();
             return;
         }
-        window.location.href = target + "?ssId=" + SSID;
+        window.location.href = target + "?ssId=" + (window.CURRENT_SS_ID || '');
     }
 </script>
 

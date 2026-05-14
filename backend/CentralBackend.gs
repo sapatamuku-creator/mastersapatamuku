@@ -22,6 +22,7 @@ function handleCentralPost(request) {
     case 'forgotPassword': return handleForgotPassword(request); 
     case 'changePassword': return handleChangePassword(request);
     case 'updateClientData': return handleUpdateClientData(request);  
+    case 'resolveSubdomain': return handleResolveSubdomain(request);
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
 }
@@ -42,7 +43,7 @@ function handleRegister(data) {
     const finalName = (data.weddingDate || "NoDate") + " - " + cleanUser;
     file.setName(finalName);
 
-    // Append Row ke Master (Kolom G untuk Email)
+    // Append Row ke Master (Kolom G untuk Email, Kolom H untuk Status)
     sheet.appendRow([
       data.username,     // A
       data.ssId,         // B
@@ -50,7 +51,8 @@ function handleRegister(data) {
       data.whatsapp,     // D
       data.weddingDate,  // E
       new Date(),        // F
-      data.email         // G (Kolom Baru)
+      data.email,        // G
+      "Active"           // H (Status Otomatis)
     ]);
 
     return createResponse({ status: "success", message: "Pendaftaran berhasil" });
@@ -225,3 +227,40 @@ function handleUpdateClientData(data) {
 }
 
 // createResponse removed (using UnifiedRouter version)
+
+// --- FUNGSI RESOLVE SUBDOMAIN ---
+function handleResolveSubdomain(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const values = sheet.getDataRange().getValues();
+    const sub = data.subdomain.toLowerCase().trim();
+    
+    for (let i = 1; i < values.length; i++) {
+      const username = String(values[i][0]).toLowerCase().trim();
+      const status = String(values[i][7] || "").toLowerCase().trim(); // Kolom H (Index 7)
+
+      if (username === sub) {
+        if (status !== "active") {
+          return createResponse({ 
+            status: "error", 
+            message: "Akun ini sedang tidak aktif atau sudah kadaluarsa. Silakan hubungi admin." 
+          });
+        }
+
+        return createResponse({ 
+          status: "success", 
+          ssId: values[i][1],
+          clientName: values[i][0]
+        });
+      }
+    }
+    return createResponse({ status: "error", message: "Subdomain tidak terdaftar" });
+  } catch (e) {
+    return createResponse({ status: "error", message: e.toString() });
+  }
+}
+
+function createResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}

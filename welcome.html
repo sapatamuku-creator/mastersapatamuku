@@ -6,6 +6,7 @@
     <title>SapaTamu.ku - Welcome Sign V7.2 (Multi-Client Support)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <script src="subdomain_resolver.js"></script>
     <style>
         :root { 
             --gold: #D4AF37; 
@@ -145,22 +146,18 @@
 
 <script>
     function getSSID() {
-        const urlParams = new URLSearchParams(window.location.search);
-        let id = urlParams.get('ssId');
+        const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+        let id = window.CURRENT_SS_ID || (session ? session.ssId : null);
+        
         if (id) {
-            sessionStorage.setItem('active_ssId', id);
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?ssId=' + id;
+            window.history.replaceState({path:newUrl}, '', newUrl);
             return id;
         }
-        const savedId = sessionStorage.getItem('active_ssId') || (localStorage.getItem('sapatamu_db') ? JSON.parse(localStorage.getItem('sapatamu_db')).ssId : null);
-        if (savedId) {
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?ssId=' + savedId;
-            window.history.replaceState({path:newUrl}, '', newUrl);
-            return savedId;
-        }
-        return "1l4NNvzl-9GpVqoVWlIha9POQLKGzSA8ByF1dTLp6SYc";
+        return null;
     }
 
-    const ssId = getSSID();
+    let ssId = null;
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1dYBHYpSqFthb8vFLHT5qH4qneA6KfKNq09GaCM5JOh3xmihkFNicuO5Q8Jgbd26y/exec";
 
     
@@ -211,6 +208,17 @@
     }
 
     async function syncData() {
+        if (!window.SAPATAMU_RESOLVED) {
+            setTimeout(syncData, 100);
+            return;
+        }
+        
+        ssId = getSSID();
+        if (!ssId) {
+            console.error("SSID NOT FOUND");
+            return;
+        }
+
         try {
             const response = await fetch(`${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData`);
             const data = await response.json();

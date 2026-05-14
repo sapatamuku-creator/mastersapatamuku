@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="subdomain_resolver.js"></script>
 
     <style>
         :root { 
@@ -124,12 +125,13 @@
             content: '';
             position: sticky;
             top: 0;
-            min-width: 30px;
+            min-width: 40px;
             height: 32px;
             z-index: 10;
             pointer-events: none;
             display: flex;
             align-items: center;
+            justify-content: center;
             font-size: 16px;
             font-weight: bold;
             color: var(--text-muted);
@@ -137,22 +139,19 @@
         }
         .sapatamu-nav-container::before {
             left: 0;
-            background: linear-gradient(to right, #FFFDFB 60%, transparent);
+            background: linear-gradient(to right, #FFFDFB 70%, transparent);
             content: '‹';
-            margin-right: -30px;
-            padding-left: 10px;
+            margin-right: -40px;
         }
         .sapatamu-nav-container::after {
             right: 0;
-            background: linear-gradient(to left, #FFFDFB 60%, transparent);
+            background: linear-gradient(to left, #FFFDFB 70%, transparent);
             content: '›';
-            margin-left: -30px;
-            justify-content: flex-end;
-            padding-right: 10px;
+            margin-left: -40px;
         }
         .nav-group { display: flex; align-items: center; gap: 4px; }
-        .nav-group:first-child { padding-left: 15px; }
-        .nav-group:last-child { padding-right: 15px; }
+        .nav-group:first-child { padding-left: 20px; }
+        .nav-group:last-child { padding-right: 20px; }
         .nav-link {
             text-decoration: none;
             font-size: 10.5px;
@@ -301,8 +300,13 @@
     }
 
     async function initLucky() {
-        syncNavbar();
-        await refreshData(true);
+        if (window.SAPATAMU_RESOLVED) {
+            syncNavbar();
+            await refreshData(true);
+            initScanner();
+        } else {
+            setTimeout(initLucky, 100);
+        }
     }
 
     // --- CUSTOM NOTIFICATION SYSTEM ---
@@ -324,7 +328,12 @@
 
     const getActiveSession = () => {
         const session = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
-        return session ? JSON.parse(session) : null;
+        const parsed = session ? JSON.parse(session) : null;
+        if (window.CURRENT_SS_ID) {
+            if (!parsed) return { ssId: window.CURRENT_SS_ID };
+            parsed.ssId = window.CURRENT_SS_ID;
+        }
+        return parsed;
     };
 
     window.logout = function() {
@@ -531,8 +540,7 @@
     }
 
     window.onload = () => {
-        refreshData(true);
-        setTimeout(initScanner, 1500);
+        initLucky();
         
         setInterval(() => {
             document.querySelectorAll('.weebly-footer, #weebly-footer-signup-container, [class*="weebly-"]').forEach(b => b.remove());
