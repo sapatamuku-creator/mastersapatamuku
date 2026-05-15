@@ -22,10 +22,9 @@ function handleWAFormGet(e) {
   const waktuAcara = sheet1.getRange("B4").getValue() || "-";
   
   let rawLink = sheet1.getRange("B5").getValue().toString().trim();
-  if (rawLink && !rawLink.startsWith("http")) {
-    rawLink = "https://" + rawLink;
-  }
-  const linkInvitation = rawLink.includes("?") ? `${rawLink}&v=3` : `${rawLink}?v=3`;
+  // Hapus semua protokol yang mungkin sudah ada agar kita bisa pasang yang bersih
+  rawLink = rawLink.replace(/^https?:\/\//i, ""); 
+  const linkInvitation = "https://" + (rawLink.includes("?") ? `${rawLink}&v=3` : `${rawLink}?v=3`);
 
   const deviceData = settings.getRange("A3:D8").getValues();
   const categoryMap = deviceData
