@@ -23,7 +23,11 @@ function handleWAFormGet(e) {
   
   let rawLink = sheet1.getRange("B5").getValue().toString().trim();
   rawLink = rawLink.replace(/^https?:\/\//i, ""); 
-  const linkInvitation = "https://" + (rawLink.includes("?") ? `${rawLink}&v=3` : `${rawLink}?v=3`);
+  let linkInvitation = "https://" + rawLink;
+  // Hanya tambahkan v=3 jika bukan format link cantik (/u)
+  if (!rawLink.includes("/u")) {
+    linkInvitation = linkInvitation.includes("?") ? `${linkInvitation}&v=3` : `${linkInvitation}?v=3`;
+  }
 
   const deviceData = settings.getRange("A3:D8").getValues();
   const categoryMap = deviceData

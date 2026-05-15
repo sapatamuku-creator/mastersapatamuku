@@ -4,7 +4,7 @@
 
 window.SAPATAMU_RESOLVED = false;
 window.CURRENT_SS_ID = null;
-window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfJD7Vr_1ALz7LGb_rQ_HE4iH1AuOUZRiwzshRgFppWzBdvtfOpXB7fM9gaEslYwJN/exec";
+window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsnkt4IMHhZpgeUAfkc681ErgNmYJrEMUWOSLGpLfi75evZYWscFNDS4q9T5ZX9PS0/exec";
 
 async function resolveSapatamuSubdomain() {
     console.log("Resolving subdomain...");
@@ -12,22 +12,30 @@ async function resolveSapatamuSubdomain() {
     const parts = hostname.split('.');
     const isMainDomain = (hostname === "sapatamu.id" || hostname === "www.sapatamu.id");
     
-    // 1. TRANSFER DATA DARI URL (Bekal Login)
+    // 1. TRANSFER DATA DARI URL
     const _urlParams = new URLSearchParams(window.location.search);
     const _urlSsid = _urlParams.get('ssId');
     const _urlUser = _urlParams.get('user');
 
-    if (_urlSsid && _urlUser) {
-        const _urlCat = _urlParams.get('category') || "wedding";
-        console.log("Bekal login ditemukan di URL, membongkar...");
-        localStorage.setItem('sapatamu_db', JSON.stringify({ ssId: _urlSsid, username: _urlUser, category: _urlCat }));
+    if (_urlSsid) {
+        console.log("ID Spreadsheet ditemukan di URL:", _urlSsid);
         window.CURRENT_SS_ID = _urlSsid;
-        window.CURRENT_CATEGORY = _urlCat;
+        
+        // Simpan ke storage jika ada data user/kategori
+        if (_urlUser) {
+            const _urlCat = _urlParams.get('category') || "wedding";
+            localStorage.setItem('sapatamu_db', JSON.stringify({ ssId: _urlSsid, username: _urlUser, category: _urlCat }));
+            window.CURRENT_CATEGORY = _urlCat;
+        }
+        
+        // Bersihkan URL tanpa reload (Opsional: simpan ssId jika ini halaman publik)
         const _newUrl = new URL(window.location.href);
-        _newUrl.searchParams.delete('ssId');
-        _newUrl.searchParams.delete('user');
-        _newUrl.searchParams.delete('category');
-        window.history.replaceState({}, '', _newUrl);
+        if (_urlUser) {
+            _newUrl.searchParams.delete('ssId');
+            _newUrl.searchParams.delete('user');
+            _newUrl.searchParams.delete('category');
+            window.history.replaceState({}, '', _newUrl);
+        }
     }
 
     // 2. PROSES SUBDOMAIN

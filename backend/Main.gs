@@ -643,9 +643,9 @@ function getWelcomeData(ssId) {
       }
     }
 
-    // Ambil Background Photos dari Config (B1)
+    // Ambil Background Photos dari CONFIG (B1)
     let urlFoto = "";
-    const configSheet = ss.getSheetByName("Config");
+    const configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
     if (configSheet) {
         urlFoto = configSheet.getRange("B1").getValue() || "";
     }
@@ -753,7 +753,7 @@ function saveSettings(ssId, s) {
   try {
     const ss = getSS(ssId);
     const sheet = ss.getSheetByName(SHEET_DATA);
-    let configSheet = ss.getSheetByName("Config");
+    let configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
     const settingsSheet = ss.getSheetByName("Settings");
 
     // 1. Konfigurasi Acara (Sheet1)
@@ -764,7 +764,7 @@ function saveSettings(ssId, s) {
 
     // 2. Integrasi & Display (Config)
     if (!configSheet) {
-      configSheet = ss.insertSheet("Config");
+      configSheet = ss.insertSheet("CONFIG");
       configSheet.getRange("A1:A2").setValues([["URL_FOTO"], ["PRESET_STYLE"]]);
     }
     configSheet.getRange("B1").setValue(s.urlFoto);
