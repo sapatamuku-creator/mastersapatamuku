@@ -99,7 +99,20 @@
         .pax-label { font-size: 10px; font-weight: 800; color: #666; text-transform: uppercase; }
 
         .fab-fullscreen { position: fixed; bottom: 25px; right: 25px; width: 45px; height: 45px; background: rgba(26,26,26,0.9); color: white; border-radius: 50%; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; z-index: 1000; cursor: pointer; }
-        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); z-index: 30000; display: none; align-items: center; justify-content: center; font-weight: 700; color: var(--gold); }
+        .loading-overlay { 
+            position: fixed; inset: 0; 
+            background: rgba(255,255,255,0.7); 
+            backdrop-filter: blur(10px); 
+            z-index: 200000; 
+            display: none; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 800; 
+            color: var(--primary); 
+            gap: 15px;
+        }
+        .loading-overlay span { font-size: 14px; letter-spacing: 2px; color: var(--text-main); }
 
         /* ADVANCED NAVBAR STYLES (CLONE FROM ONSITE) */
         .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
@@ -183,7 +196,10 @@
         </div>
     </nav>
     
-    <div id="loading" class="loading-overlay">MEMPROSES...</div>
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <span>[ DATA DIPROSES ]</span>
+    </div>
 
     <div id="loading-global">
         <div class="spinner"></div>
@@ -718,6 +734,16 @@
             await closeModal();
             renderUI(); // Render ulang dari data lokal (Instan)
             
+            // --- STEP 4: SUCCESS GREETING MODAL ---
+            const guestData = list.length > 0 ? masterData.find(r => r.kode === list[0]) : null;
+            if (guestData) {
+                await showAlert(
+                    "CHECK-IN BERHASIL", 
+                    `Selamat Datang,\n\n${guestData.nama.toUpperCase()}\n(${guestData.kategori || 'REGULER'})\n\nSilakan Masuk`, 
+                    "✨"
+                );
+            }
+
             // Refresh data asli di background tanpa mematikan loading
             fetchData(); 
 
