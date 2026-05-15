@@ -14,16 +14,10 @@ export default async function handler(req, res) {
   // Link Gambar Dinamis dari API OG yang kita buat tadi
   const dynamicOgImage = `https://sapatamu.id/api/og?u=${encodeURIComponent(guestName)}&id=${guestId}`;
 
-  // GANTI META TAG SECARA DINAMIS
-  html = html.replace(
-    /<meta property="og:title" content="[^"]*">/i,
-    `<meta property="og:title" content="Undangan Spesial untuk ${guestName}">`
-  );
-  
-  html = html.replace(
-    /<meta property="og:image" content="[^"]*">/i,
-    `<meta property="og:image" content="${dynamicOgImage}">`
-  );
+  // GANTI META TAG SECARA DINAMIS (Lebih kuat)
+  html = html.replace(/<meta property="og:title" content="[^"]*">/gi, `<meta property="og:title" content="Undangan Spesial untuk ${guestName}">`);
+  html = html.replace(/<meta property="og:image" content="[^"]*">/gi, `<meta property="og:image" content="${dynamicOgImage}">`);
+  html = html.replace(/<title>[^<]*<\/title>/gi, `<title>Undangan ${guestName}</title>`);
 
   // Set header agar dibaca sebagai HTML
   res.setHeader('Content-Type', 'text/html');

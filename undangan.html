@@ -411,9 +411,23 @@
         <source src="https://raw.githubusercontent.com/opick8c/Annisa-Bintang/ad4fb4ba10a2a6879f586896829a2e437e11d7b3/sal-priadi-ada-titik-titik-di-ujung-doa_x6a7RHIL~2.mp3" type="audio/mpeg">
     </audio>
 
-    <script>const urlParams = new URLSearchParams(window.location.search);
-        const guestName = decodeURIComponent(urlParams.get('u') || "Tamu Undangan");
-        const guestId = urlParams.get('id') || "STK-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+        const urlParams = new URLSearchParams(window.location.search);
+        let guestName = decodeURIComponent(urlParams.get('u') || "");
+        let guestId = urlParams.get('id') || "";
+
+        // Jika tidak ada di query params, coba ambil dari path (/u/ID/NAMA)
+        if (!guestName || !guestId) {
+            const pathParts = window.location.pathname.split('/');
+            const uIdx = pathParts.indexOf('u');
+            if (uIdx !== -1 && pathParts[uIdx + 1]) {
+                guestId = pathParts[uIdx + 1];
+                guestName = decodeURIComponent(pathParts[uIdx + 2] || "").replace(/\+/g, ' ');
+            }
+        }
+        
+        // Fallback jika tetap kosong
+        if (!guestName) guestName = "Tamu Undangan";
+        if (!guestId) guestId = "STK-" + Math.random().toString(36).substr(2, 6).toUpperCase();
         const audio = document.getElementById('main-audio');
         let isPlaying = false;
 
