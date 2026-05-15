@@ -9,6 +9,8 @@
     <meta property="og:title" content="Digital Invitation">
     <meta property="og:description" content="Kami mengundang Anda untuk hadir di hari bahagia kami.">
     <meta property="og:image" content="https://i.ibb.co.com/gMzy2dNv/Draft-Statis.png"> <!-- Banner Utama Statis -->
+    <meta property="og:image:width" content="630">
+    <meta property="og:image:height" content="1200">
     <meta property="og:url" content="">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
@@ -412,8 +414,8 @@
     </audio>
 
         const urlParams = new URLSearchParams(window.location.search);
-        let guestName = decodeURIComponent(urlParams.get('u') || "");
-        let guestId = urlParams.get('id') || "";
+        let guestName = urlParams.get('u');
+        let guestId = urlParams.get('id');
 
         // Jika tidak ada di query params, coba ambil dari path (/u/ID/NAMA)
         if (!guestName || !guestId) {
@@ -421,13 +423,25 @@
             const uIdx = pathParts.indexOf('u');
             if (uIdx !== -1 && pathParts[uIdx + 1]) {
                 guestId = pathParts[uIdx + 1];
-                guestName = decodeURIComponent(pathParts[uIdx + 2] || "").replace(/\+/g, ' ');
+                guestName = pathParts[uIdx + 2];
             }
         }
         
-        // Fallback jika tetap kosong
-        if (!guestName) guestName = "Tamu Undangan";
+        // Bersihkan nama (Hapus %20 atau tanda +)
+        if (guestName) {
+            guestName = decodeURIComponent(guestName.replace(/\+/g, ' '));
+        } else {
+            guestName = "Tamu Undangan";
+        }
+        
         if (!guestId) guestId = "STK-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+
+        // Tampilkan Nama ke Layar
+        document.addEventListener("DOMContentLoaded", function() {
+            const displayEl = document.getElementById('guest-name-display');
+            if (displayEl) displayEl.innerText = guestName;
+        });
+
         const audio = document.getElementById('main-audio');
         let isPlaying = false;
 
