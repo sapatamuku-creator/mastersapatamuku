@@ -149,13 +149,7 @@
 
         <div class="form-group" id="group_single_name">
             <label id="lbl_client_name">Nama Klien / Wedding</label>
-            <div style="display: flex; gap: 8px;">
-                <input type="text" id="reg_user" class="sapatamu-input" placeholder="Gildan & Mita" oninput="autoSuggestSubdomain(this.value)">
-                <button onclick="generateSheet()" id="btn_gen_sheet" class="gen-btn">
-                    <span id="text_gen_sheet">Buat Sheet</span>
-                    <span class="loader" id="load_gen_sheet"></span>
-                </button>
-            </div>
+            <input type="text" id="reg_user" class="sapatamu-input" placeholder="Gildan & Mita" oninput="autoSuggestSubdomain(this.value)">
         </div>
 
         <!-- DOUBLE NAME FOR WEDDING -->
@@ -166,10 +160,6 @@
                     <input type="text" id="reg_pria" class="sapatamu-input" placeholder="Nama Pria" oninput="syncWeddingNames()">
                     <span style="font-weight: 800; color: var(--primary);">&</span>
                     <input type="text" id="reg_wanita" class="sapatamu-input" placeholder="Nama Wanita" oninput="syncWeddingNames()">
-                    <button onclick="generateSheet()" id="btn_gen_sheet_dual" class="gen-btn">
-                        <span id="text_gen_sheet_dual">Buat Sheet</span>
-                        <span class="loader" id="load_gen_sheet_dual"></span>
-                    </button>
                 </div>
             </div>
         </div>
@@ -178,11 +168,17 @@
             <label>Subdomain / Username 
                 <span id="sub-status" style="margin-left: 10px; font-size: 12px; font-weight: 800;"></span>
             </label>
-            <div style="position: relative; display: flex; align-items: center;">
-                <input type="text" id="reg_subdomain" class="sapatamu-input" placeholder="gildanmita" oninput="validateSubdomain(this.value)" style="padding-right: 120px;">
-                <span style="position: absolute; right: 15px; font-weight: 800; font-size: 13px; color: var(--text-muted); pointer-events: none;">.sapatamu.id</span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <div style="position: relative; flex: 1;">
+                    <input type="text" id="reg_subdomain" class="sapatamu-input" placeholder="gildanmita" style="padding-right: 100px;">
+                    <span style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-weight: 800; font-size: 11px; color: var(--text-muted); pointer-events: none;">.sapatamu.id</span>
+                </div>
+                <button onclick="validateSubdomain()" id="btn_cek_sub" class="gen-btn" style="background: #6366f1; color: white;">
+                    <span id="text_cek_sub">Cek</span>
+                    <span class="loader" id="load_cek_sub"></span>
+                </button>
             </div>
-            <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px; font-weight: 600;">* Digunakan sebagai URL akses dan Username Login.</p>
+            <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px; font-weight: 600;">* Gunakan tombol 'Cek' untuk memastikan subdomain tersedia.</p>
         </div>
 
         <div class="form-group">
@@ -218,10 +214,17 @@
             <input type="password" id="reg_pass" class="sapatamu-input" placeholder="••••••••">
         </div>
 
-        <button onclick="prosesDaftar()" id="btn_reg" class="sapatamu-btn success-btn" disabled>
-            <span id="text_reg">Buat Akun & Konfirmasi WA</span>
-            <span class="loader" id="load_reg"></span>
-        </button>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--bg);">
+            <button onclick="generateSheet()" id="btn_gen_sheet" class="sapatamu-btn" style="background: #fbbf24; margin-bottom: 12px; color: #4A3F35;">
+                <span id="text_gen_sheet">1. Siapkan Database (Buat Sheet)</span>
+                <span class="loader" id="load_gen_sheet"></span>
+            </button>
+
+            <button onclick="prosesDaftar()" id="btn_reg" class="sapatamu-btn success-btn" disabled>
+                <span id="text_reg">2. Buat Akun & Konfirmasi WA</span>
+                <span class="loader" id="load_reg"></span>
+            </button>
+        </div>
         <div class="footer-link">
             Sudah punya akun? <span class="clickable" onclick="toggleForm('loginForm')">Login</span>
         </div>
@@ -486,44 +489,46 @@
         if (!val) return;
         const slug = val.toLowerCase().replace(/[^a-z0-9]/g, '');
         document.getElementById('reg_subdomain').value = slug;
-        validateSubdomain(slug);
+        // Tidak lagi memanggil validateSubdomain otomatis
+        const statusEl = document.getElementById('sub-status');
+        statusEl.innerText = ""; // Reset status saat ada perubahan input
     };
 
-    window.validateSubdomain = function(val) {
+    window.validateSubdomain = async function() {
+        const val = document.getElementById('reg_subdomain').value.trim();
         const statusEl = document.getElementById('sub-status');
         const regBtn = document.getElementById('btn_reg');
         
         if (!val || val.length < 3) {
-            statusEl.innerText = "";
-            return;
+            return showSapaModal("Input Terlalu Pendek", "Subdomain minimal 3 karakter.", "⚠️");
         }
 
+        setLoading('btn_cek_sub', true);
         statusEl.innerText = "⌛ Mengecek...";
         statusEl.style.color = "var(--gold)";
 
-        clearTimeout(subTimeout);
-        subTimeout = setTimeout(async () => {
-            try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: "POST",
-                    body: JSON.stringify({ action: "checkSubdomain", subdomain: val })
-                });
-                const res = await response.json();
-                
-                if (res.status === "available") {
-                    statusEl.innerText = "✅ BISA DIGUNAKAN";
-                    statusEl.style.color = "var(--success)";
-                    // Hanya enable tombol daftar jika ID SSID juga sudah ada
-                    if (document.getElementById('reg_ssid').value) regBtn.disabled = false;
-                } else {
-                    statusEl.innerText = "❌ SUDAH DIGUNAKAN";
-                    statusEl.style.color = "#E07B7B";
-                    regBtn.disabled = true;
-                }
-            } catch (e) {
-                statusEl.innerText = "⚠️ Gangguan Koneksi";
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "checkSubdomain", subdomain: val })
+            });
+            const res = await response.json();
+            
+            if (res.status === "available") {
+                statusEl.innerText = "✅ BISA DIGUNAKAN";
+                statusEl.style.color = "var(--success)";
+                // Enable tombol daftar jika SSID sudah terisi
+                if (document.getElementById('reg_ssid').value) regBtn.disabled = false;
+            } else {
+                statusEl.innerText = "❌ SUDAH DIGUNAKAN";
+                statusEl.style.color = "#E07B7B";
+                regBtn.disabled = true;
+                showSapaModal("Tidak Tersedia", "Subdomain '" + val + "' sudah dimiliki klien lain.", "❌");
             }
-        }, 500);
+        } catch (e) {
+            statusEl.innerText = "⚠️ Gangguan Koneksi";
+        }
+        setLoading('btn_cek_sub', false);
     };
 
     window.generateSheet = async function() {
@@ -543,7 +548,7 @@
             currentBtnId = 'btn_gen_sheet';
         }
 
-        setLoading(currentBtnId, true);
+        setLoading('btn_gen_sheet', true);
         try {
             const payload = { 
                 action: "copyMaster", 
@@ -577,16 +582,21 @@
                     inputSsid.classList.add('success-highlight');
                 }
 
+                // Kunci input nama agar tidak diubah setelah sheet dibuat
                 document.getElementById('reg_user').readOnly = true; 
                 if (document.getElementById('reg_pria')) document.getElementById('reg_pria').readOnly = true;
                 if (document.getElementById('reg_wanita')) document.getElementById('reg_wanita').readOnly = true;
                 
                 document.getElementById('btn_gen_sheet').disabled = true;
-                if (document.getElementById('btn_gen_sheet_dual')) document.getElementById('btn_gen_sheet_dual').disabled = true;
+                document.getElementById('text_gen_sheet').innerText = "✅ Database Siap";
                 
-                document.getElementById('btn_reg').disabled = false;
+                // Aktifkan tombol daftar jika subdomain juga sudah dicek/aman
+                const subStatus = document.getElementById('sub-status').innerText;
+                if (subStatus.includes("✅")) {
+                    document.getElementById('btn_reg').disabled = false;
+                }
                 
-                showSapaModal("Berhasil!", "Spreadsheet baru Anda telah dibuat dengan ID: " + fileId, "📊");
+                showSapaModal("Berhasil!", "Spreadsheet baru Anda telah dibuat. Silakan lanjut ke langkah terakhir.", "📊");
             } else {
                 showSapaModal("Gagal", (res.message || "Gagal membuat spreadsheet."), "❌");
             }
