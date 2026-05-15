@@ -376,22 +376,19 @@ function handleCheckSubdomain(data) {
     if (!sub || sub.length < 3) return createResponse({ status: "too_short" });
 
     for (let i = 1; i < values.length; i++) {
-      const rawA = String(values[i][0] || "").trim();
       const rawJ = String(values[i][9] || "").trim();
       
-      // Abaikan baris jika Kolom A dan J kosong (baris baru/kosong)
-      if (!rawA && !rawJ) continue;
+      if (!rawJ) continue;
 
-      // Bersihkan format untuk perbandingan (Slugify)
       const colJ = rawJ.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const colA = rawA.toLowerCase().replace(/[^a-z0-9]/g, '');
       
-      // Gunakan J jika ada, jika tidak gunakan A (sebagai identitas cadangan)
-      const dbSub = colJ || colA;
-
-      // CEK IDENTIK (Hanya jika benar-benar sama persis setelah dibersihkan)
-      if (dbSub === sub) {
-        return createResponse({ status: "taken", debug: "Matched with row " + (i+1) });
+      // HANYA CEK KOLOM J (Subdomain)
+      if (colJ === sub) {
+        return createResponse({ 
+          status: "taken", 
+          message: "Subdomain sudah terdaftar di baris " + (i + 1),
+          row: i + 1 
+        });
       }
     }
     return createResponse({ status: "available" });

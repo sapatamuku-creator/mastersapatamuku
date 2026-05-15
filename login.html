@@ -170,7 +170,7 @@
             </label>
             <div style="display: flex; gap: 8px; align-items: center;">
                 <div style="position: relative; flex: 1;">
-                    <input type="text" id="reg_subdomain" class="sapatamu-input" placeholder="gildanmita" style="padding-right: 100px;">
+                    <input type="text" id="reg_subdomain" class="sapatamu-input" placeholder="gildanmita" readonly style="padding-right: 100px; background: #f8fafc; cursor: not-allowed;">
                     <span style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-weight: 800; font-size: 11px; color: var(--text-muted); pointer-events: none;">.sapatamu.id</span>
                 </div>
                 <button onclick="validateSubdomain()" id="btn_cek_sub" class="gen-btn" style="background: #6366f1; color: white;">
@@ -178,7 +178,7 @@
                     <span class="loader" id="load_cek_sub"></span>
                 </button>
             </div>
-            <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px; font-weight: 600;">* Gunakan tombol 'Cek' untuk memastikan subdomain tersedia.</p>
+            <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px; font-weight: 600;">* Subdomain dibuat otomatis berdasarkan Nama di atas.</p>
         </div>
 
         <div class="form-group">
@@ -517,13 +517,13 @@
             if (res.status === "available") {
                 statusEl.innerText = "✅ BISA DIGUNAKAN";
                 statusEl.style.color = "var(--success)";
-                // Enable tombol daftar jika SSID sudah terisi
                 if (document.getElementById('reg_ssid').value) regBtn.disabled = false;
             } else {
                 statusEl.innerText = "❌ SUDAH DIGUNAKAN";
                 statusEl.style.color = "#E07B7B";
                 regBtn.disabled = true;
-                showSapaModal("Tidak Tersedia", "Subdomain '" + val + "' sudah dimiliki klien lain.", "❌");
+                const msg = res.message || "Subdomain '" + val + "' sudah dimiliki klien lain.";
+                showSapaModal("Tidak Tersedia", msg, "❌");
             }
         } catch (e) {
             statusEl.innerText = "⚠️ Gangguan Koneksi";
