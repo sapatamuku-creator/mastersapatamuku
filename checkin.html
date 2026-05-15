@@ -365,6 +365,8 @@
             fetchData();
             setupFullscreen();
             initNavScroll();
+            // Matikan loading global setelah sistem siap
+            toggleProcessing(false);
         } else {
             setTimeout(initApp, 100);
         }
@@ -431,7 +433,12 @@
             const data = await res.json();
             masterData = data.guestList || [];
             renderUI();
-        } catch (e) { console.error("Sync error"); }
+            // Matikan loading global setelah data masuk
+            toggleProcessing(false);
+        } catch (e) { 
+            console.error("Sync error"); 
+            toggleProcessing(false);
+        }
     }
 
     window.renderUI = function() {
