@@ -178,6 +178,18 @@
             color: white;
             transform: scale(1.1);
         }
+        .sync-indicator {
+            position: absolute;
+            top: 12px;
+            right: 42px; /* Sebelah kiri tombol delete */
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sync-spin {
+            animation: spin 1s linear infinite;
+        }
         .guest-item-card { position: relative; transition: all 0.3s ease; }
 
         .static-edit-box {
@@ -651,34 +663,57 @@
         const spinner = document.getElementById('submit-spinner');
         const btnText = document.getElementById('btn-text');
 
-        const payload = {
-            action: "submitCollection",
-            ssId: CURRENT_SS_ID,
-            nama: document.getElementById('in-c7-nama').value,
-            whatsapp: document.getElementById('in-d7-wa').value,
+        const formData = {
+            nama: document.getElementById('in-c7-nama').value.trim(),
+            whatsapp: document.getElementById('in-d7-wa').value.trim(),
             kategori: document.getElementById('in-e7-kategori').value,
             pihak: document.getElementById('in-l7-pengundang').value,
             souvenir: document.getElementById('in-k7-souvenir').value,
-            alamat: document.getElementById('in-m7-alamat').value,
+            alamat: document.getElementById('in-m7-alamat').value.trim(),
             rencana: document.getElementById('in-h7-rencana').value,
-            sesi: document.getElementById('in-sesi-undangan').value,
+            sesi: document.getElementById('in-sesi-undangan').value
+        };
+
+        if(!formData.nama || !formData.whatsapp) return showSapaModal("Data Belum Lengkap", "Silakan isi Nama & Nomor WhatsApp tamu.", "⚠️");
+        
+        // --- STEP 1: OPTIMISTIC UI (Instant Add) ---
+        const tempId = "temp_" + Date.now();
+        const draftGuest = {
+            id: tempId,
+            row: null,
+            kode: "SYNCING...",
+            nama: formData.nama,
+            whatsapp: formData.whatsapp,
+            kategori: formData.kategori,
+            pihakPengundang: formData.pihak,
+            souvenir: formData.souvenir,
+            alamat: formData.alamat,
+            rencanaHadir: formData.rencana,
+            sesi: formData.sesi,
+            statusWA: "PENDING",
+            syncStatus: "syncing"
+        };
+
+        // Masukkan ke urutan paling atas
+        MASTER_LIST.unshift(draftGuest);
+        render(MASTER_LIST);
+        
+        // Reset Form
+        document.getElementById('in-c7-nama').value = "";
+        document.getElementById('in-d7-wa').value = "";
+        document.getElementById('in-m7-alamat').value = "";
+        document.getElementById('in-h7-rencana').value = "1";
+        document.getElementById('in-c7-nama').focus();
+
+        // --- STEP 2: BACKGROUND SYNC ---
+        const payload = {
+            action: "submitCollection",
+            ssId: CURRENT_SS_ID,
+            ...formData,
             fastMode: true 
         };
 
-        if(!payload.nama || !payload.whatsapp) return showSapaModal("Data Belum Lengkap", "Silakan isi Nama & Nomor WhatsApp tamu.", "⚠️");
-        
-        // --- STEP 1: BLOCK UI (Prevent Double Click) ---
-        btn.disabled = true;
-        spinner.style.display = "inline-block";
-        btnText.innerText = "SAVING...";
-        
-        const blocker = document.createElement('div');
-        blocker.id = "global-blocker";
-        blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
-        document.body.appendChild(blocker);
-
         try {
-            // --- STEP 2: CORE DATA SAVE (Blocking) ---
             const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload)
@@ -686,30 +721,33 @@
             const result = await response.json();
 
             if (result.status === "success") {
-                // --- STEP 3: INSTANT SUCCESS FEEDBACK ---
-                if(blocker) blocker.remove(); 
-                
-                showSapaModal("Berhasil!", `Tamu <b>${payload.nama}</b> telah terdaftar.`, "✅");
-                
-                document.getElementById('in-c7-nama').value = "";
-                document.getElementById('in-d7-wa').value = "";
-                document.getElementById('in-m7-alamat').value = "";
-                document.getElementById('in-h7-rencana').value = "1";
-                
-                refreshApp();
-                // Blast otomatis pendaftaran dihapus sesuai permintaan (Manual Blast Mode)
+                // Update status ke DONE
+                const idx = MASTER_LIST.findIndex(g => g.id === tempId);
+                if (idx !== -1) {
+                    MASTER_LIST[idx].syncStatus = "done";
+                    MASTER_LIST[idx].row = result.row;
+                    MASTER_LIST[idx].kode = result.kode;
+                    render(MASTER_LIST);
+                    
+                    // Hilangkan indikator centang setelah 3 detik
+                    setTimeout(() => {
+                        const guest = MASTER_LIST.find(g => g.id === tempId);
+                        if(guest) {
+                            delete guest.syncStatus;
+                            render(MASTER_LIST);
+                        }
+                    }, 3000);
+                }
             } else {
-                if(blocker) blocker.remove();
-                showSapaModal("Gagal Simpan", result.message || "Terjadi kesalahan.", "❌");
+                throw new Error(result.message);
             }
         } catch (err) {
-            if(blocker) blocker.remove();
-            console.error(err);
-            showSapaModal("Connection Error", "Gagal menghubungi server.", "⚠️");
-        } finally {
-            btn.disabled = false;
-            spinner.style.display = "none";
-            btnText.innerText = "ADD TO COLLECTION";
+            console.error("Sync Failed:", err);
+            const idx = MASTER_LIST.findIndex(g => g.id === tempId);
+            if (idx !== -1) {
+                MASTER_LIST[idx].syncStatus = "failed";
+                render(MASTER_LIST);
+            }
         }
     };
 
@@ -774,10 +812,17 @@
             const isSent = g.statusWA && (g.statusWA.includes("✅") || g.statusWA.includes("SENT"));
             const souvenirIcon = g.souvenir === 'ya' ? '□' : '⚪';
             
+            // Logika Indikator Sync
+            let syncIcon = "";
+            if (g.syncStatus === "syncing") syncIcon = '<span class="sync-indicator sync-spin" title="Sedang sinkronisasi...">🔄</span>';
+            else if (g.syncStatus === "done") syncIcon = '<span class="sync-indicator" style="color: #10B981;" title="Berhasil tersimpan">✅</span>';
+            else if (g.syncStatus === "failed") syncIcon = '<span class="sync-indicator" style="color: #EF4444;" title="Gagal tersimpan, coba refresh">⚠️</span>';
+
             return `
                 <div class="guest-item-card" 
                     style="border: 1.5px solid ${isSent ? '#D1FAE5':'var(--border)'}; background: ${isSent ? '#F0FDF4':'#FFF'}; padding:15px; border-radius:20px; display: flex; flex-direction: column; justify-content: space-between; cursor:pointer; transition:0.3s; min-height: 140px; box-shadow: 0 10px 20px rgba(140, 117, 96, 0.03); position: relative;">
-                    ${!isSent ? `<button class="delete-guest-btn" onclick="confirmDeleteGuest(event, '${g.kode}', '${g.nama}')" style="position: absolute; top: 12px; right: 12px; border: none; background: #FEE2E2; color: #991B1B; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer;">✕</button>` : ''}
+                    ${syncIcon}
+                    ${(!isSent && g.syncStatus !== "syncing") ? `<button class="delete-guest-btn" onclick="confirmDeleteGuest(event, '${g.kode}', '${g.nama}')" style="position: absolute; top: 12px; right: 12px; border: none; background: #FEE2E2; color: #991B1B; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer;">✕</button>` : ''}
                     <div onclick="executeBlast('${g.row}','${g.whatsapp}','${g.nama}','${g.kode}')">
                         <div>
                             <div style="font-weight:700; font-size:14px; color:var(--text-main); line-height:1.2; padding-right:20px;">${g.nama}</div>
