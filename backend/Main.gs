@@ -186,6 +186,10 @@ function handleMainPost(payload) {
         result = handleWAFormPost(payload);
         break;
         
+      case 'saveWelcomePhotos':
+        result = saveWelcomePhotos(ssId, payload.urlFoto);
+        break;
+        
       default:
         result = { status: "error", message: "Action unknown" };
     }
@@ -745,6 +749,19 @@ function getSettings(ssId) {
         invitationData: invitationData
       }
     };
+  } catch (e) { return { status: "error", message: e.toString() }; }
+}
+
+function saveWelcomePhotos(ssId, urlFoto) {
+  try {
+    const ss = getSS(ssId);
+    let configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
+    if (!configSheet) {
+      configSheet = ss.insertSheet("CONFIG");
+      configSheet.getRange("A1").setValue("URL_FOTO");
+    }
+    configSheet.getRange("B1").setValue(urlFoto);
+    return { status: "success", message: "Foto background berhasil diperbarui" };
   } catch (e) { return { status: "error", message: e.toString() }; }
 }
 

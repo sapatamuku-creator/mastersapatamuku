@@ -246,7 +246,8 @@
                 const photoUrls = data.urlFoto.split(",").map(u => u.trim()).filter(u => u !== "");
                 initSlideshow(photoUrls);
             } else {
-                initSlideshow([]); // Default
+                // Default fallback image if no photo is configured
+                initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
             }
 
             const now = new Date();
@@ -255,13 +256,7 @@
             (data.rundown || []).forEach((item, i, arr) => {
                 const startVal = convertToTimeValue(item.syncTime);
                 const nextItem = arr[i + 1];
-                let active = false;
-                if (nextItem) {
-                    const nextVal = convertToTimeValue(nextItem.syncTime);
-                    active = (nowVal >= startVal && nowVal < nextVal);
-                } else {
-                    active = (nowVal >= startVal);
-                }
+                let active = nextItem ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime)) : (nowVal >= startVal);
                 rundownHtml += `
                     <div class="rundown-item ${active ? 'active-event' : ''}">
                         <div class="event-time">${item.displayTime}</div>
@@ -272,7 +267,7 @@
 
             clearTimeout(syncTimer);
             syncTimer = setTimeout(syncData, data.displayDuration || 12000);
-        } catch (e) {
+        } catch (e) { 
             console.error("Sync Error Details:", e);
             document.getElementById('couple-name').innerText = "ERROR KONEKSI";
             document.getElementById('marquee-log').innerText = "Koneksi Bermasalah: " + (e.message || "Unknown Error");
@@ -286,12 +281,7 @@
     let slideInterval;
 
     function initSlideshow(urls) {
-        if (!urls || urls.length === 0) {
-            // Default background if none provided
-            urls = ['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz'];
-        }
-        
-        // Only re-init if the list actually changed
+        // Only re-init if the photo list actually changed
         const newStr = urls.join(",");
         if (newStr === currentPhotos.join(",")) return;
         currentPhotos = urls;
@@ -315,7 +305,7 @@
                 slides[slideIdx].classList.remove('active');
                 slideIdx = (slideIdx + 1) % slides.length;
                 slides[slideIdx].classList.add('active');
-            }, 12000);
+            }, 11000);
         }
     }
 
