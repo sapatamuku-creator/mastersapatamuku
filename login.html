@@ -147,7 +147,7 @@
             </select>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="group_single_name">
             <label id="lbl_client_name">Nama Klien / Wedding</label>
             <div style="display: flex; gap: 8px;">
                 <input type="text" id="reg_user" class="sapatamu-input" placeholder="Gildan & Mita" oninput="autoSuggestSubdomain(this.value)">
@@ -155,6 +155,22 @@
                     <span id="text_gen_sheet">Buat Sheet</span>
                     <span class="loader" id="load_gen_sheet"></span>
                 </button>
+            </div>
+        </div>
+
+        <!-- DOUBLE NAME FOR WEDDING -->
+        <div id="group_double_name" style="display: none;">
+            <div class="form-group">
+                <label>Nama Mempelai Pria & Wanita</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="reg_pria" class="sapatamu-input" placeholder="Nama Pria" oninput="syncWeddingNames()">
+                    <span style="font-weight: 800; color: var(--primary);">&</span>
+                    <input type="text" id="reg_wanita" class="sapatamu-input" placeholder="Nama Wanita" oninput="syncWeddingNames()">
+                    <button onclick="generateSheet()" id="btn_gen_sheet_dual" class="gen-btn">
+                        <span id="text_gen_sheet_dual">Buat Sheet</span>
+                        <span class="loader" id="load_gen_sheet_dual"></span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -365,8 +381,11 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', initLogin);
-
+    // Run theme update on load to ensure correct fields are shown
+    document.addEventListener('DOMContentLoaded', () => {
+        initLogin();
+        updateCategoryTheme();
+    });
     window.toggleForm = function(id) {
         const forms = ['loginForm', 'registerForm', 'forgotForm', 'changePassForm'];
         forms.forEach(f => {
@@ -381,6 +400,17 @@
         const input = document.getElementById('reg_user');
         const emailInput = document.getElementById('reg_email');
         
+        const groupSingle = document.getElementById('group_single_name');
+        const groupDouble = document.getElementById('group_double_name');
+
+        if (cat === 'wedding') {
+            groupSingle.style.display = 'none';
+            groupDouble.style.display = 'block';
+        } else {
+            groupSingle.style.display = 'block';
+            groupDouble.style.display = 'none';
+        }
+
         const themes = {
             wedding: { label: "Nama Klien / Wedding", placeholder: "Gildan & Mita", email: "wedding@gmail.com" },
             birthday: { label: "Nama Klien / Birthday", placeholder: "Clara's 17th Birthday", email: "birthday@gmail.com" },
@@ -393,6 +423,15 @@
         lbl.innerText = theme.label;
         input.placeholder = theme.placeholder;
         emailInput.placeholder = theme.email;
+    };
+
+    window.syncWeddingNames = function() {
+        const pria = document.getElementById('reg_pria').value.trim();
+        const wanita = document.getElementById('reg_wanita').value.trim();
+        if (pria || wanita) {
+            const combined = (pria + " " + wanita).trim();
+            autoSuggestSubdomain(combined);
+        }
     };
 
     function setLoading(btnId, isLoad) {
@@ -488,10 +527,23 @@
     };
 
     window.generateSheet = async function() {
-        const user = document.getElementById('reg_user').value;
-        if (!user) return showSapaModal("Isi Nama Klien", "Nama klien diperlukan untuk membuat Google Sheets baru.", "⚠️");
+        const cat = document.getElementById('reg_category').value;
+        let user;
+        let currentBtnId;
 
-        setLoading('btn_gen_sheet', true);
+        if (cat === 'wedding') {
+            const pria = document.getElementById('reg_pria').value.trim();
+            const wanita = document.getElementById('reg_wanita').value.trim();
+            if (!pria || !wanita) return showSapaModal("Lengkapi Nama", "Nama Pria & Wanita diperlukan.", "⚠️");
+            user = pria + " & " + wanita;
+            currentBtnId = 'btn_gen_sheet_dual';
+        } else {
+            user = document.getElementById('reg_user').value.trim();
+            if (!user) return showSapaModal("Isi Nama Klien", "Nama klien diperlukan untuk membuat Google Sheets baru.", "⚠️");
+            currentBtnId = 'btn_gen_sheet';
+        }
+
+        setLoading(currentBtnId, true);
         try {
             const payload = { 
                 action: "copyMaster", 
@@ -526,7 +578,12 @@
                 }
 
                 document.getElementById('reg_user').readOnly = true; 
+                if (document.getElementById('reg_pria')) document.getElementById('reg_pria').readOnly = true;
+                if (document.getElementById('reg_wanita')) document.getElementById('reg_wanita').readOnly = true;
+                
                 document.getElementById('btn_gen_sheet').disabled = true;
+                if (document.getElementById('btn_gen_sheet_dual')) document.getElementById('btn_gen_sheet_dual').disabled = true;
+                
                 document.getElementById('btn_reg').disabled = false;
                 
                 showSapaModal("Berhasil!", "Spreadsheet baru Anda telah dibuat dengan ID: " + fileId, "📊");
