@@ -13,8 +13,8 @@ export default function handler(req) {
     const username = searchParams.get('u')?.toUpperCase() || 'TAMU UNDANGAN';
     const guestId = searchParams.get('id') || '00000';
     
-    // URL Gambar Blanko Anda (Pastikan link ini publik dan bisa diakses)
-    const bgImage = "https://i.ibb.co.com/W4mNQL5P/Draft-DESAIN-BLAST-WA.jpg";
+    // URL Gambar Blanko dari folder assets Anda sendiri
+    const bgImage = "https://sapatamu.id/assets/Blanko%20Blast%20WA.png";
     
     // URL QR Code dinamis
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${guestId}&size=200x200`;
