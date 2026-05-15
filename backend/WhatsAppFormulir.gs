@@ -134,7 +134,8 @@ function handleWAFormPost(data) {
         const body = { 
           target: item.target, 
           message: item.message,
-          url: item.url || "" 
+          url: item.url || "",
+          delay: "5" // Memberi waktu WhatsApp untuk merender preview link
         };
         const res = directFonnteSend("https://api.fonnte.com/send", body, item.token);
         if (res.status) {
