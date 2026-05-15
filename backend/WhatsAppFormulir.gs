@@ -158,7 +158,8 @@ function directFonnteSend(url, payload, token) {
   try {
     const options = {
       method: "post",
-      payload: payload,
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
       headers: { "Authorization": token },
       muteHttpExceptions: true
     };
