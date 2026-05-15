@@ -9,8 +9,8 @@ echo.
 
 :: 1. Update Frontend via Git
 echo [STEP 1] Mengunggah Frontend ke GitHub...
-git add .
-git commit -m "New Deploy: %date% %time%"
+git add --all
+git commit -m "New Deployment: %date% %time%"
 git push origin main
 echo OK: Frontend terkirim.
 

@@ -8,8 +8,8 @@ echo.
 
 :: 1. Update Frontend via Git (Triggers Vercel)
 echo [STEP 1] Mengunggah Frontend ke GitHub...
-git add .
-git commit -m "Sync: %date% %time%"
+git add --all
+git commit -m "Sync & Update: %date% %time%"
 git push origin main
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Gagal melakukan push ke GitHub.
