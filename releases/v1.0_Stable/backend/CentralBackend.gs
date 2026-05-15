@@ -350,9 +350,7 @@ function handleResolveSubdomain(data) {
   }
 }
 
-function createResponse(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
+// createResponse removed (using UnifiedRouter version)
 function handleUploadFile(data) {
   try {
     const folderId = FOLDER_KLIEN_ID; // Default folder parent

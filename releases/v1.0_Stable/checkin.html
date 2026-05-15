@@ -99,7 +99,20 @@
         .pax-label { font-size: 10px; font-weight: 800; color: #666; text-transform: uppercase; }
 
         .fab-fullscreen { position: fixed; bottom: 25px; right: 25px; width: 45px; height: 45px; background: rgba(26,26,26,0.9); color: white; border-radius: 50%; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; z-index: 1000; cursor: pointer; }
-        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); z-index: 30000; display: none; align-items: center; justify-content: center; font-weight: 700; color: var(--gold); }
+        .loading-overlay { 
+            position: fixed; inset: 0; 
+            background: rgba(255,255,255,0.7); 
+            backdrop-filter: blur(10px); 
+            z-index: 200000; 
+            display: none; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 800; 
+            color: var(--primary); 
+            gap: 15px;
+        }
+        .loading-overlay span { font-size: 14px; letter-spacing: 2px; color: var(--text-main); }
 
         /* ADVANCED NAVBAR STYLES (CLONE FROM ONSITE) */
         .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
@@ -130,6 +143,19 @@
         
         .tag-btn { transition: all 0.2s ease; cursor: pointer; }
         .tag-btn.active { transform: scale(1.05); box-shadow: 0 4px 8px rgba(212,175,55,0.3); }
+
+        .st-modal-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.4); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2147483647; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .st-modal-content { background: white; width: 100%; max-width: 320px; border-radius: 35px; padding: 30px; text-align: center; box-shadow: 0 20px 60px rgba(74, 63, 53, 0.15); border: 1px solid rgba(255,255,255,0.8); animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .st-modal-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; }
+        .st-modal-msg { font-size: 11px; color: var(--text-muted); line-height: 1.6; font-weight: 500; }
+        .st-btn { border: none; padding: 14px 25px; border-radius: 18px; font-weight: 800; font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: 0.3s; }
+        .btn-dark { background: var(--text-main); color: white; box-shadow: 0 10px 20px rgba(74, 63, 53, 0.2); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+        
+        #loading-global { position: fixed; inset: 0; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; transition: 0.3s; }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(224, 123, 123, 0.1); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body onload="initApp()">
@@ -170,7 +196,10 @@
         </div>
     </nav>
     
-    <div id="loading" class="loading-overlay">MEMPROSES...</div>
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <span>[ DATA DIPROSES ]</span>
+    </div>
 
     <div id="loading-global">
         <div class="spinner"></div>
@@ -270,7 +299,7 @@
     </div>
 </div>
 
-<script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzZzTdMqxpaz66LzU7AboxlXst9bWc3ft5t-dxkWC0tVkuukBXhPwblHVCVVvyI1X_d/exec";
+<script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxvUH3iN41A_-GV9SNRYbz5b9NKMko0kkRn-HFj5kXHjjmCTkEm9cEQSu-PIjmDxE2V/exec";
  
     const WA_ENGINE_URL = SCRIPT_URL;
     const SELFIE_URL = SCRIPT_URL;
@@ -300,7 +329,7 @@
             document.getElementById('st-modal-msg').innerText = msg;
             document.getElementById('modal-cancel-btn').style.display = 'none';
             const okBtn = document.getElementById('modal-ok-btn');
-            okBtn.innerText = "MENGERTI";
+            okBtn.innerText = "TUTUP";
             okBtn.onclick = () => {
                 document.getElementById('st-modal').style.display = 'none';
                 resolve(true);
@@ -352,6 +381,8 @@
             fetchData();
             setupFullscreen();
             initNavScroll();
+            // Matikan loading global setelah sistem siap
+            toggleProcessing(false);
         } else {
             setTimeout(initApp, 100);
         }
@@ -418,7 +449,12 @@
             const data = await res.json();
             masterData = data.guestList || [];
             renderUI();
-        } catch (e) { console.error("Sync error"); }
+            // Matikan loading global setelah data masuk
+            toggleProcessing(false);
+        } catch (e) { 
+            console.error("Sync error"); 
+            toggleProcessing(false);
+        }
     }
 
     window.renderUI = function() {
@@ -554,10 +590,9 @@
         btnSnap.innerText = "AMBIL FOTO";
         btnSnap.onclick = takeSelfie;
 
-        // Jika VIP wajib foto, matikan tombol. Jika tidak, bisa tetap nyala.
-        // Untuk amannya kita samakan dengan onsite
-        document.getElementById('btn-final-confirm').disabled = true;
-        document.getElementById('btn-final-confirm').style.opacity = "0.5";
+        // Foto opsional, tombol tetap aktif
+        document.getElementById('btn-final-confirm').disabled = false;
+        document.getElementById('btn-final-confirm').style.opacity = "1";
     };
 
     window.openConfirmModal = function() {
@@ -591,8 +626,8 @@
         btnSnap.innerText = "AMBIL FOTO";
         btnSnap.onclick = takeSelfie;
         
-        document.getElementById('btn-final-confirm').disabled = isPriority;
-        document.getElementById('btn-final-confirm').style.opacity = isPriority ? "0.5" : "1";
+        document.getElementById('btn-final-confirm').disabled = false;
+        document.getElementById('btn-final-confirm').style.opacity = "1";
 
         document.getElementById('modalConfirm').style.display = 'flex';
         startSelfieCamera();
@@ -679,9 +714,6 @@
             // Tunggu Database utama selesai saja
             await Promise.all(checkinPromises);
 
-            // 3. UI Feedback Instan
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-            
             // Update status lokal agar tidak perlu refresh data berat
             list.forEach(id => {
                 const idx = masterData.findIndex(r => r.kode === id);
@@ -696,14 +728,28 @@
             document.getElementById('bulk-btn').style.display = 'none';
             
             await closeModal();
-            renderUI(); // Render ulang dari data lokal (Instan)
+            renderUI(); 
             
+            // --- STEP 4: SUCCESS GREETING MODAL ---
+            document.getElementById('loading').style.display = 'none'; 
+            if(document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+            document.body.style.cursor = 'default';
+
+            const guestData = list.length > 0 ? masterData.find(r => r.kode === list[0]) : null;
+            if (guestData) {
+                await showAlert(
+                    "CHECK-IN BERHASIL", 
+                    `Selamat Datang,\n\n${guestData.nama.toUpperCase()}\n(${guestData.kategori || 'REGULER'})\n\nSilakan Masuk`, 
+                    "✨"
+                );
+            }
+
             // Refresh data asli di background tanpa mematikan loading
             fetchData(); 
 
         } catch (e) { 
             console.error(e);
-            alert("Gagal memproses check-in. Cek internet."); 
+            showAlert("Gagal", "Gagal memproses check-in. Cek internet.", "❌"); 
         } finally { 
             isBusy = false; 
             document.getElementById('loading').style.display = 'none'; 

@@ -105,7 +105,32 @@
         .tag-item { flex: 1; padding: 10px; border-radius: 10px; background: #f5f5f5; border: 1px solid #eee; font-size: 9px; font-weight: 800; text-align: center; cursor: pointer; color: #888; transition: 0.3s; }
         .tag-item.active { background: var(--gold); color: white; border-color: var(--gold); }
 
-        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 1000000; display: none; align-items: center; justify-content: center; font-weight: 800; color: var(--primary); }
+        .loading-overlay { 
+            position: fixed; inset: 0; 
+            background: rgba(255,255,255,0.7); 
+            backdrop-filter: blur(10px); 
+            z-index: 200000; 
+            display: none; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 800; 
+            color: var(--primary); 
+            gap: 15px;
+        }
+        .loading-overlay span { font-size: 14px; letter-spacing: 2px; color: var(--text-main); }
+
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(224, 123, 123, 0.1); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .st-modal-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.4); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2147483647; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .st-modal-content { background: white; width: 100%; max-width: 320px; border-radius: 35px; padding: 30px; text-align: center; box-shadow: 0 20px 60px rgba(74, 63, 53, 0.15); border: 1px solid rgba(255,255,255,0.8); animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .st-modal-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; }
+        .st-modal-msg { font-size: 11px; color: var(--text-muted); line-height: 1.6; font-weight: 500; }
+        .st-btn { border: none; padding: 14px 25px; border-radius: 18px; font-weight: 800; font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: 0.3s; }
+        .btn-dark { background: var(--text-main); color: white; box-shadow: 0 10px 20px rgba(74, 63, 53, 0.2); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
 
         /* ADVANCED NAVBAR STYLES (CLONE FROM CHECKIN) */
         .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
@@ -327,10 +352,25 @@
     </div>
 </div>
 
-<div id="loading" class="loading-overlay">MEMPROSES...</div>
+<div id="loading" class="loading-overlay">
+    <div class="spinner"></div>
+    <span>[ DATA DIPROSES ]</span>
+</div>
+
+<div id="st-modal" class="st-modal-overlay">
+    <div id="modal-container" class="st-modal-content">
+        <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️</span>
+        <div id="st-modal-title" class="st-modal-title">Notifikasi</div>
+        <div id="st-modal-msg" class="st-modal-msg">Pesan akan muncul di sini.</div>
+        <div id="modal-actions" style="display: flex; gap: 10px; margin-top: 30px;">
+            <button id="modal-cancel-btn" class="st-btn btn-outline" style="flex:1; display:none;">BATAL</button>
+            <button id="modal-ok-btn" class="st-btn btn-dark" style="flex:1;">MENGERTI</button>
+        </div>
+    </div>
+</div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfJD7Vr_1ALz7LGb_rQ_HE4iH1AuOUZRiwzshRgFppWzBdvtfOpXB7fM9gaEslYwJN/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxvUH3iN41A_-GV9SNRYbz5b9NKMko0kkRn-HFj5kXHjjmCTkEm9cEQSu-PIjmDxE2V/exec";
     
     let CURRENT_SS_ID = null;
     let masterData = [];
@@ -339,6 +379,41 @@
     let capturedBase64 = null;
     let regStream = null;
     let selectedGuest = null;
+
+    window.showAlert = function(title, msg, icon = "⚠️") {
+        return new Promise(resolve => {
+            document.getElementById('st-modal-icon').innerText = icon;
+            document.getElementById('st-modal-title').innerText = title;
+            document.getElementById('st-modal-msg').innerText = msg;
+            document.getElementById('modal-cancel-btn').style.display = 'none';
+            const okBtn = document.getElementById('modal-ok-btn');
+            okBtn.innerText = "TUTUP";
+            okBtn.onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(true);
+            };
+            document.getElementById('st-modal').style.display = 'flex';
+        });
+    };
+
+    window.showConfirm = function(title, msg, icon = "🚀") {
+        return new Promise(resolve => {
+            document.getElementById('st-modal-icon').innerText = icon;
+            document.getElementById('st-modal-title').innerText = title;
+            document.getElementById('st-modal-msg').innerText = msg;
+            document.getElementById('modal-cancel-btn').style.display = 'block';
+            document.getElementById('modal-ok-btn').innerText = "LANJUTKAN";
+            document.getElementById('modal-ok-btn').onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(true);
+            };
+            document.getElementById('modal-cancel-btn').onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(false);
+            };
+            document.getElementById('st-modal').style.display = 'flex';
+        });
+    };
 
     async function initApp() {
         if (!window.SAPATAMU_RESOLVED) {
@@ -557,11 +632,21 @@
             if (result.status === "success") {
                 // --- STEP 3: FAST FEEDBACK ---
                 if(blocker) blocker.remove();
-                confetti({ particleCount: 100, spread: 70 });
                 closeModal(); 
-                fetchData(); // Refresh UI list
+                renderUI(); 
 
-                // --- STEP 4: BACKGROUND TASKS ---
+                // --- STEP 4: SUCCESS GREETING MODAL ---
+                document.getElementById('loading').style.display = 'none'; 
+                if(document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+                document.body.style.cursor = 'default';
+
+                await showAlert(
+                    "CHECK-IN BERHASIL", 
+                    `Selamat Datang,\n\n${selectedGuest.nama.toUpperCase()}\n(${selectedGuest.kategori || 'UMUM'})\n\nSilakan Masuk`, 
+                    "✨"
+                );
+
+                fetchData(); // Refresh UI list from server background
                 // Upload Selfie & Blast WA in background
                 if (capturedBase64) {
                     fetch(SCRIPT_URL, { 
@@ -673,7 +758,17 @@
             if (json.status === "success") {
                 // --- STEP 3: FAST FEEDBACK ---
                 if(blocker) blocker.remove();
-                alert("Berhasil mendaftarkan tamu " + nama + " (ID: " + json.kode + ")");
+
+                // --- STEP 4: SUCCESS GREETING MODAL ---
+                document.getElementById('loading').style.display = 'none'; 
+                if(document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+                document.body.style.cursor = 'default';
+
+                await showAlert(
+                    "REGISTRASI BERHASIL", 
+                    `Selamat Datang,\n\n${nama.toUpperCase()}\n(${payload.kategori || 'UMUM'})\n\nSilakan Masuk`, 
+                    "✨"
+                );
                 
                 // RESET FIELDS
                 document.getElementById('reg-nama').value = "";

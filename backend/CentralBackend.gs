@@ -31,30 +31,37 @@ function handleCentralPost(request) {
     case 'changePassword': return handleChangePassword(request);
     case 'updateClientData': return handleUpdateClientData(request);  
     case 'resolveSubdomain': return handleResolveSubdomain(request);
+    case 'checkSubdomain': return handleCheckSubdomain(request); // Aksi Baru
     case 'uploadFile': return handleUploadFile(request);
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
 }
 
 // --- FUNGSI REGISTER (TAMBAH EMAIL) ---
+// --- FUNGSI REGISTER (UPDATED FOR SUBDOMAIN) ---
 function handleRegister(data) {
   try {
     const ss = SpreadsheetApp.openById(MASTER_SS_ID);
     const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
     const values = sheet.getDataRange().getValues();
     
+    const sub = data.subdomain.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // Cek duplikasi di Kolom A (Username) atau Kolom J (Subdomain)
     for (let i = 1; i < values.length; i++) {
-      if (values[i][0] == data.username) return createResponse({ status: "error", message: "Username sudah terdaftar" });
+      if (values[i][0] == sub || values[i][9] == sub) {
+        return createResponse({ status: "error", message: "Subdomain / Username sudah terdaftar" });
+      }
     }
 
     const file = DriveApp.getFileById(data.ssId);
-    const cleanUser = data.username.replace(/\s+/g, '');
-    const finalName = (data.weddingDate || "NoDate") + " - " + cleanUser;
+    const finalName = (data.weddingDate || "NoDate") + " - " + data.clientName;
     file.setName(finalName);
 
-    // Append Row ke Master (Kolom G untuk Email, Kolom H untuk Status, Kolom I untuk Kategori)
+    // Append Row ke Master
+    // A: Username (Slug), B: ID, C: Pass, D: WA, E: Date, F: Created, G: Email, H: Status, I: Kategori, J: Subdomain (Slug), K: Nama Klien
     sheet.appendRow([
-      data.username,     // A
+      sub,               // A: Username (Slug)
       data.ssId,         // B
       data.password,     // C
       data.whatsapp,     // D
@@ -62,7 +69,9 @@ function handleRegister(data) {
       new Date(),        // F
       data.email,        // G
       "Active",          // H
-      data.category || "wedding" // I: Kategori Event
+      data.category || "wedding", // I
+      sub,               // J: Subdomain (Slug)
+      data.clientName    // K: Nama Klien (Full)
     ]);
 
     return createResponse({ status: "success", message: "Pendaftaran berhasil" });
@@ -228,17 +237,21 @@ function handleLogin(data) {
     const targetUser = String(data.username || "").toLowerCase().trim();
 
     for (let i = 1; i < values.length; i++) {
-      const dbUser = String(values[i][0] || "").toLowerCase().trim();
-      if (dbUser === targetUser && values[i][2] == data.password) {
+      const colA = String(values[i][0] || "").toLowerCase().trim();
+      const colJ = String(values[i][9] || "").toLowerCase().trim();
+      
+      // LOGIN MATCH: Bisa menggunakan Kolom A (Username) atau Kolom J (Subdomain Slug)
+      if ((colA === targetUser || colJ === targetUser) && values[i][2] == data.password) {
         // SET STATUS KE ACTIVE SAAT LOGIN (KOLOM H)
         sheet.getRange(i + 1, 8).setValue("Active");
 
         return createResponse({ status: "success", message: "Login Berhasil", data: {
-          username: values[i][0],
+          username: values[i][10] || values[i][0], // Nama Klien di Kolom K
+          subdomain: values[i][9] || values[i][0], // Subdomain di Kolom J
           ssId: values[i][1],
           whatsapp: values[i][3],
           email: values[i][6],
-          category: values[i][8] || "wedding" // Kolom I
+          category: values[i][8] || "wedding"
         } });
       }
     }
@@ -323,12 +336,14 @@ function handleResolveSubdomain(data) {
     const sub = data.subdomain.toLowerCase().trim();
     
     for (let i = 1; i < values.length; i++) {
-      const dbUserRaw = String(values[i][0] || "");
-      const dbUserCleaned = dbUserRaw.toLowerCase().replace(/\s+/g, '').trim();
+      const colJ = String(values[i][9] || "").toLowerCase().trim();
+      const colA = String(values[i][0] || "").toLowerCase().replace(/\s+/g, '').trim();
+      
+      // LOGIKA: Cek Kolom J dulu, jika kosong baru cek Kolom A (Akun Lama)
+      const dbSub = colJ || colA; 
       const status = String(values[i][7] || "").toLowerCase().trim(); // Kolom H (Index 7)
 
-      if (dbUserCleaned === sub) {
-        // CEK APAKAH AKUN DIBLOKIR/EXPIRED OLEH ADMIN
+      if (dbSub === sub) {
         if (status !== "active") {
           return createResponse({ 
             status: "error", 
@@ -339,12 +354,34 @@ function handleResolveSubdomain(data) {
         return createResponse({ 
           status: "success", 
           ssId: values[i][1],
-          clientName: values[i][0],
-          category: values[i][8] || "wedding" // Kolom I
+          clientName: values[i][10] || values[i][0], // Nama Klien di Kolom K (Index 10) atau Kolom A
+          category: values[i][8] || "wedding" // Kolom I (Index 8)
         });
       }
     }
     return createResponse({ status: "error", message: "Subdomain tidak terdaftar" });
+  } catch (e) {
+    return createResponse({ status: "error", message: e.toString() });
+  }
+}
+
+// --- FUNGSI CEK KETERSEDIAAN SUBDOMAIN ---
+function handleCheckSubdomain(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const values = sheet.getDataRange().getValues();
+    const sub = data.subdomain.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+    
+    if (sub.length < 3) return createResponse({ status: "too_short" });
+
+    for (let i = 1; i < values.length; i++) {
+      const dbSub = String(values[i][9] || values[i][0]).toLowerCase().trim();
+      if (dbSub === sub) {
+        return createResponse({ status: "taken" });
+      }
+    }
+    return createResponse({ status: "available" });
   } catch (e) {
     return createResponse({ status: "error", message: e.toString() });
   }

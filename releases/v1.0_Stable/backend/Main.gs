@@ -186,6 +186,10 @@ function handleMainPost(payload) {
         result = handleWAFormPost(payload);
         break;
         
+      case 'saveWelcomePhotos':
+        result = saveWelcomePhotos(ssId, payload.urlFoto);
+        break;
+        
       default:
         result = { status: "error", message: "Action unknown" };
     }
@@ -377,12 +381,18 @@ function addToRundown(ssId, guestRow) {
     const now = new Date();
     const timeOnly = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");
 
+    // Ambil status antrean untuk menentukan status awal
+    let initialStatus = "WAITING";
+    const existingStatuses = rdSheet.getRange(2, 8, rdSheet.getLastRow(), 1).getValues();
+    const hasDisplay = existingStatuses.some(r => r[0] === "DISPLAY");
+    if (!hasDisplay) initialStatus = "DISPLAY";
+
     // E: Kode, F: Nama, G: Jam, H: Status, I: Kategori, J: Alamat
     const rdData = [
       guestRow[5],  // Kode Unik (Kolom F di Data)
       guestRow[2],  // Nama (Kolom C di Data)
       timeOnly,     // Jam Datang
-      "CHECKED-IN", // Status
+      initialStatus,// Status (WAITING / DISPLAY)
       guestRow[4],  // Kategori (Kolom E di Data)
       guestRow[12]  // Alamat (Kolom M di Data)
     ];
@@ -580,42 +590,83 @@ function getWelcomeData(ssId) {
     const sheet = ss.getSheetByName(SHEET_DATA);
     if (!sheet) throw new Error("Sheet '" + SHEET_DATA + "' tidak ditemukan.");
     
-    // Metadata dari Sheet1 (B1 & B2) sesuai screenshot
     const meta = sheet.getRange("B1:B2").getValues();
     const weddingName = meta[0][0] || "SapaTamu.Ku";
     const weddingDate = meta[1][0] || "-";
     
-    // Cari Tamu Terakhir dari sheet Rundown (Bukan Sheet1)
-    let latestGuest = { nama: "", kategori: "", alamat: "" };
     const rundownSheet = ss.getSheetByName("Rundown");
-    
+    let latestGuest = { nama: "", kategori: "", alamat: "" };
+    let displayDuration = 12000; // Default 12s
+
     if (rundownSheet) {
       const rdLast = rundownSheet.getLastRow();
       if (rdLast >= 2) {
-        // Scan dari bawah di kolom E (Kode Unik) untuk cari data terakhir
-        const logDataFull = rundownSheet.getRange(2, 5, rdLast - 1, 6).getValues(); 
-        for (let i = logDataFull.length - 1; i >= 0; i--) {
-          if (logDataFull[i][0]) { // Jika Kode Unik (Kolom E) ada isinya
-            latestGuest = {
-              nama: logDataFull[i][1],     // Kolom F (Index 1 di logDataFull)
-              kategori: logDataFull[i][4], // Kolom I (Index 4 di logDataFull)
-              alamat: logDataFull[i][5]    // Kolom J (Index 5 di logDataFull)
-            };
-            break;
-          }
+        // AMBIL SEMUA DATA RUNDOWN (Kolom E s/d J)
+        const rdRange = rundownSheet.getRange(2, 5, rdLast - 1, 6);
+        const rdValues = rdRange.getValues();
+        
+        let displayIdx = -1;
+        let waitingIndices = [];
+
+        // Identifikasi status DISPLAY dan antrean WAITING
+        for (let i = 0; i < rdValues.length; i++) {
+          const status = String(rdValues[i][3]).toUpperCase();
+          if (status === "DISPLAY") displayIdx = i;
+          if (status === "WAITING") waitingIndices.push(i);
+        }
+
+        // LOGIKA ROTASI: Jika ada DISPLAY dan ada antrean WAITING
+        if (displayIdx !== -1 && waitingIndices.length > 0) {
+          // 1. DISPLAY lama -> DONE
+          rundownSheet.getRange(displayIdx + 2, 8).setValue("DONE");
+          
+          // 2. WAITING tertua -> DISPLAY
+          const nextIdx = waitingIndices[0];
+          rundownSheet.getRange(nextIdx + 2, 8).setValue("DISPLAY");
+          
+          // Ambil data DISPLAY baru
+          latestGuest = {
+            nama: rdValues[nextIdx][1],
+            kategori: rdValues[nextIdx][4],
+            alamat: rdValues[nextIdx][5]
+          };
+          
+          // Hitung durasi dinamis berdasarkan jumlah sisa antrean
+          const qSize = waitingIndices.length;
+          if (qSize < 3) displayDuration = 12000;
+          else if (qSize < 9) displayDuration = 6000;
+          else displayDuration = 3000;
+
+        } else if (displayIdx !== -1) {
+          // Hanya ada DISPLAY tanpa antrean WAITING
+          latestGuest = {
+            nama: rdValues[displayIdx][1],
+            kategori: rdValues[displayIdx][4],
+            alamat: rdValues[displayIdx][5]
+          };
+          displayDuration = 12000;
+        } else if (waitingIndices.length > 0) {
+          // Tidak ada DISPLAY tapi ada WAITING (Kasih makan mesin)
+          const nextIdx = waitingIndices[0];
+          rundownSheet.getRange(nextIdx + 2, 8).setValue("DISPLAY");
+          latestGuest = {
+            nama: rdValues[nextIdx][1],
+            kategori: rdValues[nextIdx][4],
+            alamat: rdValues[nextIdx][5]
+          };
+          displayDuration = 12000;
         }
       }
     }
 
-    // Ambil Rundown secara Aman
+    // Ambil Rundown (Timeline)
     let rundown = [];
     if (rundownSheet) {
       const rdLast = rundownSheet.getLastRow();
       if (rdLast >= 2) {
-        const rdData = rundownSheet.getRange(2, 1, rdLast - 1, 3).getValues();
         const rundownRaw = rundownSheet.getRange(2, 1, Math.max(1, rdLast - 1), 3).getValues();
         rundown = rundownRaw
-          .filter(r => r[0] || r[1]) // Hanya baris yang ada isi Waktu atau Nama Acara
+          .filter(r => r[0] || r[1])
           .map(row => ({
             displayTime: String(row[0] || ""),
             eventName: String(row[1] || ""),
@@ -624,31 +675,20 @@ function getWelcomeData(ssId) {
       }
     }
 
-    // Ambil Daftar Tamu Terakhir dari Rundown (Kolom E-J) untuk Marquee
+    // Ambil 10 Nama Terakhir untuk Marquee (Semua yang sudah masuk sistem)
     let guestLog = "MENUNGGU TAMU...";
     if (rundownSheet) {
       const rdLast = rundownSheet.getLastRow();
       if (rdLast >= 2) {
-        // Ambil 10 baris terakhir dari kolom F (Nama Tamu)
-        const startScan = Math.max(2, rdLast - 10);
-        const logData = rundownSheet.getRange(startScan, 6, (rdLast - startScan) + 1, 1).getValues();
-        const names = logData
-          .map(r => String(r[0] || "").trim())
-          .filter(n => n !== "")
-          .reverse(); // Terbaru di depan
-        
-        if (names.length > 0) {
-          guestLog = "SELAMAT DATANG: " + names.join("  •  ");
-        }
+        const logData = rundownSheet.getRange(Math.max(2, rdLast - 10), 6, Math.min(11, rdLast), 1).getValues();
+        const names = logData.map(r => String(r[0] || "").trim()).filter(n => n !== "").reverse();
+        if (names.length > 0) guestLog = "SELAMAT DATANG: " + names.join("  •  ");
       }
     }
 
-    // Ambil Background Photos dari Config (B1)
     let urlFoto = "";
-    const configSheet = ss.getSheetByName("Config");
-    if (configSheet) {
-        urlFoto = configSheet.getRange("B1").getValue() || "";
-    }
+    const configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
+    if (configSheet) urlFoto = configSheet.getRange("B1").getValue() || "";
 
     return {
       status: "success",
@@ -657,12 +697,11 @@ function getWelcomeData(ssId) {
       latestGuest,
       rundown,
       log: guestLog.toUpperCase(),
-      urlFoto: urlFoto,
-      displayDuration: 10000
+      urlFoto,
+      displayDuration
     };
   } catch (err) {
-    console.error("getWelcomeData Error:", err);
-    return { status: "error", error: err.toString(), message: err.toString() };
+    return { status: "error", error: err.toString() };
   }
 }
 
@@ -749,11 +788,62 @@ function getSettings(ssId) {
   } catch (e) { return { status: "error", message: e.toString() }; }
 }
 
+function getSettings(ssId) {
+  try {
+    const ss = getSS(ssId);
+    let configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
+    let urlFoto = "";
+    let presetKode = "1";
+    
+    if (configSheet) {
+      urlFoto = configSheet.getRange("B1").getValue() || "";
+      presetKode = configSheet.getRange("B2").getValue() || "1";
+    }
+    
+    return {
+      status: "success",
+      data: {
+        urlFoto: urlFoto,
+        presetKode: presetKode
+      }
+    };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
+function getDropdownOptions(ssId) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName("Config_Dropdown");
+    if (!sheet) return { status: "success", options: [] };
+    
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+    const options = data.map(r => r[0]).filter(r => r !== "");
+    return { status: "success", options: options };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
+function saveWelcomePhotos(ssId, urlFoto) {
+  try {
+    const ss = getSS(ssId);
+    let configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
+    if (!configSheet) {
+      configSheet = ss.insertSheet("CONFIG");
+      configSheet.getRange("A1").setValue("URL_FOTO");
+    }
+    configSheet.getRange("B1").setValue(urlFoto);
+    return { status: "success", message: "Foto background berhasil diperbarui" };
+  } catch (e) { return { status: "error", message: e.toString() }; }
+}
+
 function saveSettings(ssId, s) {
   try {
     const ss = getSS(ssId);
     const sheet = ss.getSheetByName(SHEET_DATA);
-    let configSheet = ss.getSheetByName("Config");
+    let configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
     const settingsSheet = ss.getSheetByName("Settings");
 
     // 1. Konfigurasi Acara (Sheet1)
@@ -764,7 +854,7 @@ function saveSettings(ssId, s) {
 
     // 2. Integrasi & Display (Config)
     if (!configSheet) {
-      configSheet = ss.insertSheet("Config");
+      configSheet = ss.insertSheet("CONFIG");
       configSheet.getRange("A1:A2").setValues([["URL_FOTO"], ["PRESET_STYLE"]]);
     }
     configSheet.getRange("B1").setValue(s.urlFoto);
