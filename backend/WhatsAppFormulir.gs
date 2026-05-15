@@ -21,7 +21,10 @@ function handleWAFormGet(e) {
   const lokasiAcara = sheet1.getRange("B3").getValue();
   const waktuAcara = sheet1.getRange("B4").getValue() || "-";
   
-  let rawLink = sheet1.getRange("B5").getValue();
+  let rawLink = sheet1.getRange("B5").getValue().toString().trim();
+  if (rawLink && !rawLink.startsWith("http")) {
+    rawLink = "https://" + rawLink;
+  }
   const linkInvitation = rawLink.includes("?") ? `${rawLink}&v=3` : `${rawLink}?v=3`;
 
   const deviceData = settings.getRange("A3:D8").getValues();
