@@ -64,7 +64,8 @@
         .photo-card img {
             width: 100%;
             height: 100%;
-            object-cover: cover;
+            object-fit: cover;
+            display: block;
         }
         .delete-btn {
             position: absolute;
@@ -201,15 +202,25 @@
             return;
         }
 
-        container.innerHTML = currentPhotos.map((url, idx) => `
-            <div class="photo-card group">
-                <img src="${url}" onerror="this.src='https://via.placeholder.com/800x450?text=Invalid+Image+URL'" alt="Background ${idx+1}">
-                <div class="delete-btn" onclick="removePhoto(${idx})">×</div>
-                <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <p class="text-[9px] text-white/80 font-medium truncate">${url}</p>
+        container.innerHTML = currentPhotos.map((url, idx) => {
+            // Fix URL on the fly for preview
+            let previewUrl = url;
+            const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+            const match = url.match(driveRegex);
+            if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file"))) {
+                previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1920`;
+            }
+
+            return `
+                <div class="photo-card group">
+                    <img src="${previewUrl}" onerror="this.src='https://via.placeholder.com/800x450?text=Invalid+Image+URL'" alt="Background ${idx+1}">
+                    <div class="delete-btn" onclick="removePhoto(${idx})">×</div>
+                    <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p class="text-[9px] text-white/80 font-medium truncate">${url}</p>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     function addPhoto() {
