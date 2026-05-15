@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Config Invitation - SapaTamu.Ku</title>
+    <script src="subdomain_resolver.js?v=3.2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --primary: #E07B7B; --bg: #FFF9F5; --text: #4A3F35; --border: #F0E6DE; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; overflow: hidden; }
+        
+        .main-wrapper { display: grid; grid-template-columns: 450px 1fr; height: calc(100vh - 80px); margin-top: 80px; }
+        
+        /* LEFT SIDE: SETTINGS */
+        .settings-panel { 
+            background: white; border-right: 1px solid var(--border); 
+            padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px;
+        }
+        .section-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #8C7560; margin-bottom: 8px; }
+        .stk-input { width: 100%; padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--border); background: #FCF8F5; font-size: 14px; font-weight: 600; transition: 0.3s; }
+        .stk-input:focus { border-color: var(--primary); outline: none; background: #fff; }
+        
+        /* RIGHT SIDE: PREVIEW */
+        .preview-panel { background: #F0E6DE; padding: 40px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .preview-frame-container { 
+            width: 100%; max-width: 400px; height: 100%; max-height: 800px; 
+            background: white; border-radius: 40px; overflow: hidden; 
+            box-shadow: 0 40px 100px rgba(74, 63, 53, 0.2); border: 8px solid #1a1a1a;
+            position: relative;
+        }
+        .preview-frame { width: 100%; height: 100%; border: none; }
+        
+        .floating-save { position: fixed; bottom: 30px; left: 30px; width: 390px; z-index: 100; }
+        .btn-save { background: #1a1a1a; color: white; width: 100%; padding: 20px; border-radius: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; font-size: 12px; cursor: pointer; transition: 0.3s; }
+        .btn-save:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.2); }
+
+        /* NAVBAR CLONE */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; background: var(--bg); }
+        .nav-outer-wrapper { position: relative; max-width: 95%; display: flex; align-items: center; background: #FFFDFB; border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08); border: 1px solid var(--border); overflow: hidden; }
+        .nav-scroll-container { display: flex; align-items: center; gap: 5px; padding: 6px 15px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: #8C7560; padding: 10px 18px; border-radius: 30px; transition: 0.3s; }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
+    </style>
+</head>
+<body>
+
+    <nav class="sapatamu-navbar">
+        <div class="nav-outer-wrapper">
+            <div class="nav-scroll-container" id="nav-scroll">
+                <div class="nav-group flex items-center">
+                    <a href="dashboard.html" class="nav-link">Dashboard</a>
+                    <div class="nav-divider"></div>
+                    <a href="formulir_tamu.html" class="nav-link">Formulir</a>
+                    <a href="wa_blast.html" class="nav-link">WA Blast</a>
+                    <a href="undangan.html" class="nav-link">Undangan</a>
+                </div>
+                <div class="nav-divider"></div>
+                <div class="nav-group flex items-center">
+                    <a href="checkin.html" class="nav-link">Check-in</a>
+                    <a href="onsite.html" class="nav-link">On-Site</a>
+                    <a href="analytics.html" class="nav-link">Analytics</a>
+                    <a href="luckydraw.html" class="nav-link">Lucky Draw</a>
+                    <a href="angpao.html" class="nav-link">Angpao</a>
+                    <a href="worker.html" class="nav-link">Worker</a>
+                    <a href="welcome.html" class="nav-link">Welcome</a>
+                    <div class="nav-divider"></div>
+                    
+                    
+                </div>
+                <div class="nav-divider"></div>
+                <a href="logout.html" class="nav-link" style="color: #E07B7B;">Sign Out</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-wrapper">
+        <!-- SIDEBAR: SETTINGS -->
+        <div class="settings-panel">
+            <div class="pb-32">
+                <div class="section-title">Invitation Theme & Music</div>
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <button id="theme_classic" onclick="selectTheme('classic')" class="theme-btn p-4 border-2 border-primary rounded-2xl bg-primary/5 text-xs font-black text-primary">Classic Alice</button>
+                    <button id="theme_modern" onclick="selectTheme('modern')" class="theme-btn p-4 border-2 border-transparent bg-neutral-100 rounded-2xl text-xs font-bold text-neutral-400">Modern Glass</button>
+                </div>
+                <div class="form-group">
+                    <label>Music URL (MP3)</label>
+                    <input type="text" id="inv_music" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                </div>
+
+                <div class="section-title">Hero / Cover Section</div>
+                <div class="form-group">
+                    <label>Cover Background Image</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="inv_cover_bg" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('inv_cover_bg')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Hero Image</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="inv_hero_img" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('inv_hero_img')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Invitation Header Label</label>
+                    <input type="text" id="inv_header_label" class="stk-input" placeholder="The Wedding Celebration" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Hashtag</label>
+                    <input type="text" id="inv_hashtag" class="stk-input" placeholder="#SatuBINTANGuntukANISA" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Guest Greeting Text</label>
+                    <input type="text" id="inv_greeting" class="stk-input" placeholder="Yth. Bapak/Ibu/Saudara/i" oninput="updatePreview()">
+                </div>
+
+                <div class="section-title">Groom (Mempelai Pria)</div>
+                <div class="form-group">
+                    <label>Groom Photo</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="groom_photo" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('groom_photo')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="groom_name" class="stk-input" placeholder="Bintang Zahlahar Trijati" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Parents / Description</label>
+                    <textarea id="groom_desc" class="stk-input" rows="2" placeholder="Putra ke-4 dari Bp. Nana Herna Sutisna & Almh. Ibu Eva Refliana" oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Instagram Username</label>
+                    <input type="text" id="groom_ig" class="stk-input" placeholder="@bintangzt" oninput="updatePreview()">
+                </div>
+
+                <div class="section-title">Bride (Mempelai Wanita)</div>
+                <div class="form-group">
+                    <label>Bride Photo</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="bride_photo" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('bride_photo')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="bride_name" class="stk-input" placeholder="Anisa Nur Fitria" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Parents / Description</label>
+                    <textarea id="bride_desc" class="stk-input" rows="2" placeholder="Putri ke-1 dari Bp. Udin Jaenudin & Ibu Susi Yamayanti" oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Instagram Username</label>
+                    <input type="text" id="bride_ig" class="stk-input" placeholder="@anisanrf" oninput="updatePreview()">
+                </div>
+
+                <div class="section-title">Event 1 (e.g. Akad Nikah)</div>
+                <div class="form-group">
+                    <label>Event Name</label>
+                    <input type="text" id="ev1_name" class="stk-input" placeholder="Akad Nikah" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Time</label>
+                    <input type="text" id="ev1_time" class="stk-input" placeholder="08.00 WIB - Selesai" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Location Name</label>
+                    <textarea id="ev1_loc_name" class="stk-input" rows="2" placeholder="Lingkungan Marga Mulya..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Maps Link URL</label>
+                    <input type="text" id="ev1_maps" class="stk-input" placeholder="https://goo.gl/maps/..." oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Event Photo</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="ev1_photo" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('ev1_photo')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
+                    </div>
+                </div>
+
+                <div class="section-title">Event 2 (e.g. Resepsi)</div>
+                <div class="form-group">
+                    <label>Event Name</label>
+                    <input type="text" id="ev2_name" class="stk-input" placeholder="Resepsi" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Time</label>
+                    <input type="text" id="ev2_time" class="stk-input" placeholder="12.30 WIB - Selesai" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Location Name</label>
+                    <textarea id="ev2_loc_name" class="stk-input" rows="2" placeholder="Lingkungan Marga Mulya..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Maps Link URL</label>
+                    <input type="text" id="ev2_maps" class="stk-input" placeholder="https://goo.gl/maps/..." oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Event Photo</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="ev2_photo" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('ev2_photo')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
+                    </div>
+                </div>
+
+                <div class="section-title">Gift / Angpao Digital</div>
+                <div class="p-4 bg-neutral-50 rounded-2xl mb-4 border border-neutral-100">
+                    <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT CARD 1</div>
+                    <input type="text" id="gift1_bank" class="stk-input mb-2" placeholder="Bank (e.g. BRI)">
+                    <input type="text" id="gift1_acc" class="stk-input mb-2" placeholder="No Rekening">
+                    <input type="text" id="gift1_owner" class="stk-input" placeholder="Atas Nama">
+                </div>
+                <div class="p-4 bg-neutral-50 rounded-2xl mb-4 border border-neutral-100">
+                    <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT CARD 2</div>
+                    <input type="text" id="gift2_bank" class="stk-input mb-2" placeholder="Bank (e.g. BJB)">
+                    <input type="text" id="gift2_acc" class="stk-input mb-2" placeholder="No Rekening">
+                    <input type="text" id="gift2_owner" class="stk-input" placeholder="Atas Nama">
+                </div>
+                <div class="p-4 bg-neutral-50 rounded-2xl mb-4 border border-neutral-100">
+                    <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT CARD 3 (e.g. DANA)</div>
+                    <input type="text" id="gift3_bank" class="stk-input mb-2" placeholder="Bank/E-Wallet">
+                    <input type="text" id="gift3_acc" class="stk-input mb-2" placeholder="No Rek/HP">
+                    <input type="text" id="gift3_owner" class="stk-input" placeholder="Atas Nama">
+                </div>
+
+                <div class="section-title">Gallery Photos</div>
+                <div class="grid grid-cols-2 gap-3 mb-10">
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_1" class="stk-input text-[10px] p-2" placeholder="URL Photo 1">
+                        <button onclick="pickFile('gal_1')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_2" class="stk-input text-[10px] p-2" placeholder="URL Photo 2">
+                        <button onclick="pickFile('gal_2')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_3" class="stk-input text-[10px] p-2" placeholder="URL Photo 3">
+                        <button onclick="pickFile('gal_3')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_4" class="stk-input text-[10px] p-2" placeholder="URL Photo 4">
+                        <button onclick="pickFile('gal_4')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_5" class="stk-input text-[10px] p-2" placeholder="URL Photo 5">
+                        <button onclick="pickFile('gal_5')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_6" class="stk-input text-[10px] p-2" placeholder="URL Photo 6">
+                        <button onclick="pickFile('gal_6')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN AREA: LIVE PREVIEW -->
+        <div class="preview-panel">
+            <div class="preview-frame-container">
+                <iframe id="preview-iframe" src="undangan.html" class="preview-frame"></iframe>
+            </div>
+            
+            <!-- Mobile Badge -->
+            <div class="absolute top-10 right-10 bg-white/80 backdrop-blur-md px-6 py-3 rounded-full border border-white shadow-xl flex items-center gap-3">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-[10px] font-black tracking-widest text-neutral-500 uppercase">Live Preview</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-save">
+        <button onclick="saveInvitationConfig()" class="btn-save">SIMPAN KONFIGURASI UNDANGAN</button>
+    </div>
+
+    <input type="file" id="globalFilePicker" style="display: none;" onchange="handleFileChange(event)">
+
+    <script>
+        let currentTheme = "classic";
+        let targetInputId = ""; // Untuk menampung input mana yang sedang diupload
+
+        function pickFile(inputId) {
+            targetInputId = inputId;
+            document.getElementById('globalFilePicker').click();
+        }
+
+        function handleFileChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64Data = e.target.result;
+                const fileName = file.name;
+                
+                // Show loading on button or input
+                const input = document.getElementById(targetInputId);
+                const originalVal = input.value;
+                input.value = "UPLOADING...";
+                input.disabled = true;
+
+                const payload = {
+                    action: "uploadFile",
+                    ssId: window.CURRENT_SS_ID,
+                    fileData: base64Data,
+                    fileName: fileName
+                };
+
+                try {
+                    const res = await fetch(window.SCRIPT_URL, { 
+                        method: "POST", 
+                        body: JSON.stringify(payload) 
+                    });
+                    const result = await res.json();
+                    
+                    if (result.status === "success") {
+                        input.value = result.url;
+                        updatePreview();
+                    } else {
+                        alert("Upload gagal: " + result.message);
+                        input.value = originalVal;
+                    }
+                } catch (err) {
+                    alert("Error koneksi upload.");
+                    input.value = originalVal;
+                } finally {
+                    input.disabled = false;
+                    event.target.value = ""; // Clear file picker
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function initApp() {
+            if (!window.SAPATAMU_RESOLVED) { setTimeout(initApp, 100); return; }
+            syncNavbar();
+            loadInvitationSettings();
+        }
+
+        function selectTheme(theme) {
+            currentTheme = theme;
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('border-primary', 'bg-primary/5', 'text-primary');
+                btn.classList.add('border-transparent', 'bg-neutral-100', 'text-neutral-400');
+            });
+            const selected = document.getElementById('theme_' + theme);
+            selected.classList.remove('border-transparent', 'bg-neutral-100', 'text-neutral-400');
+            selected.classList.add('border-primary', 'bg-primary/5', 'text-primary');
+            updatePreview();
+        }
+
+        function syncNavbar() {
+            const ssId = window.CURRENT_SS_ID || "";
+            document.querySelectorAll('.nav-link').forEach(link => {
+                const base = link.href.split('?')[0];
+                link.href = `${base}?ssId=${ssId}`;
+            });
+        }
+
+        async function loadInvitationSettings() {
+            const ssId = window.CURRENT_SS_ID;
+            if (!ssId) return;
+
+            try {
+                const res = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`);
+                const result = await res.json();
+                if (result.status === "success") {
+                    const s = result.data;
+                    const inv = s.invitationData || {};
+
+                    // Load Hero
+                    document.getElementById('inv_music').value = inv.musicUrl || "";
+                    document.getElementById('inv_cover_bg').value = inv.coverBg || "";
+                    document.getElementById('inv_hero_img').value = inv.heroImg || "";
+                    document.getElementById('inv_header_label').value = inv.headerLabel || "";
+                    document.getElementById('inv_hashtag').value = inv.hashtag || "";
+
+                    // Load Groom
+                    const g = inv.groom || {};
+                    document.getElementById('groom_photo').value = g.photo || "";
+                    document.getElementById('groom_name').value = g.name || "";
+                    document.getElementById('groom_desc').value = g.desc || "";
+                    document.getElementById('groom_ig').value = g.ig || "";
+
+                    // Load Bride
+                    const b = inv.bride || {};
+                    document.getElementById('bride_photo').value = b.photo || "";
+                    document.getElementById('bride_name').value = b.name || "";
+                    document.getElementById('bride_desc').value = b.desc || "";
+                    document.getElementById('bride_ig').value = b.ig || "";
+
+                    // Load Events
+                    const ev1 = inv.ev1 || {};
+                    document.getElementById('ev1_name').value = ev1.name || "";
+                    document.getElementById('ev1_time').value = ev1.time || "";
+                    document.getElementById('ev1_loc_name').value = ev1.locName || "";
+                    document.getElementById('ev1_maps').value = ev1.maps || "";
+                    document.getElementById('ev1_photo').value = ev1.photo || "";
+
+                    const ev2 = inv.ev2 || {};
+                    document.getElementById('ev2_name').value = ev2.name || "";
+                    document.getElementById('ev2_time').value = ev2.time || "";
+                    document.getElementById('ev2_loc_name').value = ev2.locName || "";
+                    document.getElementById('ev2_maps').value = ev2.maps || "";
+                    document.getElementById('ev2_photo').value = ev2.photo || "";
+
+                    // Load Gifts
+                    const gifts = inv.gifts || [{}, {}, {}];
+                    document.getElementById('gift1_bank').value = gifts[0].bank || "BRI";
+                    document.getElementById('gift1_acc').value = gifts[0].acc || "0046 0101 6863 537";
+                    document.getElementById('gift1_owner').value = gifts[0].owner || "Bintang Zahlahar Trijati";
+                    
+                    document.getElementById('gift2_bank').value = gifts[1].bank || "BJB";
+                    document.getElementById('gift2_acc').value = gifts[1].acc || "0150614368104";
+                    document.getElementById('gift2_owner').value = gifts[1].owner || "Anisa Nur Fitria";
+
+                    document.getElementById('gift3_bank').value = gifts[2].bank || "DANA";
+                    document.getElementById('gift3_acc').value = gifts[2].acc || "082246379369";
+                    document.getElementById('gift3_owner').value = gifts[2].owner || "Anisa Nur Fitria";
+
+                    document.getElementById('inv_greeting').value = inv.greeting || "Yth. Bapak/Ibu/Saudara/i";
+
+                    // Load Gallery
+                    const gal = inv.gallery || [];
+                    for(let i=1; i<=6; i++) {
+                        document.getElementById('gal_'+i).value = gal[i-1] || "";
+                    }
+                    
+                    if (s.theme) selectTheme(s.theme);
+                    
+                    // Initial Preview update
+                    setTimeout(updatePreview, 1000);
+                }
+            } catch (e) { console.error("Load Invitation Error:", e); }
+        }
+
+        function updatePreview() {
+            const iframe = document.getElementById('preview-iframe');
+            if (!iframe.contentWindow) return;
+
+            const data = {
+                musicUrl: document.getElementById('inv_music').value,
+                coverBg: document.getElementById('inv_cover_bg').value,
+                heroImg: document.getElementById('inv_hero_img').value,
+                headerLabel: document.getElementById('inv_header_label').value,
+                hashtag: document.getElementById('inv_hashtag').value,
+                groom: {
+                    photo: document.getElementById('groom_photo').value,
+                    name: document.getElementById('groom_name').value,
+                    desc: document.getElementById('groom_desc').value,
+                    ig: document.getElementById('groom_ig').value
+                },
+                bride: {
+                    photo: document.getElementById('bride_photo').value,
+                    name: document.getElementById('bride_name').value,
+                    desc: document.getElementById('bride_desc').value,
+                    ig: document.getElementById('bride_ig').value
+                },
+                ev1: {
+                    name: document.getElementById('ev1_name').value,
+                    time: document.getElementById('ev1_time').value,
+                    locName: document.getElementById('ev1_loc_name').value,
+                    maps: document.getElementById('ev1_maps').value,
+                    photo: document.getElementById('ev1_photo').value
+                },
+                ev2: {
+                    name: document.getElementById('ev2_name').value,
+                    time: document.getElementById('ev2_time').value,
+                    locName: document.getElementById('ev2_loc_name').value,
+                    maps: document.getElementById('ev2_maps').value,
+                    photo: document.getElementById('ev2_photo').value
+                },
+                gifts: [
+                    { bank: document.getElementById('gift1_bank').value, acc: document.getElementById('gift1_acc').value, owner: document.getElementById('gift1_owner').value },
+                    { bank: document.getElementById('gift2_bank').value, acc: document.getElementById('gift2_acc').value, owner: document.getElementById('gift2_owner').value },
+                    { bank: document.getElementById('gift3_bank').value, acc: document.getElementById('gift3_acc').value, owner: document.getElementById('gift3_owner').value }
+                ],
+                greeting: document.getElementById('inv_greeting').value,
+                gallery: [
+                    document.getElementById('gal_1').value, document.getElementById('gal_2').value,
+                    document.getElementById('gal_3').value, document.getElementById('gal_4').value,
+                    document.getElementById('gal_5').value, document.getElementById('gal_6').value
+                ]
+            };
+
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                if (typeof iframe.contentWindow.applyLivePreview === 'function') {
+                    iframe.contentWindow.applyLivePreview(data);
+                }
+            } catch (e) {
+                console.warn("Iframe manipulation blocked or not ready yet.");
+            }
+        }
+
+        async function saveInvitationConfig() {
+            const ssId = window.CURRENT_SS_ID;
+            if (!ssId) return;
+
+            const btn = document.querySelector('.btn-save');
+            btn.innerText = "MENYIMPAN...";
+            btn.disabled = true;
+
+            const invData = {
+                musicUrl: document.getElementById('inv_music').value,
+                coverBg: document.getElementById('inv_cover_bg').value,
+                heroImg: document.getElementById('inv_hero_img').value,
+                headerLabel: document.getElementById('inv_header_label').value,
+                hashtag: document.getElementById('inv_hashtag').value,
+                groom: {
+                    photo: document.getElementById('groom_photo').value,
+                    name: document.getElementById('groom_name').value,
+                    desc: document.getElementById('groom_desc').value,
+                    ig: document.getElementById('groom_ig').value
+                },
+                bride: {
+                    photo: document.getElementById('bride_photo').value,
+                    name: document.getElementById('bride_name').value,
+                    desc: document.getElementById('bride_desc').value,
+                    ig: document.getElementById('bride_ig').value
+                },
+                ev1: {
+                    name: document.getElementById('ev1_name').value,
+                    time: document.getElementById('ev1_time').value,
+                    locName: document.getElementById('ev1_loc_name').value,
+                    maps: document.getElementById('ev1_maps').value,
+                    photo: document.getElementById('ev1_photo').value
+                },
+                ev2: {
+                    name: document.getElementById('ev2_name').value,
+                    time: document.getElementById('ev2_time').value,
+                    locName: document.getElementById('ev2_loc_name').value,
+                    maps: document.getElementById('ev2_maps').value,
+                    photo: document.getElementById('ev2_photo').value
+                },
+                gifts: [
+                    { bank: document.getElementById('gift1_bank').value, acc: document.getElementById('gift1_acc').value, owner: document.getElementById('gift1_owner').value },
+                    { bank: document.getElementById('gift2_bank').value, acc: document.getElementById('gift2_acc').value, owner: document.getElementById('gift2_owner').value },
+                    { bank: document.getElementById('gift3_bank').value, acc: document.getElementById('gift3_acc').value, owner: document.getElementById('gift3_owner').value }
+                ],
+                greeting: document.getElementById('inv_greeting').value,
+                gallery: [
+                    document.getElementById('gal_1').value, document.getElementById('gal_2').value,
+                    document.getElementById('gal_3').value, document.getElementById('gal_4').value,
+                    document.getElementById('gal_5').value, document.getElementById('gal_6').value
+                ]
+            };
+
+            const payload = {
+                action: "updateClientData",
+                ssId: ssId,
+                eventData: {
+                    nama: invData.groom.name + " & " + invData.bride.name,
+                    invitationData: invData,
+                    theme: currentTheme
+                }
+            };
+
+            try {
+                const res = await fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+                const result = await res.json();
+                if (result.status === "success") {
+                    alert("Konfigurasi Undangan Berhasil Disimpan!");
+                } else {
+                    alert("Gagal menyimpan: " + result.message);
+                }
+            } catch (e) {
+                alert("Error koneksi server.");
+            } finally {
+                btn.innerText = "SIMPAN KONFIGURASI UNDANGAN";
+                btn.disabled = false;
+            }
+        }
+
+        initApp();
+    </script>
+</body>
+</html>

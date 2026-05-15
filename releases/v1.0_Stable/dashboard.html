@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SapaTamu.Ku</title>
+    <script src="subdomain_resolver.js?v=3.2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --primary: #E07B7B; /* Rose */
+            --bg: #FFF9F5;      /* Warm White */
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --gold: #C8962E;
+            --border: #F0E6DE;
+        }
+        * { line-height: normal !important; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            min-height: 100vh;
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+        .main-wrapper {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+            padding: 100px 20px 50px;
+        }
+        .brand-title {
+            font-family: 'Lora', serif;
+            font-weight: 700 !important;
+            letter-spacing: 2px !important;
+            font-size: clamp(28px, 6vw, 36px) !important;
+            margin-bottom: 15px !important;
+            color: var(--text-main) !important;
+        }
+        .tagline-box {
+            padding: 30px 10px !important;
+            margin-bottom: 40px !important;
+            border-top: 1.5px solid var(--border) !important;
+            border-bottom: 1.5px solid var(--border) !important;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .tagline-main {
+            font-size: clamp(12px, 3.5vw, 14px) !important;
+            font-weight: 800 !important;
+            letter-spacing: 1px !important;
+            margin-bottom: 12px !important;
+            color: var(--primary) !important;
+            text-transform: uppercase !important;
+        }
+        .tagline-sub {
+            font-size: clamp(10px, 3vw, 13px) !important;
+            font-weight: 500 !important;
+            color: var(--text-muted) !important;
+            line-height: 1.7 !important;
+        }
+        .tagline-highlight {
+            color: var(--gold) !important;
+            font-weight: 800 !important;
+            display: block;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        .nav-container {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+        @media (min-width: 768px) {
+            .nav-container {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 25px;
+            border-radius: 24px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: #fff;
+            border: 1px solid var(--border);
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(140, 117, 96, 0.05);
+        }
+
+        /* ADVANCED NAVBAR STYLES (CLONE FROM ONSITE) */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
+        .nav-outer-wrapper { position: relative; max-width: 95%; display: flex; align-items: center; background: #FFFDFB; border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08); border: 1px solid var(--border); overflow: hidden; }
+        
+        .nav-scroll-container { 
+            display: flex; align-items: center; gap: 5px; padding: 6px 15px;
+            overflow-x: auto; white-space: nowrap; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        }
+        .nav-scroll-container::-webkit-scrollbar { display: none; }
+        
+        .nav-fade { position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none; z-index: 2; transition: opacity 0.3s; opacity: 0; }
+        .nav-fade-left { left: 0; background: linear-gradient(to right, #FFFDFB 20%, transparent); }
+        .nav-fade-right { right: 0; background: linear-gradient(to left, #FFFDFB 20%, transparent); }
+        .nav-fade.visible { opacity: 1; }
+
+        .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; font-size: 10px; color: var(--text-muted); opacity: 0.5; pointer-events: none; transition: 0.3s; }
+        .nav-arrow-left { left: 8px; }
+        .nav-arrow-right { right: 8px; }
+
+        .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: 0.3s; display: flex; align-items: center; white-space: nowrap; }
+        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-link.sign-out { color: #E07B7B !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
+
+        .nav-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(224, 123, 123, 0.12);
+        }
+        .glass-box {
+            background: #fff;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: clamp(65px, 15vw, 80px);
+            height: clamp(65px, 15vw, 80px);
+            flex-shrink: 0;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .nav-item:hover .glass-box {
+            border-color: var(--gold);
+            transform: scale(1.05);
+        }
+        .icon-mono {
+            filter: grayscale(1);
+            opacity: 0.7;
+            width: 28px;
+        }
+        .nav-item:hover .icon-mono {
+            filter: none;
+            opacity: 1;
+        }
+        .content-box {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden;
+        }
+        .label-text {
+            font-size: clamp(10px, 2.5vw, 12px) !important;
+            font-weight: 900 !important;
+            letter-spacing: 1.2px !important;
+            text-transform: uppercase !important;
+            color: #111 !important;
+            margin: 0 !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .desc-text {
+            font-size: clamp(8px, 2vw, 10px) !important;
+            font-weight: 500 !important;
+            color: #888 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            line-height: 1.4 !important;
+            margin: 0 !important;
+        }
+        .gold-accent .label-text, 
+        .gold-accent .desc-text { color: var(--gold) !important; }
+        .gold-border { border-bottom: 2px solid rgba(212, 175, 55, 0.4) !important; }
+        .gold-bg { background: rgba(212, 175, 55, 0.03) !important; }
+        .logout-pill {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid #eee;
+            cursor: pointer;
+            z-index: 1000;
+            transition: 0.3s;
+        }
+        .logout-pill:hover { background: #fdfdfd; border-color: #ef4444; color: #ef4444; }
+
+    #loading-global {
+        position: fixed; inset: 0;
+        background: rgba(255, 249, 245, 0.95); 
+        display: none; justify-content: center;
+        align-items: center; z-index: 100000; flex-direction: column;
+        backdrop-filter: blur(10px);
+        cursor: wait;
+    }
+    .spinner {
+        width: 45px; height: 45px;
+        border: 4px solid var(--border); border-top: 4px solid var(--primary);
+        border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* MODAL STYLES */
+    .st-modal-overlay {
+        position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4);
+        display: none; justify-content: center; align-items: center;
+        z-index: 100000; backdrop-filter: blur(10px);
+    }
+    .st-modal-content {
+        background: #fff;
+        padding: 50px 40px; border-radius: 32px;
+        text-align: center; max-width: 400px; width: 90%;
+        box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2);
+        border: 1px solid var(--border);
+    }
+    .st-modal-title { font-family: 'Lora', serif; color: var(--text-main); font-size: 24px; margin-bottom: 15px; font-weight:700; }
+    .st-modal-msg { color: var(--text-muted); line-height: 1.6; font-size: 15px; margin-bottom: 35px; white-space: pre-line; }
+    .st-btn { cursor: pointer; padding: 15px; border-radius: 12px; font-weight: 700; font-size: 11px; letter-spacing: 1px; transition: 0.3s; border: none; }
+    .btn-dark { background: var(--text-main); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+<nav class="sapatamu-navbar">
+    <div class="nav-outer-wrapper">
+        <div class="nav-fade nav-fade-left" id="fade-left"></div>
+        <div class="nav-arrow nav-arrow-left">‹</div>
+        
+        <div class="nav-scroll-container" id="nav-scroll">
+            <div class="nav-group">
+                <a href="dashboard.html" class="nav-link active" id="nav-dashboard">Dashboard</a>
+                <div class="nav-divider"></div>
+                <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
+                <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+                <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+            </div>
+            <div class="nav-divider"></div>
+            <div class="nav-group">
+                <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+                <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+                <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+                <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+                <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+                
+                
+            </div>
+            <div class="nav-divider"></div>
+            <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
+        </div>
+
+        <div class="nav-arrow nav-arrow-right">›</div>
+        <div class="nav-fade nav-fade-right" id="fade-right"></div>
+    </div>
+</nav>
+
+<div id="loading-global">
+    <div class="spinner"></div>
+    <div style="color:var(--primary); font-family:'Lora', serif; font-size: 16px; font-weight:700; letter-spacing: 1px;" id="loading-text">Menyiapkan Sistem...</div>
+</div>
+
+<div id="st-modal" class="st-modal-overlay">
+    <div id="modal-container" class="st-modal-content">
+        <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️</span>
+        <div id="st-modal-title" class="st-modal-title">Notifikasi</div>
+        <div id="st-modal-msg" class="st-modal-msg">Pesan akan muncul di sini.</div>
+        <div id="modal-actions" style="display: flex; gap: 10px; margin-top: 30px;">
+            <button id="modal-cancel-btn" class="st-btn btn-outline" style="flex:1; display:none;">BATAL</button>
+            <button id="modal-ok-btn" class="st-btn btn-dark" style="flex:1;">MENGERTI</button>
+        </div>
+    </div>
+</div>
+
+<div class="main-wrapper">
+    <header>
+        <h1 class="brand-title" id="display_wedding_name">SapaTamu.Ku</h1>
+        <div class="tagline-box">
+            <p class="tagline-main" id="display_category_label">All in One Digital Guestbook Management</p>
+            <p class="tagline-sub">
+                Sentuhan teknologi <b>AI Experience</b> Collaboration with <b>Knowhere Studio</b> to serving you 
+                <span class="tagline-highlight">Instant AI Gallery Face Finder with QR Code.</span>
+            </p>
+        </div>
+    </header>
+
+    <div class="nav-container">
+        <!-- Guestbook -->
+        <div class="nav-item" onclick="nav('formulir_tamu.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/document.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Digital Guestbook</span>
+                <p class="desc-text">Self-Registration & Realtime Check-in</p>
+            </div>
+        </div>
+
+        <!-- Checkin Scanner -->
+        <div class="nav-item" onclick="nav('checkin.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/qr-code.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">QR Scanner</span>
+                <p class="desc-text">Fast Attendance & Selfie Mode</p>
+            </div>
+        </div>
+
+        <!-- On-Site -->
+        <div class="nav-item" onclick="nav('onsite.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/plus.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">On-Site Registration</span>
+                <p class="desc-text">Manual entry at venue</p>
+            </div>
+        </div>
+
+        <!-- Angpao -->
+        <div class="nav-item" onclick="nav('angpao.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/wallet.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Input Angpao</span>
+                <p class="desc-text">Secure Digital Gift Log Record</p>
+            </div>
+        </div>
+
+        <!-- WA Blast -->
+        <div class="nav-item" onclick="nav('wa_blast.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/whatsapp.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">WA Blast Manager</span>
+                <p class="desc-text">Broadcast Messages to Guests</p>
+            </div>
+        </div>
+
+        <!-- Lucky Draw -->
+        <div class="nav-item" onclick="nav('luckydraw.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/trophy.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Lucky Draw</span>
+                <p class="desc-text">Raffle System for Winners</p>
+            </div>
+        </div>
+
+        <!-- Analytics -->
+        <div class="nav-item" onclick="nav('analytics.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/data-configuration.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Analytics Node</span>
+                <p class="desc-text">Attendance & Traffic Insight</p>
+            </div>
+        </div>
+
+        <!-- Welcome Sign -->
+        <div class="nav-item" onclick="nav('welcome.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/image.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Welcome Sign</span>
+                <p class="desc-text">Greeting Screen Display</p>
+            </div>
+        </div>
+
+        <!-- Worker -->
+        <div class="nav-item" onclick="nav('worker.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/print.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Printer Worker</span>
+                <p class="desc-text">Bluetooth Label Printing Engine</p>
+            </div>
+        </div>
+
+        <!-- Digital Invitation -->
+        <div class="nav-item gold-accent" onclick="nav('undangan.html')">
+            <div class="glass-box gold-border">
+                <img src="https://img.icons8.com/ios-filled/50/D4AF37/star.png" class="icon-mono" style="filter:none; opacity:1;"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text">Digital Invitation</span>
+                <p class="desc-text">Exclusive Personalized Web</p>
+            </div>
+        </div>
+
+        <!-- Configuration Settings -->
+        <div class="nav-item" onclick="nav('config.html')" style="background: linear-gradient(to right, #fff, #FFFDFB); border: 1.5px dashed var(--gold);">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/C8962E/settings.png" class="icon-mono" style="filter:none; opacity:1;"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text" style="color: var(--gold) !important;">Event Config</span>
+                <p class="desc-text">Manage Settings & Categories</p>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="mt-20 text-center pb-10">
+        <p style="font-size: 8px !important; font-weight: 700; letter-spacing: 3px; color: #BBB; text-transform: uppercase;">Powered by Sapatamu.Ku</p>
+    </footer>
+
+</div>
+
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">⚠️</div>
+            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Sesi Berakhir</h2>
+            <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Silakan Login terlebih dahulu untuk mengakses menu ini.</p>
+            <button onclick="window.location.href='login.html'" class="nav-item" style="justify-content: center; background: var(--text-main); color: #fff; padding: 18px; border-radius: 18px; font-size: 11px; width: 100%; border: none;">LOGIN SEKARANG</button>
+        </div>
+    </div>
+
+    <style>
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
+<script>
+    function syncNavbar() {
+        const ssId = window.CURRENT_SS_ID || "";
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            const baseHref = link.getAttribute('href').split('?')[0];
+            link.href = `${baseHref}?ssId=${ssId}`;
+        });
+    }
+
+    function initHub() {
+        syncNavbar();
+    }
+
+    // Tunggu resolver selesai baru init (SATPAM UTAMA)
+    function checkResolved() {
+        if (window.SAPATAMU_RESOLVED) {
+            const hn = window.location.hostname;
+            const localData = localStorage.getItem('sapatamu_db');
+            
+            // 1. CEK DOMAIN UTAMA (Redirect ke Subdomain)
+            if (hn === "sapatamu.id" || hn === "www.sapatamu.id") {
+                if (localData) {
+                    const parsed = JSON.parse(localData);
+                    if (parsed.username) {
+                        const sub = parsed.username.toLowerCase().replace(/\s+/g, '');
+                        const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
+                        const targetPage = (currentPage === "" || currentPage === "/") ? "dashboard.html" : currentPage;
+                        window.location.replace("https://" + sub + ".sapatamu.id/" + targetPage);
+                        return;
+                    }
+                }
+                window.location.replace("login.html");
+                return;
+            }
+
+            // 2. CEK SESI (Wajib ada sapatamu_db)
+            if (!localData || !window.CURRENT_SS_ID) {
+                console.warn("Sesi tidak valid, kembali ke login.");
+                window.location.replace("https://sapatamu.id/login.html");
+                return;
+            }
+
+            // 3. JALANKAN DASHBOARD
+            const parsed = JSON.parse(localData);
+            const cat = window.CURRENT_CATEGORY || "wedding";
+            const name = parsed.username || "Client";
+            
+            document.getElementById('display_wedding_name').innerText = name;
+            const labels = {
+                wedding: "Wedding Guestbook Management",
+                birthday: "Birthday Event Management",
+                anniversary: "Anniversary Event Management",
+                corporate: "Corporate Meeting Management",
+                gathering: "Community Gathering Management"
+            };
+            document.getElementById('display_category_label').innerText = labels[cat] || labels.wedding;
+
+            initHub();
+            initNavScroll();
+        } else {
+            setTimeout(checkResolved, 100);
+        }
+    }
+
+    function toggleProcessing(isStart, text = "Menyiapkan Sistem...") {
+        isProcessing = isStart;
+        const loader = document.getElementById('loading-global');
+        if(loader) {
+            document.getElementById('loading-text').innerText = text;
+            loader.style.display = isStart ? 'flex' : 'none';
+        }
+        document.body.style.cursor = isStart ? 'wait' : 'default';
+    }
+
+    window.showAlert = function(title, msg, icon = "⚠️") {
+        return new Promise(resolve => {
+            document.getElementById('st-modal-icon').innerText = icon;
+            document.getElementById('st-modal-title').innerText = title;
+            document.getElementById('st-modal-msg').innerText = msg;
+            document.getElementById('modal-cancel-btn').style.display = 'none';
+            const okBtn = document.getElementById('modal-ok-btn');
+            okBtn.innerText = "MENGERTI";
+            okBtn.onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(true);
+            };
+            document.getElementById('st-modal').style.display = 'flex';
+        });
+    };
+
+    window.showConfirm = function(title, msg, icon = "🚀") {
+        return new Promise(resolve => {
+            document.getElementById('st-modal-icon').innerText = icon;
+            document.getElementById('st-modal-title').innerText = title;
+            document.getElementById('st-modal-msg').innerText = msg;
+            document.getElementById('modal-cancel-btn').style.display = 'block';
+            document.getElementById('modal-ok-btn').innerText = "LANJUTKAN";
+            document.getElementById('modal-ok-btn').onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(true);
+            };
+            document.getElementById('modal-cancel-btn').onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(false);
+            };
+            document.getElementById('st-modal').style.display = 'flex';
+        });
+    };
+
+    function initNavScroll() {
+        const container = document.getElementById('nav-scroll');
+        const fLeft = document.getElementById('fade-left');
+        const fRight = document.getElementById('fade-right');
+        
+        const updateFades = () => {
+            const scrollLeft = container.scrollLeft;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            fLeft.classList.toggle('visible', scrollLeft > 10);
+            fRight.classList.toggle('visible', scrollLeft < maxScroll - 10);
+        };
+        
+        container.addEventListener('scroll', updateFades);
+        window.addEventListener('resize', updateFades);
+        setTimeout(updateFades, 500);
+
+        // Auto-scroll to active link
+        const active = container.querySelector('.nav-link.active');
+        if (active) {
+            container.scrollLeft = active.offsetLeft - (container.clientWidth / 2) + (active.clientWidth / 2);
+        }
+    }
+    checkResolved();
+
+    window.showSapaModal = function() {
+        document.getElementById('sapa-notify-modal').style.display = 'flex';
+    };
+
+    function nav(target) {
+        if (!window.CURRENT_SS_ID && target !== 'undangan.html') {
+            showSapaModal();
+            return;
+        }
+        window.location.href = target;
+    }
+</script>
+
+</body>
+</html>
