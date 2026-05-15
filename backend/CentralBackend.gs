@@ -386,8 +386,7 @@ function handleCheckSubdomain(data) {
       if (colJ === sub) {
         return createResponse({ 
           status: "taken", 
-          message: "Subdomain sudah terdaftar di baris " + (i + 1),
-          row: i + 1 
+          message: "Subdomain '" + rawJ + "' sudah dimiliki oleh klien lain. Silakan coba nama lain."
         });
       }
     }
