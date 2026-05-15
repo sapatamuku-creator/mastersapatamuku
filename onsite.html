@@ -123,7 +123,7 @@
         .spinner { width: 40px; height: 40px; border: 3px solid rgba(224, 123, 123, 0.1); border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .st-modal-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.4); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 300000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .st-modal-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.4); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2147483647; display: none; align-items: center; justify-content: center; padding: 20px; }
         .st-modal-content { background: white; width: 100%; max-width: 320px; border-radius: 35px; padding: 30px; text-align: center; box-shadow: 0 20px 60px rgba(74, 63, 53, 0.15); border: 1px solid rgba(255,255,255,0.8); animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         .st-modal-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; }
@@ -387,7 +387,7 @@
             document.getElementById('st-modal-msg').innerText = msg;
             document.getElementById('modal-cancel-btn').style.display = 'none';
             const okBtn = document.getElementById('modal-ok-btn');
-            okBtn.innerText = "MENGERTI";
+            okBtn.innerText = "TUTUP";
             okBtn.onclick = () => {
                 document.getElementById('st-modal').style.display = 'none';
                 resolve(true);
@@ -637,7 +637,10 @@
                 renderUI(); 
 
                 // --- STEP 4: SUCCESS GREETING MODAL ---
-                document.getElementById('loading').style.display = 'none'; // TUTUP LOADING DULU
+                document.getElementById('loading').style.display = 'none'; 
+                if(document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+                document.body.style.cursor = 'default';
+
                 await showAlert(
                     "CHECK-IN BERHASIL", 
                     `Selamat Datang,\n\n${selectedGuest.nama.toUpperCase()}\n(${selectedGuest.kategori || 'UMUM'})\n\nSilakan Masuk`, 
@@ -759,7 +762,10 @@
                 confetti({ particleCount: 100, spread: 70 });
 
                 // --- STEP 4: SUCCESS GREETING MODAL ---
-                document.getElementById('loading').style.display = 'none'; // TUTUP LOADING DULU
+                document.getElementById('loading').style.display = 'none'; 
+                if(document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+                document.body.style.cursor = 'default';
+
                 await showAlert(
                     "REGISTRASI BERHASIL", 
                     `Selamat Datang,\n\n${nama.toUpperCase()}\n(${payload.kategori || 'UMUM'})\n\nSilakan Masuk`, 
