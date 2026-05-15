@@ -612,7 +612,6 @@ function getWelcomeData(ssId) {
     if (rundownSheet) {
       const rdLast = rundownSheet.getLastRow();
       if (rdLast >= 2) {
-        const rdData = rundownSheet.getRange(2, 1, rdLast - 1, 3).getValues();
         const rundownRaw = rundownSheet.getRange(2, 1, Math.max(1, rdLast - 1), 3).getValues();
         rundown = rundownRaw
           .filter(r => r[0] || r[1]) // Hanya baris yang ada isi Waktu atau Nama Acara
