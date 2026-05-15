@@ -752,6 +752,44 @@ function getSettings(ssId) {
   } catch (e) { return { status: "error", message: e.toString() }; }
 }
 
+function getSettings(ssId) {
+  try {
+    const ss = getSS(ssId);
+    let configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
+    let urlFoto = "";
+    let presetKode = "1";
+    
+    if (configSheet) {
+      urlFoto = configSheet.getRange("B1").getValue() || "";
+      presetKode = configSheet.getRange("B2").getValue() || "1";
+    }
+    
+    return {
+      status: "success",
+      data: {
+        urlFoto: urlFoto,
+        presetKode: presetKode
+      }
+    };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
+function getDropdownOptions(ssId) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName("Config_Dropdown");
+    if (!sheet) return { status: "success", options: [] };
+    
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+    const options = data.map(r => r[0]).filter(r => r !== "");
+    return { status: "success", options: options };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
 function saveWelcomePhotos(ssId, urlFoto) {
   try {
     const ss = getSS(ssId);

@@ -21,6 +21,7 @@ function doGet(e) {
     case 'getMasterData':
     case 'getMasterDataAngpao':
     case 'getPrintQueue':
+    case 'getSettings':
       return handleMainGet(e);
     default:
       // Handle legacy URL params (row & ssId) for check-in via WhatsApp links
