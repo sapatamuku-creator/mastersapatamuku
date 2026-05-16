@@ -758,11 +758,19 @@
                     };
 
                     // Update UI
-                    if (document.getElementById('page-title')) document.getElementById('page-title').innerText = s.namaAcara + " - SapaTamu.Ku";
-                    document.querySelectorAll('.wedding-names-text').forEach(el => el.innerText = s.namaAcara);
-                    if (document.getElementById('wedding-date-text')) document.getElementById('wedding-date-text').innerText = s.tanggal;
-                    if (s.invitationData) {
-                        window.applyLivePreview(s.invitationData);
+                    const safeName = (s.namaAcara && s.namaAcara !== "undefined") ? s.namaAcara : "Bintang & Anisa";
+                    const safeDate = (s.tanggal && s.tanggal !== "undefined") ? s.tanggal : "Senin, 25 Mei 2026";
+                    
+                    if (document.getElementById('page-title')) document.getElementById('page-title').innerText = safeName + " - SapaTamu.Ku";
+                    document.querySelectorAll('.wedding-names-text').forEach(el => el.innerText = safeName);
+                    if (document.getElementById('wedding-date-text')) document.getElementById('wedding-date-text').innerText = safeDate;
+                    
+                    if (s.invitationData && Object.keys(s.invitationData).length > 0) {
+                        try {
+                            window.applyLivePreview(s.invitationData);
+                        } catch(e) {
+                            console.error("Gagal apply live preview:", e);
+                        }
                     }
                 }
             } catch (e) { console.error("Gagal memuat metadata:", e); }
@@ -847,6 +855,7 @@
         };
         window.applyLivePreview = function (data) {
             console.log("Applying Live Preview Data:", data);
+            if (!data) return;
 
             if (data.headerLabel) document.querySelectorAll('.header-label-text').forEach(el => el.innerText = data.headerLabel);
             if (data.hashtag) document.querySelectorAll('.hashtag-text').forEach(el => el.innerText = data.hashtag);
@@ -859,25 +868,35 @@
                 if (heroImg) heroImg.src = data.heroImg;
             }
 
-            document.querySelectorAll('.wedding-names-text').forEach(el => el.innerText = data.groom.name + " & " + data.bride.name);
+            if (data.groom && data.bride) {
+                document.querySelectorAll('.wedding-names-text').forEach(el => el.innerText = (data.groom.name || "Bintang") + " & " + (data.bride.name || "Anisa"));
+            }
 
-            document.querySelectorAll('.groom-name-text').forEach(el => el.innerText = data.groom.name);
-            document.querySelectorAll('.groom-desc-text').forEach(el => el.innerText = data.groom.desc);
-            document.querySelectorAll('.groom-photo-img').forEach(el => el.src = data.groom.photo);
+            if (data.groom) {
+                document.querySelectorAll('.groom-name-text').forEach(el => el.innerText = data.groom.name || "Bintang Zahlahar Trijati");
+                document.querySelectorAll('.groom-desc-text').forEach(el => el.innerText = data.groom.desc || "Putra dari...");
+                if (data.groom.photo) document.querySelectorAll('.groom-photo-img').forEach(el => el.src = data.groom.photo);
+            }
 
-            document.querySelectorAll('.bride-name-text').forEach(el => el.innerText = data.bride.name);
-            document.querySelectorAll('.bride-desc-text').forEach(el => el.innerText = data.bride.desc);
-            document.querySelectorAll('.bride-photo-img').forEach(el => el.src = data.bride.photo);
+            if (data.bride) {
+                document.querySelectorAll('.bride-name-text').forEach(el => el.innerText = data.bride.name || "Anisa Nur Fitria");
+                document.querySelectorAll('.bride-desc-text').forEach(el => el.innerText = data.bride.desc || "Putri dari...");
+                if (data.bride.photo) document.querySelectorAll('.bride-photo-img').forEach(el => el.src = data.bride.photo);
+            }
 
-            document.querySelectorAll('.ev1-name-text').forEach(el => el.innerText = data.ev1.name);
-            document.querySelectorAll('.ev1-time-text').forEach(el => el.innerText = data.ev1.time);
-            document.querySelectorAll('.ev1-loc-text').forEach(el => el.innerText = data.ev1.locName);
-            document.querySelectorAll('.ev1-photo-img').forEach(el => el.src = data.ev1.photo);
+            if (data.ev1) {
+                document.querySelectorAll('.ev1-name-text').forEach(el => el.innerText = data.ev1.name || "Akad Nikah");
+                document.querySelectorAll('.ev1-time-text').forEach(el => el.innerText = data.ev1.time || "08.00 WIB - Selesai");
+                document.querySelectorAll('.ev1-loc-text').forEach(el => el.innerText = data.ev1.locName || "Lokasi");
+                if (data.ev1.photo) document.querySelectorAll('.ev1-photo-img').forEach(el => el.src = data.ev1.photo);
+            }
 
-            document.querySelectorAll('.ev2-name-text').forEach(el => el.innerText = data.ev2.name);
-            document.querySelectorAll('.ev2-time-text').forEach(el => el.innerText = data.ev2.time);
-            document.querySelectorAll('.ev2-loc-text').forEach(el => el.innerText = data.ev2.locName);
-            document.querySelectorAll('.ev2-photo-img').forEach(el => el.src = data.ev2.photo);
+            if (data.ev2) {
+                document.querySelectorAll('.ev2-name-text').forEach(el => el.innerText = data.ev2.name || "Resepsi");
+                document.querySelectorAll('.ev2-time-text').forEach(el => el.innerText = data.ev2.time || "11.00 WIB - Selesai");
+                document.querySelectorAll('.ev2-loc-text').forEach(el => el.innerText = data.ev2.locName || "Lokasi");
+                if (data.ev2.photo) document.querySelectorAll('.ev2-photo-img').forEach(el => el.src = data.ev2.photo);
+            }
 
             if (data.greeting) document.querySelectorAll('.greeting-text').forEach(el => el.innerText = data.greeting);
 
