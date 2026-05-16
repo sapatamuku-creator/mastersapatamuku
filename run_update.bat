@@ -40,7 +40,7 @@ echo.
 echo.
 echo ==================================================
 echo    SUKSES! Ekosistem SapaTamu.Ku Telah Terupdate.
-echo    URL: https://script.google.com/macros/s/AKfycbyFOiyAdQnyFBV-ZnwZ3Mt9KeNuwRuTvvp2n-t9a36KQvyMU7QPR0KCe0sY7B1rzVn5/exec
+echo    URL: https://script.google.com/macros/s/AKfycbygBaFZE1n36jh8q7ZBICvmPcvVjvIjYKFmf-Gg5XS5F09Sr59SHTSymrLgOTuxcPDA/exec
 echo ==================================================
 echo.
 pause
