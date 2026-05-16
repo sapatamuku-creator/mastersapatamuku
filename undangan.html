@@ -25,41 +25,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Alice&family=Montserrat:wght@200;400;600;700&display=swap"
         rel="stylesheet">
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-        // Placeholder for firebase config - will be injected or need to be set
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        if (firebaseConfig.apiKey) {
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-            window.db = db;
-            window.collection = collection;
-            window.addDoc = addDoc;
-            window.onSnapshot = onSnapshot;
-            window.query = query;
-            window.serverTimestamp = serverTimestamp;
-            window.appId = appId;
-
-            async function init() {
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                    if (typeof loadWishes === 'function') loadWishes();
-                } catch (err) {
-                    console.error("Auth error:", err);
-                }
-            }
-            init();
-        }
+    <script>
+        // Init wishes when ready
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (typeof window.loadWishes === 'function') window.loadWishes();
+            }, 1000);
+        });
     </script>
 
     <style>
@@ -720,6 +692,7 @@
             }
 
             document.getElementById('cover').style.transform = 'translateY(-100%)';
+            document.getElementById('cover').style.pointerEvents = 'none';
             const content = document.getElementById('content');
             content.classList.remove('hidden');
             setTimeout(() => {
@@ -804,51 +777,74 @@
         window.sendWish = async function () {
             const name = document.getElementById('wish-name').value;
             const text = document.getElementById('wish-text').value;
-            if (!name || !text || !window.db) return;
+            if (!name || !text) return;
+
+            const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
+            if (!ssId) { alert("Sesi undangan tidak valid."); return; }
 
             const btn = document.getElementById('btn-wish');
             btn.disabled = true;
             btn.innerText = "Mengirim...";
 
             try {
-                await addDoc(collection(window.db, 'artifacts', window.appId, 'public', 'data', 'wishes'), {
-                    name, text, timestamp: serverTimestamp()
+                const formData = new URLSearchParams();
+                formData.append("action", "addWish");
+                formData.append("ssId", ssId);
+                formData.append("name", name);
+                formData.append("text", text);
+
+                const response = await fetch(window.SCRIPT_URL, {
+                    method: "POST",
+                    body: formData
                 });
-                document.getElementById('wish-text').value = "";
-                btn.innerText = "Terkirim!";
-                setTimeout(() => { btn.innerText = "Kirim Ucapan"; btn.disabled = false; }, 2000);
+                
+                const result = await response.json();
+                if(result.status === "success") {
+                    document.getElementById('wish-text').value = "";
+                    btn.innerText = "Terkirim!";
+                    if(typeof loadWishes === 'function') loadWishes(); // Refresh the list
+                } else {
+                    throw new Error("Gagal menyimpan");
+                }
             } catch (e) {
                 btn.innerText = "Gagal";
-                setTimeout(() => { btn.innerText = "Kirim Ucapan"; btn.disabled = false; }, 2000);
             }
+            
+            setTimeout(() => { btn.innerText = "Kirim Ucapan"; btn.disabled = false; }, 2000);
         };
 
-        window.loadWishes = function () {
-            if (!window.db) return;
-            const q = query(collection(window.db, 'artifacts', window.appId, 'public', 'data', 'wishes'));
-            onSnapshot(q, (snapshot) => {
-                const container = document.getElementById('wishes-container');
-                if (!container) return;
-                const wishes = [];
-                snapshot.forEach(doc => wishes.push(doc.data()));
-                wishes.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+        window.loadWishes = async function () {
+            const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
+            if (!ssId) return;
 
-                container.innerHTML = '';
-                const adminDiv = document.createElement('div');
-                adminDiv.className = "wish-card border-l-4 border-[#D4AF37]";
-                adminDiv.innerHTML = `<p class="text-[11px] font-bold text-neutral-800 mb-1">Admin SapaTamu.Ku ✨</p>
-                    <p class="text-[10px] text-neutral-500">Selamat menempuh hidup baru untuk Bintang & Anisa!</p>`;
-                container.appendChild(adminDiv);
+            try {
+                const response = await fetch(`${window.SCRIPT_URL}?action=getWishes&ssId=${ssId}`);
+                const result = await response.json();
+                
+                if (result.status === "success" && Array.isArray(result.data)) {
+                     const container = document.getElementById('wishes-container');
+                     if (!container) return;
+                     
+                     container.innerHTML = ''; 
+                     
+                     // Optional: Add Admin Pin
+                     const adminDiv = document.createElement('div');
+                     adminDiv.className = "wish-card border-l-4 border-[#D4AF37]";
+                     adminDiv.innerHTML = `<p class="text-[11px] font-bold text-neutral-800 mb-1">Admin SapaTamu.Ku ✨</p>
+                         <p class="text-[10px] text-neutral-500">Selamat menempuh hidup baru!</p>`;
+                     container.appendChild(adminDiv);
 
-                wishes.forEach(wish => {
-                    const div = document.createElement('div');
-                    div.className = "wish-card";
-                    div.innerHTML = `<p class="text-[11px] font-bold text-neutral-800 mb-1">${wish.name || 'Tamu'}</p>
-                        <p class="text-[10px] text-neutral-500">${wish.text}</p>`;
-                    container.appendChild(div);
-                });
-            }, (err) => console.error("Firestore Listen Error:", err));
-        }
+                     // Render Wishes
+                     result.data.forEach(wish => {
+                         const div = document.createElement('div');
+                         div.className = "wish-card";
+                         div.innerHTML = `<p class="text-[11px] font-bold text-neutral-800 mb-1">${wish.name || 'Tamu'}</p>
+                             <p class="text-[10px] text-neutral-500">${wish.text}</p>`;
+                         container.appendChild(div);
+                     });
+                }
+            } catch(e) { console.error("Gagal load wishes", e); }
+        };
         window.applyLivePreview = function (data) {
             console.log("Applying Live Preview Data:", data);
 

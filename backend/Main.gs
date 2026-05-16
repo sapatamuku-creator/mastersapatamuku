@@ -93,6 +93,7 @@ function handleMainGet(e) {
   if (action === "getMasterDataAngpao") return createResponse({ status: "success", guestList: getMasterDataV3(ssId) });
   if (action === "getSettings") return createResponse(getSettings(ssId));
   if (action === "getDropdownOptions") return createResponse(getDropdownOptions(ssId));
+  if (action === "getWishes") return createResponse(getWishes(ssId));
   
   // WELCOME SIGN HANDSHAKE
   if (action === "getWelcome") return createResponse(getWelcomeData(ssId));
@@ -188,6 +189,10 @@ function handleMainPost(payload) {
         
       case 'saveWelcomePhotos':
         result = saveWelcomePhotos(ssId, payload.urlFoto);
+        break;
+        
+      case 'addWish':
+        result = addWish(ssId, payload.name, payload.text);
         break;
         
       default:
@@ -958,6 +963,43 @@ function handleSendAutomationBlast(data) {
     });
 
     return { status: "success", fonnte: JSON.parse(res.getContentText()) };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
+function addWish(ssId, name, text) {
+  try {
+    const ss = getSS(ssId);
+    let sheet = ss.getSheetByName("Wishes");
+    if (!sheet) {
+      sheet = ss.insertSheet("Wishes");
+      sheet.appendRow(["Timestamp", "Name", "Text"]);
+    }
+    sheet.appendRow([new Date(), name, text]);
+    return { status: "success" };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
+function getWishes(ssId) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName("Wishes");
+    if (!sheet) return { status: "success", data: [] };
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return { status: "success", data: [] };
+    
+    const dataRange = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+    const wishes = dataRange.map(row => ({
+      name: row[1],
+      text: row[2],
+      timestamp: row[0]
+    })).reverse();
+    
+    return { status: "success", data: wishes };
   } catch (e) {
     return { status: "error", message: e.toString() };
   }
