@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Digital Gift - Sapatamu.ku V10.0 Security Patch</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="subdomain_resolver.js?v=3.2"></script>
+    
+    <style>
+        :root { 
+            --primary: #E07B7B; /* Rose */
+            --bg: #FFF9F5;      /* Warm White */
+            --card: #FFFFFF;
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --border: #F0E6DE;
+            --input-bg: #FDF8F4;
+            --gold: #C8962E;
+            --success: #10B981;
+            --danger: #EF4444;
+            --gray-200: #F0E6DE;
+            --gray-100: #FDF8F4;
+            --gray-50: #FFF9F5;
+            --gray-500: #8C7560;
+            --dark: #4A3F35;
+        }
+
+        * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; touch-action: manipulation; }
+        html, body { height: 100%; width: 100%; overflow: hidden; background: #fff; }
+
+        #app-container {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--gray-50); display: flex; flex-direction: column; z-index: 9999;
+        }
+
+        .top-bar { padding: 80px 16px 12px; background: white; border-bottom: 1px solid var(--gray-200); display: flex; justify-content: space-between; align-items: center; width: 100%; flex-shrink: 0; }
+        .status-pill { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--gray-500); }
+        .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+        .dot.loading { background: #F59E0B; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        .scanner-section { display: flex; gap: 12px; padding: 12px; background: white; align-items: center; border-bottom: 1px solid var(--gray-200); width: 100%; flex-shrink: 0; }
+        .scanner-mini { width: 70px; height: 70px; background: #000; border-radius: 10px; overflow: hidden; flex-shrink: 0; border: 2px solid var(--gray-200); }
+        .input-manual-box { flex-grow: 1; }
+        .input-manual-box input { width: 100%; padding: 12px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-size: 14px; font-weight: 600; outline: none; }
+
+        #guestDisplay { background: #FFFBEB; padding: 16px; border-bottom: 2px solid #FEF3C7; display: none; justify-content: space-between; align-items: center; width: 100%; flex-shrink: 0; }
+        #guestDisplay.active { display: flex; animation: slideIn 0.3s ease-out; }
+        #guestDisplay.edit-mode { background: #FEE2E2; border-color: #FCA5A5; }
+        .guest-info h2 { font-size: 18px; font-weight: 800; color: #92400E; text-transform: uppercase; }
+        .kode-badge { font-size: 12px; background: #FEF3C7; padding: 2px 8px; border-radius: 4px; color: #B45309; font-weight: 800; border: 1px solid #FDE68A; }
+
+        .main-controls { padding: 16px; background: white; border-bottom: 1px solid var(--gray-200); width: 100%; flex-shrink: 0; }
+        .display-area { text-align: right; margin-bottom: 12px; padding: 16px; background: var(--gray-100); border-radius: 12px; position: relative; }
+        .display-area::before { content: 'Rp'; position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-weight: 800; color: #9ca3af; font-size: 20px; }
+        .nominal-input { width: 100%; border: none; background: transparent; text-align: right; font-size: 42px; font-weight: 800; color: var(--gold); outline: none; }
+
+        .shortcut-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
+        .btn-shortcut { padding: 14px 0; background: var(--gray-100); border: 1px solid var(--gray-200); border-radius: 8px; font-size: 12px; font-weight: 800; color: var(--dark); }
+        .btn-shortcut.clear { color: #EF4444; border-color: #FEE2E2; background: #FEF2F2; }
+
+        .btn-submit { width: 100%; padding: 20px; background: var(--dark); color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 800; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .btn-submit:disabled { opacity: 0.2; }
+        .btn-submit.btn-edit { background: var(--danger); }
+
+        .history-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
+        .history-header { padding: 12px 16px; background: var(--gray-50); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--gray-200); }
+        #historyLog { flex-grow: 1; overflow-y: auto; padding: 0 16px; padding-bottom: 80px; }
+        .log-card { padding: 16px 0; border-bottom: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center; }
+        .log-card:last-child { border-bottom: none; }
+        .log-left { display: flex; align-items: center; gap: 12px; }
+        .btn-edit-trigger { width: 36px; height: 36px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FEE2E2; color: var(--danger); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .log-user .name { font-size: 14px; font-weight: 700; color: var(--dark); }
+        .log-amount { text-align: right; }
+        .log-amount .val { font-size: 15px; font-weight: 800; color: var(--gold); }
+
+        #securityModal { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.95); z-index: 10002; display: none; align-items: flex-end; justify-content: center; padding: 20px; backdrop-filter: blur(8px); }
+        #securityModal.active { display: flex; }
+        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 30px; padding: 30px; text-align: center; animation: slideUp 0.3s ease-out; }
+        .slider-container { position: relative; width: 100%; height: 64px; background: #F3F4F6; border-radius: 32px; margin: 24px 0; padding: 6px; display: flex; align-items: center; border: 2px solid #E5E7EB; overflow: hidden; }
+        .slider-text { position: absolute; width: 100%; text-align: center; font-size: 12px; font-weight: 800; color: #9CA3AF; letter-spacing: 1px; pointer-events: none; }
+        .slider-handle { width: 52px; height: 52px; background: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; z-index: 2; transition: transform 0.1s; }
+
+        .fs-floating-indicator { position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; background: white; border: 1px solid var(--gray-200); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.15); z-index: 10001; cursor: pointer; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* ADVANCED NAVBAR STYLES (CLONE FROM ONSITE) */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
+        .nav-outer-wrapper { position: relative; max-width: 95%; display: flex; align-items: center; background: #FFFDFB; border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08); border: 1px solid var(--border); overflow: hidden; }
+        
+        .nav-scroll-container { 
+            display: flex; align-items: center; gap: 5px; padding: 6px 15px;
+            overflow-x: auto; white-space: nowrap; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        }
+        .nav-scroll-container::-webkit-scrollbar { display: none; }
+        
+        .nav-fade { position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none; z-index: 2; transition: opacity 0.3s; opacity: 0; }
+        .nav-fade-left { left: 0; background: linear-gradient(to right, #FFFDFB 20%, transparent); }
+        .nav-fade-right { right: 0; background: linear-gradient(to left, #FFFDFB 20%, transparent); }
+        .nav-fade.visible { opacity: 1; }
+
+        .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; font-size: 10px; color: var(--text-muted); opacity: 0.5; pointer-events: none; transition: 0.3s; }
+        .nav-arrow-left { left: 8px; }
+        .nav-arrow-right { right: 8px; }
+
+        .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: 0.3s; display: flex; align-items: center; white-space: nowrap; }
+        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-link.sign-out { color: #E07B7B !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <nav class="sapatamu-navbar">
+            <div class="nav-outer-wrapper">
+                <div class="nav-fade nav-fade-left" id="fade-left"></div>
+                <div class="nav-arrow nav-arrow-left">‹</div>
+                
+                <div class="nav-scroll-container" id="nav-scroll">
+                    <div class="nav-group">
+                        <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+                        <div class="nav-divider"></div>
+                        <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
+                        <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+                        <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+                    </div>
+                    <div class="nav-divider"></div>
+                    <div class="nav-group">
+                        <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                        <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                        <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+                        <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+                        <a href="angpao.html" class="nav-link active" id="nav-angpao">Angpao</a>
+                        <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+                        <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+                        <div class="nav-divider"></div>
+                        
+                        
+                    </div>
+                    <div class="nav-divider"></div>
+                    <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
+                </div>
+
+                <div class="nav-arrow nav-arrow-right">›</div>
+                <div class="nav-fade nav-fade-right" id="fade-right"></div>
+            </div>
+        </nav>
+        
+        <!-- CUSTOM NOTIFICATION MODAL -->
+        <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+            <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+                <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
+                <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Pesan</h2>
+                <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
+                <button onclick="closeSapaModal()" class="btn-submit" style="padding: 15px; border-radius: 15px; font-size: 11px; margin-top: 0; background: var(--text-main); width: 100%; border: none; color: white;">MENGERTI</button>
+            </div>
+        </div>
+
+        <style>
+            @keyframes modalPop {
+                from { transform: scale(0.8); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+            }
+        </style>
+        <div class="top-bar">
+            <div class="status-pill"><div id="statusDot" class="dot"></div> <span id="statusLabel">SYNCING...</span></div>
+            <div id="syncCount" style="font-size: 11px; font-weight: 800; color: #4F46E5; background: #EEF2FF; padding: 4px 10px; border-radius: 6px;">DATA: 0</div>
+        </div>
+
+        <div class="scanner-section">
+            <div class="scanner-mini" id="reader"></div>
+            <div class="input-manual-box">
+                <input type="text" id="qrInput" placeholder="Ketik Kode / Scan..." oninput="instantCheckUser()" onkeyup="if(event.key==='Enter') checkUser()">
+                <div id="searchIndicator" style="font-size: 9px; margin-top: 4px; color: var(--gray-500); font-weight: 700; letter-spacing: 0.5px;">STATION READY</div>
+            </div>
+        </div>
+
+        <div id="guestDisplay">
+            <div class="guest-info-wrapper" style="flex:1">
+                <span id="guestCat" style="font-size: 11px; color: #B45309; font-weight: 700;">KATEGORI</span>
+                <div style="display:flex; justify-content: space-between; align-items: center;">
+                    <h2 id="guestName">NAMA TAMU</h2>
+                    <div id="guestKodeUnik" class="kode-badge">KODE</div>
+                </div>
+                <div id="securityMsg" style="font-size: 10px; font-weight: 800; margin-top: 6px; color: #991B1B; display: none;"></div>
+            </div>
+            <button onclick="resetApp()" style="background: white; border: 1.5px solid #FDE68A; padding: 8px 16px; border-radius: 10px; font-weight: 800; color: #92400E; font-size: 11px; margin-left: 12px;">GANTI</button>
+        </div>
+
+        <div class="main-controls">
+            <div class="display-area">
+                <input type="number" id="nomInput" class="nominal-input" placeholder="0" oninput="validateInput()">
+            </div>
+            <div class="shortcut-grid">
+                <button class="btn-shortcut" onclick="addValue(10000)">10K</button>
+                <button class="btn-shortcut" onclick="addValue(20000)">20K</button>
+                <button class="btn-shortcut" onclick="addValue(50000)">50K</button>
+                <button class="btn-shortcut" onclick="addValue(100000)">100K</button>
+                <button class="btn-shortcut clear" onclick="clearNominal()">CLR</button>
+            </div>
+            <button class="btn-submit" id="submitBtn" onclick="confirmData()" disabled>KIRIM TANDA KASIH</button>
+        </div>
+
+        <div class="history-container">
+            <div class="history-header">
+                <h3 style="font-size: 12px; font-weight: 800; color: var(--gray-500);">RIWAYAT TRANSAKSI</h3>
+                <span id="totalNominal" style="font-size: 13px; font-weight: 800; color: var(--gold);">Rp 0</span>
+            </div>
+            <div id="historyLog"></div>
+        </div>
+    </div>
+
+    <div class="fs-floating-indicator" onclick="toggleFullScreen()"><i id="fsIndicatorIcon" data-lucide="maximize"></i></div>
+
+    <div id="securityModal">
+        <div class="modal-content">
+            <h2 style="font-weight: 800; font-size: 20px;">Konfirmasi Akses</h2>
+            <p style="font-size: 13px; color: var(--gray-500); margin: 10px 0;">Data <b id="targetEditName"></b> sudah ada. Geser untuk edit.</p>
+            <div class="slider-container" id="sliderBox">
+                <div class="slider-text">SWIPE UNTUK EDIT</div>
+                <div class="slider-handle" id="sliderHandle"><i data-lucide="chevron-right"></i></div>
+            </div>
+            <button onclick="closeSecurity()" style="font-size: 11px; font-weight: 800; color: var(--gray-400); border:none; background:none;">BATALKAN</button>
+        </div>
+    </div>
+
+<script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFOiyAdQnyFBV-ZnwZ3Mt9KeNuwRuTvvp2n-t9a36KQvyMU7QPR0KCe0sY7B1rzVn5/exec";
+ 
+    const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+    let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
+
+    function syncNavbar() {
+        const ssId = window.CURRENT_SS_ID || "";
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            const baseHref = link.getAttribute('href').split('?')[0];
+            link.href = `${baseHref}?ssId=${ssId}`;
+        });
+    }
+
+    // --- CUSTOM NOTIFICATION SYSTEM ---
+    window.showSapaModal = function(title, msg, icon = "✨") {
+        document.getElementById('notify-title').innerText = title;
+        document.getElementById('notify-msg').innerText = msg;
+        document.getElementById('notify-icon').innerText = icon;
+        document.getElementById('sapa-notify-modal').style.display = 'flex';
+    };
+
+    window.closeSapaModal = function() {
+        document.getElementById('sapa-notify-modal').style.display = 'none';
+    };
+
+
+    let identifiedUser = null, localHistory = [], masterHistory = [], masterGuests = [], pendingUser = null;
+
+    // Slider Logic
+    let isDragging = false, startX = 0;
+    const handle = document.getElementById('sliderHandle'), box = document.getElementById('sliderBox');
+    if(handle) {
+        handle.addEventListener('mousedown', startDrag); handle.addEventListener('touchstart', startDrag);
+    }
+    window.addEventListener('mousemove', onDrag); window.addEventListener('touchmove', onDrag);
+    window.addEventListener('mouseup', endDrag); window.addEventListener('touchend', endDrag);
+
+    function startDrag(e) { isDragging = true; startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; handle.style.transition = 'none'; }
+    function onDrag(e) {
+        if (!isDragging) return;
+        const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        let delta = currentX - startX, max = box.offsetWidth - handle.offsetWidth - 12;
+        if (delta < 0) delta = 0; if (delta > max) delta = max;
+        handle.style.transform = `translateX(${delta}px)`;
+        if (delta >= max) { isDragging = false; unlockSuccess(); }
+    }
+    function endDrag() { if (!isDragging) return; isDragging = false; handle.style.transition = 'transform 0.3s'; handle.style.transform = 'translateX(0px)'; }
+    function unlockSuccess() { handle.style.backgroundColor = 'var(--success)'; setTimeout(() => { applyFoundUser(pendingUser, true); closeSecurity(); }, 300); }
+
+    async function initApp() {
+        if (window.SAPATAMU_RESOLVED) {
+            CURRENT_SS_ID = window.CURRENT_SS_ID || CURRENT_SS_ID;
+            if (!CURRENT_SS_ID) {
+                window.location.href = "login.html";
+                return;
+            }
+            syncNavbar();
+            initNavScroll();
+            fetchMasterData();
+            initScanner();
+            lucide.createIcons();
+        } else {
+            setTimeout(initApp, 100);
+        }
+    }
+
+    function initNavScroll() {
+        const container = document.getElementById('nav-scroll');
+        const fLeft = document.getElementById('fade-left');
+        const fRight = document.getElementById('fade-right');
+        if(!container) return;
+        
+        const updateFades = () => {
+            const scrollLeft = container.scrollLeft;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            if(fLeft) fLeft.classList.toggle('visible', scrollLeft > 10);
+            if(fRight) fRight.classList.toggle('visible', scrollLeft < maxScroll - 10);
+        };
+        
+        container.addEventListener('scroll', updateFades);
+        window.addEventListener('resize', updateFades);
+        setTimeout(updateFades, 500);
+
+        // Auto-scroll to active link
+        const active = container.querySelector('.nav-link.active');
+        if (active) {
+            container.scrollLeft = active.offsetLeft - (container.clientWidth / 2) + (active.clientWidth / 2);
+        }
+    }
+
+    window.onload = initApp;
+
+    async function fetchMasterData() {
+        const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+        if (!session || !session.ssId) { setLoading(false, "AUTH ERROR"); return; }
+        setLoading(true, "FETCHING...");
+        try {
+            const response = await fetch(`${SCRIPT_URL}?action=getMasterDataAngpao&ssId=${session.ssId}`);
+            const result = await response.json();
+            if (result.status === "success") {
+                masterGuests = result.guestList.guestList || [];
+                masterHistory = masterGuests.filter(g => g.tandaKasih > 0).map(g => ({
+                    kode: g.kode, name: g.nama, cat: g.kategori || "UMUM", amount: parseInt(g.tandaKasih), time: "SERVER", isOld: true
+                }));
+                updateTotal(); renderHistory(); setLoading(false, "SECURE MONITORING");
+            }
+        } catch (e) { setLoading(false, "CONN ERROR"); }
+    }
+
+    function initScanner() {
+        const scanner = new Html5Qrcode("reader");
+        scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (code) => {
+            document.getElementById('qrInput').value = code; checkUser();
+        }).catch(() => {});
+    }
+
+    window.instantCheckUser = function() {
+        const code = document.getElementById('qrInput').value.trim();
+        if(code.length >= 3) {
+            const found = masterGuests.find(g => g.kode.toLowerCase() === code.toLowerCase());
+            if (found) {
+                if (found.tandaKasih > 0) triggerSecurity(found);
+                else applyFoundUser(found);
+            }
+        }
+    };
+
+    window.checkUser = function() {
+        const code = document.getElementById('qrInput').value.trim();
+        const found = masterGuests.find(g => g.kode.toLowerCase() === code.toLowerCase());
+        if (found) {
+            if (found.tandaKasih > 0) triggerSecurity(found);
+            else applyFoundUser(found);
+        } else { resetApp(); }
+    };
+
+    function triggerSecurity(user) {
+        pendingUser = user;
+        document.getElementById('targetEditName').innerText = user.nama.toUpperCase();
+        document.getElementById('securityModal').classList.add('active');
+        handle.style.backgroundColor = 'var(--danger)'; handle.style.transform = 'translateX(0px)';
+    }
+
+    window.closeSecurity = function() { document.getElementById('securityModal').classList.remove('active'); pendingUser = null; };
+
+    function applyFoundUser(found, isUnlocked = false) {
+        identifiedUser = found;
+        const display = document.getElementById('guestDisplay'), secMsg = document.getElementById('securityMsg');
+        const submitBtn = document.getElementById('submitBtn'), nomInput = document.getElementById('nomInput');
+
+        document.getElementById('guestName').innerText = found.nama;
+        document.getElementById('guestKodeUnik').innerText = found.kode;
+        document.getElementById('guestCat').innerText = found.kategori || "UMUM";
+        display.classList.add('active');
+        
+        if (isUnlocked) {
+            display.classList.add('edit-mode');
+            secMsg.innerText = `LOG SEBELUMNYA: Rp ${parseInt(found.tandaKasih).toLocaleString('id-ID')}`;
+            secMsg.style.display = "block";
+            nomInput.value = found.tandaKasih;
+            submitBtn.innerText = "UPDATE DATA"; submitBtn.classList.add('btn-edit');
+        } else {
+            display.classList.remove('edit-mode'); secMsg.style.display = "none";
+            nomInput.value = ""; submitBtn.innerText = "KIRIM TANDA KASIH"; submitBtn.classList.remove('btn-edit');
+        }
+        nomInput.focus(); validateInput();
+    }
+
+    window.addValue = function(val) { const input = document.getElementById('nomInput'); input.value = (parseInt(input.value) || 0) + val; validateInput(); };
+    window.clearNominal = function() { document.getElementById('nomInput').value = ""; validateInput(); };
+    window.validateInput = function() { const val = parseInt(document.getElementById('nomInput').value) || 0; document.getElementById('submitBtn').disabled = !(identifiedUser && val > 0); };
+
+    window.confirmData = async function() {
+        const val = parseInt(document.getElementById('nomInput').value) || 0;
+        const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true; btn.innerText = "SINKRONISASI...";
+
+        try {
+            await fetch(SCRIPT_URL, {
+                method: "POST", mode: "no-cors",
+                body: JSON.stringify({ action: "update_tanda_kasih", ssId: session.ssId, kodeUnik: identifiedUser.kode, nominal: val })
+            });
+            
+            const logEntry = { kode: identifiedUser.kode, name: identifiedUser.nama, cat: identifiedUser.kategori || "UMUM", amount: val, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), isOld: false };
+            const exIdx = localHistory.findIndex(h => h.kode === identifiedUser.kode);
+            if (exIdx !== -1) localHistory[exIdx] = logEntry; else localHistory.unshift(logEntry);
+            
+            const mIdx = masterGuests.findIndex(g => g.kode === identifiedUser.kode);
+            if(mIdx !== -1) masterGuests[mIdx].tandaKasih = val;
+
+            updateTotal(); renderHistory();
+            btn.innerText = "SUCCESS!"; btn.style.background = "#10B981";
+            setTimeout(() => { resetApp(); btn.style.background = ""; }, 1000);
+        } catch (e) { btn.disabled = false; btn.innerText = "RETRY"; }
+    };
+
+    window.resetApp = function() {
+        identifiedUser = null; document.getElementById('qrInput').value = "";
+        document.getElementById('nomInput').value = "";
+        document.getElementById('guestDisplay').classList.remove('active', 'edit-mode');
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtn').innerText = "KIRIM TANDA KASIH";
+    };
+
+    function updateTotal() {
+        const current = localHistory.reduce((a, b) => a + b.amount, 0);
+        const old = masterHistory.filter(h => !localHistory.find(l => l.kode === h.kode)).reduce((a, b) => a + b.amount, 0);
+        document.getElementById('totalNominal').innerText = `Rp ${(current + old).toLocaleString('id-ID')}`;
+        document.getElementById('syncCount').innerText = `DATA: ${masterHistory.length + localHistory.length}`;
+    }
+
+    function renderHistory() {
+        const container = document.getElementById('historyLog');
+        const localKodes = localHistory.map(l => l.kode);
+        const combined = [...localHistory, ...masterHistory.filter(m => !localKodes.includes(m.kode))];
+        container.innerHTML = combined.map(h => `
+            <div class="log-card">
+                <div class="log-left">
+                    <button class="btn-edit-trigger" onclick="triggerSecurityByKode('${h.kode}')"><i data-lucide="edit-2" style="width:14px"></i></button>
+                    <div class="log-user"><span class="name">${h.name}</span><br><span style="font-size:10px; color:#999">${h.kode}</span></div>
+                </div>
+                <div class="log-amount"><span class="val">Rp ${h.amount.toLocaleString('id-ID')}</span></div>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
+
+    window.triggerSecurityByKode = function(kode) { const user = masterGuests.find(g => g.kode === kode); if (user) triggerSecurity(user); };
+    function setLoading(isLoading, label) { document.getElementById('statusLabel').innerText = label; document.getElementById('statusDot').className = isLoading ? 'dot loading' : 'dot'; }
+    window.toggleFullScreen = function() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
+    initApp();
+</script>
+</body>
+</html>
