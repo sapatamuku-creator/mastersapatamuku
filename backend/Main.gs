@@ -91,7 +91,7 @@ function handleMainGet(e) {
   // Routing Action Get
   if (action === "getMasterData") return createResponse({ status: "success", data: getMasterDataV3(ssId) });
   if (action === "getMasterDataAngpao") return createResponse({ status: "success", guestList: getMasterDataV3(ssId) });
-  if (action === "getSettings") return createResponse(getSettings(ssId));
+  if (action === "getSettings") return createResponse(getSettings(ssId, e.parameter.guestId));
   if (action === "getDropdownOptions") return createResponse(getDropdownOptions(ssId));
   if (action === "getWishes") return createResponse(getWishes(ssId));
   
@@ -737,7 +737,7 @@ function formatTime(timeVal) {
   
   return hours.toString().padStart(2, '0') + ":" + mins.padStart(2, '0');
 }
-function getSettings(ssId) {
+function getSettings(ssId, guestId = null) {
   try {
     const ss = getSS(ssId);
     const sheet = ss.getSheetByName(SHEET_DATA);
@@ -758,10 +758,45 @@ function getSettings(ssId) {
     let theme = "classic";
     let invitationData = {};
     
+    // Pencarian waPhone Dinamis berdasarkan guestId
+    let foundWaPhone = false;
+    if (settingsSheet && guestId && sheet) {
+       const lastRow = sheet.getLastRow();
+       if (lastRow > 6) {
+           const guestData = sheet.getRange(7, 1, lastRow - 6, 12).getValues();
+           const matchedGuest = guestData.find(row => row[5] === guestId); // Kolom F (Kode Unik)
+           
+           if (matchedGuest) {
+               const pengundang = matchedGuest[11]; // Kolom L (Pihak Pengundang)
+               const settingsData = settingsSheet.getRange("A2:B20").getValues();
+               const matchedSetting = settingsData.find(row => row[0] === pengundang);
+               
+               if (matchedSetting && matchedSetting[1]) {
+                   waPhone = matchedSetting[1].toString();
+                   if (waPhone.startsWith('0')) waPhone = '62' + waPhone.substring(1);
+                   foundWaPhone = true;
+               }
+           }
+       }
+    }
+    
+    // Fallback: cari nomor telepon pertama yang tersedia di sheet Settings jika guestId tidak ditemukan
+    if (settingsSheet && !foundWaPhone) {
+      const phones = settingsSheet.getRange("B3:B8").getValues().flat().filter(String);
+      if (phones.length > 0) {
+        waPhone = phones[0].toString();
+        // Konversi awal 0 ke 62 agar format wa.me valid
+        if (waPhone.startsWith('0')) waPhone = '62' + waPhone.substring(1);
+      }
+    }
+    
     if (configSheet) {
-      urlFoto = configSheet.getRange("B1").getValue();
+      urlFoto = configSheet.getRange("B1").getValue() || "";
       presetKode = configSheet.getRange("B2").getValue() || "1";
-      waPhone = configSheet.getRange("B5").getValue() || "6282214578132";
+      // Coba ambil dari Config B5 jika ada (override)
+      const configWa = configSheet.getRange("B5").getValue();
+      if (configWa) waPhone = configWa.toString().startsWith('0') ? '62' + configWa.toString().substring(1) : configWa;
+      
       theme = configSheet.getRange("B6").getValue() || "classic";
       
       const invSheet = ss.getSheetByName("InvConfig");
