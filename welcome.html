@@ -149,7 +149,11 @@
         let id = window.CURRENT_SS_ID || (session ? session.ssId : null);
         
         if (id) {
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?ssId=' + id;
+            const params = new URLSearchParams(window.location.search);
+            let qs = '?ssId=' + id;
+            if (params.has('mode')) qs += '&mode=' + params.get('mode');
+
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + qs;
             window.history.replaceState({path:newUrl}, '', newUrl);
             return id;
         }
@@ -327,6 +331,12 @@
     };
 
     window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('mode') === 'kiosk') {
+            document.getElementById('timeline-panel').style.display = 'none';
+            document.querySelector('.master-container').style.gridTemplateColumns = '1fr';
+        }
+
         handleUIVisibility();
         syncData();
         updateInternalLinks();
