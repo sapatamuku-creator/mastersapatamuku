@@ -651,10 +651,12 @@
         window.audio = audio; // expose globally
         let isPlaying = false;
 
+        const FALLBACK_MUSIC = "https://raw.githubusercontent.com/opick8c/Annisa-Bintang/ad4fb4ba10a2a6879f586896829a2e437e11d7b3/sal-priadi-ada-titik-titik-di-ujung-doa_x6a7RHIL~2.mp3";
+
         function setMusicSource(url) {
             if (!url || !audio) return;
             let finalUrl = url;
-            // Detect any Google Drive share/view link and convert to direct download
+            // Convert any Google Drive link to the export=view format (streaming, no redirect)
             const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
             const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
             const driveUcMatch = url.match(/drive\.google\.com\/uc\?.*?id=([a-zA-Z0-9_-]+)/);
@@ -663,10 +665,18 @@
             else if (driveOpenMatch) fileId = driveOpenMatch[1];
             else if (driveUcMatch) fileId = driveUcMatch[1];
             if (fileId) {
-                finalUrl = `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`;
+                // Use /uc?export=view — streams audio without redirect confirmation page
+                finalUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
             }
             audio.src = finalUrl;
             audio.load();
+            // Fallback: if this URL fails to load, revert to default
+            audio.onerror = function() {
+                console.warn("Music URL failed, falling back to default.", finalUrl);
+                audio.onerror = null;
+                audio.src = FALLBACK_MUSIC;
+                audio.load();
+            };
             console.log("Music source set:", finalUrl);
         }
 
@@ -762,10 +772,23 @@
 
         window.startInvitation = function () {
             if (audio) {
-                audio.play().then(() => {
-                    isPlaying = true;
-                    updateMusicUI();
-                }).catch(e => console.warn("Audio play blocked:", e));
+                // Ensure audio is ready, then play
+                const playAudio = () => {
+                    audio.play().then(() => {
+                        isPlaying = true;
+                        updateMusicUI();
+                    }).catch(e => {
+                        console.warn("Audio play blocked by browser policy:", e);
+                        // Show PLAY button so user can manually start
+                        updateMusicUI();
+                    });
+                };
+                // If audio is not yet loaded, wait for it
+                if (audio.readyState >= 2) {
+                    playAudio();
+                } else {
+                    audio.addEventListener('canplay', playAudio, { once: true });
+                }
             }
 
             document.getElementById('cover').style.transform = 'translateY(-100%)';
@@ -787,9 +810,18 @@
         };
 
         window.toggleMusic = function () {
-            isPlaying ? audio.pause() : audio.play();
-            isPlaying = !isPlaying;
-            updateMusicUI();
+            if (isPlaying) {
+                audio.pause();
+                isPlaying = false;
+                updateMusicUI();
+            } else {
+                audio.play().then(() => {
+                    isPlaying = true;
+                    updateMusicUI();
+                }).catch(e => {
+                    console.warn("Toggle play failed:", e);
+                });
+            }
         };
 
         function updateMusicUI() {
