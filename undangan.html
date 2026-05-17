@@ -29,6 +29,7 @@
         // Init wishes when ready
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
+                if (typeof window.loadDynamicConfig === 'function') window.loadDynamicConfig();
                 if (typeof window.loadWishes === 'function') window.loadWishes();
             }, 1000);
         });
@@ -402,7 +403,7 @@
                     class="groom-desc-text text-[9px] font-medium uppercase tracking-[0.2em] opacity-60 leading-loose mb-4">
                     Putra ke-4 dari Bp. Nana Herna Sutisna <br>& Almh. Ibu Eva Refliana</p>
                 <a href="https://instagram.com/bintangzt" target="_blank"
-                    class="inline-flex items-center gap-2 text-[9px] font-bold tracking-widest text-neutral-400 border border-neutral-200 px-4 py-2 rounded-full">@BINTANGZT</a>
+                    class="groom-ig-link inline-flex items-center gap-2 text-[9px] font-bold tracking-widest text-neutral-400 border border-neutral-200 px-4 py-2 rounded-full">@BINTANGZT</a>
             </div>
 
             <div class="text-center reveal-right">
@@ -416,7 +417,7 @@
                     class="bride-desc-text text-[9px] font-medium uppercase tracking-[0.2em] opacity-60 leading-loose mb-4">
                     Putri ke-1 dari Bp. Udin Jaenudin <br>& Ibu Susi Yamayanti</p>
                 <a href="https://instagram.com/anisanrf" target="_blank"
-                    class="inline-flex items-center gap-2 text-[9px] font-bold tracking-widest text-neutral-400 border border-neutral-200 px-4 py-2 rounded-full">@ANISANRF</a>
+                    class="bride-ig-link inline-flex items-center gap-2 text-[9px] font-bold tracking-widest text-neutral-400 border border-neutral-200 px-4 py-2 rounded-full">@ANISANRF</a>
             </div>
         </section>
 
@@ -432,13 +433,9 @@
                     </div>
                     <p class="ev1-name-text text-[11px] font-bold tracking-[0.3em] mb-3 uppercase text-[#D4AF37]">Akad
                         Nikah</p>
-                    <p class="ev1-time-text text-lg font-serif mb-4">08.00 WIB - Selesai</p>
-                    <p
-                        class="ev1-loc-text wedding-location-text text-[11px] uppercase tracking-widest text-neutral-500 leading-relaxed mb-8">
-                        Lingkungan Marga Mulya RT. 10 RW 04 <br> Kelurahan Babakan Jawa, Majalengka</p>
-                    <a href="https://maps.app.goo.gl/JkyBKp5tJn5yNDx78" target="_blank"
-                        class="inline-block px-10 py-4 border border-[#D4AF37] rounded-full text-[9px] uppercase tracking-widest font-bold text-[#D4AF37]">Petunjuk
-                        Lokasi</a>
+                    <p class="ev1-time-text text-sm mb-1 text-neutral-500">08.00 WIB - Selesai</p>
+                    <p class="ev1-loc-text text-xs text-neutral-400 mb-6">Lingkungan Marga Mulya RT.004 RW.002, Kel. Babakan Jawa, Majalengka</p>
+                    <a href="https://maps.app.goo.gl/tWp5wUo7T4X6hF" target="_blank" class="ev1-maps-btn btn-secondary text-[9px] px-6">Lihat Peta</a>
                 </div>
 
                 <div class="reveal bg-white p-8 rounded-3xl shadow-sm border border-neutral-100">
@@ -448,7 +445,6 @@
                     </div>
                     <p class="ev2-name-text text-[11px] font-bold tracking-[0.3em] mb-3 uppercase text-[#D4AF37]">
                         Resepsi</p>
-                    <p class="ev2-time-text text-lg font-serif mb-4">12.30 WIB - Selesai</p>
                     <p class="ev2-loc-text text-[11px] uppercase tracking-widest text-neutral-500 leading-relaxed mb-8">
                         Lingkungan Marga Mulya RT. 10 RW 04 <br> Kelurahan Babakan Jawa, Majalengka</p>
                     <a href="https://maps.app.goo.gl/JkyBKp5tJn5yNDx78" target="_blank"
@@ -917,12 +913,35 @@
                 }
             } catch(e) { console.error("Gagal load wishes", e); }
         };
+        window.loadDynamicConfig = async function() {
+            const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
+            if (!ssId) return;
+
+            try {
+                const response = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`);
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    if (result.data.invitationData && Object.keys(result.data.invitationData).length > 0) {
+                        const invData = result.data.invitationData;
+                        // Inject fallback root data
+                        if (result.data.tanggal) invData.weddingDate = result.data.tanggal;
+                        
+                        window.applyLivePreview(invData);
+                    }
+                    if (result.data.theme === 'modern') document.body.classList.add('modern-theme');
+                }
+            } catch(e) { console.error("Gagal load config", e); }
+        };
+
         window.applyLivePreview = function (data) {
             console.log("Applying Live Preview Data:", data);
             if (!data) return;
 
             if (data.headerLabel) document.querySelectorAll('.header-label-text').forEach(el => el.innerText = data.headerLabel);
             if (data.hashtag) document.querySelectorAll('.hashtag-text').forEach(el => el.innerText = data.hashtag);
+            if (data.weddingDate) document.getElementById('wedding-date-text').innerText = data.weddingDate;
+
             if (data.coverBg) {
                 const coverImg = document.querySelector('#cover img');
                 if (coverImg) coverImg.src = data.coverBg;
@@ -933,33 +952,47 @@
             }
 
             if (data.groom && data.bride) {
-                document.querySelectorAll('.wedding-names-text').forEach(el => el.innerText = (data.groom.name || "Bintang") + " & " + (data.bride.name || "Anisa"));
+                document.querySelectorAll('.wedding-names-text').forEach(el => el.innerHTML = (data.groom.name || "Bintang") + " <br>& " + (data.bride.name || "Anisa"));
             }
 
             if (data.groom) {
                 document.querySelectorAll('.groom-name-text').forEach(el => el.innerText = data.groom.name || "Bintang Zahlahar Trijati");
-                document.querySelectorAll('.groom-desc-text').forEach(el => el.innerText = data.groom.desc || "Putra dari...");
+                document.querySelectorAll('.groom-desc-text').forEach(el => el.innerHTML = data.groom.desc ? data.groom.desc.replace(/\n/g, '<br>') : "Putra dari...");
                 if (data.groom.photo) document.querySelectorAll('.groom-photo-img').forEach(el => el.src = data.groom.photo);
+                if (data.groom.ig) {
+                    document.querySelectorAll('.groom-ig-link').forEach(el => {
+                        el.href = `https://instagram.com/${data.groom.ig.replace('@', '')}`;
+                        el.innerText = data.groom.ig;
+                    });
+                }
             }
 
             if (data.bride) {
                 document.querySelectorAll('.bride-name-text').forEach(el => el.innerText = data.bride.name || "Anisa Nur Fitria");
-                document.querySelectorAll('.bride-desc-text').forEach(el => el.innerText = data.bride.desc || "Putri dari...");
+                document.querySelectorAll('.bride-desc-text').forEach(el => el.innerHTML = data.bride.desc ? data.bride.desc.replace(/\n/g, '<br>') : "Putri dari...");
                 if (data.bride.photo) document.querySelectorAll('.bride-photo-img').forEach(el => el.src = data.bride.photo);
+                if (data.bride.ig) {
+                    document.querySelectorAll('.bride-ig-link').forEach(el => {
+                        el.href = `https://instagram.com/${data.bride.ig.replace('@', '')}`;
+                        el.innerText = data.bride.ig;
+                    });
+                }
             }
 
             if (data.ev1) {
                 document.querySelectorAll('.ev1-name-text').forEach(el => el.innerText = data.ev1.name || "Akad Nikah");
                 document.querySelectorAll('.ev1-time-text').forEach(el => el.innerText = data.ev1.time || "08.00 WIB - Selesai");
-                document.querySelectorAll('.ev1-loc-text').forEach(el => el.innerText = data.ev1.locName || "Lokasi");
+                document.querySelectorAll('.ev1-loc-text').forEach(el => el.innerHTML = data.ev1.locName ? data.ev1.locName.replace(/\n/g, '<br>') : "Lokasi");
                 if (data.ev1.photo) document.querySelectorAll('.ev1-photo-img').forEach(el => el.src = data.ev1.photo);
+                if (data.ev1.maps) document.querySelectorAll('.ev1-maps-btn').forEach(el => el.href = data.ev1.maps);
             }
 
             if (data.ev2) {
                 document.querySelectorAll('.ev2-name-text').forEach(el => el.innerText = data.ev2.name || "Resepsi");
                 document.querySelectorAll('.ev2-time-text').forEach(el => el.innerText = data.ev2.time || "11.00 WIB - Selesai");
-                document.querySelectorAll('.ev2-loc-text').forEach(el => el.innerText = data.ev2.locName || "Lokasi");
+                document.querySelectorAll('.ev2-loc-text').forEach(el => el.innerHTML = data.ev2.locName ? data.ev2.locName.replace(/\n/g, '<br>') : "Lokasi");
                 if (data.ev2.photo) document.querySelectorAll('.ev2-photo-img').forEach(el => el.src = data.ev2.photo);
+                if (data.ev2.maps) document.querySelectorAll('.ev2-maps-btn').forEach(el => el.href = data.ev2.maps);
             }
 
             if (data.greeting) document.querySelectorAll('.greeting-text').forEach(el => el.innerText = data.greeting);
