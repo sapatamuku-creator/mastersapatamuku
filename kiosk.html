@@ -79,6 +79,10 @@
             position: relative; border-radius: 20px;
             transition: all 0.3s ease;
         }
+        
+        /* Sembunyikan kotak putih bawaan html5-qrcode */
+        #qr-shaded-region { display: none !important; }
+
         .corner { position: absolute; width: 50px; height: 50px; border-color: var(--primary); border-style: solid; transition: 0.3s; }
         .top-left { top: -2px; left: -2px; border-width: 6px 0 0 6px; border-top-left-radius: 24px; }
         .top-right { top: -2px; right: -2px; border-width: 6px 6px 0 0; border-top-right-radius: 24px; }
@@ -212,7 +216,23 @@
         <span class="text-[#E07B7B] mt-6 tracking-widest font-bold text-sm">MEMPROSES DATA...</span>
     </div>
 
+    <!-- Toast Notifikasi Cepat -->
+    <div id="toast" class="fixed top-10 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-8 py-4 rounded-full shadow-2xl font-bold tracking-wide z-[999999] transition-all duration-300 opacity-0 translate-y-[-20px] pointer-events-none">
+        Pesan Notifikasi
+    </div>
+
     <script>
+        function showToast(msg, isSuccess = false) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.className = `fixed top-10 left-1/2 transform -translate-x-1/2 px-8 py-4 rounded-full shadow-2xl font-bold tracking-wide z-[999999] transition-all duration-300 pointer-events-none ${isSuccess ? 'bg-[#10B981] text-white' : 'bg-[#E07B7B] text-white'}`;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -20px)';
+            }, 3000);
+        }
         let SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygBaFZE1n36jh8q7ZBICvmPcvVjvIjYKFmf-Gg5XS5F09Sr59SHTSymrLgOTuxcPDA/exec";
         let CURRENT_SS_ID = null;
         let masterData = [];
@@ -268,7 +288,7 @@
             if (guest) {
                 frame.classList.add('qr-detected');
                 if (String(guest.statusHadir) === "1") {
-                    alert("Tamu '" + guest.nama + "' sudah melakukan check-in sebelumnya.");
+                    showToast(`Tamu ${guest.nama} sudah check-in!`);
                     setTimeout(() => frame.classList.remove('qr-detected'), 1500);
                 } else {
                     setTimeout(() => {
@@ -279,6 +299,7 @@
             } else {
                 // Not found visual feedback
                 document.querySelectorAll('.corner').forEach(c => c.style.borderColor = '#E07B7B');
+                showToast("QR Code Tidak Dikenali!");
                 setTimeout(() => document.querySelectorAll('.corner').forEach(c => c.style.borderColor = 'var(--primary)'), 1000);
             }
         }
