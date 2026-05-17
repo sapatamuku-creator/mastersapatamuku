@@ -16,7 +16,8 @@ const pagesToCapture = [
     { name: 'feature_luckydraw', file: 'luckydraw.html' },
     { name: 'feature_onsite', file: 'onsite.html' },
     { name: 'feature_angpao', file: 'angpao.html' },
-    { name: 'feature_config', file: 'config.html' }
+    { name: 'feature_config', file: 'config.html' },
+    { name: 'feature_formulirtamu', file: 'formulir_tamu.html' }
 ];
 
 async function captureScreenshots() {
