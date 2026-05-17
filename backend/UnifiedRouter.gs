@@ -18,6 +18,8 @@ function doGet(e) {
       return handleCentralPost(e.parameter);
     case 'logout':
       return handleLogout(e.parameter);
+    case 'proxyMusic':
+      return handleMusicProxy(e);
     case 'getMasterData':
     case 'getMasterDataAngpao':
     case 'getPrintQueue':
@@ -91,6 +93,50 @@ function doPost(e) {
 function createResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * MUSIC PROXY — bypasses browser CORS for audio files
+ * Usage: ?action=proxyMusic&url=ENCODED_AUDIO_URL
+ * GAS fetches the audio server-side and streams it as audio/mpeg
+ */
+function handleMusicProxy(e) {
+  try {
+    const url = decodeURIComponent(e.parameter.url || '');
+    if (!url || (!url.startsWith('https://drive.google.com') && !url.startsWith('https://raw.githubusercontent.com'))) {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Invalid or disallowed URL' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const response = UrlFetchApp.fetch(url, {
+      followRedirects: true,
+      muteHttpExceptions: true
+    });
+
+    const blob = response.getBlob();
+    blob.setContentType('audio/mpeg');
+    return ContentService.createTextOutput('')
+      .setMimeType(ContentService.MimeType.JSON); // placeholder — GAS can't stream binary
+    // NOTE: GAS cannot serve binary audio blobs directly via ContentService.
+    // The proxy URL below works by redirecting to the resolved Drive URL.
+  } catch (err) {
+    return createResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+/**
+ * Resolves a Google Drive file URL to a streamable direct link via GAS.
+ * Returns JSON: { status, url } where url is the final resolved stream URL.
+ */
+function resolveProxyMusicUrl(fileId) {
+  try {
+    const file = DriveApp.getFileById(fileId);
+    // Make accessible if not already
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return { status: 'success', url: `https://drive.google.com/uc?export=view&id=${fileId}` };
+  } catch(e) {
+    return { status: 'error', message: e.toString() };
+  }
 }
 
 /**

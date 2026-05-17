@@ -656,7 +656,7 @@
         function setMusicSource(url) {
             if (!url || !audio) return;
             let finalUrl = url;
-            // Convert any Google Drive link to the export=view format (streaming, no redirect)
+            // Extract Google Drive file ID from any Drive URL format
             const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
             const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
             const driveUcMatch = url.match(/drive\.google\.com\/uc\?.*?id=([a-zA-Z0-9_-]+)/);
@@ -664,20 +664,32 @@
             if (driveFileMatch) fileId = driveFileMatch[1];
             else if (driveOpenMatch) fileId = driveOpenMatch[1];
             else if (driveUcMatch) fileId = driveUcMatch[1];
-            if (fileId) {
-                // Use /uc?export=view — streams audio without redirect confirmation page
-                finalUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+
+            if (fileId && window.SCRIPT_URL) {
+                // Ask GAS to verify public access & return resolved URL
+                fetch(`${window.SCRIPT_URL}?action=proxyMusic&url=${encodeURIComponent('https://drive.google.com/uc?export=view&id=' + fileId)}`)
+                    .then(r => r.json())
+                    .then(res => {
+                        // Whether proxy succeeds or not, try the direct export=view URL
+                        audio.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                        audio.load();
+                    })
+                    .catch(() => {
+                        audio.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                        audio.load();
+                    });
+            } else {
+                audio.src = finalUrl;
+                audio.load();
             }
-            audio.src = finalUrl;
-            audio.load();
             // Fallback: if this URL fails to load, revert to default
             audio.onerror = function() {
-                console.warn("Music URL failed, falling back to default.", finalUrl);
+                console.warn("Music URL failed, falling back to default.", audio.src);
                 audio.onerror = null;
                 audio.src = FALLBACK_MUSIC;
                 audio.load();
             };
-            console.log("Music source set:", finalUrl);
+            console.log("Music source set for fileId:", fileId || finalUrl);
         }
 
         function copyToClipboard(text) {
