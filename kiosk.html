@@ -91,6 +91,15 @@
 
         .scan-frame.qr-detected .corner { border-color: var(--success); transform: scale(1.1); }
 
+        @keyframes blinkGreen {
+            0%   { border-color: var(--primary); transform: scale(1); }
+            50%  { border-color: var(--success); transform: scale(1.15); }
+            100% { border-color: var(--primary); transform: scale(1); }
+        }
+        .scan-frame.qr-already .corner {
+            animation: blinkGreen 0.4s ease-in-out 3; /* Berkedip 3 kali */
+        }
+
         /* --- MODAL FULL SCREEN --- */
         @keyframes slideUp {
             from { transform: translateY(100vh); opacity: 0; }
@@ -238,6 +247,7 @@
         let masterData = [];
         let html5QrCode = null;
         let selectedGuest = null;
+        let scanCooldown = false;
 
         async function initApp() {
             if (!window.SAPATAMU_RESOLVED) {
@@ -278,6 +288,9 @@
         function onScanSuccess(txt) {
             if (!document.getElementById('kiosk-modal').classList.contains('hidden')) return;
             if (!document.getElementById('success-modal').classList.contains('hidden')) return;
+            if (scanCooldown) return;
+
+            scanCooldown = true;
 
             const frame = document.getElementById('target-frame');
             let scCode = txt.trim();
@@ -286,21 +299,29 @@
             const guest = masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase());
             
             if (guest) {
-                frame.classList.add('qr-detected');
                 if (String(guest.statusHadir) === "1") {
+                    frame.classList.add('qr-already');
                     showToast(`Tamu ${guest.nama} sudah check-in!`);
-                    setTimeout(() => frame.classList.remove('qr-detected'), 1500);
+                    setTimeout(() => {
+                        frame.classList.remove('qr-already');
+                        scanCooldown = false;
+                    }, 1500);
                 } else {
+                    frame.classList.add('qr-detected');
                     setTimeout(() => {
                         frame.classList.remove('qr-detected');
                         openConfirm(guest);
+                        scanCooldown = false;
                     }, 500);
                 }
             } else {
                 // Not found visual feedback
                 document.querySelectorAll('.corner').forEach(c => c.style.borderColor = '#E07B7B');
                 showToast("QR Code Tidak Dikenali!");
-                setTimeout(() => document.querySelectorAll('.corner').forEach(c => c.style.borderColor = 'var(--primary)'), 1000);
+                setTimeout(() => {
+                    document.querySelectorAll('.corner').forEach(c => c.style.borderColor = 'var(--primary)');
+                    scanCooldown = false;
+                }, 1500);
             }
         }
 
