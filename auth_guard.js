@@ -49,6 +49,7 @@
                el.classList.contains('nav-link');
     }
 
+    let observer = null;
     function applyViewOnlyContent() {
         const disable = () => {
             // Disable semua button/input/textarea KECUALI:
@@ -80,11 +81,35 @@
                 f.addEventListener('submit', e => e.preventDefault(), true);
             });
         };
+
+        const startObserver = () => {
+            if (observer) return;
+            observer = new MutationObserver(() => {
+                observer.disconnect();
+                disable();
+                observer.observe(document.body, {
+                    attributes: true,
+                    childList: true,
+                    subtree: true,
+                    attributeFilter: ['disabled']
+                });
+            });
+            observer.observe(document.body, {
+                attributes: true,
+                childList: true,
+                subtree: true,
+                attributeFilter: ['disabled']
+            });
+        };
+
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', disable);
+            document.addEventListener('DOMContentLoaded', () => {
+                disable();
+                startObserver();
+            });
         } else {
             disable();
-            setTimeout(disable, 1500);
+            startObserver();
         }
     }
 
@@ -264,10 +289,16 @@
     // ─── Public API ────────────────────────────────────────────────────────
     window.SapaGuard = {
         apply: function (mode) {
+            window.SAPAGUARD_MODE = mode;
             if (mode === 'field')     applyFieldGuard();
             if (mode === 'sensitive') applySensitiveGuard();
         },
         getRole: getRole,
+        isRestricted: function() {
+            const role = getRole();
+            return (window.SAPAGUARD_MODE === 'field' && role === 'client') ||
+                   (window.SAPAGUARD_MODE === 'sensitive' && role === 'usher');
+        },
 
         dismissOverlay: function () {
             const overlay = document.getElementById('sapa-guard-overlay');

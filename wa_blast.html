@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -582,6 +582,10 @@
     };
 
     window.saveMasterToken = async function() {
+        if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+            showToast("🔒 Mode Lihat Saja Aktif!");
+            return;
+        }
         const token = document.getElementById('masterToken').value.trim(); 
         if (!token) return showToast("⚠️ Token tidak boleh kosong!");
 
@@ -610,6 +614,12 @@
         const isChecked = document.getElementById('statusToggle').checked;
         const newStatus = isChecked ? "connect" : "disconnect";
 
+        if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+            showToast("🔒 Mode Lihat Saja Aktif!");
+            document.getElementById('statusToggle').checked = !isChecked;
+            return;
+        }
+
         if(!kat) {
             showToast("⚠️ Pilih kategori dulu!");
             document.getElementById('statusToggle').checked = !isChecked;
@@ -629,6 +639,10 @@
     };
 
     window.remoteSyncDevice = async function() {
+        if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+            showToast("🔒 Mode Lihat Saja Aktif!");
+            return;
+        }
         const kat = document.getElementById('kategoriSelect').value;
         const phone = document.getElementById('clientPhone').value;
         if(!kat || !phone) return showToast("⚠️ Lengkapi data!");
@@ -652,6 +666,11 @@
     window.executeMassBlast = async function() {
         if(isProcessing) return;
         
+        if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+            await showAlert("Mode Lihat Saja", "🔒 Halaman ini dalam mode lihat saja. Anda tidak dapat melakukan blast.");
+            return;
+        }
+
         try {
             const katSelect = document.getElementById('kategoriSelect');
             const kat = katSelect ? katSelect.value.trim() : "";
