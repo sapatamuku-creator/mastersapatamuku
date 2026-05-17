@@ -25,7 +25,9 @@
     }
 
     function getRole() {
-        return getSession().role || 'client';
+        // Kembalikan undefined jika tidak ada role (sesi lama sebelum RBAC)
+        // Guard hanya aktif jika role EKSPLISIT: 'client' atau 'usher'
+        return getSession().role || undefined;
     }
 
     // ─── Upgrade role di session (Switch to Admin) ─────────────────────────
@@ -91,7 +93,9 @@
     // USHER : langsung full access
     function applyFieldGuard() {
         const role = getRole();
-        if (role === 'usher') return; // Usher full access, tidak ada guard
+        // Hanya terapkan guard jika role EKSPLISIT 'client'
+        // Usher → full access | Tidak ada role (sesi lama) → full access (backward compat)
+        if (role !== 'client') return;
 
         // Inject CSS
         const style = document.createElement('style');
@@ -216,7 +220,9 @@
     // CLIENT: full access, tidak ada guard
     function applySensitiveGuard() {
         const role = getRole();
-        if (role !== 'usher') return; // Client full access
+        // Hanya terapkan view-only jika role EKSPLISIT 'usher'
+        // Client → full access | Tidak ada role (sesi lama) → full access (backward compat)
+        if (role !== 'usher') return;
 
         // Inject CSS banner
         const style = document.createElement('style');
