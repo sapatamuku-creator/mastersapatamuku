@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sapa Tamu.ku - WA Blast Console</title>
+    <script src="subdomain_resolver.js?v=3.3"></script>
+    <style>
+    /* IMPORT FONTS */
+    @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+    :root { 
+        --primary: #E07B7B; /* Rose */
+        --bg: #FFF9F5;      /* Warm White */
+        --card: #FFFFFF;
+        --text-main: #4A3F35; /* Warm Dark Brown */
+        --text-muted: #8C7560; /* Warm Brown */
+        --border: #F0E6DE;
+        --input-bg: #FDF8F4;
+        --gold: #C8962E;
+        --wedding: #D9608A;
+        --success: #10B981;
+        --warning: #D97706;   /* Amber - for duplicate warning */
+        --warning-bg: #FFFBEB;
+    }
+
+    body { 
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+        background: var(--bg); 
+        color: var(--text-main); 
+        margin: 0; 
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .st-container {
+        padding: 100px 20px 40px;
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+
+    h1, h2, h3, .heading-font {
+        font-family: 'Lora', serif;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .st-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 30px;
+        margin-bottom: 25px;
+        box-shadow: 0 10px 30px rgba(140, 117, 96, 0.05);
+    }
+
+    .st-label {
+        display: block;
+        font-size: 10px !important;
+        font-weight: 800;
+        color: var(--text-muted);
+        letter-spacing: 1.2px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+    }
+
+    .st-input {
+        width: 100%;
+        padding: 15px;
+        background: var(--input-bg);
+        border: 1.5px solid var(--border);
+        color: var(--text-main);
+        border-radius: 12px;
+        font-size: 14px !important;
+        font-weight: 600;
+        margin-bottom: 15px;
+        box-sizing: border-box;
+        outline: none;
+        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .st-input:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(224, 123, 123, 0.1); }
+
+    .st-btn {
+        padding: 16px 24px;
+        border-radius: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: 0.3s;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        color: #fff;
+    }
+    .st-btn:active { transform: scale(0.97); }
+
+    .btn-primary { background: var(--primary); }
+
+    /* ADVANCED NAVBAR STYLES (CLONE FROM ONSITE) */
+    .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
+    .nav-outer-wrapper { position: relative; max-width: 95%; display: flex; align-items: center; background: #FFFDFB; border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08); border: 1px solid var(--border); overflow: hidden; }
+    
+    .nav-scroll-container { 
+        display: flex; align-items: center; gap: 5px; padding: 6px 15px;
+        overflow-x: auto; white-space: nowrap; scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .nav-scroll-container::-webkit-scrollbar { display: none; }
+    
+    .nav-fade { position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none; z-index: 2; transition: opacity 0.3s; opacity: 0; }
+    .nav-fade-left { left: 0; background: linear-gradient(to right, #FFFDFB 20%, transparent); }
+    .nav-fade-right { right: 0; background: linear-gradient(to left, #FFFDFB 20%, transparent); }
+    .nav-fade.visible { opacity: 1; }
+
+    .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; font-size: 10px; color: var(--text-muted); opacity: 0.5; pointer-events: none; transition: 0.3s; }
+    .nav-arrow-left { left: 8px; }
+    .nav-arrow-right { right: 8px; }
+
+    .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: 0.3s; display: flex; align-items: center; white-space: nowrap; }
+    .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+    .nav-link.active { background: var(--primary); color: white !important; }
+    .nav-link.sign-out { color: #E07B7B !important; }
+    .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
+
+    .btn-gold { background: var(--gold); }
+    .btn-dark { background: var(--text-main); }
+    .btn-outline { 
+        background: #fff; 
+        border: 1.5px solid var(--border); 
+        color: var(--text-muted); 
+    }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-disabled { background: #EAE2DB !important; color: #BBB !important; cursor: not-allowed; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { 
+        text-align: left; 
+        padding: 18px; 
+        border-bottom: 2px solid var(--bg); 
+        color: var(--text-muted); 
+        font-size: 10px; 
+        font-weight: 800;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        position: sticky; 
+        top: 0; 
+        background: var(--card); 
+    }
+    td { padding: 18px; border-bottom: 1px solid var(--bg); font-size: 13px; font-weight: 600; color: var(--text-main); }
+    
+    .grid-layout { display: flex; gap: 30px; align-items: flex-start; }
+    .sidebar { flex: 0 0 380px; }
+    .main-content { flex: 1; min-width: 0; }
+
+    .table-scroll-area {
+        overflow-y: auto;
+        background: #fff;
+        max-height: 600px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+    }
+
+    #loading-global {
+        position: fixed; inset: 0;
+        background: rgba(255, 249, 245, 0.95); 
+        display: none; justify-content: center;
+        align-items: center; z-index: 100000; flex-direction: column;
+        backdrop-filter: blur(10px);
+        cursor: wait;
+    }
+    .spinner {
+        width: 45px; height: 45px;
+        border: 4px solid var(--border); border-top: 4px solid var(--primary);
+        border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+
+    .st-modal-overlay {
+        position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4);
+        display: none; justify-content: center; align-items: center;
+        z-index: 100000; backdrop-filter: blur(10px);
+    }
+    .st-modal-content {
+        background: #fff;
+        padding: 50px 40px; border-radius: 32px;
+        text-align: center; max-width: 400px; width: 90%;
+        box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2);
+        border: 1px solid var(--border);
+    }
+    .st-modal-title { font-family: 'Lora', serif; color: var(--text-main); font-size: 24px; margin-bottom: 15px; }
+    .st-modal-msg { color: var(--text-muted); line-height: 1.6; font-size: 15px; margin-bottom: 35px; }
+
+    .switch-container { 
+        display: flex; justify-content: space-between; align-items: center; 
+        background: var(--input-bg); padding: 15px; border-radius: 12px; border: 1.5px solid var(--border);
+        margin-bottom: 15px;
+    }
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+        position: absolute; cursor: pointer; inset: 0;
+        background-color: #D6CCC4; transition: .4s; border-radius: 20px;
+    }
+    .slider:before {
+        position: absolute; content: ""; height: 18px; width: 18px;
+        left: 3px; bottom: 3px; background-color: #fff; transition: .4s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    #customToast {
+        display: none; position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+        background: var(--text-main); color: #fff; padding: 16px 30px; border-radius: 50px;
+        font-weight: 700; font-size: 12px; z-index: 100001; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        white-space: nowrap;
+    }
+
+    @media (max-width: 900px) {
+        .grid-layout { flex-direction: column; }
+        .sidebar { flex: 1 0 100%; width: 100%; }
+        .st-container { padding: 20px; }
+    }
+    </style>
+    <script src="auth_guard.js?v=1.0"></script>
+</head>
+<body onload="SapaGuard && SapaGuard.apply('sensitive')" onload="initBlast()">
+
+
+<nav class="sapatamu-navbar">
+    <div class="nav-outer-wrapper">
+        <div class="nav-fade nav-fade-left" id="fade-left"></div>
+        <div class="nav-arrow nav-arrow-left">‹</div>
+        
+        <div class="nav-scroll-container" id="nav-scroll">
+            <div class="nav-group">
+                <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+                <div class="nav-divider"></div>
+                <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
+                <a href="wa_blast.html" class="nav-link active" id="nav-wa">WA Blast</a>
+                <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+            </div>
+            <div class="nav-divider"></div>
+            <div class="nav-group">
+                <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                
+                
+                <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+                <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+                <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+                <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+                <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+            </div>
+            <div class="nav-divider"></div>
+            <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
+        </div>
+
+        <div class="nav-arrow nav-arrow-right">›</div>
+        <div class="nav-fade nav-fade-right" id="fade-right"></div>
+    </div>
+</nav>
+
+<div id="loading-global">
+    <div class="spinner"></div>
+    <div style="color:var(--primary); font-family:'Lora', serif; font-size: 16px; font-weight:700; letter-spacing: 1px;" id="loading-text">Menyiapkan Sistem...</div>
+</div>
+
+<div id="st-modal" class="st-modal-overlay">
+    <div id="modal-container" class="st-modal-content">
+        <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️</span>
+        <div id="st-modal-title" class="st-modal-title">Notifikasi</div>
+        <div id="st-modal-msg" class="st-modal-msg" style="white-space: pre-line;">Pesan akan muncul di sini.</div>
+        <div id="modal-actions" style="display: flex; gap: 10px; margin-top: 30px;">
+            <button id="modal-cancel-btn" class="st-btn btn-outline" style="flex:1; display:none;">BATAL</button>
+            <button id="modal-ok-btn" class="st-btn btn-dark" style="flex:1;">MENGERTI</button>
+        </div>
+    </div>
+</div>
+
+<div id="customToast"></div>
+
+<div class="st-container">
+    <header style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; border-bottom: 1.5px solid var(--border); padding-bottom: 30px;">
+        <div>
+            <h1 style="font-size: 32px; color: var(--text-main);">SapaTamu.Ku <span style="font-family:'Plus Jakarta Sans'; font-size: 12px; font-weight: 800; color: var(--primary); vertical-align: middle; margin-left: 10px; letter-spacing: 2px;">WA BLAST</span></h1>
+            <p style="margin-top: 5px; font-weight: 600; color: var(--text-muted); font-size: 12px;">Precision Messaging & Automation Console</p>
+        </div>
+        <div style="text-align: right;">
+            <div id="weddingTitle" style="font-family:'Lora', serif; font-size: 20px; color: var(--gold); font-weight: 700;">--</div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 8px;">
+                <button onclick="refreshData()" class="st-btn btn-outline" style="padding: 4px 10px; font-size: 9px; height: auto;">REFRESH DATA</button>
+                <div id="connectionStatus" style="font-size: 10px; font-weight: 800; padding: 4px 12px; border-radius: 50px; background: #EAE2DB; color: #8C7560;">OFFLINE</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="grid-layout">
+        <aside class="sidebar">
+            <div class="st-card">
+                <label class="st-label">Fonnte Master Token</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                    <input type="password" id="masterToken" class="st-input" style="margin:0;" placeholder="Token Fonnte Anda...">
+                    <button onclick="saveMasterToken()" class="st-btn btn-dark">SAVE</button>
+                </div>
+                <a href="https://md.fonnte.com/new/login.php" target="_blank" class="st-btn btn-dark" style="width: 100%; text-decoration: none; box-sizing: border-box; background: #333; color: var(--gold);">REGISTER / LOGIN FONNTE</a>
+            </div>
+
+            <div class="st-card">
+                <h3 style="font-size: 14px; color: var(--text-main); margin-bottom: 25px; border-left: 4px solid var(--primary); padding-left: 15px;">Control Center</h3>
+
+                <label class="st-label">Pilih Pihak Pengundang</label>
+                <select id="kategoriSelect" class="st-input" onchange="updateClientView()"></select>
+
+                <label class="st-label">Nomor WhatsApp</label>
+                <input type="text" id="clientPhone" class="st-input" placeholder="628xxxx">
+
+                <div class="switch-container">
+                    <label class="st-label" style="margin: 0;">Status Koneksi</label>
+                    <label class="switch">
+                        <input type="checkbox" id="statusToggle" onchange="manualStatusUpdate()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <label class="st-label">Device Token</label>
+                <input type="text" id="displayToken" class="st-input" readonly style="background: var(--bg); border-style: dashed; text-align: center; color: var(--gold);"> 
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; margin-bottom: 12px;">
+                    <button onclick="remoteSyncDevice()" class="st-btn btn-outline" style="font-size: 10px;">GET TOKEN</button>
+                    <button id="btnBlastAction" onclick="executeMassBlast()" class="st-btn btn-disabled" disabled style="font-size: 10px; position: relative; z-index: 10000;">
+                        BLAST ALL
+                    </button>
+                </div>
+
+                <a href="https://md.fonnte.com/new/device.php" target="_blank" class="st-btn btn-outline" style="width: 100%; text-decoration: none; box-sizing: border-box; color: var(--gold); border-color: var(--gold); font-size: 10px;">CONNECT TO FONNTE</a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="st-card" style="padding: 30px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <h3 style="font-size: 14px; color: var(--text-main);">Database Tamu</h3>
+                    <span id="countTamu" style="background: var(--bg); border: 1px solid var(--border); color: var(--text-muted); padding: 5px 15px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 GUESTS</span>
+                </div>
+                
+                <div class="table-scroll-area">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>NAMA TAMU</th>
+                                <th>KATEGORI</th>
+                                <th style="text-align: right;">STATUS BLAST</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tamuTable">
+                            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 100px; font-size: 14px; font-style: italic;">Memuat data tamu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>(function() {
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
+
+    function syncNavbar() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const ssId = window.CURRENT_SS_ID || urlParams.get("ssId");
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            const baseHref = link.getAttribute('href').split('?')[0];
+            link.href = ssId ? `${baseHref}?ssId=${ssId}` : baseHref;
+        });
+    }
+
+    let CURRENT_SS_ID;
+    let localData = { categories: [], tamu: [], liveUsage: 0 };
+    let isProcessing = false;
+
+    window.initBlast = function() {
+        if (window.SAPATAMU_RESOLVED) {
+            const urlParams = new URLSearchParams(window.location.search);
+            CURRENT_SS_ID = window.CURRENT_SS_ID || urlParams.get("ssId") || localStorage.getItem("st_saved_ssid");
+
+            if (!CURRENT_SS_ID) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            localStorage.setItem("st_saved_ssid", CURRENT_SS_ID);
+            syncNavbar();
+            initNavScroll();
+            refreshData(true);
+        } else {
+            setTimeout(initBlast, 100);
+        }
+    };
+
+    function initNavScroll() {
+        const container = document.getElementById('nav-scroll');
+        const fLeft = document.getElementById('fade-left');
+        const fRight = document.getElementById('fade-right');
+        
+        const updateFades = () => {
+            const scrollLeft = container.scrollLeft;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            fLeft.classList.toggle('visible', scrollLeft > 10);
+            fRight.classList.toggle('visible', scrollLeft < maxScroll - 10);
+        };
+        
+        container.addEventListener('scroll', updateFades);
+        window.addEventListener('resize', updateFades);
+        setTimeout(updateFades, 500);
+
+        // Auto-scroll to active link
+        const active = container.querySelector('.nav-link.active');
+        if (active) {
+            container.scrollLeft = active.offsetLeft - (container.clientWidth / 2) + (active.clientWidth / 2);
+        }
+    }
+
+    function showToast(msg, duration = 3000) {
+        const toast = document.getElementById('customToast');
+        toast.innerText = msg;
+        toast.style.display = 'block';
+        toast.style.animation = 'fadeIn 0.3s ease-out';
+        setTimeout(() => { toast.style.display = 'none'; }, duration);
+    }
+
+    function toggleProcessing(isStart, text = "Menyiapkan Sistem...") {
+        isProcessing = isStart;
+        const loader = document.getElementById('loading-global');
+        if(loader) {
+            document.getElementById('loading-text').innerText = text;
+            loader.style.display = isStart ? 'flex' : 'none';
+        }
+        document.body.style.cursor = isStart ? 'wait' : 'default';
+        document.body.style.pointerEvents = isStart ? 'none' : 'auto';
+    }
+
+    window.showAlert = function(title, msg, icon = "⚠️") {
+        return new Promise(resolve => {
+            document.getElementById('st-modal-icon').innerText = icon;
+            document.getElementById('st-modal-title').innerText = title;
+            document.getElementById('st-modal-msg').innerText = msg;
+            document.getElementById('modal-cancel-btn').style.display = 'none';
+            const okBtn = document.getElementById('modal-ok-btn');
+            okBtn.innerText = "MENGERTI";
+            okBtn.onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(true);
+            };
+            document.getElementById('st-modal').style.display = 'flex';
+        });
+    };
+
+    window.showConfirm = function(title, msg, icon = "🚀") {
+        return new Promise(resolve => {
+            document.getElementById('st-modal-icon').innerText = icon;
+            document.getElementById('st-modal-title').innerText = title;
+            document.getElementById('st-modal-msg').innerText = msg;
+            document.getElementById('modal-cancel-btn').style.display = 'block';
+            document.getElementById('modal-ok-btn').innerText = "LANJUTKAN";
+            
+            document.getElementById('modal-ok-btn').onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(true);
+            };
+            document.getElementById('modal-cancel-btn').onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(false);
+            };
+            document.getElementById('st-modal').style.display = 'flex';
+        });
+    };
+
+    window.refreshData = async function(isInitial = false) {
+        try {
+            const response = await fetch(SCRIPT_URL + "?action=getWAForm&ssId=" + CURRENT_SS_ID);
+            localData = await response.json();
+            
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.innerText = "CONNECTED";
+            statusEl.style.background = "#D1FAE5";
+            statusEl.style.color = "#065F46";
+            
+            document.getElementById('weddingTitle').innerText = localData.weddingTitle || "--";
+            document.getElementById('masterToken').value = localData.masterToken || '';
+            
+            renderCategories(localData);
+            renderTable();
+        } catch (err) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.innerText = "DISCONNECTED";
+            statusEl.style.background = "#FEE2E2";
+            statusEl.style.color = "#991B1B";
+        } finally {
+            if(isInitial) toggleProcessing(false);
+        }
+    }
+
+    window.renderCategories = function(data) {
+        const select = document.getElementById('kategoriSelect');
+        const currentVal = select.value;
+        
+        select.innerHTML = '<option value="">-- Pilih Pihak Pengundang --</option>';
+        data.categories.forEach(c => {
+            if(c.kategori) {
+                const opt = document.createElement('option');
+                opt.value = c.kategori;
+                opt.textContent = c.kategori;
+                select.appendChild(opt);
+            }
+        });
+
+        if(currentVal) select.value = currentVal;
+        updateClientView();
+    };
+
+    function getStatusColor(status) {
+        if (!status || typeof status !== 'string') return 'var(--primary)';
+        if (status.includes('✅')) return 'var(--success)';
+        if (status.includes('⚠️') || status.toLowerCase().includes('duplikasi')) return 'var(--warning)';
+        if (status.includes('❌') || status.toLowerCase().includes('gagal')) return '#DC2626';
+        return 'var(--primary)';
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('tamuTable');
+        tbody.innerHTML = localData.tamu.length ? localData.tamu.map(t => {
+            const statusColor = getStatusColor(t.status);
+            const isDuplicate = t.status && typeof t.status === 'string' && 
+                (t.status.includes('⚠️') || t.status.toLowerCase().includes('duplikasi'));
+            return `
+            <tr style="${isDuplicate ? 'background: var(--warning-bg);' : ''}">
+                <td><div style="font-weight: 700;">${t.nama}</div><div style="font-size:10px; color:var(--text-muted);">ID: ${t.kode}</div></td>
+                <td><span style="font-size:11px; background:var(--bg); padding:4px 10px; border-radius:6px; color:var(--text-muted); font-weight:700;">${t.kategori}</span></td>
+                <td style="text-align:right; font-weight:800; color:${statusColor}">
+                    ${t.status || 'BELUM TERKIRIM'}
+                </td>
+            </tr>`;
+        }).join('') : '<tr><td colspan="3" style="text-align:center; padding: 50px;">Data Tidak Tersedia</td></tr>';
+        document.getElementById('countTamu').innerText = localData.tamu.length;
+    }
+
+    window.updateClientView = function() {
+        const selectedKat = document.getElementById('kategoriSelect').value;
+        const found = localData.categories.find(c => c.kategori === selectedKat);
+        const btnBlast = document.getElementById('btnBlastAction');
+        const toggle = document.getElementById('statusToggle');
+
+        if (found) {
+            document.getElementById('clientPhone').value = found.nomor || "";
+            document.getElementById('displayToken').value = (found.token && found.token !== "-") ? found.token : "";
+            const isConnect = found.statusConnect === "connect";
+            toggle.checked = isConnect;
+
+            if (isConnect) {
+                btnBlast.disabled = false;
+                btnBlast.className = "st-btn btn-primary"; 
+            } else {
+                btnBlast.disabled = true;
+                btnBlast.className = "st-btn btn-disabled";
+            }
+        } else {
+            document.getElementById('clientPhone').value = "";
+            document.getElementById('displayToken').value = "";
+            toggle.checked = false;
+            btnBlast.disabled = true;
+            btnBlast.className = "st-btn btn-disabled";
+        }
+    };
+
+    window.saveMasterToken = async function() {
+        if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+            showToast("🔒 Mode Lihat Saja Aktif!");
+            return;
+        }
+        const token = document.getElementById('masterToken').value.trim(); 
+        if (!token) return showToast("⚠️ Token tidak boleh kosong!");
+
+        toggleProcessing(true, "Menyimpan Token...");
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "saveMasterToken", ssId: CURRENT_SS_ID, token: token })
+            });
+            const result = await response.json();
+            if (result.status === "success") {
+                showToast("✅ Token berhasil disimpan!");
+                await refreshData();
+            } else {
+                showToast("❌ Gagal: " + result.msg);
+            }
+        } catch (e) {
+            showToast("❌ Kesalahan koneksi.");
+        } finally {
+            toggleProcessing(false);
+        }
+    };
+
+    window.manualStatusUpdate = async function() {
+        const kat = document.getElementById('kategoriSelect').value;
+        const isChecked = document.getElementById('statusToggle').checked;
+        const newStatus = isChecked ? "connect" : "disconnect";
+
+        if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+            showToast("🔒 Mode Lihat Saja Aktif!");
+            document.getElementById('statusToggle').checked = !isChecked;
+            return;
+        }
+
+        if(!kat) {
+            showToast("⚠️ Pilih kategori dulu!");
+            document.getElementById('statusToggle').checked = !isChecked;
+            return;
+        }
+
+        toggleProcessing(true, "Memperbarui Status...");
+        try {
+            await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "toggleStatus", ssId: CURRENT_SS_ID, kategori: kat, status: newStatus })
+            });
+            await refreshData();
+            showToast("✅ Status diperbarui");
+        } catch (e) { showToast("❌ Gagal update."); }
+        finally { toggleProcessing(false); }
+    };
+
+    window.remoteSyncDevice = async function() {
+        if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+            showToast("🔒 Mode Lihat Saja Aktif!");
+            return;
+        }
+        const kat = document.getElementById('kategoriSelect').value;
+        const phone = document.getElementById('clientPhone').value;
+        if(!kat || !phone) return showToast("⚠️ Lengkapi data!");
+
+        toggleProcessing(true, "Sinkronisasi Device...");
+        try {
+            const res = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "remoteFonnte", ssId: CURRENT_SS_ID, kategori: kat, targetNumber: phone })
+            });
+            const result = await res.json();
+            if (result.status === "success") {
+                showToast("✅ Berhasil! Silahkan Scan QR.");
+                window.open("https://md.fonnte.com/new/device.php", "_blank");
+                await refreshData();
+            } else { showToast("❌ Gagal: " + result.msg); }
+        } catch (e) { showToast("❌ Error koneksi."); }
+        finally { toggleProcessing(false); }
+    };
+
+    window.executeMassBlast = async function() {
+        if(isProcessing) return;
+        
+        if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+            await showAlert("Mode Lihat Saja", "🔒 Halaman ini dalam mode lihat saja. Anda tidak dapat melakukan blast.");
+            return;
+        }
+
+        try {
+            const katSelect = document.getElementById('kategoriSelect');
+            const kat = katSelect ? katSelect.value.trim() : "";
+            const token = document.getElementById('displayToken').value;
+            
+            if(!kat) {
+                await showAlert("Peringatan", "Pilih kategori pengundang terlebih dahulu!");
+                return;
+            }
+
+            if (!localData.tamu || !Array.isArray(localData.tamu)) {
+                await showAlert("Error", "Data tamu tidak ditemukan.");
+                return;
+            }
+
+            const targets = localData.tamu.filter(t => {
+                const tKat = (t.kategori || "").trim();
+                return tKat === kat && !(t.status && typeof t.status === 'string' && t.status.includes('✅'));
+            });
+
+            if(!targets.length) {
+                await showAlert("Informasi", "Semua tamu di kategori [" + kat + "] sudah terkirim ✅", "ℹ️");
+                return;
+            }
+
+            // ===== DUPLICATE NUMBER GUARD =====
+            const seenNumbers = new Set();
+            const uniqueTargets = [];
+            const duplicates = [];
+
+            targets.forEach(t => {
+                const rawNomor = (t.nomor || "").toString().trim().replace(/D/g, '');
+                if (!rawNomor) {
+                    // No number at all — skip silently
+                    return;
+                }
+                if (seenNumbers.has(rawNomor)) {
+                    duplicates.push(t);
+                } else {
+                    seenNumbers.add(rawNomor);
+                    uniqueTargets.push(t);
+                }
+            });
+
+            // Warn if duplicates found
+            if (duplicates.length > 0) {
+                const dupNames = duplicates.slice(0, 5).map(d => d.nama).join(', ');
+                const extraCount = duplicates.length > 5 ? ` (+${duplicates.length - 5} lainnya)` : '';
+                const warnMsg = `Ditemukan ${duplicates.length} tamu dengan nomor HP yang sama.
+
+Tamu duplikat (⚠️ akan di-skip):
+${dupNames}${extraCount}
+
+Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
+                const proceedAnyway = await showConfirm(
+                    "⚠️ DUPLIKASI NOMOR TERDETEKSI",
+                    warnMsg,
+                    "⚠️"
+                );
+                if (!proceedAnyway) return;
+
+                // Mark duplicates as warning (yellow) via backend — fire-and-forget
+                const dupPayload = duplicates.map(d => ({
+                    row: d.row,
+                    status: "⚠️ Gagal Blast (Duplikasi Nomor)"
+                }));
+                fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ 
+                        action: "markDuplicateBlast", 
+                        ssId: CURRENT_SS_ID, 
+                        duplicates: dupPayload 
+                    })
+                }).catch(() => {});
+            }
+
+            if(!uniqueTargets.length) {
+                await showAlert("Informasi", "Tidak ada nomor unik yang dapat dikirim.", "ℹ️");
+                return;
+            }
+            // ===== END DUPLICATE GUARD =====
+
+            const isConfirmed = await showConfirm(
+                "MESIN BLAST READY", 
+                `Target: ${uniqueTargets.length} Tamu (Unik)${duplicates.length > 0 ? '\n⚠️ ' + duplicates.length + ' tamu duplikat di-skip' : ''}\nKategori: ${kat}\n\nSistem akan mengirimkan pesan undangan otomatis.`
+            );
+            
+            if(!isConfirmed) return;
+
+            toggleProcessing(true, "Menyiapkan Jalur Blast...");
+            const inviteBase = localData.linkInvitation || "";
+            const payload = uniqueTargets.map(t => {
+                const guestName = (t.nama || "Tamu Undangan").toString();
+                const guestNameCaps = guestName.toUpperCase();
+                const encodedName = encodeURIComponent(guestName).replace(/,/g, '%2C');
+                // --- KEMBALI KE FORMAT AWAL (STATIS) ---
+                const inviteLink = inviteBase ? `${inviteBase}${inviteBase.includes('?') ? '&' : '?'}id=${t.kode}&u=${encodedName}` : "";
+                
+                const dynamicImageUrl = "";
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${t.kode}&size=400x400`;
+
+                const completeMessage = `Kepada Yth. Bapak/Ibu/Saudara/i\n*${guestNameCaps}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\nTepat pada pukul *[${t.sesi || localData.waktuAcara || '-'}]*\n\n*${localData.weddingTitle || 'Pernikahan Kami'}*\n▫️ ${localData.hariTanggal || '-'}\n▫️ Waktu: ${localData.waktuAcara || '-'}\n▫️ Lokasi: ${localData.lokasiAcara || '-'}\n\nInformasi lengkap mengenai jadwal, lokasi, dan kartu akses digital dapat diakses melalui tautan berikut:\n${inviteLink}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara:\n${qrUrl}\n\nMerupakan suatu kehormatan bagi kami apabila Anda berkenan hadir. Terima kasih.`;
+
+                return {
+                    row: t.row, target: t.nomor, token: token, url: dynamicImageUrl, 
+                    message: completeMessage
+                };
+            });
+
+            const res = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "executeFonnteBlast", ssId: CURRENT_SS_ID, payload: payload })
+            });
+            
+            toggleProcessing(false);
+            const result = await res.json();
+
+            if (result.status === "success") {
+                // ===== UPDATE TABEL IN-MEMORY (tidak fetch ulang dari spreadsheet) =====
+                const now = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                const nowStr = pad(now.getDate()) + '/' + pad(now.getMonth()+1) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+
+                // Tandai baris sukses di localData
+                uniqueTargets.forEach(t => {
+                    const entry = localData.tamu.find(x => x.row === t.row);
+                    if (entry) entry.status = '\u2705 [' + nowStr + ']';
+                });
+
+                // Tandai baris error — SESSION ONLY, tidak ditulis ke spreadsheet
+                // Saat user klik "Refresh Data" → kembali jadi BELUM TERKIRIM → bisa retry
+                const failedRows = result.failedRows || [];
+                failedRows.forEach(f => {
+                    const entry = localData.tamu.find(x => x.row === f.row);
+                    if (entry) entry.status = '\u274c Gagal [' + nowStr + '] (Refresh untuk Retry)';
+                });
+
+                // Re-render tabel dari localData (bukan dari spreadsheet)
+                renderTable();
+
+                // Summary
+                const failCount = failedRows.length;
+                const dupCount = duplicates.length;
+                let summary = result.sent + ' pesan berhasil dikirim.';
+                if (failCount > 0) summary += '\n\u274c ' + failCount + ' gagal — Refresh halaman untuk retry.';
+                if (dupCount > 0) summary += '\n\u26a0\ufe0f ' + dupCount + ' di-skip (duplikasi nomor).';
+                await showAlert("Selesai!", summary, result.sent > 0 ? "\u2705" : "\u26a0\ufe0f");
+
+                // Auto-refresh hanya jika tidak ada error (agar row error tidak hilang sebelum user baca)
+                if (failCount === 0) await refreshData();
+
+            } else {
+                await showAlert("Gagal Server", result.msg || "Terjadi kesalahan pada backend.", "\u274c");
+                await refreshData();
+            }
+        } catch (e) { 
+            toggleProcessing(false);
+            await showAlert("Critical Error", e.toString(), "\u274c"); 
+        }
+    };
+
+    window.syncNavbar = function() {
+        // Logic to ensure navbar is rendered/maintained
+    };
+
+    window.initBlast();
+    
+    // Auto-refresh dimatikan sesuai permintaan untuk mencegah interupsi
+    console.log("Auto-refresh disabled. Use manual refresh button.");
+})();
+</script>
+</body>
+</html>
