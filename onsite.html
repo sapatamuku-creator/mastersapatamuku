@@ -197,7 +197,19 @@
         </div>
     </nav>
 
-    <div class="header">
+    <div class="header" style="position: relative;">
+        <!-- STATION SELECTOR -->
+        <div style="position: absolute; top: 60px; left: 15px; z-index: 200; display: flex; align-items: center; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <span style="font-size: 8px; color: var(--text-muted); font-weight: 800; margin-right: 5px; text-transform: uppercase;">STATION:</span>
+            <select id="station-selector" style="background: transparent; border: none; color: var(--text-main); font-size: 9px; font-weight: 800; text-transform: uppercase; outline: none; cursor: pointer;">
+                <option value="ALL">ALL SERVER</option>
+                <option value="STATION 1">STATION 1</option>
+                <option value="STATION 2">STATION 2</option>
+                <option value="STATION 3">STATION 3</option>
+                <option value="STATION 4">STATION 4</option>
+            </select>
+        </div>
+
         <h1>sapa<span>tamu</span>.ku</h1>
         <p>ONSITE SCAN & REGISTRATION</p>
     </div>
@@ -379,6 +391,7 @@
     let capturedBase64 = null;
     let regStream = null;
     let selectedGuest = null;
+    let STATION_ID = "ALL";
 
     window.showAlert = function(title, msg, icon = "⚠️") {
         return new Promise(resolve => {
@@ -426,6 +439,17 @@
         
         if (!CURRENT_SS_ID) { window.location.href = "login.html"; return; }
         
+        const savedStation = localStorage.getItem('onsite_station_id');
+        if (savedStation) {
+            STATION_ID = savedStation;
+            document.getElementById('station-selector').value = savedStation;
+        }
+
+        document.getElementById('station-selector').addEventListener('change', (e) => {
+            STATION_ID = e.target.value;
+            localStorage.setItem('onsite_station_id', STATION_ID);
+        });
+
         fetchData();
         initScanner();
         initNavScroll();
@@ -624,7 +648,8 @@
                     ssId: CURRENT_SS_ID, 
                     kodeUnik: selectedGuest.kode, 
                     realHadir: paxString, 
-                    statusAngpao: gift || "-" 
+                    statusAngpao: gift || "-",
+                    stationId: STATION_ID
                 }) 
             });
             const result = await res.json();
@@ -748,7 +773,8 @@
                 sesi: document.getElementById('reg-sesi').value, 
                 souvenir: document.getElementById('reg-souvenir').value, 
                 realHadir: paxString,
-                prefix: "ONS"
+                prefix: "ONS",
+                stationId: STATION_ID
             };
             
             // --- STEP 2: CORE REGISTER (Blocking) ---

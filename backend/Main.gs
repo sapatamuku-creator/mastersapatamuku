@@ -101,7 +101,7 @@ function handleMainGet(e) {
 
   // Routing untuk Worker dengan Filter Station
   if (action === "getPrintQueue") {
-    const queueData = getPrintQueue(ssId, station); // Mengirim parameter station ke fungsi filter
+    const queueData = getPrintQueue(ssId, station, e.parameter.stationId); // Mengirim parameter station dan stationId
     return ContentService.createTextOutput(JSON.stringify(queueData))
            .setMimeType(ContentService.MimeType.JSON);
   }
@@ -133,7 +133,7 @@ function handleMainPost(payload) {
         break;
       
       case "confirm_checkin": 
-        result = confirmCheckIn(ssId, payload.kodeUnik, payload.realHadir, payload.statusAngpao || payload.catatan); 
+        result = confirmCheckIn(ssId, payload.kodeUnik, payload.realHadir, payload.statusAngpao || payload.catatan, payload.stationId); 
         break;
         
       case "register_new_onsite": 
@@ -253,7 +253,7 @@ function updateTandaKasih(ssId, kode, nominal) {
   return { status: "error", message: "Kode tamu tidak ditemukan" };
 }
 
-function confirmCheckIn(ssId, kodeUnik, realHadir, catatan) {
+function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId) {
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_DATA);
   const data = sheet.getDataRange().getValues();
@@ -270,7 +270,7 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan) {
       sheet.getRange(rowIndex, COL_CATATAN).setValue(catatan);
       
       const updatedRowData = sheet.getRange(rowIndex, 1, 1, 19).getValues()[0];
-      processPrintLogic(ssId, updatedRowData, catatan);
+      processPrintLogic(ssId, updatedRowData, catatan, stationId);
       addToRundown(ssId, updatedRowData); // Sinkronisasi ke Welcome Sign Rundown
 
       return { "status": "success", "row": rowIndex, "triggerBlast": true };
@@ -335,7 +335,7 @@ function getMasterDataV3(ssId) {
 
 // --- 4. PRINT & QUEUE FUNCTIONS ---
 
-function processPrintLogic(ssId, guestData, giftStatus) {
+function processPrintLogic(ssId, guestData, giftStatus, stationId) {
   const guestInfo = { 
     nama: guestData[2], 
     kategori: guestData[4], 
@@ -348,15 +348,15 @@ function processPrintLogic(ssId, guestData, giftStatus) {
   };
   let catUpper = String(guestInfo.kategori).toUpperCase();
   let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
-  addToQueue(ssId, guestInfo, guestInfo.kategori, labelType);
+  addToQueue(ssId, guestInfo, guestInfo.kategori, labelType, stationId);
 
   if (giftStatus && giftStatus !== "-" && giftStatus !== "ON-SITE") {
     const statusUpper = String(giftStatus).toUpperCase();
     if (statusUpper.includes("ANGPAO") && statusUpper.includes("KADO")) {
-      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: KADO");
-      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: ANGPAO");
+      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: KADO", stationId);
+      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: ANGPAO", stationId);
     } else {
-      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: " + statusUpper);
+      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: " + statusUpper, stationId);
     }
   }
 }
@@ -414,18 +414,20 @@ function addToRundown(ssId, guestRow) {
   }
 }
 
-function addToQueue(ssId, guest, category, info) {
+function addToQueue(ssId, guest, category, info, stationId) {
   const ss = getSS(ssId);
   let qSheet = ss.getSheetByName(SHEET_PRINT) || ss.insertSheet(SHEET_PRINT);
   
-  // JABAT TANGAN BACKEND: Pastikan Header Lengkap (ID s/d PAX)
+  // JABAT TANGAN BACKEND: Pastikan Header Lengkap (ID s/d STATION ID)
   if (qSheet.getLastRow() === 0) {
-    qSheet.appendRow(["ID", "TIMESTAMP", "NAMA", "KODE", "QR LINK", "INFO", "STATUS", "KATEGORI", "ALAMAT", "PIHAK", "SESI", "PAX"]);
+    qSheet.appendRow(["ID", "TIMESTAMP", "NAMA", "KODE", "QR LINK", "INFO", "STATUS", "KATEGORI", "ALAMAT", "PIHAK", "SESI", "PAX", "STATION ID"]);
   } else {
-    // Jika sheet sudah ada, pastikan kolom ke-9 (ALAMAT) sudah ada header-nya
-    const headerCheck = qSheet.getRange(1, 1, 1, 12).getValues()[0];
+    // Jika sheet sudah ada, pastikan kolom ke-9 (ALAMAT) dan ke-13 (STATION ID) sudah ada header-nya
+    const headerCheck = qSheet.getRange(1, 1, 1, Math.max(13, qSheet.getLastColumn())).getValues()[0];
     if (headerCheck.length < 9 || headerCheck[8] !== "ALAMAT") {
-       qSheet.getRange(1, 9, 1, 4).setValues([["ALAMAT", "PIHAK", "SESI", "PAX"]]);
+       qSheet.getRange(1, 9, 1, 5).setValues([["ALAMAT", "PIHAK", "SESI", "PAX", "STATION ID"]]);
+    } else if (headerCheck.length < 13 || headerCheck[12] !== "STATION ID") {
+       qSheet.getRange(1, 13).setValue("STATION ID");
     }
   }
 
@@ -442,11 +444,12 @@ function addToQueue(ssId, guest, category, info) {
     guest.alamat || "-",
     guest.pihak || "-",
     guest.sesi || "-",
-    guest.pax || "1"
+    guest.pax || "1",
+    stationId || "ALL"
   ]);
 }
 
-function getPrintQueue(ssId, station) {
+function getPrintQueue(ssId, stationFilter, stationIdFilter) {
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_PRINT);
   if (!sheet) return [];
@@ -459,23 +462,35 @@ function getPrintQueue(ssId, station) {
     sheet.getRange(1, 9, 1, 4).setValues([["ALAMAT", "PIHAK", "SESI", "PAX"]]);
   }
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
-  const currentStation = (station || "").toUpperCase().trim();
+  const lastCol = sheet.getLastColumn();
+  const numCols = Math.max(13, lastCol);
+  const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+  const currentStation = (stationFilter || "").toUpperCase().trim();
+  const currentStationId = (stationIdFilter || "ALL").toUpperCase().trim();
 
   return data
     .filter(r => {
-      const statusMatch = r[6].toString().toUpperCase().trim() === "WAITING"; // Kolom G
-      const jenisInfo = r[5].toString().toUpperCase().trim(); // Kolom F
-      
+      const statusMatch = r[6] ? r[6].toString().toUpperCase().trim() === "WAITING" : false; // Kolom G
       if (!statusMatch) return false;
 
-      if (currentStation === "LOKET-1") return jenisInfo.indexOf("SOUVENIR") !== -1;
-      if (currentStation === "LOKET-2") return jenisInfo.indexOf("CHECKIN") !== -1;
+      const jenisInfo = r[5] ? r[5].toString().toUpperCase().trim() : ""; // Kolom F
+      if (currentStation === "LOKET-1" && jenisInfo.indexOf("SOUVENIR") === -1) return false;
+      if (currentStation === "LOKET-2" && jenisInfo.indexOf("CHECKIN") === -1) return false;
+
+      // Filter by Station ID
+      if (currentStationId !== "ALL" && currentStationId !== "ALL SERVER") {
+        const rowStationId = r[12] ? r[12].toString().toUpperCase().trim() : "ALL";
+        // If worker is STATION X, only fetch if row is STATION X or ALL
+        if (rowStationId !== "ALL" && rowStationId !== "" && rowStationId !== currentStationId) {
+          return false;
+        }
+      }
+
       return true;
     })
     .map(r => ({ 
       id: r[0], timestamp: r[1], nama: r[2], kode: r[3], qr: r[4], info: r[5], status: r[6], kategori: r[7],
-      alamat: r[8], pihak: r[9], sesi: r[10], pax: r[11]
+      alamat: r[8], pihak: r[9], sesi: r[10], pax: r[11], stationId: r[12] || "ALL"
     }));
 }
 
@@ -517,7 +532,7 @@ function registerNewOnsite(data) {
     ];
     sheet.appendRow(newRow);
     const lastRowData = sheet.getRange(sheet.getLastRow(), 1, 1, 19).getValues()[0];
-    processPrintLogic(data.ssId, lastRowData, giftVal);
+    processPrintLogic(data.ssId, lastRowData, giftVal, data.stationId);
     addToRundown(data.ssId, lastRowData); // Sinkronisasi ke Welcome Sign
     return { status: "success", kode: kodeUnik, message: "On-Site Berhasil", triggerBlast: true };
   } catch (e) { return { status: "error", message: e.toString() }; } finally { lock.releaseLock(); }

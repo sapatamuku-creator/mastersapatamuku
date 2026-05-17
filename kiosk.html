@@ -136,6 +136,18 @@
     <!-- Script Resolver Subdomain -->
     <script src="subdomain_resolver.js?v=3.2"></script>
 
+    <!-- STATION SELECTOR (Pojok Kiri Atas) -->
+    <div class="fixed top-6 left-6 z-[200] flex items-center bg-white/50 backdrop-blur border border-[#F0E6DE] rounded-full px-4 py-2 shadow-sm">
+        <span class="text-[10px] text-[#8C7560] font-bold mr-2 uppercase tracking-widest">STATION:</span>
+        <select id="kiosk-station-selector" class="bg-transparent text-[#4A3F35] text-xs font-bold uppercase outline-none cursor-pointer">
+            <option value="ALL">ALL SERVER</option>
+            <option value="STATION 1">STATION 1</option>
+            <option value="STATION 2">STATION 2</option>
+            <option value="STATION 3">STATION 3</option>
+            <option value="STATION 4">STATION 4</option>
+        </select>
+    </div>
+
     <!-- STEP 1: KIOSK IDLE STATE (WELCOME SIGN) -->
     <div id="kiosk-idle-state" class="fixed inset-0 z-[100] transition-opacity duration-700 bg-black cursor-pointer" onclick="startScanning()">
         <iframe id="welcome-frame" src="welcome.html?mode=kiosk" class="w-full h-full border-none pointer-events-none"></iframe>
@@ -328,6 +340,9 @@
         let selectedGuest = null;
         let scanCooldown = false;
         
+        // Settings State
+        let STATION_ID = "ALL";
+        
         // Selfie States
         let currentStream = null;
         let capturedBase64 = null;
@@ -340,6 +355,19 @@
             
             const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
             CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
+            
+            // Inisialisasi Station ID dari localStorage jika ada
+            const savedStation = localStorage.getItem('kiosk_station_id');
+            if (savedStation) {
+                STATION_ID = savedStation;
+                document.getElementById('kiosk-station-selector').value = savedStation;
+            }
+
+            document.getElementById('kiosk-station-selector').addEventListener('change', (e) => {
+                STATION_ID = e.target.value;
+                localStorage.setItem('kiosk_station_id', STATION_ID);
+                showToast(`Printer rute diubah ke: ${STATION_ID}`, true);
+            });
             
             if (!CURRENT_SS_ID) { window.location.href = "login.html"; return; }
             
@@ -668,7 +696,8 @@
                         ssId: CURRENT_SS_ID, 
                         kodeUnik: selectedGuest.kode, 
                         realHadir: paxString, 
-                        statusAngpao: giftStatus || "-" 
+                        statusAngpao: giftStatus || "-",
+                        stationId: STATION_ID 
                     }) 
                 });
                 const result = await res.json();
