@@ -33,30 +33,31 @@
 
         .scan-header {
             text-align: center;
-            margin-bottom: 4vh;
+            margin-bottom: 3vh;
         }
         .scan-header h1 { 
             font-family: 'Lora', serif; 
-            font-size: 3rem; 
+            font-size: clamp(2rem, 5vw, 3rem); 
             letter-spacing: 4px; 
             font-weight: 700; 
             color: var(--text-main);
             margin: 0;
         }
         .scan-header p { 
-            font-size: 1.1rem; 
+            font-size: clamp(0.9rem, 2vw, 1.1rem); 
             color: var(--text-muted); 
             margin-top: 8px; 
             font-weight: 500; 
             letter-spacing: 1px;
         }
 
-        /* --- LAYOUT SCANNER BOX (75%) --- */
+        /* --- LAYOUT SCANNER BOX --- */
         #scanner-wrapper { 
             position: relative; 
-            width: 75vw; 
-            max-width: 1000px;
-            aspect-ratio: 16 / 9;
+            width: 90vw; 
+            max-width: 800px;
+            height: 50vh;
+            max-height: 450px;
             background: #000; 
             z-index: 1;
             border-radius: 30px;
@@ -74,7 +75,7 @@
 
         /* Frame Kotak Pindai */
         .scan-frame { 
-            width: 45%; aspect-ratio: 3/4; max-width: 350px; 
+            width: 50%; height: 65%; max-width: 300px; max-height: 300px; 
             box-shadow: 0 0 0 4000px rgba(0,0,0,0.5); /* Gelapkan area luar */
             position: relative; border-radius: 20px;
             transition: all 0.3s ease;
@@ -163,71 +164,78 @@
     </div>
 
     <!-- Tombol Kembali ke Idle -->
-    <button onclick="returnToIdle()" class="fixed bottom-[5%] left-1/2 transform -translate-x-1/2 z-10 px-12 py-4 bg-[#4A3F35] text-white rounded-full font-bold tracking-widest hover:bg-[#E07B7B] transition-colors shadow-2xl uppercase border-none text-sm md:text-base">
+    <button onclick="returnToIdle()" class="fixed bottom-6 md:bottom-10 left-1/2 transform -translate-x-1/2 z-10 px-10 py-3 md:px-12 md:py-4 bg-[#4A3F35] text-white rounded-full font-bold tracking-widest hover:bg-[#E07B7B] transition-colors shadow-2xl uppercase border-none text-sm md:text-base">
         KEMBALI
     </button>
 
+    <!-- Tombol Fullscreen -->
+    <button id="btn-fullscreen" onclick="toggleFullScreen()" class="fixed bottom-6 right-6 z-[200] p-3 bg-[#F0E6DE]/80 backdrop-blur text-[#8C7560] rounded-full shadow-lg hover:bg-[#E07B7B] hover:text-white transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+        </svg>
+    </button>
+
     <!-- STEP 3: MODAL KONFIRMASI FULL LAYAR -->
-    <div id="kiosk-modal" class="hidden fixed inset-0 bg-[#FFFDFB] z-50 flex-col items-center justify-center modal-full overflow-y-auto py-10">
-        <p class="text-2xl md:text-3xl text-[#8C7560] font-serif italic mb-2 mt-auto">Welcome,</p>
-        <h2 id="guest-name" class="text-5xl md:text-7xl font-serif text-[#4A3F35] font-bold text-center px-10 mb-4 uppercase tracking-wide">NAMA TAMU</h2>
-        <p id="guest-category" class="text-xl md:text-2xl text-[#C8962E] font-bold tracking-widest uppercase mb-10">KATEGORI</p>
+    <div id="kiosk-modal" class="hidden fixed inset-0 bg-[#FFFDFB] z-50 flex-col items-center justify-center modal-full overflow-y-auto py-6 md:py-10">
+        <p class="text-xl md:text-2xl text-[#8C7560] font-serif italic mb-2 mt-auto">Welcome,</p>
+        <h2 id="guest-name" class="text-4xl md:text-6xl font-serif text-[#4A3F35] font-bold text-center px-6 mb-2 uppercase tracking-wide">NAMA TAMU</h2>
+        <p id="guest-category" class="text-lg md:text-xl text-[#C8962E] font-bold tracking-widest uppercase mb-6 md:mb-8">KATEGORI</p>
 
         <!-- Toggle Selfie Button -->
-        <button id="btn-show-selfie" onclick="toggleSelfieBox()" class="mb-10 px-8 py-3 rounded-full bg-[#F0E6DE] text-[#8C7560] font-bold tracking-widest hover:bg-[#E07B7B] hover:text-white transition-colors uppercase text-sm">
+        <button id="btn-show-selfie" onclick="toggleSelfieBox()" class="mb-8 px-6 py-2 md:px-8 md:py-3 rounded-full bg-[#F0E6DE] text-[#8C7560] font-bold tracking-widest hover:bg-[#E07B7B] hover:text-white transition-colors uppercase text-xs md:text-sm">
             📷 TAMBAHKAN FOTO SELFIE
         </button>
 
         <!-- SELFIE BOX -->
-        <div id="selfie-container" class="hidden flex-col items-center justify-center mb-10 w-full">
-            <div class="w-[250px] h-[250px] md:w-[350px] md:h-[350px] bg-black rounded-[30px] overflow-hidden border-4 border-[#F0E6DE] mb-6 shadow-xl relative">
+        <div id="selfie-container" class="hidden flex-col items-center justify-center mb-6 w-full">
+            <div class="w-[200px] h-[200px] md:w-[300px] md:h-[300px] bg-black rounded-[30px] overflow-hidden border-4 border-[#F0E6DE] mb-4 shadow-xl relative">
                 <video id="camera-preview" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
                 <canvas id="capture-canvas" style="display:none;"></canvas>
             </div>
-            <button id="btn-snap" onclick="takeSelfie()" class="px-8 py-3 rounded-full border-2 border-[#C8962E] text-[#C8962E] font-bold tracking-widest hover:bg-[#C8962E] hover:text-white transition-colors uppercase text-sm bg-transparent">
+            <button id="btn-snap" onclick="takeSelfie()" class="px-6 py-2 rounded-full border-2 border-[#C8962E] text-[#C8962E] font-bold tracking-widest hover:bg-[#C8962E] hover:text-white transition-colors uppercase text-xs bg-transparent">
                 AMBIL FOTO
             </button>
         </div>
 
         <!-- Steppers and Toggles Grid -->
-        <div class="flex flex-wrap items-center justify-center gap-10 md:gap-20 mb-16">
+        <div class="flex flex-wrap items-center justify-center gap-6 md:gap-16 mb-8 md:mb-12">
             <!-- Dewasa -->
-            <div class="flex items-center gap-5">
-                <button onclick="updatePax('adult', -1)" class="w-14 h-14 rounded-full bg-[#F0E6DE] text-[#4A3F35] text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] hover:text-white transition-colors">-</button>
-                <div class="text-center w-28">
-                    <div id="m-pax-adult" class="text-5xl font-bold text-[#4A3F35]">1</div>
-                    <div class="text-[12px] text-[#8C7560] uppercase tracking-widest font-bold mt-2">Person(s)</div>
+            <div class="flex items-center gap-3 md:gap-5">
+                <button onclick="updatePax('adult', -1)" class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#F0E6DE] text-[#4A3F35] text-2xl md:text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] hover:text-white transition-colors">-</button>
+                <div class="text-center w-24 md:w-28">
+                    <div id="m-pax-adult" class="text-4xl md:text-5xl font-bold text-[#4A3F35]">1</div>
+                    <div class="text-[10px] md:text-[12px] text-[#8C7560] uppercase tracking-widest font-bold mt-1">Person(s)</div>
                 </div>
-                <button onclick="updatePax('adult', 1)" class="w-14 h-14 rounded-full bg-[#4A3F35] text-white text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] transition-colors">+</button>
+                <button onclick="updatePax('adult', 1)" class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#4A3F35] text-white text-2xl md:text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] transition-colors">+</button>
             </div>
 
             <!-- Anak -->
-            <div class="flex items-center gap-5">
-                <button onclick="updatePax('child', -1)" class="w-14 h-14 rounded-full bg-[#F0E6DE] text-[#4A3F35] text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] hover:text-white transition-colors">-</button>
-                <div class="text-center w-28">
-                    <div id="m-pax-child" class="text-5xl font-bold text-[#4A3F35]">0</div>
-                    <div class="text-[12px] text-[#8C7560] uppercase tracking-widest font-bold mt-2">Kid(s)</div>
+            <div class="flex items-center gap-3 md:gap-5">
+                <button onclick="updatePax('child', -1)" class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#F0E6DE] text-[#4A3F35] text-2xl md:text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] hover:text-white transition-colors">-</button>
+                <div class="text-center w-24 md:w-28">
+                    <div id="m-pax-child" class="text-4xl md:text-5xl font-bold text-[#4A3F35]">0</div>
+                    <div class="text-[10px] md:text-[12px] text-[#8C7560] uppercase tracking-widest font-bold mt-1">Kid(s)</div>
                 </div>
-                <button onclick="updatePax('child', 1)" class="w-14 h-14 rounded-full bg-[#4A3F35] text-white text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] transition-colors">+</button>
+                <button onclick="updatePax('child', 1)" class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#4A3F35] text-white text-2xl md:text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] transition-colors">+</button>
             </div>
         </div>
 
         <!-- Toggles -->
-        <div class="flex items-center justify-center gap-8 mb-16">
-            <button id="btn-angpao" onclick="toggleGift('angpao')" class="flex items-center gap-4 px-10 py-5 rounded-full border-2 border-[#E5D7CA] text-[#8C7560] font-bold text-xl transition-all">
-                <span class="text-3xl">✉️</span> Angpao
+        <div class="flex items-center justify-center gap-4 md:gap-8 mb-10 md:mb-12">
+            <button id="btn-angpao" onclick="toggleGift('angpao')" class="flex items-center gap-3 px-6 py-3 md:px-10 md:py-5 rounded-full border-2 border-[#E5D7CA] text-[#8C7560] font-bold text-lg md:text-xl transition-all">
+                <span class="text-2xl md:text-3xl">✉️</span> Angpao
             </button>
-            <button id="btn-kado" onclick="toggleGift('kado')" class="flex items-center gap-4 px-10 py-5 rounded-full border-2 border-[#E5D7CA] text-[#8C7560] font-bold text-xl transition-all">
-                <span class="text-3xl">🎁</span> Kado
+            <button id="btn-kado" onclick="toggleGift('kado')" class="flex items-center gap-3 px-6 py-3 md:px-10 md:py-5 rounded-full border-2 border-[#E5D7CA] text-[#8C7560] font-bold text-lg md:text-xl transition-all">
+                <span class="text-2xl md:text-3xl">🎁</span> Kado
             </button>
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex items-center gap-8 mb-auto">
-            <button onclick="cancelCheckin()" class="px-12 py-6 rounded-full border-2 border-[#F0E6DE] text-[#8C7560] font-bold text-xl uppercase tracking-widest hover:bg-[#F0E6DE] transition-colors">
+        <div class="flex items-center gap-4 md:gap-8 mb-auto pb-6">
+            <button onclick="cancelCheckin()" class="px-8 py-4 md:px-12 md:py-6 rounded-full border-2 border-[#F0E6DE] text-[#8C7560] font-bold text-lg md:text-xl uppercase tracking-widest hover:bg-[#F0E6DE] transition-colors">
                 BATAL
             </button>
-            <button onclick="executeCheckin()" class="px-20 py-6 rounded-full bg-[#4A3F35] text-white font-bold text-xl uppercase tracking-widest hover:bg-[#E07B7B] shadow-2xl transition-all">
+            <button onclick="executeCheckin()" class="px-12 py-4 md:px-20 md:py-6 rounded-full bg-[#4A3F35] text-white font-bold text-lg md:text-xl uppercase tracking-widest hover:bg-[#E07B7B] shadow-2xl transition-all">
                 CONTINUE
             </button>
         </div>
@@ -270,6 +278,29 @@
                 toast.style.transform = 'translate(-50%, -20px)';
             }, 3000);
         }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.getElementById('btn-fullscreen');
+            if (document.fullscreenElement) {
+                btn.style.opacity = '0';
+                btn.style.pointerEvents = 'none';
+            } else {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            }
+        });
 
         let SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygBaFZE1n36jh8q7ZBICvmPcvVjvIjYKFmf-Gg5XS5F09Sr59SHTSymrLgOTuxcPDA/exec";
         let CURRENT_SS_ID = null;
