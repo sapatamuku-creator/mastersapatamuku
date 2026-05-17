@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu - Self Check-in Kiosk</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        /* Desain latar belakang elegan */
+        body {
+            background: radial-gradient(circle at center, #1a1a2e, #0f0f1a);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        /* Efek Kaca (Glassmorphism) */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #scanner-wrapper { 
+            position: relative; 
+            width: 80%; max-width: 600px; 
+            aspect-ratio: 4 / 3;
+            background: #000; border-radius: 24px; overflow: hidden; border: 4px solid rgba(255,255,255,0.2); 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+        }
+        #reader { width: 100% !important; height: 100% !important; }
+        #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+
+        .scan-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 5; pointer-events: none; }
+        .scan-frame { 
+            width: 60%; height: 60%; border: 2px solid rgba(255,255,255,0.3); border-radius: 20px; 
+            box-shadow: 0 0 0 1000px rgba(0,0,0,0.6); transition: all 0.25s ease; opacity: 0.8;
+        }
+        .scan-frame.qr-detected { border-color: #10B981; box-shadow: 0 0 30px rgba(16,185,129,0.5), 0 0 0 1000px rgba(0,0,0,0.4); transform: scale(1.05); opacity: 1; }
+        
+        .loading-overlay { 
+            position: fixed; inset: 0; 
+            background: rgba(0,0,0,0.8); 
+            backdrop-filter: blur(10px); 
+            z-index: 200000; 
+            display: none; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+        }
+        .spinner { width: 60px; height: 60px; border: 4px solid rgba(16,185,129, 0.2); border-top: 4px solid #10B981; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center relative" onload="initApp()">
+
+    <!-- Script Resolver Subdomain -->
+    <script src="js/subdomain_resolver.js"></script>
+
+    <!-- Header Insting -->
+    <div class="absolute top-12 left-0 w-full text-center z-10">
+        <h1 class="text-4xl md:text-5xl font-light tracking-widest text-neutral-300">SELAMAT DATANG</h1>
+        <p class="text-lg md:text-xl text-neutral-400 mt-2">Silakan Arahkan QR Code Undangan Anda ke Kamera</p>
+    </div>
+
+    <!-- Area Kamera Scanner -->
+    <div id="scanner-wrapper" class="z-0">
+        <div id="reader"></div>
+        <div class="scan-overlay"><div class="scan-frame" id="target-frame"></div></div>
+    </div>
+
+    <!-- Modal Konfirmasi -->
+    <div id="kiosk-modal" class="hidden absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center">
+        <div class="glass-panel p-10 md:p-16 rounded-[2rem] text-center max-w-lg w-[90%] transform transition-all shadow-2xl">
+            <p class="text-sm tracking-widest text-emerald-400 mb-2 uppercase font-bold">Data Ditemukan</p>
+            <h2 id="guest-name" class="text-4xl md:text-5xl font-serif text-white mb-2 line-clamp-2">Nama Tamu</h2>
+            <p id="guest-category" class="text-lg text-neutral-400 mb-10">Kategori: UMUM</p>
+            
+            <button onclick="executeCheckin()" class="w-full py-6 bg-emerald-500 hover:bg-emerald-400 text-white text-2xl font-bold rounded-2xl transition-colors shadow-lg shadow-emerald-500/30">
+                PROSES CHECK-IN
+            </button>
+            <button onclick="cancelCheckin()" class="w-full mt-6 py-4 text-neutral-400 hover:text-white transition-colors text-lg font-medium tracking-wide">
+                Batal
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Sukses Animasi -->
+    <div id="success-modal" class="hidden absolute inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center">
+        <div class="text-center scale-150 transform transition-all duration-500 opacity-0" id="success-content">
+            <!-- Icon Checklist Hijau -->
+            <div class="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(16,185,129,0.4)] mx-auto">
+                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h3 class="text-3xl mt-8 text-white font-medium tracking-wide">Check-in Berhasil</h3>
+            <p class="text-neutral-400 mt-3 text-sm tracking-widest uppercase">Silakan Masuk</p>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <span class="text-emerald-400 mt-6 tracking-widest font-bold text-sm">MEMPROSES DATA...</span>
+    </div>
+
+    <script>
+        let SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygBaFZE1n36jh8q7ZBICvmPcvVjvIjYKFmf-Gg5XS5F09Sr59SHTSymrLgOTuxcPDA/exec";
+        let CURRENT_SS_ID = null;
+        let masterData = [];
+        let html5QrCode = null;
+        let selectedGuest = null;
+
+        async function initApp() {
+            if (!window.SAPATAMU_RESOLVED) {
+                setTimeout(initApp, 100);
+                return;
+            }
+            
+            const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+            CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
+            
+            if (!CURRENT_SS_ID) { window.location.href = "login.html"; return; }
+            
+            fetchData();
+            initScanner();
+        }
+
+        async function fetchData() {
+            try {
+                const res = await fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ action: "get_master_data", ssId: CURRENT_SS_ID }) 
+                });
+                const data = await res.json();
+                masterData = data.guestList || [];
+            } catch (e) { console.error("Gagal load data tamu:", e); }
+        }
+
+        function initScanner() {
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+            // Kiosk usually uses front facing camera if it's an iPad standing, but let's try 'user' or default 'environment'
+            html5QrCode.start({ facingMode: "user" }, { fps: 15, qrbox: 250, aspectRatio: 4/3 }, onScanSuccess)
+            .catch(e => {
+                // Fallback to environment if user facing is not available
+                html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 250, aspectRatio: 4/3 }, onScanSuccess).catch(console.error);
+            });
+        }
+
+        function onScanSuccess(txt) {
+            if (!document.getElementById('kiosk-modal').classList.contains('hidden')) return;
+            if (!document.getElementById('success-modal').classList.contains('hidden')) return;
+
+            const frame = document.getElementById('target-frame');
+            let scCode = txt.trim();
+            if (scCode.includes("id=")) scCode = scCode.split("id=")[1].split("&")[0];
+            
+            const guest = masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase());
+            
+            if (guest) {
+                frame.classList.add('qr-detected');
+                if (String(guest.statusHadir) === "1") {
+                    alert("Tamu '" + guest.nama + "' sudah melakukan check-in sebelumnya.");
+                    setTimeout(() => frame.classList.remove('qr-detected'), 1000);
+                } else {
+                    setTimeout(() => {
+                        frame.classList.remove('qr-detected');
+                        openConfirm(guest);
+                    }, 400);
+                }
+            }
+        }
+
+        function openConfirm(guest) {
+            selectedGuest = guest;
+            document.getElementById('guest-name').innerText = guest.nama;
+            
+            const pax = guest.rencanaHadir ? ` (${guest.rencanaHadir} Orang)` : '';
+            document.getElementById('guest-category').innerText = `Kategori: ${guest.kategori || 'UMUM'}${pax}`;
+            
+            document.getElementById('kiosk-modal').classList.remove('hidden');
+            if (html5QrCode) html5QrCode.pause(true); // Pause scanner to save battery
+        }
+
+        function cancelCheckin() {
+            document.getElementById('kiosk-modal').classList.add('hidden');
+            selectedGuest = null;
+            if (html5QrCode) html5QrCode.resume();
+        }
+
+        async function executeCheckin() {
+            if (!selectedGuest) return;
+            
+            const loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+            
+            const adult = parseInt(selectedGuest.rencanaHadir) || 1;
+            const paxString = `${adult} ( ${adult}D + 0A )`;
+
+            try {
+                const res = await fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ 
+                        action: "confirm_checkin", 
+                        ssId: CURRENT_SS_ID, 
+                        kodeUnik: selectedGuest.kode, 
+                        realHadir: paxString, 
+                        statusAngpao: "-" 
+                    }) 
+                });
+                const result = await res.json();
+
+                if (result.status === "success") {
+                    document.getElementById('kiosk-modal').classList.add('hidden');
+                    
+                    // Show success animation
+                    const successModal = document.getElementById('success-modal');
+                    const successContent = document.getElementById('success-content');
+                    successModal.classList.remove('hidden');
+                    
+                    // Trigger animation frame
+                    setTimeout(() => {
+                        successContent.style.opacity = '1';
+                        successContent.style.transform = 'scale(1)';
+                    }, 50);
+
+                    // Blast WA Automation in background
+                    if (result.triggerBlast) {
+                        fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            body: JSON.stringify({ 
+                                action: "sendAutomationBlast", 
+                                ssId: CURRENT_SS_ID, 
+                                type: "checkin",
+                                guestData: { nama: selectedGuest.nama, whatsapp: selectedGuest.whatsapp } 
+                            })
+                        }).catch(e => console.warn("Background blast failed:", e));
+                    }
+
+                    // Reset and update local list
+                    selectedGuest.statusHadir = "1"; 
+                    
+                    // Auto close after 3 seconds
+                    setTimeout(() => {
+                        successContent.style.opacity = '0';
+                        successContent.style.transform = 'scale(1.5)';
+                        setTimeout(() => {
+                            successModal.classList.add('hidden');
+                            selectedGuest = null;
+                            if (html5QrCode) html5QrCode.resume();
+                        }, 500);
+                    }, 3000);
+                } else {
+                    alert("Gagal Check-in: " + result.message);
+                }
+            } catch(e) { 
+                alert("Koneksi Error!"); 
+                console.error(e);
+            } finally { 
+                loading.style.display = 'none'; 
+            }
+        }
+    </script>
+</body>
+</html>
