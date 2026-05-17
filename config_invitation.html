@@ -396,6 +396,30 @@
             document.getElementById('globalFilePicker').click();
         }
 
+        /**
+         * Normalizes any date string to YYYY-MM-DD (required by <input type="date">).
+         * Handles: "2026-08-23", "23/08/2026", "2026-08-23T..." ISO strings.
+         */
+        function toDateInputValue(dateStr) {
+            if (!dateStr) return '';
+            // Already YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+            // ISO datetime: "2026-08-23T00:00:00.000Z"
+            if (/^\d{4}-\d{2}-\d{2}T/.test(dateStr)) return dateStr.substring(0, 10);
+            // DD/MM/YYYY
+            const ddmmyyyy = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`;
+            // Try native Date parse as last resort
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+            return '';
+        }
+
         function handleFileChange(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -535,14 +559,18 @@
                     // Load Events
                     const ev1 = inv.ev1 || {};
                     document.getElementById('ev1_name').value = ev1.name || "";
+                    document.getElementById('ev1_date').value = toDateInputValue(ev1.date || "");
                     document.getElementById('ev1_time').value = ev1.time || "";
+                    if (ev1.zone) document.getElementById('ev1_zone').value = ev1.zone;
                     document.getElementById('ev1_loc_name').value = ev1.locName || "";
                     document.getElementById('ev1_maps').value = ev1.maps || "";
                     document.getElementById('ev1_photo').value = ev1.photo || "";
 
                     const ev2 = inv.ev2 || {};
                     document.getElementById('ev2_name').value = ev2.name || "";
+                    document.getElementById('ev2_date').value = toDateInputValue(ev2.date || "");
                     document.getElementById('ev2_time').value = ev2.time || "";
+                    if (ev2.zone) document.getElementById('ev2_zone').value = ev2.zone;
                     document.getElementById('ev2_loc_name').value = ev2.locName || "";
                     document.getElementById('ev2_maps').value = ev2.maps || "";
                     document.getElementById('ev2_photo').value = ev2.photo || "";
