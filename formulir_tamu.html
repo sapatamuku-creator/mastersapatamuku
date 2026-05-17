@@ -783,11 +783,17 @@
                   `Terima kasih.`;
 
         window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`, '_blank');
-        
+
+        // ===== OPTIMISTIC UPDATE: langsung hijau tanpa tunggu API =====
+        // User sudah klik kirim → WA sudah terbuka → tandai SENT di-memory sekarang
+        guest.statusWA = '✅ SENT';
+        render(MASTER_LIST);
+
+        // Persist ke spreadsheet di background (fire-and-forget)
         fetch(SCRIPT_URL, {
             method: "POST",
             body: JSON.stringify({ action: "markSent", ssId: CURRENT_SS_ID, row: row })
-        }).then(() => setTimeout(refreshApp, 2000));
+        }).catch(err => console.warn("markSent background failed:", err));
     };
 
     window.filterGuestList = function() {
