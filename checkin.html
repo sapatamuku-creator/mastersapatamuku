@@ -221,13 +221,13 @@
     <div class="header" style="position: relative;">
         <!-- STATION SELECTOR -->
         <div style="position: absolute; top: 60px; left: 15px; z-index: 200; display: flex; align-items: center; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-            <span style="font-size: 8px; color: var(--text-muted); font-weight: 800; margin-right: 5px; text-transform: uppercase;">STATION:</span>
-            <select id="station-selector" style="background: transparent; border: none; color: var(--text-main); font-size: 9px; font-weight: 800; text-transform: uppercase; outline: none; cursor: pointer;">
-                <option value="ALL">ALL SERVER</option>
-                <option value="STATION 1">STATION 1</option>
-                <option value="STATION 2">STATION 2</option>
-                <option value="STATION 3">STATION 3</option>
-                <option value="STATION 4">STATION 4</option>
+            <span style="font-size: 8px; color: var(--text-muted); font-weight: 800; margin-right: 5px; text-transform: uppercase;">JALUR:</span>
+            <select id="jalur-selector" style="background: transparent; border: none; color: var(--text-main); font-size: 9px; font-weight: 800; text-transform: uppercase; outline: none; cursor: pointer;">
+                <option value="ALL">ALL JALUR</option>
+                <option value="1">JALUR 1</option>
+                <option value="2">JALUR 2</option>
+                <option value="3">JALUR 3</option>
+                <option value="4">JALUR 4</option>
             </select>
         </div>
 
@@ -379,7 +379,7 @@
     let html5QrCode = null;
     let currentStream = null;
     let capturedBase64 = null;
-    let STATION_ID = "ALL";
+    let JALUR_ID = "ALL";
 
     function initApp() {
         if (window.SAPATAMU_RESOLVED) {
@@ -389,15 +389,15 @@
                 return;
             }
             
-            const savedStation = localStorage.getItem('checkin_station_id');
-            if (savedStation) {
-                STATION_ID = savedStation;
-                document.getElementById('station-selector').value = savedStation;
+            const savedJalur = localStorage.getItem('checkin_jalur_id');
+            if (savedJalur) {
+                JALUR_ID = savedJalur;
+                document.getElementById('jalur-selector').value = savedJalur;
             }
 
-            document.getElementById('station-selector').addEventListener('change', (e) => {
-                STATION_ID = e.target.value;
-                localStorage.setItem('checkin_station_id', STATION_ID);
+            document.getElementById('jalur-selector').addEventListener('change', (e) => {
+                JALUR_ID = e.target.value;
+                localStorage.setItem('checkin_jalur_id', JALUR_ID);
             });
 
             localStorage.setItem("st_saved_ssid", CURRENT_SS_ID);
@@ -709,7 +709,7 @@
                         kodeUnik: id, 
                         realHadir: paxString, 
                         statusAngpao: gift || "-",
-                        stationId: STATION_ID
+                        stationId: JALUR_ID === "ALL" ? "CHECKIN-ALL" : "CHECKIN-" + JALUR_ID
                     }) 
                 })
             );

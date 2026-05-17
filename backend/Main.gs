@@ -101,7 +101,7 @@ function handleMainGet(e) {
 
   // Routing untuk Worker dengan Filter Station
   if (action === "getPrintQueue") {
-    const queueData = getPrintQueue(ssId, station, e.parameter.stationId); // Mengirim parameter station dan stationId
+    const queueData = getPrintQueue(ssId, station, e.parameter.source, e.parameter.jalur); 
     return ContentService.createTextOutput(JSON.stringify(queueData))
            .setMimeType(ContentService.MimeType.JSON);
   }
@@ -449,7 +449,7 @@ function addToQueue(ssId, guest, category, info, stationId) {
   ]);
 }
 
-function getPrintQueue(ssId, stationFilter, stationIdFilter) {
+function getPrintQueue(ssId, stationFilter, sourceFilter, jalurFilter) {
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_PRINT);
   if (!sheet) return [];
@@ -466,7 +466,8 @@ function getPrintQueue(ssId, stationFilter, stationIdFilter) {
   const numCols = Math.max(13, lastCol);
   const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
   const currentStation = (stationFilter || "").toUpperCase().trim();
-  const currentStationId = (stationIdFilter || "ALL").toUpperCase().trim();
+  const currentSource = (sourceFilter || "ALL").toUpperCase().trim();
+  const currentJalur = (jalurFilter || "ALL").toUpperCase().trim();
 
   return data
     .filter(r => {
@@ -477,12 +478,16 @@ function getPrintQueue(ssId, stationFilter, stationIdFilter) {
       if (currentStation === "LOKET-1" && jenisInfo.indexOf("SOUVENIR") === -1) return false;
       if (currentStation === "LOKET-2" && jenisInfo.indexOf("CHECKIN") === -1) return false;
 
-      // Filter by Station ID
-      if (currentStationId !== "ALL" && currentStationId !== "ALL SERVER") {
+      // Filter by Station ID (Column M, e.g. "CHECKIN-4")
+      if (currentSource !== "ALL" || currentJalur !== "ALL") {
         const rowStationId = r[12] ? r[12].toString().toUpperCase().trim() : "ALL";
-        // If worker is STATION X, only fetch if row is STATION X or ALL
-        if (rowStationId !== "ALL" && rowStationId !== "" && rowStationId !== currentStationId) {
-          return false;
+        if (rowStationId !== "ALL" && rowStationId !== "") {
+          let parts = rowStationId.split("-");
+          let rowSource = parts[0];
+          let rowJalur = parts[1] || "ALL";
+
+          if (currentSource !== "ALL" && rowSource !== currentSource) return false;
+          if (currentJalur !== "ALL" && rowJalur !== currentJalur) return false;
         }
       }
 

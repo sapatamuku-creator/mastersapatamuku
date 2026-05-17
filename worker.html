@@ -68,14 +68,23 @@
                     <option value="LOKET-2" class="bg-zinc-900">LOKET-2 (CHECKIN)</option>
                 </select>
             </div>
+            <div class="flex items-center bg-zinc-900 border border-blue-500/30 rounded px-2">
+                <span class="text-[8px] text-blue-500/50 font-bold mr-1">STATION:</span>
+                <select id="sourceInput" class="bg-transparent text-blue-400 text-[10px] font-bold uppercase outline-none py-0.5 cursor-pointer">
+                    <option value="ALL" class="bg-zinc-900">ALL STATION</option>
+                    <option value="CHECKIN" class="bg-zinc-900">CHECKIN</option>
+                    <option value="ONSITE" class="bg-zinc-900">ONSITE</option>
+                    <option value="KIOSK" class="bg-zinc-900">KIOSK</option>
+                </select>
+            </div>
             <div class="flex items-center bg-zinc-900 border border-amber-500/30 rounded px-2">
-                <span class="text-[8px] text-amber-500/50 font-bold mr-1">STATION:</span>
-                <select id="stationIdInput" class="bg-transparent text-amber-400 text-[10px] font-bold uppercase outline-none py-0.5 cursor-pointer">
-                    <option value="ALL" class="bg-zinc-900">ALL SERVER</option>
-                    <option value="STATION 1" class="bg-zinc-900">STATION 1</option>
-                    <option value="STATION 2" class="bg-zinc-900">STATION 2</option>
-                    <option value="STATION 3" class="bg-zinc-900">STATION 3</option>
-                    <option value="STATION 4" class="bg-zinc-900">STATION 4</option>
+                <span class="text-[8px] text-amber-500/50 font-bold mr-1">JALUR:</span>
+                <select id="jalurInput" class="bg-transparent text-amber-400 text-[10px] font-bold uppercase outline-none py-0.5 cursor-pointer">
+                    <option value="ALL" class="bg-zinc-900">ALL JALUR</option>
+                    <option value="1" class="bg-zinc-900">JALUR 1</option>
+                    <option value="2" class="bg-zinc-900">JALUR 2</option>
+                    <option value="3" class="bg-zinc-900">JALUR 3</option>
+                    <option value="4" class="bg-zinc-900">JALUR 4</option>
                 </select>
             </div>
         </div>
@@ -122,7 +131,8 @@
     
     let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
     let TAB_ID = urlParams.get('tabId') || "REGISTRASI";
-    let STATION_ID = urlParams.get('stationId') || "ALL";
+    let SOURCE_ID = urlParams.get('sourceId') || "ALL";
+    let JALUR_ID = urlParams.get('jalurId') || "ALL";
 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygBaFZE1n36jh8q7ZBICvmPcvVjvIjYKFmf-Gg5XS5F09Sr59SHTSymrLgOTuxcPDA/exec";
     
@@ -132,13 +142,15 @@
     let currentDeviceName = ""; 
 
     const tabInput = document.getElementById('tabIdInput');
-    const stationInput = document.getElementById('stationIdInput');
+    const sourceInput = document.getElementById('sourceInput');
+    const jalurInput = document.getElementById('jalurInput');
 
     async function initApp() {
       if (window.SAPATAMU_RESOLVED) {
         CURRENT_SS_ID = window.CURRENT_SS_ID || CURRENT_SS_ID;
         tabInput.value = TAB_ID;
-        stationInput.value = STATION_ID;
+        sourceInput.value = SOURCE_ID;
+        jalurInput.value = JALUR_ID;
         if (!CURRENT_SS_ID) {
           log("CRITICAL ERROR: ssId tidak ditemukan! Harap login ulang.", true);
           document.getElementById('connectBtn').disabled = true;
@@ -162,13 +174,22 @@
         log(`Loket updated: ${newTabId}`);
     });
 
-    stationInput.addEventListener('change', () => {
-        const newStationId = stationInput.value;
-        STATION_ID = newStationId;
+    sourceInput.addEventListener('change', () => {
+        const newSourceId = sourceInput.value;
+        SOURCE_ID = newSourceId;
         const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('stationId', newStationId);
+        newUrl.searchParams.set('sourceId', newSourceId);
         window.history.pushState({path: newUrl.href}, '', newUrl.href);
-        log(`Station rute diubah ke: ${newStationId}`);
+        log(`Station rute diubah ke: ${newSourceId}`);
+    });
+
+    jalurInput.addEventListener('change', () => {
+        const newJalurId = jalurInput.value;
+        JALUR_ID = newJalurId;
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('jalurId', newJalurId);
+        window.history.pushState({path: newUrl.href}, '', newUrl.href);
+        log(`Jalur rute diubah ke: ${newJalurId}`);
     });
 
     const fsButton = document.getElementById('fsButton');
@@ -225,9 +246,10 @@
       if (!CURRENT_SS_ID) return;
       try {
         TAB_ID = document.getElementById('tabIdInput').value;
-        STATION_ID = document.getElementById('stationIdInput').value;
+        SOURCE_ID = document.getElementById('sourceInput').value;
+        JALUR_ID = document.getElementById('jalurInput').value;
         const ts = new Date().getTime();
-        const targetUrl = `${SCRIPT_URL}?action=getPrintQueue&ssId=${CURRENT_SS_ID}&station=${TAB_ID}&stationId=${STATION_ID}&_=${ts}`;
+        const targetUrl = `${SCRIPT_URL}?action=getPrintQueue&ssId=${CURRENT_SS_ID}&station=${TAB_ID}&source=${SOURCE_ID}&jalur=${JALUR_ID}&_=${ts}`;
         
         const response = await fetch(targetUrl);
         
