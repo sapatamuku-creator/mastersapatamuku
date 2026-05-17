@@ -744,34 +744,38 @@
             if (!url) return;
 
             let converted = url;
-            let msg = '';
+            let isConverted = false;
 
-            // Google Drive: https://drive.google.com/file/d/FILE_ID/view
-            const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
+            // Google Drive: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+            const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
             // Google Drive: https://drive.google.com/open?id=FILE_ID
-            const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+            const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+            // Google Drive: https://drive.google.com/uc?id=FILE_ID (already partially converted)
+            const driveUcMatch = url.match(/drive\.google\.com\/uc\?.*?id=([a-zA-Z0-9_-]+)/);
 
-            if (driveFileMatch) {
-                converted = `https://drive.google.com/uc?export=view&id=${driveFileMatch[1]}`;
-                msg = '✅ Berhasil dikonversi dari Google Drive!';
-            } else if (driveOpenMatch) {
-                converted = `https://drive.google.com/uc?export=view&id=${driveOpenMatch[1]}`;
-                msg = '✅ Berhasil dikonversi dari Google Drive!';
+            let fileId = null;
+            if (driveFileMatch) fileId = driveFileMatch[1];
+            else if (driveOpenMatch) fileId = driveOpenMatch[1];
+            else if (driveUcMatch) fileId = driveUcMatch[1];
+
+            if (fileId) {
+                // export=download&confirm=t → bypasses virus-scan redirect, serves raw file
+                converted = `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`;
+                isConverted = true;
             } else if (url.includes('lh3.googleusercontent.com')) {
-                msg = '⚠️ URL ini untuk gambar, bukan audio. Gunakan link Google Drive untuk file MP3.';
                 status.className = 'text-[9px] mt-1 text-orange-500';
-                status.innerText = msg;
+                status.innerText = '⚠️ URL ini adalah link gambar, bukan audio. Paste link Google Drive file MP3 Anda.';
                 status.classList.remove('hidden');
                 return;
-            } else {
-                msg = '✅ Link MP3 langsung — tidak perlu konversi.';
             }
 
             input.value = converted;
             status.className = 'text-[9px] mt-1 text-green-600';
-            status.innerText = msg;
+            status.innerText = isConverted
+                ? `✅ Berhasil! Link siap diputar: ...${fileId.slice(-8)}`
+                : '✅ Link MP3 langsung — tidak perlu konversi.';
             status.classList.remove('hidden');
-            setTimeout(() => status.classList.add('hidden'), 4000);
+            setTimeout(() => status.classList.add('hidden'), 5000);
             updatePreview();
         }
 
