@@ -1,4 +1,4 @@
-/**
+﻿/**
  * auth_guard.js — SapaTamu RBAC Guard
  * =====================================
  * Diinclude di setiap halaman yang dilindungi.
@@ -12,7 +12,7 @@
  */
 
 (function () {
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygBaFZE1n36jh8q7ZBICvmPcvVjvIjYKFmf-Gg5XS5F09Sr59SHTSymrLgOTuxcPDA/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
     const SESSION_KEY = 'sapatamu_session';
     const LOCAL_DB = 'sapatamu_db';
 

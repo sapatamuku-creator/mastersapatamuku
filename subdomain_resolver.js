@@ -1,10 +1,10 @@
-/**
+﻿/**
  * SAPATAMU.KU - GLOBAL SUBDOMAIN RESOLVER (VERSI SEDERHANA v1.5)
  */
 
 window.SAPATAMU_RESOLVED = false;
 window.CURRENT_SS_ID = null;
-window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygBaFZE1n36jh8q7ZBICvmPcvVjvIjYKFmf-Gg5XS5F09Sr59SHTSymrLgOTuxcPDA/exec";
+window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
 
 async function resolveSapatamuSubdomain() {
     console.log("Resolving subdomain...");
