@@ -613,10 +613,8 @@
         </button>
     </div>
 
-    <audio id="main-audio" loop preload="none">
-        <source id="main-audio-src"
-            src="https://raw.githubusercontent.com/opick8c/Annisa-Bintang/ad4fb4ba10a2a6879f586896829a2e437e11d7b3/sal-priadi-ada-titik-titik-di-ujung-doa_x6a7RHIL~2.mp3"
-            type="audio/mpeg">
+    <audio id="main-audio" loop preload="auto"
+        src="https://raw.githubusercontent.com/opick8c/Annisa-Bintang/ad4fb4ba10a2a6879f586896829a2e437e11d7b3/sal-priadi-ada-titik-titik-di-ujung-doa_x6a7RHIL~2.mp3">
     </audio>
 
     <script>
@@ -655,17 +653,19 @@
 
         function setMusicSource(url) {
             if (!url || !audio) return;
-            // Auto-convert Google Drive share link to direct streaming URL
-            const driveMatch = url.match(/[-\w]{25,}/);
             let finalUrl = url;
-            if (url.includes('drive.google.com') && driveMatch) {
-                finalUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[0]}`;
+            // Convert Google Drive share link → direct stream URL
+            if (url.includes('drive.google.com/file/d/')) {
+                const idMatch = url.match(/\/d\/([^/\?]+)/);
+                if (idMatch) finalUrl = `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+            } else if (url.includes('drive.google.com/open?id=')) {
+                const idMatch = url.match(/id=([^&]+)/);
+                if (idMatch) finalUrl = `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
             }
-            const src = document.getElementById('main-audio-src');
-            if (src) {
-                src.src = finalUrl;
-                audio.load();
-            }
+            // Set src directly on audio element — most reliable method
+            audio.src = finalUrl;
+            audio.load();
+            console.log("Music source set:", finalUrl);
         }
 
         function copyToClipboard(text) {

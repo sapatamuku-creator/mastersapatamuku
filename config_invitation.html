@@ -92,12 +92,16 @@
                     <button id="theme_modern" onclick="selectTheme('modern')" class="theme-btn p-4 border-2 border-transparent bg-neutral-100 rounded-2xl text-xs font-bold text-neutral-400">Modern Glass</button>
                 </div>
                 <div class="form-group">
-                    <label>Music URL (Google Drive MP3)</label>
-                    <p class="text-[9px] text-neutral-400 mb-2 leading-relaxed">Upload MP3 ke Google Drive → Klik kanan → <strong>Share & Copy Link</strong> → paste di sini → tekan <strong>⚡ Auto-Convert</strong></p>
+                    <label>Music URL (Direct MP3 Link)</label>
+                    <p class="text-[9px] text-neutral-400 mb-2 leading-relaxed">
+                        Upload MP3 ke <strong>Google Drive</strong> → Klik kanan file → <strong>Get Link</strong> (Anyone with link) → paste link di sini → tekan <strong>⚡ Convert</strong>.<br>
+                        Atau gunakan link MP3 langsung (GitHub Raw, Cloudinary, dll).
+                    </p>
                     <div class="flex gap-2">
-                        <input type="text" id="inv_music" class="stk-input" placeholder="https://drive.google.com/file/d/..." oninput="updatePreview()">
-                        <button onclick="autoConvertDriveLink(document.getElementById('inv_music'))" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-amber-600 font-bold text-[9px] hover:bg-amber-100 transition-all whitespace-nowrap">⚡ Convert</button>
+                        <input type="text" id="inv_music" class="stk-input" placeholder="https://drive.google.com/file/d/XXXXX/view" oninput="updatePreview()">
+                        <button onclick="convertMusicUrl()" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-amber-600 font-bold text-[9px] hover:bg-amber-100 transition-all whitespace-nowrap">⚡ Convert</button>
                     </div>
+                    <p id="music-convert-status" class="text-[9px] mt-1 hidden"></p>
                 </div>
 
                 <div class="section-title">Hero / Cover Section</div>
@@ -731,6 +735,44 @@
                 btn.innerText = "SIMPAN KONFIGURASI UNDANGAN";
                 btn.disabled = false;
             }
+        }
+
+        function convertMusicUrl() {
+            const input = document.getElementById('inv_music');
+            const status = document.getElementById('music-convert-status');
+            const url = input.value.trim();
+            if (!url) return;
+
+            let converted = url;
+            let msg = '';
+
+            // Google Drive: https://drive.google.com/file/d/FILE_ID/view
+            const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([^/\?]+)/);
+            // Google Drive: https://drive.google.com/open?id=FILE_ID
+            const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+
+            if (driveFileMatch) {
+                converted = `https://drive.google.com/uc?export=view&id=${driveFileMatch[1]}`;
+                msg = '✅ Berhasil dikonversi dari Google Drive!';
+            } else if (driveOpenMatch) {
+                converted = `https://drive.google.com/uc?export=view&id=${driveOpenMatch[1]}`;
+                msg = '✅ Berhasil dikonversi dari Google Drive!';
+            } else if (url.includes('lh3.googleusercontent.com')) {
+                msg = '⚠️ URL ini untuk gambar, bukan audio. Gunakan link Google Drive untuk file MP3.';
+                status.className = 'text-[9px] mt-1 text-orange-500';
+                status.innerText = msg;
+                status.classList.remove('hidden');
+                return;
+            } else {
+                msg = '✅ Link MP3 langsung — tidak perlu konversi.';
+            }
+
+            input.value = converted;
+            status.className = 'text-[9px] mt-1 text-green-600';
+            status.innerText = msg;
+            status.classList.remove('hidden');
+            setTimeout(() => status.classList.add('hidden'), 4000);
+            updatePreview();
         }
 
         initApp();
