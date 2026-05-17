@@ -994,17 +994,24 @@
             
             function formatDateId(ds) {
                 if(!ds) return "";
-                if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)) return ds; // If user typed custom string, return it
                 const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
                 const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-                const parts = ds.split('-');
-                const d = new Date(parts[0], parts[1]-1, parts[2]);
-                return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+                let d;
+                // Format DD/MM/YYYY (stored format)
+                const ddmmyyyy = ds.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                if (ddmmyyyy) { d = new Date(ddmmyyyy[3], ddmmyyyy[2]-1, ddmmyyyy[1]); }
+                // Format YYYY-MM-DD (ISO format)
+                else if (/^\d{4}-\d{2}-\d{2}$/.test(ds)) {
+                    const parts = ds.split('-');
+                    d = new Date(parts[0], parts[1]-1, parts[2]);
+                }
+                else return ds; // Custom string, return as-is
+                return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
             }
 
-            function formatTimeId(ts) {
+            function formatTimeId(ts, zone) {
                 if(!ts) return "";
-                if(/^\d{2}:\d{2}$/.test(ts)) return ts.replace(':', '.') + " WIB";
+                if(/^\d{2}:\d{2}$/.test(ts)) return ts.replace(':', '.') + (zone ? ' ' + zone : ' WIB');
                 return ts;
             }
 
@@ -1014,13 +1021,19 @@
             if (data.hashtag) document.querySelectorAll('.hashtag-text').forEach(el => el.innerText = data.hashtag);
             
             if (data.ev1 && data.ev1.date) {
-                let d = data.ev1.date;
+                // Parse date: support DD/MM/YYYY (stored) and YYYY-MM-DD (ISO)
+                let isoDate = data.ev1.date;
+                const ddmm = data.ev1.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                if (ddmm) isoDate = ddmm[3] + '-' + ddmm[2] + '-' + ddmm[1];
                 let t = "08:00";
                 if (data.ev1.time && /^\d{2}:\d{2}$/.test(data.ev1.time)) {
                     t = data.ev1.time;
                 }
-                window.ACTIVE_COUNTDOWN = `${d}T${t}:00`;
+                window.ACTIVE_COUNTDOWN = isoDate + 'T' + t + ':00';
                 updateCountdown();
+                // Also update the hero date text
+                const weddingDateEl = document.getElementById('wedding-date-text');
+                if (weddingDateEl) weddingDateEl.innerText = formatDateId(data.ev1.date).toUpperCase();
             } else if (data.countdown) {
                 window.ACTIVE_COUNTDOWN = data.countdown;
                 updateCountdown();
@@ -1082,7 +1095,7 @@
             if (data.ev1) {
                 document.querySelectorAll('.ev1-name-text').forEach(el => el.innerText = data.ev1.name || "Akad Nikah");
                 document.querySelectorAll('.ev1-date-text').forEach(el => el.innerText = formatDateId(data.ev1.date) || "Senin, 25 Mei 2026");
-                document.querySelectorAll('.ev1-time-text').forEach(el => el.innerText = formatTimeId(data.ev1.time) || "08.00 WIB");
+                document.querySelectorAll('.ev1-time-text').forEach(el => el.innerText = formatTimeId(data.ev1.time, data.ev1.zone) || "08.00 WIB");
                 document.querySelectorAll('.ev1-loc-text').forEach(el => el.innerHTML = data.ev1.locName ? data.ev1.locName.replace(/\n/g, '<br>') : "Lokasi");
                 if (data.ev1.photo) document.querySelectorAll('.ev1-photo-img').forEach(el => el.src = data.ev1.photo);
                 if (data.ev1.maps) document.querySelectorAll('.ev1-maps-btn').forEach(el => el.href = data.ev1.maps);
@@ -1091,7 +1104,7 @@
             if (data.ev2) {
                 document.querySelectorAll('.ev2-name-text').forEach(el => el.innerText = data.ev2.name || "Resepsi");
                 document.querySelectorAll('.ev2-date-text').forEach(el => el.innerText = formatDateId(data.ev2.date) || "Senin, 25 Mei 2026");
-                document.querySelectorAll('.ev2-time-text').forEach(el => el.innerText = formatTimeId(data.ev2.time) || "11.00 WIB");
+                document.querySelectorAll('.ev2-time-text').forEach(el => el.innerText = formatTimeId(data.ev2.time, data.ev2.zone) || "11.00 WIB");
                 document.querySelectorAll('.ev2-loc-text').forEach(el => el.innerHTML = data.ev2.locName ? data.ev2.locName.replace(/\n/g, '<br>') : "Lokasi");
                 if (data.ev2.photo) document.querySelectorAll('.ev2-photo-img').forEach(el => el.src = data.ev2.photo);
                 if (data.ev2.maps) document.querySelectorAll('.ev2-maps-btn').forEach(el => el.href = data.ev2.maps);
