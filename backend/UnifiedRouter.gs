@@ -74,6 +74,7 @@ function doPost(e) {
       case 'remoteFonnte':
       case 'toggleStatus':
       case 'executeFonnteBlast':
+      case 'markDuplicateBlast':
         return handleWAFormPost(payload);
 
       // Music Upload to GitHub

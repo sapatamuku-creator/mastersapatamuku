@@ -154,6 +154,20 @@ function handleWAFormPost(data) {
       return createResponse({ status: "success", sent: successCount });
     }
 
+    // 5. MARK DUPLICATE — tulis status kuning ke spreadsheet
+    if (action === "markDuplicateBlast") {
+      const now = Utilities.formatDate(new Date(), "GMT+7", "dd/MM HH:mm");
+      if (Array.isArray(data.duplicates)) {
+        data.duplicates.forEach(item => {
+          if (item.row) {
+            sheet1.getRange(item.row, 16).setValue(`⚠️ Duplikasi Nomor [${now}]`);
+          }
+        });
+        SpreadsheetApp.flush();
+      }
+      return createResponse({ status: "success", marked: (data.duplicates || []).length });
+    }
+
   } catch (err) {
     return createResponse({ status: "error", msg: err.toString() });
   }

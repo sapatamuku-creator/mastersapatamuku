@@ -20,6 +20,8 @@
         --gold: #C8962E;
         --wedding: #D9608A;
         --success: #10B981;
+        --warning: #D97706;   /* Amber - for duplicate warning */
+        --warning-bg: #FFFBEB;
     }
 
     body { 
@@ -524,17 +526,29 @@
         updateClientView();
     };
 
+    function getStatusColor(status) {
+        if (!status || typeof status !== 'string') return 'var(--primary)';
+        if (status.includes('✅')) return 'var(--success)';
+        if (status.includes('⚠️') || status.toLowerCase().includes('duplikasi')) return 'var(--warning)';
+        if (status.includes('❌') || status.toLowerCase().includes('gagal')) return '#DC2626';
+        return 'var(--primary)';
+    }
+
     function renderTable() {
         const tbody = document.getElementById('tamuTable');
-        tbody.innerHTML = localData.tamu.length ? localData.tamu.map(t => `
-            <tr>
+        tbody.innerHTML = localData.tamu.length ? localData.tamu.map(t => {
+            const statusColor = getStatusColor(t.status);
+            const isDuplicate = t.status && typeof t.status === 'string' && 
+                (t.status.includes('⚠️') || t.status.toLowerCase().includes('duplikasi'));
+            return `
+            <tr style="${isDuplicate ? 'background: var(--warning-bg);' : ''}">
                 <td><div style="font-weight: 700;">${t.nama}</div><div style="font-size:10px; color:var(--text-muted);">ID: ${t.kode}</div></td>
                 <td><span style="font-size:11px; background:var(--bg); padding:4px 10px; border-radius:6px; color:var(--text-muted); font-weight:700;">${t.kategori}</span></td>
-                <td style="text-align:right; font-weight:800; color:${(t.status && typeof t.status === 'string' && t.status.includes('✅')) ? 'var(--success)' : 'var(--primary)'}">
+                <td style="text-align:right; font-weight:800; color:${statusColor}">
                     ${t.status || 'BELUM TERKIRIM'}
                 </td>
-            </tr>
-        `).join('') : '<tr><td colspan="3" style="text-align:center; padding: 50px;">Data Tidak Tersedia</td></tr>';
+            </tr>`;
+        }).join('') : '<tr><td colspan="3" style="text-align:center; padding: 50px;">Data Tidak Tersedia</td></tr>';
         document.getElementById('countTamu').innerText = localData.tamu.length;
     }
 
@@ -661,17 +675,74 @@
                 await showAlert("Informasi", "Semua tamu di kategori [" + kat + "] sudah terkirim ✅", "ℹ️");
                 return;
             }
-            
+
+            // ===== DUPLICATE NUMBER GUARD =====
+            const seenNumbers = new Set();
+            const uniqueTargets = [];
+            const duplicates = [];
+
+            targets.forEach(t => {
+                const rawNomor = (t.nomor || "").toString().trim().replace(/D/g, '');
+                if (!rawNomor) {
+                    // No number at all — skip silently
+                    return;
+                }
+                if (seenNumbers.has(rawNomor)) {
+                    duplicates.push(t);
+                } else {
+                    seenNumbers.add(rawNomor);
+                    uniqueTargets.push(t);
+                }
+            });
+
+            // Warn if duplicates found
+            if (duplicates.length > 0) {
+                const dupNames = duplicates.slice(0, 5).map(d => d.nama).join(', ');
+                const extraCount = duplicates.length > 5 ? ` (+${duplicates.length - 5} lainnya)` : '';
+                const warnMsg = `Ditemukan ${duplicates.length} tamu dengan nomor HP yang sama.
+
+Tamu duplikat (⚠️ akan di-skip):
+${dupNames}${extraCount}
+
+Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
+                const proceedAnyway = await showConfirm(
+                    "⚠️ DUPLIKASI NOMOR TERDETEKSI",
+                    warnMsg,
+                    "⚠️"
+                );
+                if (!proceedAnyway) return;
+
+                // Mark duplicates as warning (yellow) via backend — fire-and-forget
+                const dupPayload = duplicates.map(d => ({
+                    row: d.row,
+                    status: "⚠️ Gagal Blast (Duplikasi Nomor)"
+                }));
+                fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ 
+                        action: "markDuplicateBlast", 
+                        ssId: CURRENT_SS_ID, 
+                        duplicates: dupPayload 
+                    })
+                }).catch(() => {});
+            }
+
+            if(!uniqueTargets.length) {
+                await showAlert("Informasi", "Tidak ada nomor unik yang dapat dikirim.", "ℹ️");
+                return;
+            }
+            // ===== END DUPLICATE GUARD =====
+
             const isConfirmed = await showConfirm(
                 "MESIN BLAST READY", 
-                `Target: ${targets.length} Tamu\nKategori: ${kat}\n\nSistem akan mengirimkan pesan undangan otomatis.`
+                `Target: ${uniqueTargets.length} Tamu (Unik)${duplicates.length > 0 ? '\n⚠️ ' + duplicates.length + ' tamu duplikat di-skip' : ''}\nKategori: ${kat}\n\nSistem akan mengirimkan pesan undangan otomatis.`
             );
             
             if(!isConfirmed) return;
 
             toggleProcessing(true, "Menyiapkan Jalur Blast...");
             const inviteBase = localData.linkInvitation || "";
-            const payload = targets.map(t => {
+            const payload = uniqueTargets.map(t => {
                 const guestName = (t.nama || "Tamu Undangan").toString();
                 const guestNameCaps = guestName.toUpperCase();
                 const encodedName = encodeURIComponent(guestName).replace(/,/g, '%2C');
