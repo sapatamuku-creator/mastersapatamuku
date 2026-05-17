@@ -1032,11 +1032,11 @@ function updateRsvp(ssId, guestId, pax) {
     if (lastRow < 7) return { status: "error", message: "Data tamu kosong" };
     
     const guestData = sheet.getRange(7, 1, lastRow - 6, 12).getValues();
-    const guestIndex = guestData.findIndex(row => row[5] === guestId); // Kolom F: Kode Unik
+    const guestIndex = guestData.findIndex(row => row[5] && row[5].toString().trim() === guestId.toString().trim()); // Kolom F: Kode Unik
     
     if (guestIndex > -1) {
       // Row 7 + guestIndex. Kolom H (Rencana Hadir) adalah kolom ke-8.
-      sheet.getRange(7 + guestIndex, 8).setValue(pax || 1);
+      sheet.getRange(7 + guestIndex, 8).setValue(parseInt(pax) || 1);
       return { status: "success", message: "Rencana Hadir diupdate" };
     } else {
       return { status: "error", message: "Tamu tidak ditemukan" };
