@@ -293,10 +293,8 @@
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             
             html5QrCode.start({ facingMode: "user" }, { fps: 15, qrbox: 350, aspectRatio: 16/9 }, onScanSuccess)
-            .then(() => { try{ html5QrCode.pause(true); }catch(e){} }) // Pause initially behind Welcome Sign
             .catch(e => {
                 html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 350, aspectRatio: 16/9 }, onScanSuccess)
-                .then(() => { try{ html5QrCode.pause(true); }catch(e){} })
                 .catch(console.error);
             });
         }
@@ -304,9 +302,6 @@
         function startScanning() {
             document.getElementById('kiosk-idle-state').style.opacity = '0';
             document.getElementById('kiosk-idle-state').style.pointerEvents = 'none';
-            if (html5QrCode && html5QrCode.getState() === 3) {
-                try { html5QrCode.resume(); } catch(e) {}
-            }
         }
 
         function returnToIdle() {
@@ -318,15 +313,19 @@
             
             document.getElementById('kiosk-idle-state').style.opacity = '1';
             document.getElementById('kiosk-idle-state').style.pointerEvents = 'auto';
-            if (html5QrCode && html5QrCode.getState() === 2) {
-                try { html5QrCode.pause(true); } catch(e) {}
-            }
         }
 
         function onScanSuccess(txt) {
             if (!document.getElementById('kiosk-modal').classList.contains('hidden')) return;
             if (!document.getElementById('success-modal').classList.contains('hidden')) return;
             if (scanCooldown) return;
+
+            // Jika scan berhasil saat Idle State masih aktif, paksa sembunyikan Idle Screen
+            const idleState = document.getElementById('kiosk-idle-state');
+            if (idleState.style.opacity !== '0') {
+                idleState.style.opacity = '0';
+                idleState.style.pointerEvents = 'none';
+            }
 
             scanCooldown = true;
 
@@ -376,13 +375,11 @@
             document.getElementById('btn-kado').classList.remove('active-gift');
 
             document.getElementById('kiosk-modal').classList.remove('hidden');
-            if (html5QrCode) { try { html5QrCode.pause(true); } catch(e) {} } 
         }
 
         function cancelCheckin() {
             document.getElementById('kiosk-modal').classList.add('hidden');
             selectedGuest = null;
-            if (html5QrCode) { try { html5QrCode.resume(); } catch(e) {} }
         }
 
         function updatePax(type, delta) {
