@@ -613,8 +613,8 @@
         </button>
     </div>
 
-    <audio id="main-audio" loop>
-        <source
+    <audio id="main-audio" loop preload="none">
+        <source id="main-audio-src"
             src="https://raw.githubusercontent.com/opick8c/Annisa-Bintang/ad4fb4ba10a2a6879f586896829a2e437e11d7b3/sal-priadi-ada-titik-titik-di-ujung-doa_x6a7RHIL~2.mp3"
             type="audio/mpeg">
     </audio>
@@ -650,7 +650,23 @@
         });
 
         const audio = document.getElementById('main-audio');
+        window.audio = audio; // expose globally
         let isPlaying = false;
+
+        function setMusicSource(url) {
+            if (!url || !audio) return;
+            // Auto-convert Google Drive share link to direct streaming URL
+            const driveMatch = url.match(/[-\w]{25,}/);
+            let finalUrl = url;
+            if (url.includes('drive.google.com') && driveMatch) {
+                finalUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[0]}`;
+            }
+            const src = document.getElementById('main-audio-src');
+            if (src) {
+                src.src = finalUrl;
+                audio.load();
+            }
+        }
 
         function copyToClipboard(text) {
             const tempInput = document.createElement("input");
@@ -1102,9 +1118,8 @@
             else document.getElementById('wishes-section').style.display = 'block';
             if (data.wishes_header) document.querySelectorAll('.wishes-header-text').forEach(el => el.innerText = data.wishes_header);
 
-            if (data.musicUrl && window.audio) {
-                window.audio.src = data.musicUrl;
-                window.audio.load();
+            if (data.musicUrl) {
+                setMusicSource(data.musicUrl);
             }
 
             hideInitialLoader();
