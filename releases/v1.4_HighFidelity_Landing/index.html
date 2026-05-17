@@ -2153,7 +2153,33 @@
         ];
 
         // Simulator activation
-        function activateSim(index) {
+        let currentSimIndex = 0;
+        let simInterval = null;
+        let isSimInteracted = false;
+
+        function startSimAutoCycle() {
+            if (isSimInteracted) return;
+            stopSimAutoCycle(); // Prevent duplicate intervals
+            simInterval = setInterval(() => {
+                currentSimIndex = (currentSimIndex + 1) % 12;
+                activateSim(currentSimIndex, false);
+            }, 5500); // 5.5s delay is perfect to read and enjoy the transition!
+        }
+
+        function stopSimAutoCycle() {
+            if (simInterval) {
+                clearInterval(simInterval);
+                simInterval = null;
+            }
+        }
+
+        function activateSim(index, userTriggered = true) {
+            currentSimIndex = index;
+            if (userTriggered) {
+                isSimInteracted = true;
+                stopSimAutoCycle();
+            }
+
             // Update active state in cards
             document.querySelectorAll('.sim-card').forEach((card, idx) => {
                 if (idx === index) card.classList.add('active');
@@ -2170,8 +2196,23 @@
             document.getElementById('sim-info-text').textContent = simDescriptions[index];
         }
 
-        // Staggered Scroll Reveal Observer Engine
+        // Staggered Scroll Reveal & Simulator Auto-Cycle Hook
         document.addEventListener('DOMContentLoaded', () => {
+            // Start Auto-Cycling
+            startSimAutoCycle();
+
+            // Hover listeners to pause/resume auto-cycling
+            const simContainer = document.querySelector('.sim-container');
+            if (simContainer) {
+                simContainer.addEventListener('mouseenter', () => {
+                    stopSimAutoCycle();
+                });
+                simContainer.addEventListener('mouseleave', () => {
+                    startSimAutoCycle();
+                });
+            }
+
+            // Staggered Scroll Reveal Observer Engine
             const sections = document.querySelectorAll('header, section, footer');
             
             const revealObserver = new IntersectionObserver((entries, observer) => {
