@@ -325,6 +325,11 @@
 
 <body class="bg-pattern">
 
+    <div id="initial-loader" class="fixed inset-0 z-[9999] bg-[#FFF9F5] flex flex-col items-center justify-center transition-opacity duration-1000">
+        <div class="w-10 h-10 border-2 border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin mb-4"></div>
+        <p class="text-[9px] tracking-[0.3em] font-bold uppercase text-[#D4AF37]">Menyiapkan Undangan...</p>
+    </div>
+
     <div id="copy-toast" class="copy-toast">Berhasil disalin ke Clipboard!</div>
 
     <!-- COVER SECTION -->
@@ -915,7 +920,10 @@
         };
         window.loadDynamicConfig = async function() {
             const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
-            if (!ssId) return;
+            if (!ssId) {
+                hideInitialLoader();
+                return;
+            }
 
             try {
                 const response = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`);
@@ -932,7 +940,20 @@
                     if (result.data.theme === 'modern') document.body.classList.add('modern-theme');
                 }
             } catch(e) { console.error("Gagal load config", e); }
+            finally {
+                hideInitialLoader();
+            }
         };
+
+        function hideInitialLoader() {
+            setTimeout(() => {
+                const loader = document.getElementById('initial-loader');
+                if(loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 1000);
+                }
+            }, 300);
+        }
 
         window.applyLivePreview = function (data) {
             console.log("Applying Live Preview Data:", data);
@@ -952,7 +973,9 @@
             }
 
             if (data.groom && data.bride) {
-                document.querySelectorAll('.wedding-names-text').forEach(el => el.innerHTML = (data.groom.name || "Bintang") + " <br>& " + (data.bride.name || "Anisa"));
+                const groomFirst = data.groom.name ? data.groom.name.split(" ")[0] : "Bintang";
+                const brideFirst = data.bride.name ? data.bride.name.split(" ")[0] : "Anisa";
+                document.querySelectorAll('.wedding-names-text').forEach(el => el.innerHTML = groomFirst + " <br>& " + brideFirst);
             }
 
             if (data.groom) {
@@ -1026,6 +1049,8 @@
                 window.audio.src = data.musicUrl;
                 window.audio.load();
             }
+
+            hideInitialLoader();
         };
     </script>
 </body>
