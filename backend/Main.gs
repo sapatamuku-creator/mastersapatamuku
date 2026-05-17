@@ -713,8 +713,8 @@ function getWelcomeData(ssId) {
     }
 
     let urlFoto = "";
-    let teksSambutan1 = "Selamat Datang di Pernikahan";
-    let teksSambutan2 = "Yth. Bapak/Ibu/Sdr/i";
+    let teksSambutan1 = "";
+    let teksSambutan2 = "";
     
     const configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
     if (configSheet) {
@@ -788,8 +788,8 @@ function getSettings(ssId, guestId = null) {
     let presetKode = "1";
     let waPhone = "";
     let theme = "classic";
-    let teksSambutan1 = "Selamat Datang di Pernikahan";
-    let teksSambutan2 = "Yth. Bapak/Ibu/Sdr/i";
+    let teksSambutan1 = "";
+    let teksSambutan2 = "";
     let invitationData = {};
     
     // Pencarian waPhone Dinamis berdasarkan guestId
