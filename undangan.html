@@ -689,7 +689,7 @@
             document.getElementById('qr-code').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${guestId}`;
             document.getElementById('guest-id-label').innerText = `ID: ${guestId}`;
             const weddingNames = document.getElementById('wedding-names-text')?.innerText || "Kami";
-            const waMsg = `Halo ${weddingNames}, saya ${guestName} mengonfirmasi akan hadir.`;
+            const waMsg = `Halo ${weddingNames}, saya ${guestName} (Kode: ${guestId}) mengonfirmasi akan hadir.`;
             const rsvpPhone = window.EVENT_META?.waPhone || "";
             document.getElementById('rsvp-link').href = `https://wa.me/${rsvpPhone}?text=${encodeURIComponent(waMsg)}`;
         };
@@ -777,8 +777,9 @@
                     document.querySelectorAll('.wedding-names-text').forEach(el => el.innerText = safeName);
                     if (document.getElementById('wedding-date-text')) document.getElementById('wedding-date-text').innerText = safeDate;
                     
-                    const guestName = new URLSearchParams(window.location.search).get('to') || "Tamu Undangan";
-                    const waMsg = `Halo ${safeName}, saya ${guestName} mengonfirmasi akan hadir.`;
+                    const localGuestName = new URLSearchParams(window.location.search).get('u') || "Tamu Undangan";
+                    const localGuestId = new URLSearchParams(window.location.search).get('id') || "STK-GUEST";
+                    const waMsg = `Halo ${safeName}, saya ${localGuestName} (Kode: ${localGuestId}) mengonfirmasi akan hadir.`;
                     if (document.getElementById('rsvp-link')) {
                         document.getElementById('rsvp-link').href = `https://wa.me/${window.EVENT_META.waPhone}?text=${encodeURIComponent(waMsg)}`;
                     }
