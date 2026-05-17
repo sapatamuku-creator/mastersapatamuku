@@ -292,9 +292,9 @@
         function initScanner() {
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             
-            html5QrCode.start({ facingMode: "user" }, { fps: 15, qrbox: 350, aspectRatio: 16/9 }, onScanSuccess)
+            html5QrCode.start({ facingMode: "user" }, { fps: 15 }, onScanSuccess)
             .catch(e => {
-                html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 350, aspectRatio: 16/9 }, onScanSuccess)
+                html5QrCode.start({ facingMode: "environment" }, { fps: 15 }, onScanSuccess)
                 .catch(console.error);
             });
         }
@@ -331,7 +331,10 @@
 
             const frame = document.getElementById('target-frame');
             let scCode = txt.trim();
-            if (scCode.includes("id=")) scCode = scCode.split("id=")[1].split("&")[0];
+            
+            // Case-insensitive extraction for ID
+            const match = scCode.match(/id=([^&]+)/i);
+            if (match) scCode = match[1];
             
             const guest = masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase());
             
