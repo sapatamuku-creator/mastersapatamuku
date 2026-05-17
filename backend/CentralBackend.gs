@@ -27,11 +27,12 @@ function handleCentralPost(request) {
     case 'copyMaster': return handleCopyMaster(request); 
     case 'register': return handleRegister(request); 
     case 'login': return handleLogin(request);
+    case 'verifyAdminPassword': return handleVerifyAdminPassword(request);
     case 'forgotPassword': return handleForgotPassword(request); 
     case 'changePassword': return handleChangePassword(request);
     case 'updateClientData': return handleUpdateClientData(request);  
     case 'resolveSubdomain': return handleResolveSubdomain(request);
-    case 'checkSubdomain': return handleCheckSubdomain(request); // Aksi Baru
+    case 'checkSubdomain': return handleCheckSubdomain(request);
     case 'uploadFile': return handleUploadFile(request);
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
@@ -234,30 +235,68 @@ function handleLogin(data) {
     const ss = SpreadsheetApp.openById(MASTER_SS_ID);
     const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
     const values = sheet.getDataRange().getValues();
-    const targetUser = String(data.username || "").toLowerCase().trim();
+
+    // Baca admin password dari K1 (kolom 11, index 10) — baris pertama header
+    const adminPassword = String(sheet.getRange(1, 11).getValue() || "").trim();
+
+    // Normalisasi username: lowercase, hapus spasi & "&"
+    const normalize = s => String(s || "").toLowerCase().replace(/[\s&]/g, '');
+    const targetUser = normalize(data.username);
+    const inputPass  = String(data.password || "");
 
     for (let i = 1; i < values.length; i++) {
-      const colA = String(values[i][0] || "").toLowerCase().trim();
-      const colJ = String(values[i][9] || "").toLowerCase().trim();
-      
-      // LOGIN MATCH: Bisa menggunakan Kolom A (Username) atau Kolom J (Subdomain Slug)
-      if ((colA === targetUser || colJ === targetUser) && values[i][2] == data.password) {
-        // SET STATUS KE ACTIVE SAAT LOGIN (KOLOM H)
-        sheet.getRange(i + 1, 8).setValue("Active");
+      const colA = normalize(values[i][0]);  // Col A: username asli
+      const colJ = normalize(values[i][9]);  // Col J: subdomain slug
 
-        return createResponse({ status: "success", message: "Login Berhasil", data: {
-          username: values[i][10] || values[i][0], // Nama Klien di Kolom K
-          subdomain: values[i][9] || values[i][0], // Subdomain di Kolom J
-          ssId: values[i][1],
-          whatsapp: values[i][3],
-          email: values[i][6],
-          category: values[i][8] || "wedding"
-        } });
+      if (colA !== targetUser && colJ !== targetUser) continue;
+
+      // Cocok username — tentukan role berdasarkan password
+      const clientPassword = String(values[i][2] || "");
+      let role = null;
+
+      if (adminPassword && inputPass === adminPassword) {
+        role = "usher"; // Login sebagai Admin/Usher Sapatamu
+      } else if (inputPass === clientPassword) {
+        role = "client"; // Login sebagai Client
       }
+
+      if (!role) {
+        return createResponse({ status: "error", message: "Password salah" });
+      }
+
+      // SET STATUS KE ACTIVE SAAT LOGIN (KOLOM H)
+      sheet.getRange(i + 1, 8).setValue("Active");
+
+      return createResponse({ status: "success", message: "Login Berhasil", data: {
+        username:  values[i][10] || values[i][0], // Kolom K (display name) atau A
+        subdomain: values[i][9]  || values[i][0], // Kolom J atau A
+        ssId:      values[i][1],
+        whatsapp:  values[i][3],
+        email:     values[i][6],
+        category:  values[i][8] || "wedding",
+        role:      role           // ← BARU: 'client' | 'usher'
+      } });
     }
+
     return createResponse({ status: "error", message: "Username atau Password salah" });
   } catch (err) {
     return createResponse({ status: "error", message: "Kesalahan Login: " + err.toString() });
+  }
+}
+
+// Verifikasi admin password saja (untuk Switch to Admin modal di halaman lapangan)
+function handleVerifyAdminPassword(data) {
+  try {
+    const ss    = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const adminPassword = String(sheet.getRange(1, 11).getValue() || "").trim();
+    const inputPass = String(data.password || "");
+    if (adminPassword && inputPass === adminPassword) {
+      return createResponse({ status: "success", message: "Password admin benar" });
+    }
+    return createResponse({ status: "error", message: "Password salah" });
+  } catch (err) {
+    return createResponse({ status: "error", message: err.toString() });
   }
 }
 
