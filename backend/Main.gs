@@ -793,29 +793,7 @@ function getSettings(ssId) {
   } catch (e) { return { status: "error", message: e.toString() }; }
 }
 
-function getSettings(ssId) {
-  try {
-    const ss = getSS(ssId);
-    let configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
-    let urlFoto = "";
-    let presetKode = "1";
-    
-    if (configSheet) {
-      urlFoto = configSheet.getRange("B1").getValue() || "";
-      presetKode = configSheet.getRange("B2").getValue() || "1";
-    }
-    
-    return {
-      status: "success",
-      data: {
-        urlFoto: urlFoto,
-        presetKode: presetKode
-      }
-    };
-  } catch (e) {
-    return { status: "error", message: e.toString() };
-  }
-}
+
 
 function getDropdownOptions(ssId) {
   try {
