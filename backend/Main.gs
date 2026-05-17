@@ -754,7 +754,7 @@ function getSettings(ssId, guestId = null) {
 
     let urlFoto = "";
     let presetKode = "1";
-    let waPhone = "6282214578132";
+    let waPhone = "";
     let theme = "classic";
     let invitationData = {};
     
@@ -793,9 +793,12 @@ function getSettings(ssId, guestId = null) {
     if (configSheet) {
       urlFoto = configSheet.getRange("B1").getValue() || "";
       presetKode = configSheet.getRange("B2").getValue() || "1";
-      // Coba ambil dari Config B5 jika ada (override)
+      
+      // Gunakan Config B5 HANYA jika waPhone belum ditemukan di Settings
       const configWa = configSheet.getRange("B5").getValue();
-      if (configWa) waPhone = configWa.toString().startsWith('0') ? '62' + configWa.toString().substring(1) : configWa;
+      if (configWa && !foundWaPhone && (!settingsSheet || settingsSheet.getRange("B3:B8").getValues().flat().filter(String).length === 0)) {
+         waPhone = configWa.toString().startsWith('0') ? '62' + configWa.toString().substring(1) : configWa;
+      }
       
       theme = configSheet.getRange("B6").getValue() || "classic";
       
