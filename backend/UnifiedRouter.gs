@@ -55,6 +55,8 @@ function doPost(e) {
       case 'updateClientData':
       case 'resolveSubdomain':
       case 'checkSubdomain':
+      case 'verifyAdminPassword':   // RBAC Guard — cek password admin di K1
+      case 'uploadFile':             // Upload asset ke Drive
         return handleCentralPost(payload);
 
       // Media & Selfie (SelfieCheckin.gs)
