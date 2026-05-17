@@ -76,6 +76,10 @@ function doPost(e) {
       case 'executeFonnteBlast':
         return handleWAFormPost(payload);
 
+      // Music Upload to GitHub
+      case 'uploadMusic':
+        return handleMusicUpload(payload);
+
       // Core Guestbook Actions (Main.gs)
       default:
         return handleMainPost(payload);
@@ -91,6 +95,81 @@ function doPost(e) {
 function createResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * MUSIC UPLOAD — Uploads MP3 to GitHub repo, saves URL to client spreadsheet
+ * Requires Script Property: GITHUB_TOKEN (Personal Access Token, scope: repo)
+ */
+function handleMusicUpload(payload) {
+  try {
+    const { ssId, filename, base64Content } = payload;
+    if (!base64Content || !filename) {
+      return createResponse({ status: 'error', message: 'Missing file data' });
+    }
+
+    const GITHUB_TOKEN = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+    const GITHUB_OWNER = PropertiesService.getScriptProperties().getProperty('GITHUB_OWNER') || 'opick8c';
+    const GITHUB_REPO  = PropertiesService.getScriptProperties().getProperty('GITHUB_REPO')  || 'sapatamu-music';
+
+    if (!GITHUB_TOKEN) {
+      return createResponse({ status: 'error', message: 'GITHUB_TOKEN belum diset di Script Properties.' });
+    }
+
+    // Unique filename: timestamp + original name
+    const safeFilename = `${Date.now()}_${filename}`;
+    const filePath = `music/${safeFilename}`;
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
+
+    const ghRes = UrlFetchApp.fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      payload: JSON.stringify({
+        message: `Upload music: ${safeFilename}`,
+        content: base64Content
+      }),
+      muteHttpExceptions: true
+    });
+
+    const ghResult = JSON.parse(ghRes.getContentText());
+    if (!ghResult.content || !ghResult.content.download_url) {
+      return createResponse({ status: 'error', message: 'GitHub upload gagal: ' + (ghResult.message || JSON.stringify(ghResult)) });
+    }
+
+    const rawUrl = ghResult.content.download_url;
+
+    // Auto-save URL to client spreadsheet (Config_Invitation sheet)
+    if (ssId) {
+      try {
+        const ss = SpreadsheetApp.openById(ssId);
+        let sheet = ss.getSheetByName('Config_Invitation');
+        if (sheet) {
+          // Find musicUrl row and update it
+          const data = sheet.getDataRange().getValues();
+          let found = false;
+          for (let i = 0; i < data.length; i++) {
+            if (data[i][0] === 'musicUrl') {
+              sheet.getRange(i + 1, 2).setValue(rawUrl);
+              found = true;
+              break;
+            }
+          }
+          if (!found) sheet.appendRow(['musicUrl', rawUrl]);
+        }
+      } catch(saveErr) {
+        Logger.log('Warning: Could not auto-save music URL to sheet: ' + saveErr);
+      }
+    }
+
+    return createResponse({ status: 'success', url: rawUrl, filename: safeFilename });
+
+  } catch (err) {
+    return createResponse({ status: 'error', message: err.toString() });
+  }
 }
 
 /**

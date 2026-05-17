@@ -92,17 +92,30 @@
                     <button id="theme_modern" onclick="selectTheme('modern')" class="theme-btn p-4 border-2 border-transparent bg-neutral-100 rounded-2xl text-xs font-bold text-neutral-400">Modern Glass</button>
                 </div>
                 <div class="form-group">
-                    <label>Music URL (Direct MP3 Link)</label>
-                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl mb-2">
-                        <p class="text-[9px] text-amber-700 font-bold mb-1">💡 Cara Upload Musik:</p>
-                        <p class="text-[9px] text-amber-600 leading-relaxed">
-                            1. Buka <strong>cloudinary.com</strong> → Login → Upload file MP3<br>
-                            2. Klik file yang diupload → Copy <strong>URL</strong> langsung (berakhiran <code>.mp3</code>)<br>
-                            3. Paste URL di bawah ini langsung — tidak perlu convert!
-                        </p>
+                    <label>Background Musik</label>
+                    <!-- Upload Zone -->
+                    <div id="music-upload-zone"
+                        onclick="document.getElementById('music-file-input').click()"
+                        ondragover="event.preventDefault(); this.classList.add('border-amber-400','bg-amber-50')"
+                        ondragleave="this.classList.remove('border-amber-400','bg-amber-50')"
+                        ondrop="event.preventDefault(); this.classList.remove('border-amber-400','bg-amber-50'); handleMusicFileDrop(event.dataTransfer.files[0])"
+                        class="border-2 border-dashed border-neutral-200 rounded-2xl p-6 text-center cursor-pointer hover:border-amber-300 hover:bg-amber-50/50 transition-all">
+                        <div id="music-upload-idle">
+                            <p class="text-2xl mb-2">🎵</p>
+                            <p class="text-xs font-bold text-neutral-600">Klik atau drag & drop file MP3</p>
+                            <p class="text-[9px] text-neutral-400 mt-1">Maks. 20MB · Format: .mp3</p>
+                        </div>
+                        <div id="music-upload-progress" class="hidden">
+                            <div class="w-8 h-8 border-2 border-amber-400/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-2"></div>
+                            <p id="music-upload-status-text" class="text-xs font-bold text-amber-600">Mengupload...</p>
+                        </div>
                     </div>
-                    <div class="flex gap-2">
-                        <input type="text" id="inv_music" class="stk-input" placeholder="https://res.cloudinary.com/.../lagu.mp3" oninput="updatePreview()">
+                    <input type="file" id="music-file-input" accept=".mp3,audio/mpeg" class="hidden" onchange="handleMusicFileSelect(this.files[0])">
+
+                    <!-- Result URL field -->
+                    <div class="mt-2">
+                        <p class="text-[9px] text-neutral-400 mb-1">Atau paste URL MP3 langsung (Cloudinary, GitHub Raw, dll):</p>
+                        <input type="text" id="inv_music" class="stk-input text-[10px]" placeholder="https://..." oninput="updatePreview()">
                     </div>
                     <p id="music-convert-status" class="text-[9px] mt-1 hidden"></p>
                 </div>
@@ -782,7 +795,77 @@
             updatePreview();
         }
 
+        // ─── MUSIC UPLOAD TO GITHUB ───────────────────────────────────────
+        function handleMusicFileDrop(file) { if (file) handleMusicFileSelect(file); }
+
+        function handleMusicFileSelect(file) {
+            if (!file) return;
+            const maxMB = 20;
+            if (file.size > maxMB * 1024 * 1024) {
+                alert(`File terlalu besar! Maks. ${maxMB}MB. File Anda: ${(file.size/1024/1024).toFixed(1)}MB`);
+                return;
+            }
+            if (!file.type.includes('audio') && !file.name.endsWith('.mp3')) {
+                alert('Hanya file MP3 yang diperbolehkan!');
+                return;
+            }
+            // Show loading state
+            document.getElementById('music-upload-idle').classList.add('hidden');
+            document.getElementById('music-upload-progress').classList.remove('hidden');
+            document.getElementById('music-upload-status-text').innerText = 'Membaca file...';
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64 = e.target.result.split(',')[1]; // strip data:audio/mpeg;base64,
+                document.getElementById('music-upload-status-text').innerText = 'Mengupload ke server...';
+                try {
+                    const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
+                    const payload = {
+                        action: 'uploadMusic',
+                        ssId: ssId,
+                        filename: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
+                        base64Content: base64
+                    };
+                    const res = await fetch(window.SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+
+                    if (result.status === 'success') {
+                        const url = result.url;
+                        document.getElementById('inv_music').value = url;
+                        updatePreview();
+                        // Show success in upload zone
+                        document.getElementById('music-upload-progress').classList.add('hidden');
+                        document.getElementById('music-upload-idle').classList.remove('hidden');
+                        document.getElementById('music-upload-idle').innerHTML = `
+                            <p class="text-2xl mb-1">✅</p>
+                            <p class="text-xs font-bold text-green-600">${file.name}</p>
+                            <p class="text-[9px] text-neutral-400 mt-1">Upload berhasil! Klik untuk ganti.</p>`;
+                        // Show status
+                        const st = document.getElementById('music-convert-status');
+                        st.className = 'text-[9px] mt-1 text-green-600';
+                        st.innerText = '✅ Musik berhasil diupload & link tersimpan otomatis!';
+                        st.classList.remove('hidden');
+                        setTimeout(() => st.classList.add('hidden'), 5000);
+                    } else {
+                        throw new Error(result.message || 'Upload gagal');
+                    }
+                } catch (err) {
+                    document.getElementById('music-upload-status-text').innerText = '❌ Gagal: ' + err.message;
+                    setTimeout(() => {
+                        document.getElementById('music-upload-progress').classList.add('hidden');
+                        document.getElementById('music-upload-idle').classList.remove('hidden');
+                    }, 3000);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+        // ─────────────────────────────────────────────────────────────────
+
         initApp();
+
     </script>
 
     <!-- Map Picker Modal -->
