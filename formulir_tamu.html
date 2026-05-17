@@ -754,6 +754,13 @@
     window.executeBlast = function(row, phone, name, code) {
         const guest = MASTER_LIST.find(g => g.row == row);
         if(!guest) return;
+
+        // Block jika sudah terkirim (SENT)
+        const statusWA = guest.statusWA || '';
+        if (statusWA.includes('\u2705') || statusWA.toUpperCase().includes('SENT')) {
+            showSapaModal('Sudah Terkirim', name + ' sudah menerima undangan. Tidak dapat dikirim ulang.', '\u2705');
+            return;
+        }
         
         const sesi = guest.sesi || "-";
         const weddingName = document.getElementById('view-wedding-name').innerText;
@@ -787,8 +794,11 @@
         const query = document.getElementById('guest-search').value.trim().toLowerCase();
         if (!query) { render(MASTER_LIST); return; }
         const filtered = MASTER_LIST.filter(g => {
-            const isSent = g.statusWA && (g.statusWA.includes("✅") || g.statusWA.includes("SENT"));
-            const searchableText = [g.nama, g.whatsapp, g.kategori, g.pihakPengundang, g.alamat, isSent ? "sent" : "blast"].join(" ").toLowerCase();
+            const statusWA = g.statusWA || '';
+            const isSent    = statusWA.includes('\u2705') || statusWA.toUpperCase().includes('SENT');
+            const isPending = !isSent && (statusWA.includes('\u26a0') || statusWA.toLowerCase().includes('duplikasi'));
+            const statusStr = isSent ? 'sent' : isPending ? 'pending duplikat' : 'blast';
+            const searchableText = [g.nama, g.whatsapp, g.kategori, g.pihakPengundang, g.alamat, statusStr].join(" ").toLowerCase();
             return searchableText.includes(query);
         });
         render(filtered);
@@ -808,50 +818,117 @@
             return;
         }
 
+        // ===== BUILD DUPLICATE NUMBER MAP =====
+        // Kumpulkan semua nomor yang belum terkirim — untuk deteksi duplikat visual
+        const pendingNumbers = {};
+        list.forEach(g => {
+            const rawWA = (g.whatsapp || '').toString().replace(/\D/g, '');
+            if (!rawWA) return;
+            const statusWA = g.statusWA || '';
+            const alreadySent = statusWA.includes('\u2705') || statusWA.toUpperCase().includes('SENT');
+            if (!alreadySent) {
+                pendingNumbers[rawWA] = (pendingNumbers[rawWA] || 0) + 1;
+            }
+        });
+
         listContainer.innerHTML = list.map(g => {
-            const isSent = g.statusWA && (g.statusWA.includes("✅") || g.statusWA.includes("SENT"));
-            const souvenirIcon = g.souvenir === 'ya' ? '□' : '⚪';
+            const statusWA = g.statusWA || '';
+
+            // Deteksi status
+            const isSent    = statusWA.includes('\u2705') || statusWA.toUpperCase().includes('SENT');
+            const isPending = !isSent && (statusWA.includes('\u26a0') || statusWA.toLowerCase().includes('duplikasi'));
             
-            // Logika Indikator Sync
+            // Nomor duplikat = nomor WA yang sama dengan tamu lain yang belum terkirim
+            const rawWA = (g.whatsapp || '').toString().replace(/\D/g, '');
+            const isDupNumber = !isSent && rawWA && pendingNumbers[rawWA] > 1;
+
+            // ===== CARD STYLES berdasarkan status =====
+            let cardBorder, cardBg, statusLabel, statusColor, canBlast;
+
+            if (isSent) {
+                // ✅ SENT — hijau, tidak bisa kirim manual lagi
+                cardBorder = '2px solid #BBF7D0';
+                cardBg     = '#F0FDF4';
+                statusLabel = '● SENT';
+                statusColor = '#10B981';
+                canBlast    = false;
+            } else if (isPending) {
+                // ⚠️ PENDING (duplikat dari blast) — kuning, masih bisa kirim manual
+                cardBorder = '2px solid #FCD34D';
+                cardBg     = '#FFFBEB';
+                statusLabel = '● PENDING';
+                statusColor = '#D97706';
+                canBlast    = true;
+            } else if (isDupNumber) {
+                // Nomor sama dengan tamu lain yang belum terkirim — border kuning saja
+                cardBorder = '2px solid #FCD34D';
+                cardBg     = '#FFF';
+                statusLabel = '○ BLAST';
+                statusColor = 'var(--text-main)';
+                canBlast    = true;
+            } else {
+                // Normal
+                cardBorder = '1.5px solid var(--border)';
+                cardBg     = '#FFF';
+                statusLabel = '○ BLAST';
+                statusColor = 'var(--text-main)';
+                canBlast    = true;
+            }
+
+            const souvenirIcon = g.souvenir === 'ya' ? '🎁' : '⚪';
+
+            // Sync indicator
             let syncIcon = "";
             if (g.syncStatus === "syncing") syncIcon = '<span class="sync-indicator sync-spin" title="Sedang sinkronisasi...">🔄</span>';
-            else if (g.syncStatus === "done") syncIcon = '<span class="sync-indicator" style="color: #10B981;" title="Berhasil tersimpan">✅</span>';
-            else if (g.syncStatus === "failed") syncIcon = '<span class="sync-indicator" style="color: #EF4444;" title="Gagal tersimpan, coba refresh">⚠️</span>';
+            else if (g.syncStatus === "done") syncIcon = '<span class="sync-indicator" style="color:#10B981;" title="Berhasil tersimpan">✅</span>';
+            else if (g.syncStatus === "failed") syncIcon = '<span class="sync-indicator" style="color:#EF4444;" title="Gagal tersimpan, coba refresh">⚠️</span>';
+
+            // Duplikat nomor badge
+            const dupBadge = isDupNumber && !isPending 
+                ? '<span style="position:absolute; bottom:12px; left:12px; font-size:8px; font-weight:900; background:#FEF3C7; color:#D97706; padding:2px 7px; border-radius:20px; letter-spacing:0.5px;">⚠ NOMOR DUPLIKAT</span>'
+                : '';
+
+            // Clickable area — hanya kalau bisa blast
+            const onClickAttr = canBlast ? `onclick="executeBlast('${g.row}','${g.whatsapp}','${g.nama}','${g.kode}')"` : '';
+
+            // Delete button — sembunyikan untuk SENT
+            const deleteBtn = (!isSent && g.syncStatus !== "syncing")
+                ? `<button class="delete-guest-btn" onclick="confirmDeleteGuest(event, '${g.kode}', '${g.nama}')" style="position:absolute; top:12px; right:12px; border:none; background:#FEE2E2; color:#991B1B; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;">✕</button>`
+                : '';
 
             return `
                 <div class="guest-item-card" 
-                    style="border: 1.5px solid ${isSent ? '#D1FAE5':'var(--border)'}; background: ${isSent ? '#F0FDF4':'#FFF'}; padding:15px; border-radius:20px; display: flex; flex-direction: column; justify-content: space-between; cursor:pointer; transition:0.3s; min-height: 140px; box-shadow: 0 10px 20px rgba(140, 117, 96, 0.03); position: relative;">
+                    style="border:${cardBorder}; background:${cardBg}; padding:15px; border-radius:20px; display:flex; flex-direction:column; justify-content:space-between; cursor:${canBlast?'pointer':'default'}; transition:0.3s; min-height:140px; box-shadow:0 10px 20px rgba(140,117,96,0.03); position:relative;">
                     ${syncIcon}
-                    ${(!isSent && g.syncStatus !== "syncing") ? `<button class="delete-guest-btn" onclick="confirmDeleteGuest(event, '${g.kode}', '${g.nama}')" style="position: absolute; top: 12px; right: 12px; border: none; background: #FEE2E2; color: #991B1B; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer;">✕</button>` : ''}
-                    <div onclick="executeBlast('${g.row}','${g.whatsapp}','${g.nama}','${g.kode}')">
+                    ${deleteBtn}
+                    <div ${onClickAttr}>
                         <div>
                             <div style="font-weight:700; font-size:14px; color:var(--text-main); line-height:1.2; padding-right:20px;">${g.nama}</div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top:6px;">
-                                <div style="font-size:9px; color:var(--gold); font-weight:800; text-transform: uppercase;">${g.kategori}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+                                <div style="font-size:9px; color:var(--gold); font-weight:800; text-transform:uppercase;">${g.kategori}</div>
                                 <div style="font-size:9px; color:var(--text-muted); font-weight:700;">${g.whatsapp || '-'}</div>
                             </div>
-                            <div style="font-size:10px; color:var(--text-muted); font-weight:600; margin-top:8px; line-height:1.4; border-top: 1px solid var(--border); padding-top: 8px;">
-                                <div style="display: flex; align-items: center; gap: 5px;">
-                                    <span style="color:var(--primary)">□</span> ${g.pihakPengundang || 'Umum'}
+                            <div style="font-size:10px; color:var(--text-muted); font-weight:600; margin-top:8px; line-height:1.4; border-top:1px solid var(--border); padding-top:8px;">
+                                <div style="display:flex; align-items:center; gap:5px;">
+                                    <span style="color:var(--primary)">▫</span> ${g.pihakPengundang || 'Umum'}
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 5px; margin-top: 2px;">
-                                    <span style="color:var(--primary)">□</span> ${g.alamat || '-'}
+                                <div style="display:flex; align-items:center; gap:5px; margin-top:2px;">
+                                    <span style="color:var(--primary)">▫</span> ${g.alamat || '-'}
                                 </div>
                             </div>
                         </div>
-                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border);">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <div style="font-size:10px; color:var(--text-muted); font-weight:700;">⏰ ${g.sesi || '-'}</div>
                                 <div style="font-size:11px; color:var(--gold);">${souvenirIcon}</div>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top:5px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
                                 <span style="font-size:11px; color:var(--text-main); font-weight:800;">Pax: ${g.rencanaHadir || 1}</span>
-                                <span style="font-size: 9px; font-weight: 900; color: ${isSent ? '#10B981':'var(--text-main)'};">
-                                    ${isSent ? '● SENT':'○ BLAST'}
-                                </span>
+                                <span style="font-size:9px; font-weight:900; color:${statusColor};">${statusLabel}</span>
                             </div>
                         </div>
                     </div>
+                    ${dupBadge}
                 </div>`;
         }).join('');
     }
