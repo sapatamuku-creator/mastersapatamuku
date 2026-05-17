@@ -810,6 +810,14 @@
         render(filtered);
     };
 
+    // ===== HELPER: Normalisasi nomor ke format 628xxx =====
+    // Menangani 08xxx dan 628xxx agar duplikat terdeteksi konsisten
+    function normalizePhone(phone) {
+        let p = (phone || '').toString().replace(/\D/g, '');
+        if (p.startsWith('0')) p = '62' + p.substring(1);
+        return p;
+    }
+
     function render(list) {
         const listContainer = document.getElementById('v3-draft-list');
         document.getElementById('draft-count').innerText = list.length + " GUESTS";
@@ -824,16 +832,16 @@
             return;
         }
 
-        // ===== BUILD DUPLICATE NUMBER MAP =====
-        // Kumpulkan semua nomor yang belum terkirim — untuk deteksi duplikat visual
+        // ===== BUILD DUPLICATE NUMBER MAP (dengan normalisasi 08→628) =====
+        // Kumpulkan semua nomor yang belum terkirim — deteksi duplikat visual real-time
         const pendingNumbers = {};
         list.forEach(g => {
-            const rawWA = (g.whatsapp || '').toString().replace(/\D/g, '');
-            if (!rawWA) return;
+            const normWA = normalizePhone(g.whatsapp);  // normalisasi 08→628
+            if (!normWA) return;
             const statusWA = g.statusWA || '';
             const alreadySent = statusWA.includes('\u2705') || statusWA.toUpperCase().includes('SENT');
             if (!alreadySent) {
-                pendingNumbers[rawWA] = (pendingNumbers[rawWA] || 0) + 1;
+                pendingNumbers[normWA] = (pendingNumbers[normWA] || 0) + 1;
             }
         });
 
@@ -844,9 +852,9 @@
             const isSent    = statusWA.includes('\u2705') || statusWA.toUpperCase().includes('SENT');
             const isPending = !isSent && (statusWA.includes('\u26a0') || statusWA.toLowerCase().includes('duplikasi'));
             
-            // Nomor duplikat = nomor WA yang sama dengan tamu lain yang belum terkirim
-            const rawWA = (g.whatsapp || '').toString().replace(/\D/g, '');
-            const isDupNumber = !isSent && rawWA && pendingNumbers[rawWA] > 1;
+            // Duplikat: normalisasi nomor ke 628xxx sebelum cek — agar 08xxx == 628xxx
+            const normWA = normalizePhone(g.whatsapp);
+            const isDupNumber = !isSent && normWA && pendingNumbers[normWA] > 1;
 
             // ===== CARD STYLES berdasarkan status =====
             let cardBorder, cardBg, statusLabel, statusColor, canBlast;
