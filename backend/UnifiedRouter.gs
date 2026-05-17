@@ -23,6 +23,7 @@ function doGet(e) {
     case 'getPrintQueue':
     case 'getSettings':
     case 'getWishes':
+    case 'updateRsvp':
       return handleMainGet(e);
     default:
       // Handle legacy URL params (row & ssId) for check-in via WhatsApp links
