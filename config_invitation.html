@@ -340,6 +340,37 @@
             reader.readAsDataURL(file);
         }
 
+        function autoConvertDriveLink(inputElement) {
+            let url = inputElement.value;
+            let converted = false;
+            if (url.includes('drive.google.com/file/d/')) {
+                const fileId = url.split('/d/')[1].split('/')[0];
+                inputElement.value = `https://lh3.googleusercontent.com/d/${fileId}`;
+                converted = true;
+            } else if (url.includes('drive.google.com/open?id=')) {
+                const fileId = url.split('id=')[1].split('&')[0];
+                inputElement.value = `https://lh3.googleusercontent.com/d/${fileId}`;
+                converted = true;
+            }
+            
+            if(converted) {
+                inputElement.style.transition = "all 0.3s";
+                inputElement.style.borderColor = "#4ade80";
+                inputElement.style.backgroundColor = "#f0fdf4";
+                setTimeout(() => {
+                    inputElement.style.borderColor = "";
+                    inputElement.style.backgroundColor = "";
+                }, 1500);
+                updatePreview();
+            }
+        }
+
+        document.addEventListener('input', function(e) {
+            if(e.target.tagName === 'INPUT' && e.target.type === 'text') {
+                autoConvertDriveLink(e.target);
+            }
+        });
+
         async function initApp() {
             if (!window.SAPATAMU_RESOLVED) { setTimeout(initApp, 100); return; }
             syncNavbar();
