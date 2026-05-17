@@ -1,4 +1,4 @@
-﻿/**
+/**
  * auth_guard.js — SapaTamu RBAC Guard
  * =====================================
  * Diinclude di setiap halaman yang dilindungi.
@@ -96,6 +96,8 @@
         // Hanya terapkan guard jika role EKSPLISIT 'client'
         // Usher → full access | Tidak ada role (sesi lama) → full access (backward compat)
         if (role !== 'client') return;
+        // Cegah double-inject jika initApp() dipanggil ulang saat retry SAPATAMU_RESOLVED
+        if (document.getElementById('sapa-guard-overlay')) return;
 
         // Inject CSS
         const style = document.createElement('style');
@@ -223,6 +225,8 @@
         // Hanya terapkan view-only jika role EKSPLISIT 'usher'
         // Client → full access | Tidak ada role (sesi lama) → full access (backward compat)
         if (role !== 'usher') return;
+        // Cegah double-inject jika initApp() dipanggil ulang
+        if (document.getElementById('sapa-guard-banner')) return;
 
         // Inject CSS banner
         const style = document.createElement('style');
