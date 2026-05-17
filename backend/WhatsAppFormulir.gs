@@ -133,6 +133,7 @@ function handleWAFormPost(data) {
     // 4. EXECUTE BLAST (Dukungan Gambar Dinamis)
     if (action === "executeFonnteBlast") {
       let successCount = 0;
+      const failedRows = []; // Session-only — tidak ditulis ke spreadsheet
       const now = Utilities.formatDate(new Date(), "GMT+7", "dd/MM HH:mm");
       
       data.payload.forEach(item => {
@@ -140,18 +141,24 @@ function handleWAFormPost(data) {
           target: item.target, 
           message: item.message,
           url: item.url || "",
-          delay: "5" // Memberi waktu WhatsApp untuk merender preview link
+          delay: "5"
         };
         const res = directFonnteSend("https://api.fonnte.com/send", body, item.token);
         if (res.status) {
           sheet1.getRange(item.row, 16).setValue(`✅ [${now}]`); 
           successCount++;
         } else {
-          sheet1.getRange(item.row, 16).setValue(`❌ [Err: ${now}]`);
+          // ❌ ERROR: session-only, tidak ditulis ke spreadsheet
+          // agar saat refresh kembali jadi "BELUM TERKIRIM" dan bisa di-retry
+          failedRows.push({ row: item.row, reason: res.msg || "Gagal" });
         }
       });
       SpreadsheetApp.flush(); 
-      return createResponse({ status: "success", sent: successCount });
+      return createResponse({ 
+        status: "success", 
+        sent: successCount, 
+        failedRows: failedRows  // dikembalikan ke frontend untuk display session-only
+      });
     }
 
     // 5. MARK DUPLICATE — tulis status kuning ke spreadsheet

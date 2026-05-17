@@ -765,18 +765,50 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                 body: JSON.stringify({ action: "executeFonnteBlast", ssId: CURRENT_SS_ID, payload: payload })
             });
             
-            toggleProcessing(false); 
+            toggleProcessing(false);
             const result = await res.json();
-            if(result.status === "success") {
-                await showAlert("Berhasil!", `${result.sent} Pesan telah masuk antrean pengiriman.`, "✅");
+
+            if (result.status === "success") {
+                // ===== UPDATE TABEL IN-MEMORY (tidak fetch ulang dari spreadsheet) =====
+                const now = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                const nowStr = pad(now.getDate()) + '/' + pad(now.getMonth()+1) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+
+                // Tandai baris sukses di localData
+                uniqueTargets.forEach(t => {
+                    const entry = localData.tamu.find(x => x.row === t.row);
+                    if (entry) entry.status = '\u2705 [' + nowStr + ']';
+                });
+
+                // Tandai baris error — SESSION ONLY, tidak ditulis ke spreadsheet
+                // Saat user klik "Refresh Data" → kembali jadi BELUM TERKIRIM → bisa retry
+                const failedRows = result.failedRows || [];
+                failedRows.forEach(f => {
+                    const entry = localData.tamu.find(x => x.row === f.row);
+                    if (entry) entry.status = '\u274c Gagal [' + nowStr + '] (Refresh untuk Retry)';
+                });
+
+                // Re-render tabel dari localData (bukan dari spreadsheet)
+                renderTable();
+
+                // Summary
+                const failCount = failedRows.length;
+                const dupCount = duplicates.length;
+                let summary = result.sent + ' pesan berhasil dikirim.';
+                if (failCount > 0) summary += '\n\u274c ' + failCount + ' gagal — Refresh halaman untuk retry.';
+                if (dupCount > 0) summary += '\n\u26a0\ufe0f ' + dupCount + ' di-skip (duplikasi nomor).';
+                await showAlert("Selesai!", summary, result.sent > 0 ? "\u2705" : "\u26a0\ufe0f");
+
+                // Auto-refresh hanya jika tidak ada error (agar row error tidak hilang sebelum user baca)
+                if (failCount === 0) await refreshData();
+
             } else {
-                await showAlert("Gagal Server", result.msg || "Terjadi kesalahan pada backend.", "❌");
+                await showAlert("Gagal Server", result.msg || "Terjadi kesalahan pada backend.", "\u274c");
+                await refreshData();
             }
         } catch (e) { 
             toggleProcessing(false);
-            await showAlert("Critical Error", e.toString(), "❌"); 
-        } finally { 
-            await refreshData(); 
+            await showAlert("Critical Error", e.toString(), "\u274c"); 
         }
     };
 
