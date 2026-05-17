@@ -912,10 +912,10 @@
 
             return `
                 <div class="guest-item-card" 
-                    style="border:${cardBorder}; background:${cardBg}; padding:15px; border-radius:20px; display:flex; flex-direction:column; justify-content:space-between; cursor:${canBlast?'pointer':'default'}; transition:0.3s; min-height:140px; box-shadow:0 10px 20px rgba(140,117,96,0.03); position:relative;">
+                    style="border:${cardBorder}; background:${cardBg}; padding:15px; border-radius:20px; display:flex; flex-direction:column; justify-content:space-between; cursor:default; transition:0.3s; min-height:140px; box-shadow:0 10px 20px rgba(140,117,96,0.03); position:relative;">
                     ${syncIcon}
                     ${deleteBtn}
-                    <div ${onClickAttr}>
+                    <div>
                         <div>
                             <div style="font-weight:700; font-size:14px; color:var(--text-main); line-height:1.2; padding-right:20px;">${g.nama}</div>
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
@@ -936,9 +936,34 @@
                                 <div style="font-size:10px; color:var(--text-muted); font-weight:700;">⏰ ${g.sesi || '-'}</div>
                                 <div style="font-size:11px; color:var(--gold);">${souvenirIcon}</div>
                             </div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                                 <span style="font-size:11px; color:var(--text-main); font-weight:800;">Pax: ${g.rencanaHadir || 1}</span>
-                                <span style="font-size:9px; font-weight:900; color:${statusColor};">${statusLabel}</span>
+                                ${canBlast 
+                                    ? `<button 
+                                        onclick="executeBlast('${g.row}','${g.whatsapp}','${g.nama}','${g.kode}')"
+                                        title="Klik di sini untuk kirim undangan WA"
+                                        style="
+                                            border: 1.5px dashed ${isPending ? '#D97706' : isDupNumber ? '#D97706' : 'var(--text-muted)'};
+                                            background: transparent;
+                                            color: ${statusColor};
+                                            font-size: 9px;
+                                            font-weight: 900;
+                                            padding: 5px 10px;
+                                            border-radius: 8px;
+                                            cursor: pointer;
+                                            letter-spacing: 0.5px;
+                                            transition: 0.2s;
+                                            display: flex;
+                                            align-items: center;
+                                            gap: 5px;
+                                        "
+                                        onmouseover="this.style.background='rgba(0,0,0,0.04)'"
+                                        onmouseout="this.style.background='transparent'"
+                                        onmousedown="this.style.transform='scale(0.95)'"
+                                        onmouseup="this.style.transform='scale(1)'"
+                                      >📨 ${statusLabel.replace('○ ','').replace('● ','')}</button>`
+                                    : `<span style="font-size:9px; font-weight:900; color:${statusColor}; display:flex; align-items:center; gap:4px;">● SENT</span>`
+                                }
                             </div>
                         </div>
                     </div>
