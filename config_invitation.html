@@ -6,6 +6,8 @@
     <title>Config Invitation - SapaTamu.Ku</title>
     <script src="subdomain_resolver.js?v=3.2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
@@ -200,8 +202,15 @@
                         <input type="date" id="ev1_date" class="stk-input" oninput="updatePreview()">
                     </div>
                     <div class="form-group">
-                        <label>Time</label>
-                        <input type="time" id="ev1_time" class="stk-input" oninput="updatePreview()">
+                        <label>Time & Zone</label>
+                        <div class="flex gap-2">
+                            <input type="time" id="ev1_time" class="stk-input w-2/3" oninput="updatePreview()">
+                            <select id="ev1_zone" class="stk-input w-1/3" onchange="updatePreview()">
+                                <option value="WIB">WIB</option>
+                                <option value="WITA">WITA</option>
+                                <option value="WIT">WIT</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -210,7 +219,10 @@
                 </div>
                 <div class="form-group">
                     <label>Maps Link URL</label>
-                    <input type="text" id="ev1_maps" class="stk-input" placeholder="https://goo.gl/maps/..." oninput="updatePreview()">
+                    <div class="flex gap-2">
+                        <input type="text" id="ev1_maps" class="stk-input w-2/3" placeholder="https://goo.gl/maps/..." oninput="updatePreview()">
+                        <button onclick="openMapPicker('ev1_maps')" class="w-1/3 px-4 bg-neutral-100 rounded-xl font-bold text-[10px] text-neutral-500 hover:bg-neutral-200 hover:text-black transition-all text-center">📍 TENTUKAN LOKASI</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Event Photo</label>
@@ -231,8 +243,15 @@
                         <input type="date" id="ev2_date" class="stk-input" oninput="updatePreview()">
                     </div>
                     <div class="form-group">
-                        <label>Time</label>
-                        <input type="time" id="ev2_time" class="stk-input" oninput="updatePreview()">
+                        <label>Time & Zone</label>
+                        <div class="flex gap-2">
+                            <input type="time" id="ev2_time" class="stk-input w-2/3" oninput="updatePreview()">
+                            <select id="ev2_zone" class="stk-input w-1/3" onchange="updatePreview()">
+                                <option value="WIB">WIB</option>
+                                <option value="WITA">WITA</option>
+                                <option value="WIT">WIT</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -241,7 +260,10 @@
                 </div>
                 <div class="form-group">
                     <label>Maps Link URL</label>
-                    <input type="text" id="ev2_maps" class="stk-input" placeholder="https://goo.gl/maps/..." oninput="updatePreview()">
+                    <div class="flex gap-2">
+                        <input type="text" id="ev2_maps" class="stk-input w-2/3" placeholder="https://goo.gl/maps/..." oninput="updatePreview()">
+                        <button onclick="openMapPicker('ev2_maps')" class="w-1/3 px-4 bg-neutral-100 rounded-xl font-bold text-[10px] text-neutral-500 hover:bg-neutral-200 hover:text-black transition-all text-center">📍 TENTUKAN LOKASI</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Event Photo</label>
@@ -579,6 +601,7 @@
                     name: document.getElementById('ev1_name').value,
                     date: document.getElementById('ev1_date').value,
                     time: document.getElementById('ev1_time').value,
+                    zone: document.getElementById('ev1_zone').value,
                     locName: document.getElementById('ev1_loc_name').value,
                     maps: document.getElementById('ev1_maps').value,
                     photo: document.getElementById('ev1_photo').value
@@ -587,6 +610,7 @@
                     name: document.getElementById('ev2_name').value,
                     date: document.getElementById('ev2_date').value,
                     time: document.getElementById('ev2_time').value,
+                    zone: document.getElementById('ev2_zone').value,
                     locName: document.getElementById('ev2_loc_name').value,
                     maps: document.getElementById('ev2_maps').value,
                     photo: document.getElementById('ev2_photo').value
@@ -657,6 +681,7 @@
                     name: document.getElementById('ev1_name').value,
                     date: document.getElementById('ev1_date').value,
                     time: document.getElementById('ev1_time').value,
+                    zone: document.getElementById('ev1_zone').value,
                     locName: document.getElementById('ev1_loc_name').value,
                     maps: document.getElementById('ev1_maps').value,
                     photo: document.getElementById('ev1_photo').value
@@ -665,6 +690,7 @@
                     name: document.getElementById('ev2_name').value,
                     date: document.getElementById('ev2_date').value,
                     time: document.getElementById('ev2_time').value,
+                    zone: document.getElementById('ev2_zone').value,
                     locName: document.getElementById('ev2_loc_name').value,
                     maps: document.getElementById('ev2_maps').value,
                     photo: document.getElementById('ev2_photo').value
@@ -709,6 +735,80 @@
         }
 
         initApp();
+    </script>
+
+    <!-- Map Picker Modal -->
+    <div id="map-modal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-5 border-b border-neutral-100 flex justify-between items-center bg-white">
+                <div>
+                    <h3 class="font-bold text-lg">Pilih Lokasi di Peta</h3>
+                    <p class="text-[10px] text-neutral-400 mt-1">Geser dan klik pada peta untuk menjatuhkan pin lokasi.</p>
+                </div>
+                <button onclick="closeMapPicker()" class="text-neutral-400 hover:text-black p-2 bg-neutral-100 rounded-full w-8 h-8 flex items-center justify-center">✖</button>
+            </div>
+            <div id="map-container" class="w-full h-[400px] z-10"></div>
+            <div class="p-4 bg-neutral-50 flex justify-end gap-3 border-t border-neutral-100">
+                <input type="hidden" id="map-target-input">
+                <input type="hidden" id="map-latlng">
+                <button onclick="closeMapPicker()" class="px-6 py-3 rounded-xl text-neutral-500 font-bold text-xs hover:bg-neutral-200 transition-all">BATAL</button>
+                <button onclick="saveMapCoordinates()" class="px-8 py-3 rounded-xl bg-black text-white font-bold text-xs hover:bg-neutral-800 transition-all tracking-widest shadow-lg">SIMPAN KOORDINAT MAPS</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pickerMap = null;
+        let pickerMarker = null;
+
+        function openMapPicker(targetId) {
+            document.getElementById('map-modal').classList.remove('hidden');
+            document.getElementById('map-modal').classList.add('flex');
+            document.getElementById('map-target-input').value = targetId;
+
+            if (!pickerMap) {
+                pickerMap = L.map('map-container').setView([-6.200000, 106.816666], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(pickerMap);
+
+                pickerMap.on('click', function(e) {
+                    if (pickerMarker) pickerMap.removeLayer(pickerMarker);
+                    pickerMarker = L.marker(e.latlng).addTo(pickerMap);
+                    document.getElementById('map-latlng').value = `${e.latlng.lat},${e.latlng.lng}`;
+                });
+            }
+
+            const existingUrl = document.getElementById(targetId).value;
+            const match = existingUrl.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (match) {
+                const lat = parseFloat(match[1]);
+                const lng = parseFloat(match[2]);
+                if (pickerMarker) pickerMap.removeLayer(pickerMarker);
+                pickerMarker = L.marker([lat, lng]).addTo(pickerMap);
+                pickerMap.setView([lat, lng], 15);
+                document.getElementById('map-latlng').value = `${lat},${lng}`;
+            }
+
+            setTimeout(() => {
+                pickerMap.invalidateSize();
+            }, 200);
+        }
+
+        function closeMapPicker() {
+            document.getElementById('map-modal').classList.remove('flex');
+            document.getElementById('map-modal').classList.add('hidden');
+        }
+
+        function saveMapCoordinates() {
+            const targetId = document.getElementById('map-target-input').value;
+            const latlng = document.getElementById('map-latlng').value;
+            if (latlng) {
+                document.getElementById(targetId).value = `https://www.google.com/maps?q=${latlng}`;
+                updatePreview();
+            }
+            closeMapPicker();
+        }
     </script>
 </body>
 </html>
