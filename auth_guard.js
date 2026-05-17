@@ -38,19 +38,40 @@
     }
 
     // ─── Disable seluruh konten (view-only) ───────────────────────────────
+    // NAV SELALU BEBAS: elemen di dalam #nav-scroll / .nav-scroll-container
+    // tidak pernah di-disable agar user tetap bisa pindah halaman
+    function isInsideNav(el) {
+        return el.closest('#nav-scroll') ||
+               el.closest('.nav-scroll-container') ||
+               el.closest('[id^="nav-"]') ||
+               el.classList.contains('nav-link');
+    }
+
     function applyViewOnlyContent() {
-        // Tunggu DOM siap
         const disable = () => {
-            // Disable semua input/button/textarea KECUALI search input & select (boleh)
+            // Disable semua button/input/textarea KECUALI:
+            // - elemen guard sendiri (overlay, modal, banner)
+            // - elemen di dalam nav bar
+            // - search input & select (bisa scroll & filter)
             document.querySelectorAll(
-                'button:not(.sapa-guard-exempt), input:not([type="text"][id*="search"]):not(.sapa-guard-exempt), textarea:not(.sapa-guard-exempt)'
+                'button:not(.sapa-guard-exempt), input:not(.sapa-guard-exempt), textarea:not(.sapa-guard-exempt)'
             ).forEach(el => {
-                if (!el.closest('#sapa-guard-overlay') &&
-                    !el.closest('#sapa-admin-modal') &&
-                    !el.closest('#sapa-guard-banner')) {
+                const isGuardEl = el.closest('#sapa-guard-overlay') ||
+                                  el.closest('#sapa-admin-modal') ||
+                                  el.closest('#sapa-guard-banner');
+                const isNavEl = isInsideNav(el);
+                // Biarkan search input & select tetap bisa dipakai
+                const isSearchInput = el.tagName === 'INPUT' && 
+                                      (el.id.toLowerCase().includes('search') || 
+                                       el.classList.contains('sapa-guard-exempt'));
+                if (!isGuardEl && !isNavEl && !isSearchInput) {
                     el.disabled = true;
                     el.style.cursor = 'default';
                 }
+            });
+            // Pastikan semua <a> di nav tetap clickable
+            document.querySelectorAll('#nav-scroll a, .nav-scroll-container a, .nav-link').forEach(a => {
+                a.style.pointerEvents = 'auto';
             });
             // Form submit prevention
             document.querySelectorAll('form').forEach(f => {
@@ -61,7 +82,6 @@
             document.addEventListener('DOMContentLoaded', disable);
         } else {
             disable();
-            // Re-disable setelah render dinamis (delay kecil)
             setTimeout(disable, 1500);
         }
     }
@@ -84,18 +104,13 @@
                 animation: sapaFadeIn 0.3s ease;
             }
             #sapa-guard-overlay.dismissed {
-                /* Setelah dismiss: overlay tipis pointer-events block di konten */
+                /* Setelah dismiss: overlay hilang sepenuhnya, interaksi diblokir via JS disabled */
                 background: transparent;
                 backdrop-filter: none;
-                pointer-events: none;
+                pointer-events: none;   /* overlay sendiri tidak blokir klik */
             }
             #sapa-guard-overlay.dismissed #sapa-guard-box { display: none; }
-            #sapa-guard-overlay.dismissed::after {
-                content: '';
-                position: fixed; inset: 0;
-                pointer-events: all;
-                z-index: 999998;
-            }
+            /* TIDAK ada ::after — nav dan halaman bisa di-scroll/klik sesuai hak */
             #sapa-guard-box {
                 background: #fff;
                 width: 90%; max-width: 380px;
