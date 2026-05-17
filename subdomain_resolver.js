@@ -16,6 +16,7 @@ async function resolveSapatamuSubdomain() {
     const _urlParams = new URLSearchParams(window.location.search);
     const _urlSsid = _urlParams.get('ssId');
     const _urlUser = _urlParams.get('user');
+    const _urlRole = _urlParams.get('role'); // RBAC: baca role dari URL
 
     if (_urlSsid) {
         console.log("ID Spreadsheet ditemukan di URL:", _urlSsid);
@@ -24,16 +25,24 @@ async function resolveSapatamuSubdomain() {
         // Simpan ke storage jika ada data user/kategori
         if (_urlUser) {
             const _urlCat = _urlParams.get('category') || "wedding";
-            localStorage.setItem('sapatamu_db', JSON.stringify({ ssId: _urlSsid, username: _urlUser, category: _urlCat }));
+            // Preserve role jika ada di URL, jika tidak ambil dari storage lama
+            const _existingRole = _urlRole || (function(){
+                try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
+            })();
+            const _sessionData = { ssId: _urlSsid, username: _urlUser, category: _urlCat };
+            if (_existingRole) _sessionData.role = _existingRole;
+            localStorage.setItem('sapatamu_db', JSON.stringify(_sessionData));
+            sessionStorage.setItem('sapatamu_session', JSON.stringify(_sessionData));
             window.CURRENT_CATEGORY = _urlCat;
         }
         
-        // Bersihkan URL tanpa reload (Opsional: simpan ssId jika ini halaman publik)
+        // Bersihkan URL tanpa reload
         const _newUrl = new URL(window.location.href);
         if (_urlUser) {
             _newUrl.searchParams.delete('ssId');
             _newUrl.searchParams.delete('user');
             _newUrl.searchParams.delete('category');
+            _newUrl.searchParams.delete('role');
             window.history.replaceState({}, '', _newUrl);
         }
     }
@@ -62,7 +71,13 @@ async function resolveSapatamuSubdomain() {
                 if (res.status === "success") {
                     window.CURRENT_SS_ID = res.ssId;
                     window.CURRENT_CATEGORY = res.category || "wedding";
-                    localStorage.setItem('sapatamu_db', JSON.stringify({ ssId: res.ssId, username: res.clientName, category: window.CURRENT_CATEGORY }));
+                    // Preserve role yang sudah ada di localStorage (jangan overwrite)
+                    const _existRole = (function(){
+                        try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
+                    })();
+                    const _resolvedData = { ssId: res.ssId, username: res.clientName, category: window.CURRENT_CATEGORY };
+                    if (_existRole) _resolvedData.role = _existRole;
+                    localStorage.setItem('sapatamu_db', JSON.stringify(_resolvedData));
                     console.log("Subdomain Resolved dari Server:", sub);
                 }
             } catch (e) {
