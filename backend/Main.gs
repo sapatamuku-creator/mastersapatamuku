@@ -94,6 +94,7 @@ function handleMainGet(e) {
   if (action === "getSettings") return createResponse(getSettings(ssId, e.parameter.guestId));
   if (action === "getDropdownOptions") return createResponse(getDropdownOptions(ssId));
   if (action === "getWishes") return createResponse(getWishes(ssId));
+  if (action === "updateRsvp") return createResponse(updateRsvp(ssId, e.parameter.guestId, e.parameter.pax));
   
   // WELCOME SIGN HANDSHAKE
   if (action === "getWelcome") return createResponse(getWelcomeData(ssId));
@@ -1016,6 +1017,30 @@ function getWishes(ssId) {
     })).reverse();
     
     return { status: "success", data: wishes };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
+function updateRsvp(ssId, guestId, pax) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName("Sheet1");
+    if (!sheet) return { status: "error", message: "Sheet1 tidak ditemukan" };
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 7) return { status: "error", message: "Data tamu kosong" };
+    
+    const guestData = sheet.getRange(7, 1, lastRow - 6, 12).getValues();
+    const guestIndex = guestData.findIndex(row => row[5] === guestId); // Kolom F: Kode Unik
+    
+    if (guestIndex > -1) {
+      // Row 7 + guestIndex. Kolom H (Rencana Hadir) adalah kolom ke-8.
+      sheet.getRange(7 + guestIndex, 8).setValue(pax || 1);
+      return { status: "success", message: "Rencana Hadir diupdate" };
+    } else {
+      return { status: "error", message: "Tamu tidak ditemukan" };
+    }
   } catch (e) {
     return { status: "error", message: e.toString() };
   }

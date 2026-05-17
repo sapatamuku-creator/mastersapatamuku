@@ -469,9 +469,17 @@
                         <img id="qr-code" src="" class="w-full h-full object-contain">
                     </div>
                     <p id="guest-id-label" class="text-[10px] font-bold tracking-widest text-neutral-300"></p>
-                    <a id="rsvp-link" href="#" target="_blank"
-                        class="block w-full py-5 bg-neutral-900 text-white rounded-full text-[10px] font-bold uppercase tracking-[0.3em]">Konfirmasi
-                        Kehadiran</a>
+                    <div class="my-6 flex items-center justify-center space-x-4">
+                        <span class="text-[9px] uppercase tracking-widest text-neutral-400">Rencana Hadir:</span>
+                        <div class="flex items-center border border-neutral-200 rounded-full overflow-hidden bg-white shadow-sm">
+                            <button onclick="updateRsvpCount(-1)" class="px-4 py-2 text-neutral-400 hover:bg-neutral-50 transition-colors">-</button>
+                            <span id="rsvp-count" class="px-2 text-[11px] font-bold text-neutral-700 min-w-[24px] text-center">1</span>
+                            <button onclick="updateRsvpCount(1)" class="px-4 py-2 text-neutral-400 hover:bg-neutral-50 transition-colors">+</button>
+                        </div>
+                    </div>
+                    <button id="rsvp-link" onclick="handleRsvpClick()"
+                        class="block w-full py-5 bg-neutral-900 text-white rounded-full text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-neutral-800 transition-colors cursor-pointer">Konfirmasi
+                        Kehadiran</button>
                 </div>
             </div>
         </section>
@@ -689,9 +697,46 @@
             document.getElementById('qr-code').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${guestId}`;
             document.getElementById('guest-id-label').innerText = `ID: ${guestId}`;
             const weddingNames = document.getElementById('wedding-names-text')?.innerText || "Kami";
-            const waMsg = `Halo ${weddingNames}, saya ${guestName} (Kode: ${guestId}) mengonfirmasi akan hadir.`;
-            const rsvpPhone = window.EVENT_META?.waPhone || "";
-            document.getElementById('rsvp-link').href = `https://wa.me/${rsvpPhone}?text=${encodeURIComponent(waMsg)}`;
+        };
+
+        let rsvpAttendees = 1;
+        window.updateRsvpCount = function(delta) {
+            rsvpAttendees += delta;
+            if (rsvpAttendees < 1) rsvpAttendees = 1;
+            if (rsvpAttendees > 10) rsvpAttendees = 10;
+            document.getElementById('rsvp-count').innerText = rsvpAttendees;
+        };
+
+        window.handleRsvpClick = async function() {
+            const btn = document.getElementById('rsvp-link');
+            const originalText = btn.innerText;
+            btn.innerText = "MEMPROSES...";
+            btn.style.pointerEvents = "none";
+            btn.classList.add('opacity-70');
+            
+            const guestId = new URLSearchParams(window.location.search).get('id') || "";
+            const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
+            
+            // 1. Update Spreadsheet in background
+            if (guestId && ssId) {
+                try {
+                    await fetch(`${window.SCRIPT_URL}?action=updateRsvp&ssId=${ssId}&guestId=${guestId}&pax=${rsvpAttendees}`);
+                } catch(err) {
+                    console.error("Gagal update Rencana Hadir", err);
+                }
+            }
+
+            // 2. Build WA Message & Redirect
+            const safeName = document.getElementById('wedding-names-text')?.innerText || "Kami";
+            const localGuestName = new URLSearchParams(window.location.search).get('u') || "Tamu Undangan";
+            const waMsg = `Halo ${safeName}, saya ${localGuestName} (Kode: ${guestId}) mengonfirmasi akan hadir bersama ${rsvpAttendees} orang.`;
+            const waPhone = window.EVENT_META?.waPhone || "";
+            const finalUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`;
+            
+            btn.innerText = originalText;
+            btn.style.pointerEvents = "auto";
+            btn.classList.remove('opacity-70');
+            window.open(finalUrl, '_blank');
         };
 
         window.startInvitation = function () {
@@ -779,10 +824,6 @@
                     
                     const localGuestName = new URLSearchParams(window.location.search).get('u') || "Tamu Undangan";
                     const localGuestId = new URLSearchParams(window.location.search).get('id') || "STK-GUEST";
-                    const waMsg = `Halo ${safeName}, saya ${localGuestName} (Kode: ${localGuestId}) mengonfirmasi akan hadir.`;
-                    if (document.getElementById('rsvp-link')) {
-                        document.getElementById('rsvp-link').href = `https://wa.me/${window.EVENT_META.waPhone}?text=${encodeURIComponent(waMsg)}`;
-                    }
 
                     if (s.invitationData && Object.keys(s.invitationData).length > 0) {
                         try {
