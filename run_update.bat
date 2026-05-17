@@ -31,7 +31,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [STEP 3] Memperbarui Deployment di Google agar menggunakan kode terbaru...
-call clasp deploy -i AKfycbyFOiyAdQnyFBV-ZnwZ3Mt9KeNuwRuTvvp2n-t9a36KQvyMU7QPR0KCe0sY7B1rzVn5 -d "SapaTamu Master Unified Update %date% %time%"
+call clasp deploy -i AKfycbygBaFZE1n36jh8q7ZBICvmPcvVjvIjYKFmf-Gg5XS5F09Sr59SHTSymrLgOTuxcPDA -d "SapaTamu Master Unified Update %date% %time%"
 cd ..
 
 echo OK: Kode backend terupdate.
