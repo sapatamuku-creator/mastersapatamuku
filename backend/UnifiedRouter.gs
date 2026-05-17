@@ -142,23 +142,20 @@ function handleMusicUpload(payload) {
 
     const rawUrl = ghResult.content.download_url;
 
-    // Auto-save URL to client spreadsheet (Config_Invitation sheet)
+    // Auto-save URL + filename to client spreadsheet (Config_Invitation sheet)
     if (ssId) {
       try {
         const ss = SpreadsheetApp.openById(ssId);
         let sheet = ss.getSheetByName('Config_Invitation');
         if (sheet) {
-          // Find musicUrl row and update it
           const data = sheet.getDataRange().getValues();
-          let found = false;
+          let foundUrl = false, foundFile = false;
           for (let i = 0; i < data.length; i++) {
-            if (data[i][0] === 'musicUrl') {
-              sheet.getRange(i + 1, 2).setValue(rawUrl);
-              found = true;
-              break;
-            }
+            if (data[i][0] === 'musicUrl')      { sheet.getRange(i+1, 2).setValue(rawUrl);       foundUrl  = true; }
+            if (data[i][0] === 'musicFilename')  { sheet.getRange(i+1, 2).setValue(safeFilename); foundFile = true; }
           }
-          if (!found) sheet.appendRow(['musicUrl', rawUrl]);
+          if (!foundUrl)  sheet.appendRow(['musicUrl', rawUrl]);
+          if (!foundFile) sheet.appendRow(['musicFilename', safeFilename]);
         }
       } catch(saveErr) {
         Logger.log('Warning: Could not auto-save music URL to sheet: ' + saveErr);
