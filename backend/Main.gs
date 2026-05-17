@@ -766,13 +766,13 @@ function getSettings(ssId, guestId = null) {
            const guestData = sheet.getRange(7, 1, lastRow - 6, 12).getValues();
            const matchedGuest = guestData.find(row => row[5] === guestId); // Kolom F (Kode Unik)
            
-           if (matchedGuest) {
-               const pengundang = matchedGuest[11]; // Kolom L (Pihak Pengundang)
+           if (matchedGuest && matchedGuest[11]) {
+               const pengundang = matchedGuest[11].toString().trim().toUpperCase(); // Kolom L
                const settingsData = settingsSheet.getRange("A2:B20").getValues();
-               const matchedSetting = settingsData.find(row => row[0] === pengundang);
+               const matchedSetting = settingsData.find(row => row[0] && row[0].toString().trim().toUpperCase() === pengundang);
                
                if (matchedSetting && matchedSetting[1]) {
-                   waPhone = matchedSetting[1].toString();
+                   waPhone = matchedSetting[1].toString().trim();
                    if (waPhone.startsWith('0')) waPhone = '62' + waPhone.substring(1);
                    foundWaPhone = true;
                }
@@ -782,9 +782,9 @@ function getSettings(ssId, guestId = null) {
     
     // Fallback: cari nomor telepon pertama yang tersedia di sheet Settings jika guestId tidak ditemukan
     if (settingsSheet && !foundWaPhone) {
-      const phones = settingsSheet.getRange("B3:B8").getValues().flat().filter(String);
+      const phones = settingsSheet.getRange("B2:B20").getValues().flat().filter(val => val !== "" && val !== null);
       if (phones.length > 0) {
-        waPhone = phones[0].toString();
+        waPhone = phones[0].toString().trim();
         // Konversi awal 0 ke 62 agar format wa.me valid
         if (waPhone.startsWith('0')) waPhone = '62' + waPhone.substring(1);
       }
