@@ -5,44 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu - Self Check-in Kiosk</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        /* Desain latar belakang elegan */
+        :root { 
+            --primary: #E07B7B; /* Rose */
+            --bg: #FFF9F5;      /* Warm White */
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --gold: #C8962E;
+            --border: #F0E6DE;
+            --success: #10B981;
+        }
         body {
-            background: radial-gradient(circle at center, #1a1a2e, #0f0f1a);
-            color: white;
-            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', sans-serif;
             overflow: hidden;
             margin: 0;
             padding: 0;
         }
+        .header-title { font-family: 'Lora', serif; color: var(--text-main); }
+        .header-subtitle { color: var(--text-muted); font-weight: 500; }
+
         /* Efek Kaca (Glassmorphism) */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            box-shadow: 0 30px 60px rgba(140, 117, 96, 0.15);
         }
 
         #scanner-wrapper { 
             position: relative; 
             width: 80%; max-width: 600px; 
             aspect-ratio: 4 / 3;
-            background: #000; border-radius: 24px; overflow: hidden; border: 4px solid rgba(255,255,255,0.2); 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+            background: #000; border-radius: 35px; overflow: hidden; border: 8px solid white; 
+            box-shadow: 0 20px 60px rgba(140, 117, 96, 0.15); display: flex; align-items: center; justify-content: center;
         }
         #reader { width: 100% !important; height: 100% !important; }
         #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
 
         .scan-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 5; pointer-events: none; }
         .scan-frame { 
-            width: 60%; height: 60%; border: 2px solid rgba(255,255,255,0.3); border-radius: 20px; 
-            box-shadow: 0 0 0 1000px rgba(0,0,0,0.6); transition: all 0.25s ease; opacity: 0.8;
+            width: 60%; height: 60%; border: 3px solid rgba(255,255,255,0.4); border-radius: 20px; 
+            box-shadow: 0 0 0 1000px rgba(0,0,0,0.5); transition: all 0.25s ease; opacity: 0.8;
         }
-        .scan-frame.qr-detected { border-color: #10B981; box-shadow: 0 0 30px rgba(16,185,129,0.5), 0 0 0 1000px rgba(0,0,0,0.4); transform: scale(1.05); opacity: 1; }
+        .scan-frame.qr-detected { border-color: var(--gold); box-shadow: 0 0 30px rgba(212,175,55,0.5), 0 0 0 1000px rgba(0,0,0,0.3); transform: scale(1.05); opacity: 1; }
         
         .loading-overlay { 
             position: fixed; inset: 0; 
-            background: rgba(0,0,0,0.8); 
+            background: rgba(255,249,245,0.9); 
             backdrop-filter: blur(10px); 
             z-index: 200000; 
             display: none; 
@@ -50,8 +63,16 @@
             align-items: center; 
             justify-content: center; 
         }
-        .spinner { width: 60px; height: 60px; border: 4px solid rgba(16,185,129, 0.2); border-top: 4px solid #10B981; border-radius: 50%; animation: spin 1s linear infinite; }
+        .spinner { width: 60px; height: 60px; border: 4px solid var(--border); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 15px 30px rgba(224, 123, 123, 0.3);
+        }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(224, 123, 123, 0.4); }
+        .text-gold { color: var(--gold); }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col items-center justify-center relative" onload="initApp()">
@@ -61,8 +82,8 @@
 
     <!-- Header Insting -->
     <div class="absolute top-12 left-0 w-full text-center z-10">
-        <h1 class="text-4xl md:text-5xl font-light tracking-widest text-neutral-300">SELAMAT DATANG</h1>
-        <p class="text-lg md:text-xl text-neutral-400 mt-2">Silakan Arahkan QR Code Undangan Anda ke Kamera</p>
+        <h1 class="text-4xl md:text-5xl tracking-wide header-title font-bold">SELAMAT DATANG</h1>
+        <p class="text-lg md:text-xl header-subtitle mt-2 uppercase tracking-widest text-xs">Arahkan QR Code Undangan Anda ke Layar</p>
     </div>
 
     <!-- Area Kamera Scanner -->
@@ -72,39 +93,39 @@
     </div>
 
     <!-- Modal Konfirmasi -->
-    <div id="kiosk-modal" class="hidden absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center">
-        <div class="glass-panel p-10 md:p-16 rounded-[2rem] text-center max-w-lg w-[90%] transform transition-all shadow-2xl">
-            <p class="text-sm tracking-widest text-emerald-400 mb-2 uppercase font-bold">Data Ditemukan</p>
-            <h2 id="guest-name" class="text-4xl md:text-5xl font-serif text-white mb-2 line-clamp-2">Nama Tamu</h2>
-            <p id="guest-category" class="text-lg text-neutral-400 mb-10">Kategori: UMUM</p>
+    <div id="kiosk-modal" class="hidden absolute inset-0 bg-[#4A3F35]/50 backdrop-blur-md z-50 flex items-center justify-center">
+        <div class="glass-panel p-10 md:p-16 rounded-[2.5rem] text-center max-w-lg w-[90%] transform transition-all shadow-2xl">
+            <p class="text-xs tracking-[3px] text-gold mb-3 uppercase font-extrabold">Data Ditemukan</p>
+            <h2 id="guest-name" class="text-4xl md:text-5xl header-title mb-2 line-clamp-2" style="font-weight:700">Nama Tamu</h2>
+            <p id="guest-category" class="text-lg header-subtitle mb-10">Kategori: UMUM</p>
             
-            <button onclick="executeCheckin()" class="w-full py-6 bg-emerald-500 hover:bg-emerald-400 text-white text-2xl font-bold rounded-2xl transition-colors shadow-lg shadow-emerald-500/30">
+            <button onclick="executeCheckin()" class="w-full py-6 btn-primary text-2xl font-bold rounded-3xl transition-all duration-300">
                 PROSES CHECK-IN
             </button>
-            <button onclick="cancelCheckin()" class="w-full mt-6 py-4 text-neutral-400 hover:text-white transition-colors text-lg font-medium tracking-wide">
+            <button onclick="cancelCheckin()" class="w-full mt-6 py-4 header-subtitle hover:text-[#4A3F35] transition-colors text-lg font-bold tracking-wide">
                 Batal
             </button>
         </div>
     </div>
 
     <!-- Modal Sukses Animasi -->
-    <div id="success-modal" class="hidden absolute inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center">
+    <div id="success-modal" class="hidden absolute inset-0 bg-[#FFF9F5]/95 backdrop-blur-md z-[60] flex items-center justify-center">
         <div class="text-center scale-150 transform transition-all duration-500 opacity-0" id="success-content">
             <!-- Icon Checklist Hijau -->
-            <div class="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(16,185,129,0.4)] mx-auto">
-                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-[0_20px_50px_rgba(200,150,46,0.3)] mx-auto border-4 border-[#C8962E]">
+                <svg class="w-12 h-12 text-[#C8962E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"></path>
                 </svg>
             </div>
-            <h3 class="text-3xl mt-8 text-white font-medium tracking-wide">Check-in Berhasil</h3>
-            <p class="text-neutral-400 mt-3 text-sm tracking-widest uppercase">Silakan Masuk</p>
+            <h3 class="text-3xl mt-8 header-title font-bold tracking-wide">Check-in Berhasil</h3>
+            <p class="text-gold mt-3 text-sm tracking-widest uppercase font-extrabold">Silakan Masuk</p>
         </div>
     </div>
 
     <!-- Loading -->
     <div id="loading" class="loading-overlay">
         <div class="spinner"></div>
-        <span class="text-emerald-400 mt-6 tracking-widest font-bold text-sm">MEMPROSES DATA...</span>
+        <span class="text-[#E07B7B] mt-6 tracking-widest font-bold text-sm">MEMPROSES DATA...</span>
     </div>
 
     <script>
