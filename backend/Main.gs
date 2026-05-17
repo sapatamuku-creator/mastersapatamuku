@@ -189,7 +189,7 @@ function handleMainPost(payload) {
         break;
         
       case 'saveWelcomePhotos':
-        result = saveWelcomePhotos(ssId, payload.urlFoto);
+        result = saveWelcomePhotos(ssId, payload.urlFoto, payload.teks1, payload.teks2);
         break;
         
       case 'addWish':
@@ -713,8 +713,17 @@ function getWelcomeData(ssId) {
     }
 
     let urlFoto = "";
+    let teksSambutan1 = "Selamat Datang di Pernikahan";
+    let teksSambutan2 = "Yth. Bapak/Ibu/Sdr/i";
+    
     const configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
-    if (configSheet) urlFoto = configSheet.getRange("B1").getValue() || "";
+    if (configSheet) {
+      urlFoto = configSheet.getRange("B1").getValue() || "";
+      const t1 = configSheet.getRange("B7").getValue();
+      if (t1) teksSambutan1 = t1;
+      const t2 = configSheet.getRange("B8").getValue();
+      if (t2) teksSambutan2 = t2;
+    }
 
     return {
       status: "success",
@@ -724,6 +733,8 @@ function getWelcomeData(ssId) {
       rundown,
       log: guestLog.toUpperCase(),
       urlFoto,
+      teksSambutan1,
+      teksSambutan2,
       displayDuration
     };
   } catch (err) {
@@ -777,6 +788,8 @@ function getSettings(ssId, guestId = null) {
     let presetKode = "1";
     let waPhone = "";
     let theme = "classic";
+    let teksSambutan1 = "Selamat Datang di Pernikahan";
+    let teksSambutan2 = "Yth. Bapak/Ibu/Sdr/i";
     let invitationData = {};
     
     // Pencarian waPhone Dinamis berdasarkan guestId
@@ -823,6 +836,11 @@ function getSettings(ssId, guestId = null) {
       
       theme = configSheet.getRange("B6").getValue() || "classic";
       
+      const t1 = configSheet.getRange("B7").getValue();
+      if (t1) teksSambutan1 = t1;
+      const t2 = configSheet.getRange("B8").getValue();
+      if (t2) teksSambutan2 = t2;
+      
       const invSheet = ss.getSheetByName("InvConfig");
       const invRaw = invSheet ? invSheet.getRange("B1").getValue() : "";
       try {
@@ -846,6 +864,8 @@ function getSettings(ssId, guestId = null) {
         presetKode: presetKode,
         waPhone: waPhone,
         theme: theme,
+        teksSambutan1: teksSambutan1,
+        teksSambutan2: teksSambutan2,
         invitationData: invitationData
       }
     };
@@ -868,7 +888,7 @@ function getDropdownOptions(ssId) {
   }
 }
 
-function saveWelcomePhotos(ssId, urlFoto) {
+function saveWelcomePhotos(ssId, urlFoto, teks1, teks2) {
   try {
     const ss = getSS(ssId);
     let configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
@@ -877,7 +897,17 @@ function saveWelcomePhotos(ssId, urlFoto) {
       configSheet.getRange("A1").setValue("URL_FOTO");
     }
     configSheet.getRange("B1").setValue(urlFoto);
-    return { status: "success", message: "Foto background berhasil diperbarui" };
+    
+    if (teks1 !== undefined) {
+      configSheet.getRange("A7").setValue("TEKS_SAMBUTAN_1");
+      configSheet.getRange("B7").setValue(teks1);
+    }
+    if (teks2 !== undefined) {
+      configSheet.getRange("A8").setValue("TEKS_SAMBUTAN_2");
+      configSheet.getRange("B8").setValue(teks2);
+    }
+    
+    return { status: "success", message: "Konfigurasi Welcome Sign berhasil diperbarui" };
   } catch (e) { return { status: "error", message: e.toString() }; }
 }
 

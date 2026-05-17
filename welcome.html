@@ -125,12 +125,12 @@
     <div id="welcome-panel">
         <div id="slideshow-container"></div>
         <div class="content-wrapper">
-            <span class="main-label block uppercase text-white/70">Selamat Datang di Pernikahan</span>
+            <span id="welcome-teks-1" class="main-label block uppercase text-white/70">Selamat Datang di Pernikahan</span>
             <h1 id="couple-name" class="couple-title">Memuat...</h1>
             <div id="wedding-date" class="wedding-date uppercase text-white/80"></div>
             
             <div id="guest-box" class="mt-12 opacity-0">
-                <span class="guest-label block uppercase">Yth. Bapak/Ibu/Sdr/i</span>
+                <span id="welcome-teks-2" class="guest-label block uppercase">Yth. Bapak/Ibu/Sdr/i</span>
                 <h1 id="guest-name" class="guest-name">...</h1>
                 <div class="guest-info font-medium text-[#F3F4F6] tracking-wide">
                     <span id="g-cat" class="text-[#D4AF37] font-bold"></span> &nbsp;&bull;&nbsp; 
@@ -227,8 +227,11 @@
                 throw new Error(data.message || data.error);
             }
 
-            document.getElementById('couple-name').innerText = data.weddingName;
+            document.getElementById('couple-name').innerHTML = (data.weddingName || "SapaTamu.Ku").replace(" & ", " &amp; ");
             document.getElementById('wedding-date').innerText = data.weddingDate; 
+            
+            if (data.teksSambutan1) document.getElementById('welcome-teks-1').innerText = data.teksSambutan1;
+            if (data.teksSambutan2) document.getElementById('welcome-teks-2').innerText = data.teksSambutan2;
 
             const guest = data.latestGuest;
             if (guest.nama && guest.nama !== currentGuestName) {
