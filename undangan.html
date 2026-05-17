@@ -958,6 +958,17 @@
 
         window.applyLivePreview = function (data) {
             console.log("Applying Live Preview Data:", data);
+            
+            function formatDateId(ds) {
+                if(!ds) return "";
+                if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)) return ds; // If user typed custom string, return it
+                const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                const parts = ds.split('-');
+                const d = new Date(parts[0], parts[1]-1, parts[2]);
+                return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+            }
+
             if (!data) return;
 
             if (data.headerLabel) document.querySelectorAll('.header-label-text').forEach(el => el.innerText = data.headerLabel);
@@ -1023,7 +1034,7 @@
 
             if (data.ev1) {
                 document.querySelectorAll('.ev1-name-text').forEach(el => el.innerText = data.ev1.name || "Akad Nikah");
-                document.querySelectorAll('.ev1-date-text').forEach(el => el.innerText = data.ev1.date || "Senin, 25 Mei 2026");
+                document.querySelectorAll('.ev1-date-text').forEach(el => el.innerText = formatDateId(data.ev1.date) || "Senin, 25 Mei 2026");
                 document.querySelectorAll('.ev1-time-text').forEach(el => el.innerText = data.ev1.time || "08.00 WIB - Selesai");
                 document.querySelectorAll('.ev1-loc-text').forEach(el => el.innerHTML = data.ev1.locName ? data.ev1.locName.replace(/\n/g, '<br>') : "Lokasi");
                 if (data.ev1.photo) document.querySelectorAll('.ev1-photo-img').forEach(el => el.src = data.ev1.photo);
@@ -1032,7 +1043,7 @@
 
             if (data.ev2) {
                 document.querySelectorAll('.ev2-name-text').forEach(el => el.innerText = data.ev2.name || "Resepsi");
-                document.querySelectorAll('.ev2-date-text').forEach(el => el.innerText = data.ev2.date || "Senin, 25 Mei 2026");
+                document.querySelectorAll('.ev2-date-text').forEach(el => el.innerText = formatDateId(data.ev2.date) || "Senin, 25 Mei 2026");
                 document.querySelectorAll('.ev2-time-text').forEach(el => el.innerText = data.ev2.time || "11.00 WIB - Selesai");
                 document.querySelectorAll('.ev2-loc-text').forEach(el => el.innerHTML = data.ev2.locName ? data.ev2.locName.replace(/\n/g, '<br>') : "Lokasi");
                 if (data.ev2.photo) document.querySelectorAll('.ev2-photo-img').forEach(el => el.src = data.ev2.photo);
