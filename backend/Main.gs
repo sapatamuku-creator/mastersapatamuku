@@ -782,7 +782,7 @@ function getSettings(ssId, guestId = null) {
     
     // Fallback: cari nomor telepon pertama yang tersedia di sheet Settings jika guestId tidak ditemukan
     if (settingsSheet && !foundWaPhone) {
-      const phones = settingsSheet.getRange("B2:B20").getValues().flat().filter(val => val !== "" && val !== null);
+      const phones = settingsSheet.getRange("B2:B20").getValues().flat().filter(val => val !== null && val.toString().trim() !== "");
       if (phones.length > 0) {
         waPhone = phones[0].toString().trim();
         // Konversi awal 0 ke 62 agar format wa.me valid
@@ -796,7 +796,7 @@ function getSettings(ssId, guestId = null) {
       
       // Gunakan Config B5 HANYA jika waPhone belum ditemukan di Settings
       const configWa = configSheet.getRange("B5").getValue();
-      if (configWa && !foundWaPhone && (!settingsSheet || settingsSheet.getRange("B3:B8").getValues().flat().filter(String).length === 0)) {
+      if (configWa && !foundWaPhone && (!settingsSheet || settingsSheet.getRange("B2:B20").getValues().flat().filter(val => val !== null && val.toString().trim() !== "").length === 0)) {
          waPhone = configWa.toString().startsWith('0') ? '62' + configWa.toString().substring(1) : configWa;
       }
       
