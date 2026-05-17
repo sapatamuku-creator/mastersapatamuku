@@ -163,6 +163,11 @@
         </div>
     </div>
 
+    <!-- Tombol Pencarian Manual -->
+    <button onclick="openSearchModal()" class="mt-6 md:mt-8 px-8 py-3 rounded-full border-2 border-[#C8962E] text-[#C8962E] font-bold tracking-widest hover:bg-[#C8962E] hover:text-white transition-colors uppercase text-xs md:text-sm z-10 relative bg-[#FFF9F5]/80 backdrop-blur shadow-sm">
+        🔍 PENCARIAN MANUAL
+    </button>
+    
     <!-- Tombol Kembali ke Idle -->
     <button onclick="returnToIdle()" class="fixed bottom-6 md:bottom-10 left-1/2 transform -translate-x-1/2 z-10 px-10 py-3 md:px-12 md:py-4 bg-[#4A3F35] text-white rounded-full font-bold tracking-widest hover:bg-[#E07B7B] transition-colors shadow-2xl uppercase border-none text-sm md:text-base">
         KEMBALI
@@ -174,6 +179,20 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
         </svg>
     </button>
+
+    <!-- STEP 2.5: MODAL PENCARIAN MANUAL -->
+    <div id="search-modal" class="hidden fixed inset-0 bg-[#FFF9F5] z-[80] flex-col overflow-hidden modal-full">
+        <div class="px-6 py-6 md:px-10 md:py-8 bg-white border-b border-[#F0E6DE] flex items-center justify-between shadow-sm shrink-0">
+            <h2 class="text-xl md:text-3xl font-serif text-[#4A3F35] font-bold uppercase tracking-widest">Pencarian Manual</h2>
+            <button onclick="closeSearchModal()" class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#F0E6DE] text-[#8C7560] font-bold flex items-center justify-center hover:bg-[#E07B7B] hover:text-white transition-colors text-lg md:text-xl">X</button>
+        </div>
+        <div class="p-6 md:p-10 shrink-0">
+            <input type="text" id="kiosk-search-box" oninput="renderKioskSearch()" placeholder="Ketik nama tamu..." class="w-full px-8 py-4 md:py-5 rounded-full border-2 border-[#F0E6DE] text-lg md:text-xl font-bold text-[#4A3F35] outline-none focus:border-[#C8962E] bg-white shadow-inner transition-colors">
+        </div>
+        <div class="flex-1 overflow-y-auto px-6 md:px-10 pb-10" id="kiosk-search-list">
+            <!-- List Guest Here -->
+        </div>
+    </div>
 
     <!-- STEP 3: MODAL KONFIRMASI FULL LAYAR -->
     <div id="kiosk-modal" class="hidden fixed inset-0 bg-[#FFFDFB] z-50 flex-col items-center justify-center modal-full overflow-y-auto py-6 md:py-10">
@@ -371,12 +390,14 @@
             document.getElementById('kiosk-idle-state').style.opacity = '1';
             document.getElementById('kiosk-idle-state').style.pointerEvents = 'auto';
             cleanupSelfie();
+            closeSearchModal();
             restartScanner();
         }
 
         function onScanSuccess(txt) {
             if (!document.getElementById('kiosk-modal').classList.contains('hidden')) return;
             if (!document.getElementById('success-modal').classList.contains('hidden')) return;
+            if (!document.getElementById('search-modal').classList.contains('hidden')) return;
             if (scanCooldown) return;
 
             // Jika scan berhasil saat Idle State masih aktif, paksa sembunyikan Idle Screen
@@ -504,6 +525,67 @@
                 btnSnap.innerText = "AMBIL FOTO";
                 btnSnap.onclick = takeSelfie;
             }
+        }
+
+        /* --- MANUAL SEARCH LOGIC --- */
+        function openSearchModal() {
+            document.getElementById('search-modal').classList.remove('hidden');
+            document.getElementById('search-modal').classList.add('flex');
+            document.getElementById('kiosk-search-box').value = '';
+            renderKioskSearch();
+        }
+
+        function closeSearchModal() {
+            document.getElementById('search-modal').classList.add('hidden');
+            document.getElementById('search-modal').classList.remove('flex');
+        }
+
+        function renderKioskSearch() {
+            const listBody = document.getElementById('kiosk-search-list');
+            const term = document.getElementById('kiosk-search-box').value.toLowerCase();
+            
+            const filtered = masterData.filter(row => 
+                (row.nama && row.nama.toLowerCase().includes(term)) ||
+                (row.whatsapp && row.whatsapp.includes(term))
+            );
+
+            listBody.innerHTML = filtered.map(row => {
+                const isDone = row.jamDatang && row.jamDatang !== "-";
+                // Encode to base64 to avoid JSON parsing issues with quotes
+                const guestJson = encodeURIComponent(JSON.stringify(row));
+                
+                return `
+                    <div onclick="handleSearchClick('${guestJson}', ${isDone})" class="mb-5 bg-white rounded-3xl p-6 md:p-8 border-2 ${isDone ? 'border-[#10B981] opacity-60' : 'border-[#F0E6DE] hover:border-[#C8962E] cursor-pointer'} shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <h3 class="text-xl md:text-2xl font-bold text-[#4A3F35] uppercase tracking-wide">${row.nama}</h3>
+                                <span class="text-xs bg-[#FFF9F5] text-[#C8962E] px-4 py-1.5 md:py-2 rounded-full font-bold tracking-widest border border-[#F0E6DE]">${row.kategori || 'UMUM'}</span>
+                            </div>
+                            <div class="flex flex-wrap gap-x-6 md:gap-x-8 gap-y-2 text-sm md:text-base font-bold text-[#8C7560]">
+                                <span>📱 ${row.whatsapp || '-'}</span>
+                                <span>🏠 ${row.alamat || '-'}</span>
+                                <span>💌 Inv: ${row.pihakPengundang || '-'}</span>
+                            </div>
+                        </div>
+                        <div class="shrink-0 text-right w-full md:w-auto mt-2 md:mt-0">
+                            ${isDone ? 
+                                `<span class="inline-block text-[#10B981] font-bold text-xs md:text-sm tracking-widest uppercase bg-[#10B981]/10 px-5 md:px-6 py-2.5 md:py-3 rounded-full">✓ SUDAH HADIR</span>` : 
+                                `<span class="inline-block text-[#C8962E] font-bold text-xs md:text-sm tracking-widest uppercase bg-[#C8962E]/10 px-5 md:px-6 py-2.5 md:py-3 rounded-full">PILIH TAMU</span>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleSearchClick(encodedGuest, isDone) {
+            if (isDone) {
+                showToast("Tamu ini sudah check-in!", true);
+                return;
+            }
+            const guest = JSON.parse(decodeURIComponent(encodedGuest));
+            closeSearchModal();
+            openConfirm(guest);
         }
 
         /* --- CHECKIN LOGIC --- */
