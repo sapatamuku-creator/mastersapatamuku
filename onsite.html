@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -254,7 +254,14 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Inviter Side</label>
-                    <select id="reg-host"></select>
+                    <select id="reg-host">
+                        <option value="PENGANTIN PRIA">Pengantin Pria</option>
+                        <option value="PENGANTIN WANITA">Pengantin Wanita</option>
+                        <option value="KELUARGA AYAH PENGANTIN PRIA">Keluarga Ayah CPP</option>
+                        <option value="KELUARGA IBU PENGANTIN PRIA">Keluarga Ibu CPP</option>
+                        <option value="KELUARGA AYAH PENGANTIN WANITA">Keluarga Ayah CPW</option>
+                        <option value="KELUARGA IBU PENGANTIN WANITA">Keluarga Ibu CPW</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Souvenir</label>
@@ -291,15 +298,25 @@
                     </div>
                 </div>
             </div>
-            <div class="form-group">
-                <label>Alamat / Instansi</label>
-                <input type="text" id="reg-alamat" placeholder="Kota atau Instansi...">
+            <div class="form-row">
+                <div class="form-group" style="flex: 1.2;">
+                    <label>Alamat / Instansi</label>
+                    <input type="text" id="reg-alamat" placeholder="Kota atau Instansi...">
+                </div>
+                <div class="form-group" style="flex: 0.8;">
+                    <label>Pemberian</label>
+                    <div class="tag-row" style="margin: 0; display: flex; gap: 8px;">
+                        <div class="tag-item" id="reg-tag-angpao" onclick="this.classList.toggle('active')" style="flex: 1; padding: 12px 10px;">ANGPAO</div>
+                        <div class="tag-item" id="reg-tag-kado" onclick="this.classList.toggle('active')" style="flex: 1; padding: 12px 10px;">KADO</div>
+                    </div>
+                </div>
             </div>
 
             <!-- SELFIE OPTION FOR REGISTRATION -->
             <div id="reg-selfie-box" style="margin-bottom: 20px; text-align: center;">
-                <div id="reg-preview-container" style="display:none; width:100%; aspect-ratio:1/1; background:#000; border-radius:15px; overflow:hidden; margin-bottom:10px; border:2px solid var(--border);">
+                <div id="reg-preview-container" style="display:none; width:100%; aspect-ratio:1/1; background:#000; border-radius:15px; overflow:hidden; margin-bottom:10px; border:2px solid var(--border); position:relative;">
                     <video id="reg-video" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
+                    <img id="reg-photo-preview" style="display:none; width:100%; height:100%; object-fit:cover; transform:scaleX(-1);" />
                 </div>
                 <button id="btn-reg-snap" onclick="toggleRegSelfie()" style="background: white; border: 1px solid var(--gold); color: var(--gold); padding: 10px 20px; border-radius: 30px; font-size: 11px; font-weight: 800; cursor: pointer; width:100%;">📸 AMBIL SELFIE (OPSIONAL)</button>
                 <canvas id="reg-canvas" style="display:none;"></canvas>
@@ -323,6 +340,7 @@
 
         <div class="modal-video-box">
             <video id="camera-preview" autoplay playsinline muted></video>
+            <img id="camera-photo-preview" style="display:none; width:100%; height:100%; object-fit:cover; transform:scaleX(-1);" />
             <canvas id="capture-canvas" style="display:none;"></canvas>
         </div>
         <button id="btn-snap" onclick="takeSelfie()" style="background: none; border: 1px solid var(--gold); color: var(--gold); padding: 8px 20px; border-radius: 30px; font-size: 10px; font-weight: 800; cursor: pointer; margin-bottom: 15px;">AMBIL FOTO</button>
@@ -486,8 +504,20 @@
             const data = await res.json();
             masterData = data.guestList || [];
             
-            if (data.dropdownOptions) {
-                document.getElementById('reg-host').innerHTML = data.dropdownOptions.map(o => `<option value="${o}">${o}</option>`).join('');
+            if (data.dropdownOptions && data.dropdownOptions.length > 0) {
+                const map = {
+                    'PENGANTIN PRIA': 'Pengantin Pria',
+                    'PENGANTIN WANITA': 'Pengantin Wanita',
+                    'KELUARGA AYAH PENGANTIN PRIA': 'Keluarga Ayah CPP',
+                    'KELUARGA IBU PENGANTIN PRIA': 'Keluarga Ibu CPP',
+                    'KELUARGA AYAH PENGANTIN WANITA': 'Keluarga Ayah CPW',
+                    'KELUARGA IBU PENGANTIN WANITA': 'Keluarga Ibu CPW'
+                };
+                document.getElementById('reg-host').innerHTML = data.dropdownOptions.map(o => {
+                    const valUpper = o.toUpperCase().trim();
+                    const label = map[valUpper] || o;
+                    return `<option value="${valUpper}">${label}</option>`;
+                }).join('');
             }
             if (data.eventMeta && data.eventMeta.sesiOptions) {
                 document.getElementById('reg-sesi').innerHTML = '<option value="">Pilih Sesi</option>' + data.eventMeta.sesiOptions.map(s => `<option value="${s}">${s}</option>`).join('');
@@ -531,7 +561,15 @@
         document.getElementById('tab-reg-btn').classList.toggle('active', t==='reg');
         document.getElementById('pane-scan').style.display = t==='scan'?'flex':'none';
         document.getElementById('pane-reg').style.display = t==='reg'?'block':'none';
-        if (t==='scan') initScanner();
+        if (t==='scan') {
+            initScanner();
+            if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
+            document.getElementById('reg-preview-container').style.display = 'none';
+            document.getElementById('btn-reg-snap').innerText = "📸 AMBIL SELFIE (OPSIONAL)";
+            document.getElementById('btn-reg-snap').style.background = "white";
+            document.getElementById('btn-reg-snap').style.color = "var(--gold)";
+            capturedBase64 = null;
+        }
         else if (html5QrCode) html5QrCode.stop();
     }
 
@@ -587,16 +625,39 @@
         document.getElementById('m-pax-child').innerText = "0";
         document.getElementById('m-pax-total').innerText = initialAdult;
 
+        // Reset camera display to default
+        const v = document.getElementById('camera-preview');
+        const photoPreview = document.getElementById('camera-photo-preview');
+        const btnSnap = document.getElementById('btn-snap');
+        
+        v.style.display = 'block';
+        if (photoPreview) {
+            photoPreview.style.display = 'none';
+            photoPreview.src = "";
+        }
+        btnSnap.innerText = "AMBIL FOTO";
+        btnSnap.style.background = "none";
+        btnSnap.style.color = "var(--gold)";
+
         try {
             if (html5QrCode) await html5QrCode.stop();
             currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            document.getElementById('camera-preview').srcObject = currentStream;
+            v.srcObject = currentStream;
         } catch(e) {}
     }
 
     function closeModal() {
         if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
         document.getElementById('modalConfirm').style.display = 'none';
+        
+        // Reset preview display just in case
+        document.getElementById('camera-preview').style.display = 'block';
+        const photoPreview = document.getElementById('camera-photo-preview');
+        if (photoPreview) {
+            photoPreview.style.display = 'none';
+            photoPreview.src = "";
+        }
+        
         setTimeout(() => initScanner(), 300);
     }
 
@@ -612,17 +673,56 @@
         document.getElementById('m-pax-total').innerText = adult + child;
     };
 
-    function takeSelfie() {
-        const v = document.getElementById('camera-preview'), c = document.getElementById('capture-canvas'), ctx = c.getContext('2d');
-        c.width = v.videoWidth; c.height = v.videoHeight;
-        ctx.translate(c.width, 0); ctx.scale(-1, 1);
-        ctx.drawImage(v, 0, 0, c.width, c.height);
-        capturedBase64 = c.toDataURL('image/jpeg', 0.8);
-        
+    async function takeSelfie() {
+        const v = document.getElementById('camera-preview');
+        const c = document.getElementById('capture-canvas');
+        const ctx = c.getContext('2d');
+        const photoPreview = document.getElementById('camera-photo-preview');
         const btnSnap = document.getElementById('btn-snap');
-        btnSnap.innerText = "ULANGI FOTO ✓";
-        btnSnap.style.background = "var(--success)";
-        btnSnap.style.color = "white";
+        
+        // If streaming, take picture and freeze
+        if (currentStream) {
+            c.width = v.videoWidth || 640; 
+            c.height = v.videoHeight || 480;
+            ctx.translate(c.width, 0); 
+            ctx.scale(-1, 1);
+            ctx.drawImage(v, 0, 0, c.width, c.height);
+            capturedBase64 = c.toDataURL('image/jpeg', 0.8);
+            
+            // Stop stream
+            if (currentStream) { 
+                currentStream.getTracks().forEach(t => t.stop()); 
+                currentStream = null; 
+            }
+            
+            v.style.display = 'none';
+            if (photoPreview) {
+                photoPreview.src = capturedBase64;
+                photoPreview.style.display = 'block';
+            }
+            
+            btnSnap.innerText = "ULANGI FOTO ✓";
+            btnSnap.style.background = "var(--success)";
+            btnSnap.style.color = "white";
+        } 
+        // If frozen, restart stream to retake
+        else {
+            try {
+                if (html5QrCode) await html5QrCode.stop();
+                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                v.srcObject = currentStream;
+                v.style.display = 'block';
+                if (photoPreview) {
+                    photoPreview.style.display = 'none';
+                    photoPreview.src = "";
+                }
+                btnSnap.innerText = "AMBIL FOTO";
+                btnSnap.style.background = "none";
+                btnSnap.style.color = "var(--gold)";
+            } catch(e) {
+                alert("Kamera tidak diizinkan.");
+            }
+        }
     }
 
     async function executeCheckin() {
@@ -720,28 +820,54 @@
         const box = document.getElementById('reg-preview-container');
         const btn = document.getElementById('btn-reg-snap');
         const video = document.getElementById('reg-video');
+        const photoPreview = document.getElementById('reg-photo-preview');
         
-        if (box.style.display === 'none') {
+        // State 1: Camera is not active, start stream
+        if (!regStream && box.style.display === 'none') {
             try {
                 regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = regStream;
+                video.style.display = 'block';
+                if (photoPreview) photoPreview.style.display = 'none';
                 box.style.display = 'block';
                 btn.innerText = "📸 JEPRET FOTO";
+                btn.style.background = "white";
+                btn.style.color = "var(--gold)";
             } catch(e) { alert("Kamera tidak diizinkan."); }
-        } else {
-            // Take picture
+        } 
+        // State 2: Camera is active, capture photo and freeze preview
+        else if (regStream) {
             const canvas = document.getElementById('reg-canvas'), ctx = canvas.getContext('2d');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
+            canvas.width = video.videoWidth || 640; 
+            canvas.height = video.videoHeight || 480;
+            ctx.translate(canvas.width, 0); 
+            ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
             
-            // Stop stream
             if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
-            box.style.display = 'none';
+            
+            video.style.display = 'none';
+            if (photoPreview) {
+                photoPreview.src = capturedBase64;
+                photoPreview.style.display = 'block';
+            }
+            
             btn.innerText = "📸 SELFIE BERHASIL (ULANGI?)";
             btn.style.background = "var(--success)";
             btn.style.color = "white";
+        } 
+        // State 3: Photo is frozen, restart stream to retake
+        else {
+            try {
+                regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                video.srcObject = regStream;
+                video.style.display = 'block';
+                if (photoPreview) photoPreview.style.display = 'none';
+                btn.innerText = "📸 JEPRET FOTO";
+                btn.style.background = "white";
+                btn.style.color = "var(--gold)";
+            } catch(e) { alert("Kamera tidak diizinkan."); }
         }
     }
 
@@ -764,6 +890,7 @@
         const paxString = `${parseInt(adult)+parseInt(child)} ( ${adult}D + ${child}A )`;
 
         try {
+            const gift = (document.getElementById('reg-tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('reg-tag-kado').classList.contains('active') ? "KADO" : "");
             const payload = { 
                 action: "register_new_onsite", 
                 ssId: CURRENT_SS_ID, 
@@ -775,6 +902,7 @@
                 sesi: document.getElementById('reg-sesi').value, 
                 souvenir: document.getElementById('reg-souvenir').value, 
                 realHadir: paxString,
+                catatan: gift || "-",
                 prefix: "ONS",
                 stationId: JALUR_ID === "ALL" ? "ONSITE-ALL" : "ONSITE-" + JALUR_ID
             };
@@ -804,7 +932,18 @@
                 document.getElementById('reg-alamat').value = "";
                 document.getElementById('reg-pax-adult').innerText = "1";
                 document.getElementById('reg-pax-child').innerText = "0";
+                document.getElementById('reg-tag-angpao').classList.remove('active');
+                document.getElementById('reg-tag-kado').classList.remove('active');
                 
+                // Reset registration camera preview container and preview image
+                document.getElementById('reg-preview-container').style.display = 'none';
+                document.getElementById('reg-video').style.display = 'block';
+                const photoPreview = document.getElementById('reg-photo-preview');
+                if (photoPreview) {
+                    photoPreview.style.display = 'none';
+                    photoPreview.src = "";
+                }
+
                 // --- STEP 4: BACKGROUND TASKS ---
                 if (capturedBase64) {
                     fetch(SCRIPT_URL, { 
