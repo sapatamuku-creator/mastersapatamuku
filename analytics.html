@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -705,16 +705,107 @@
                 const sessionData = JSON.parse(sessionStr);
                 const ssId = sessionData.ssId;
 
-                const response = await fetch(`${SCRIPT_URL}?action=getAnalytics&ssId=${ssId}`);
-                const d = await response.json();
-                globalData = d;
+                const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + ssId + "&order=row.desc";
+                const response = await fetch(supabaseUrl, {
+                    headers: {
+                        "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
+                    }
+                });
+                const sbData = await response.json();
+                
+                // Hitung analytics di frontend
+                let totalReal = 0;
+                let totalRSVP = 0;
+                let categories = {};
+                let hosts = {};
+                let addresses = {};
+                let flowRaw = [];
 
-                document.getElementById('side-real').innerText = d.totalReal || 0;
-                document.getElementById('side-acc').innerText = (d.percentage || 0) + "%";
+                let uniqueSessions = [...new Set((sbData || []).map(g => String(g.sesi || "").trim()))].filter(s => s !== "" && s !== "-");
+                uniqueSessions.sort();
+                
+                const s1Value = uniqueSessions[0] || "SESI 1";
+                const s2Value = uniqueSessions[1] || "SESI 2";
+                const s3Value = uniqueSessions[2] || "SESI 3";
 
-                const cat = processMergedStats(d.catLabels, d.catValues);
-                const host = processMergedStats(d.hostLabels, d.hostValues);
-                const addr = processMergedStats(d.addrLabels, d.addrValues);
+                function extractStartTime(sessionName) {
+                    const match = String(sessionName).match(/\d{1,2}[:.]\d{2}/);
+                    return match ? match[0].replace('.', ':') : "";
+                }
+
+                const s2StartStr = extractStartTime(s2Value) || "11:00";
+                const s3StartStr = extractStartTime(s3Value) || "13:00";
+
+                const s2Start = timeToMinutes(cleanTimeText(s2StartStr));
+                const s3Start = timeToMinutes(cleanTimeText(s3StartStr));
+
+                (sbData || []).forEach(item => {
+                    const valH = parseInt(item.rencana_hadir) || 0;
+                    const valN = parseInt(item.real_hadir) || 0;
+                    const isCheckedIn = String(item.status_hadir).trim();
+
+                    totalRSVP += valH;
+
+                    if (isCheckedIn === "1") {
+                        totalReal += valN;
+
+                        const catName = String(item.kategori || "UMUM").toUpperCase();
+                        const hostName = String(item.pihak_pengundang || "LAINNYA").toUpperCase();
+                        categories[catName] = (categories[catName] || 0) + valN;
+                        hosts[hostName] = (hosts[hostName] || 0) + valN;
+
+                        const rawAddr = String(item.alamat || "LUAR KOTA").toUpperCase();
+                        const simpleAddr = rawAddr.split(',')[0].split(' ').slice(0,2).join(' ');
+                        addresses[simpleAddr] = (addresses[simpleAddr] || 0) + valN;
+
+                        const formattedTime = cleanTimeText(item.jam_datang);
+                        const checkMin = timeToMinutes(formattedTime);
+
+                        let arrivalSesi = "SESI 3";
+                        if (checkMin < s2Start) {
+                            arrivalSesi = "SESI 1";
+                        } else if (checkMin >= s2Start && checkMin < s3Start) {
+                            arrivalSesi = "SESI 2";
+                        }
+
+                        let sesiAsalConverted = "TANPA SESI";
+                        const sesiRaw = String(item.sesi || "").trim();
+                        if (sesiRaw === s1Value) sesiAsalConverted = "SESI 1";
+                        else if (sesiRaw === s2Value) sesiAsalConverted = "SESI 2";
+                        else if (sesiRaw === s3Value) sesiAsalConverted = "SESI 3";
+
+                        const isIntruder = (sesiAsalConverted !== arrivalSesi && sesiAsalConverted !== "TANPA SESI");
+
+                        flowRaw.push({
+                            time: formattedTime,
+                            count: valN,
+                            sesi: sesiAsalConverted,
+                            arrivalSesi: arrivalSesi,
+                            isIntruder: isIntruder
+                        });
+                    }
+                });
+
+                globalData = {
+                    totalReal: totalReal,
+                    totalRSVP: totalRSVP,
+                    percentage: totalRSVP > 0 ? ((totalReal / totalRSVP) * 100).toFixed(1) : 0,
+                    catLabels: Object.keys(categories),
+                    catValues: Object.values(categories),
+                    hostLabels: Object.keys(hosts),
+                    hostValues: Object.values(hosts),
+                    addrLabels: Object.keys(addresses),
+                    addrValues: Object.values(addresses),
+                    flowRaw: flowRaw
+                };
+
+                document.getElementById('side-real').innerText = globalData.totalReal || 0;
+                document.getElementById('side-acc').innerText = (globalData.percentage || 0) + "%";
+
+                const cat = processMergedStats(globalData.catLabels, globalData.catValues);
+                const host = processMergedStats(globalData.hostLabels, globalData.hostValues);
+                const addr = processMergedStats(globalData.addrLabels, globalData.addrValues);
 
                 renderWithStabilo('list-cat', cat.l, cat.v, '#3b82f6');
                 renderWithStabilo('list-host', host.l, host.v, '#a855f7');

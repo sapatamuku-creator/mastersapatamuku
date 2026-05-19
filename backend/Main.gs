@@ -222,6 +222,23 @@ function deleteGuest(ssId, kodeUnik) {
     for (let i = 0; i < data.length; i++) {
       if (String(data[i][0]) === String(kodeUnik)) {
         sheet.deleteRow(i + START_ROW);
+        
+        // HAPUS DI SUPABASE SECARA OTOMATIS
+        try {
+          if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+            UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kodeUnik, {
+              method: "delete",
+              headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization": "Bearer " + SUPABASE_KEY
+              },
+              muteHttpExceptions: true
+            });
+          }
+        } catch (e) {
+          console.error("Failed to delete guest in Supabase: " + e.toString());
+        }
+
         return { status: "success", message: "Tamu berhasil dihapus" };
       }
     }
@@ -251,6 +268,25 @@ function updateTandaKasih(ssId, kode, nominal) {
     if (String(dataRange[i][0]) === String(kode)) {
       const targetRow = i + START_ROW;
       sheet.getRange(targetRow, COLUMN_TANDA_KASIH).setValue(nominal);
+      
+      // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+      try {
+        if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+          UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kode, {
+            method: "patch",
+            headers: {
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY,
+              "Content-Type": "application/json"
+            },
+            payload: JSON.stringify({ tanda_kasih: parseFloat(nominal) || 0 }),
+            muteHttpExceptions: true
+          });
+        }
+      } catch (e) {
+        console.error("Failed to sync tanda_kasih to Supabase: " + e.toString());
+      }
+
       return { status: "success", message: "Data Angpao berhasil diupdate" };
     }
   }
@@ -274,6 +310,33 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId) {
       sheet.getRange(rowIndex, COL_CATATAN).setValue(catatan);
       
       const updatedRowData = sheet.getRange(rowIndex, 1, 1, 19).getValues()[0];
+      
+      // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+      try {
+        if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+          const payload = {
+            status_hadir: "1",
+            jam_datang: timeOnly,
+            real_hadir: parseInt(realHadir) || 1,
+            status_hadiah: catatan || "-",
+            souvenir: updatedRowData[10] === 1 || updatedRowData[10] === "ya" || updatedRowData[10] === "1" ? "ya" : "tidak"
+          };
+          
+          UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kodeUnik, {
+            method: "patch",
+            headers: {
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY,
+              "Content-Type": "application/json"
+            },
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
+          });
+        }
+      } catch (e) {
+        console.error("Failed to sync checkin to Supabase: " + e.toString());
+      }
+      
       processPrintLogic(ssId, updatedRowData, catatan, stationId);
       addToRundown(ssId, updatedRowData); // Sinkronisasi ke Welcome Sign Rundown
 
@@ -437,8 +500,9 @@ function addToQueue(ssId, guest, category, info, stationId) {
   }
 
   const now = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss");
+  const uuid = Utilities.getUuid();
   qSheet.appendRow([
-    Utilities.getUuid(), 
+    uuid, 
     now, 
     guest.nama || "-", 
     guest.kode || "-", 
@@ -452,6 +516,40 @@ function addToQueue(ssId, guest, category, info, stationId) {
     guest.pax || "1",
     stationId || "ALL"
   ]);
+
+  // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+  try {
+    if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+      const payload = {
+        id: uuid,
+        ssid: ssId,
+        nama: guest.nama || "-",
+        kode: guest.kode || "-",
+        qr: guest.qr || "-",
+        info: info,
+        status: "WAITING",
+        kategori: category || "Umum",
+        alamat: guest.alamat || "-",
+        pihak: guest.pihak || "-",
+        sesi: guest.sesi || "-",
+        pax: parseInt(guest.pax) || 1,
+        station_id: stationId || "ALL"
+      };
+
+      UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/print_queue", {
+        method: "post",
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": "Bearer " + SUPABASE_KEY,
+          "Content-Type": "application/json"
+        },
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+    }
+  } catch (e) {
+    console.error("Failed to sync print_queue to Supabase: " + e.toString());
+  }
 }
 
 function getPrintQueue(ssId, stationFilter, sourceFilter, jalurFilter) {
@@ -514,6 +612,27 @@ function markAsPrinted(ssId, ids) {
       if (String(qData[i][0]) === String(id)) qSheet.getRange(i + 1, 7).setValue("DONE"); 
     }
   });
+
+  // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+  try {
+    if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+      ids.forEach(id => {
+        UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/print_queue?id=eq." + id, {
+          method: "patch",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Content-Type": "application/json"
+          },
+          payload: JSON.stringify({ status: "DONE" }),
+          muteHttpExceptions: true
+        });
+      });
+    }
+  } catch (e) {
+    console.error("Failed to sync markPrinted to Supabase: " + e.toString());
+  }
+
   return { status: "success" };
 }
 
@@ -541,7 +660,60 @@ function registerNewOnsite(data) {
       data.alamat || "-", data.realHadir || 1, giftVal, timestampP, "-", 0, data.sesi || "-"
     ];
     sheet.appendRow(newRow);
-    const lastRowData = sheet.getRange(sheet.getLastRow(), 1, 1, 19).getValues()[0];
+    const lastRow = sheet.getLastRow();
+    const lastRowData = sheet.getRange(lastRow, 1, 1, 19).getValues()[0];
+
+    // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+    try {
+      if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+        const eventDateRaw = sheet.getRange("B2").getValue();
+        let eventDate = "";
+        if (eventDateRaw) {
+          try {
+            eventDate = Utilities.formatDate(new Date(eventDateRaw), "GMT+7", "yyyy-MM-dd");
+          } catch(e) {
+            eventDate = new Date().toISOString().split('T')[0];
+          }
+        } else {
+          eventDate = new Date().toISOString().split('T')[0];
+        }
+
+        const payload = {
+          ssid: data.ssId,
+          row: lastRow,
+          kode: kodeUnik,
+          nama: data.namaTamu || "Tanpa Nama",
+          whatsapp: cleanPhone,
+          kategori: data.kategori || "UMUM",
+          rencana_hadir: 0,
+          real_hadir: parseInt(data.realHadir) || 1,
+          souvenir: data.souvenir === "tidak" ? "tidak" : "ya",
+          pihak_pengundang: data.host || "-",
+          alamat: data.alamat || "-",
+          status_hadir: "1",
+          status_wa: timestampP,
+          status_hadiah: giftVal,
+          tanda_kasih: 0,
+          sesi: data.sesi || "-",
+          jam_datang: timeOnly,
+          event_date: eventDate
+        };
+
+        UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu", {
+          method: "post",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Content-Type": "application/json"
+          },
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
+        });
+      }
+    } catch(e) {
+      console.error("Onsite Supabase sync failed: " + e.toString());
+    }
+
     processPrintLogic(data.ssId, lastRowData, giftVal, data.stationId);
     addToRundown(data.ssId, lastRowData); // Sinkronisasi ke Welcome Sign
     return { status: "success", kode: kodeUnik, message: "On-Site Berhasil", triggerBlast: true };
@@ -557,6 +729,25 @@ function claimLuckyDraw(ssId, kode) {
   for (let i = 0; i < data.length; i++) {
     if (String(data[i][5]) === String(kode)) {
       sheet.getRange(i + START_ROW, COL_STATUS_HADIAH).setValue("WINNER - SUDAH KLAIM"); 
+      
+      // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+      try {
+        if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+          UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kode, {
+            method: "patch",
+            headers: {
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY,
+              "Content-Type": "application/json"
+            },
+            payload: JSON.stringify({ status_hadiah: "WINNER - SUDAH KLAIM" }),
+            muteHttpExceptions: true
+          });
+        }
+      } catch (e) {
+        console.error("Failed to sync lucky draw to Supabase: " + e.toString());
+      }
+
       processPrintLogic(ssId, data[i], "WINNER-LABEL"); // Trigger print label pemenang
       return { status: "success", message: "Klaim Berhasil" };
     }
@@ -600,7 +791,60 @@ function submitGuestCollection(formData) {
     formData.pihak, formData.alamat, 0, "-", "BELUM TERKIRIM", "-", 0, formData.sesi || "-"
   ];
   sheet.appendRow(newRow);
-  return { status: "success", rowID: sheet.getLastRow(), kode: kodeUnik, triggerBlast: true, personalLink: baseLink + "?id=" + kodeUnik + "&u=" + encodeURIComponent(formData.nama) };
+  const lastRow = sheet.getLastRow();
+
+  // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+  try {
+    if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+      const eventDateRaw = sheet.getRange("B2").getValue();
+      let eventDate = "";
+      if (eventDateRaw) {
+        try {
+          eventDate = Utilities.formatDate(new Date(eventDateRaw), "GMT+7", "yyyy-MM-dd");
+        } catch(e) {
+          eventDate = new Date().toISOString().split('T')[0];
+        }
+      } else {
+        eventDate = new Date().toISOString().split('T')[0];
+      }
+      
+      const payload = {
+        ssid: formData.ssId,
+        row: lastRow,
+        kode: kodeUnik,
+        nama: formData.nama,
+        whatsapp: cleanPhone,
+        kategori: formData.kategori || "Umum",
+        rencana_hadir: parseInt(formData.pax || formData.rencana) || 1,
+        real_hadir: 0,
+        souvenir: "tidak",
+        pihak_pengundang: formData.pihak || "-",
+        alamat: formData.alamat || "-",
+        status_hadir: "0",
+        status_wa: "PENDING",
+        status_hadiah: "-",
+        tanda_kasih: 0,
+        sesi: formData.sesi || "-",
+        jam_datang: "-",
+        event_date: eventDate
+      };
+      
+      UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu", {
+        method: "post",
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": "Bearer " + SUPABASE_KEY,
+          "Content-Type": "application/json"
+        },
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+    }
+  } catch (e) {
+    console.error("Sync to Supabase failed on submit: " + e.toString());
+  }
+
+  return { status: "success", rowID: lastRow, kode: kodeUnik, triggerBlast: true, personalLink: baseLink + "?id=" + kodeUnik + "&u=" + encodeURIComponent(formData.nama) };
 }
 
 function markAsSent(ssId, row) {

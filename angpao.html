@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -333,15 +333,40 @@
         if (!session || !session.ssId) { setLoading(false, "AUTH ERROR"); return; }
         setLoading(true, "FETCHING...");
         try {
-            const response = await fetch(`${SCRIPT_URL}?action=getMasterDataAngpao&ssId=${session.ssId}`);
-            const result = await response.json();
-            if (result.status === "success") {
-                masterGuests = result.guestList.guestList || [];
-                masterHistory = masterGuests.filter(g => g.tandaKasih > 0).map(g => ({
-                    kode: g.kode, name: g.nama, cat: g.kategori || "UMUM", amount: parseInt(g.tandaKasih), time: "SERVER", isOld: true
-                }));
-                updateTotal(); renderHistory(); setLoading(false, "SECURE MONITORING");
-            }
+            const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + session.ssId + "&order=row.desc";
+            const response = await fetch(supabaseUrl, {
+                headers: {
+                    "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
+                }
+            });
+            const sbData = await response.json();
+            
+            // Map data snake_case Supabase ke format camelCase frontend
+            masterGuests = (sbData || []).map(item => ({
+                row: item.row,
+                nama: item.nama,
+                whatsapp: item.whatsapp,
+                kategori: item.kategori,
+                kode: item.kode,
+                barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
+                rencanaHadir: item.rencana_hadir,
+                statusHadir: String(item.status_hadir),
+                jamDatang: item.jam_datang,
+                souvenir: item.souvenir,
+                pihakPengundang: item.pihak_pengundang,
+                alamat: item.alamat,
+                realHadir: item.real_hadir,
+                statusWA: item.status_wa,
+                statusHadiah: item.status_hadiah,
+                tandaKasih: item.tanda_kasih,
+                sesi: item.sesi
+            }));
+            
+            masterHistory = masterGuests.filter(g => g.tandaKasih > 0).map(g => ({
+                kode: g.kode, name: g.nama, cat: g.kategori || "UMUM", amount: parseInt(g.tandaKasih), time: "SERVER", isOld: true
+            }));
+            updateTotal(); renderHistory(); setLoading(false, "SECURE MONITORING");
         } catch (e) { setLoading(false, "CONN ERROR"); }
     }
 
@@ -415,10 +440,23 @@
         btn.disabled = true; btn.innerText = "SINKRONISASI...";
 
         try {
-            await fetch(SCRIPT_URL, {
+            // 1. Update Supabase REST API directly first (Takes ~50ms)
+            const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + session.ssId + "&kode=eq." + identifiedUser.kode;
+            await fetch(supabaseUrl, {
+                method: "PATCH",
+                headers: {
+                    "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ tanda_kasih: parseFloat(val) || 0 })
+            });
+
+            // 2. Perform Spreadsheet sync in the background (Non-blocking)
+            fetch(SCRIPT_URL, {
                 method: "POST", mode: "no-cors",
                 body: JSON.stringify({ action: "update_tanda_kasih", ssId: session.ssId, kodeUnik: identifiedUser.kode, nominal: val })
-            });
+            }).catch(e => console.warn("Background sheet sync failed:", e));
             
             const logEntry = { kode: identifiedUser.kode, name: identifiedUser.nama, cat: identifiedUser.kategori || "UMUM", amount: val, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), isOld: false };
             const exIdx = localHistory.findIndex(h => h.kode === identifiedUser.kode);

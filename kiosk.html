@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -384,12 +384,35 @@
 
         async function fetchData() {
             try {
-                const res = await fetch(SCRIPT_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ action: "get_master_data", ssId: CURRENT_SS_ID }) 
+                const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
+                const response = await fetch(supabaseUrl, {
+                    headers: {
+                        "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
+                    }
                 });
-                const data = await res.json();
-                masterData = data.guestList || [];
+                const sbData = await response.json();
+                
+                // Map data snake_case Supabase ke format camelCase frontend
+                masterData = (sbData || []).map(item => ({
+                    row: item.row,
+                    nama: item.nama,
+                    whatsapp: item.whatsapp,
+                    kategori: item.kategori,
+                    kode: item.kode,
+                    barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
+                    rencanaHadir: item.rencana_hadir,
+                    statusHadir: String(item.status_hadir),
+                    jamDatang: item.jam_datang,
+                    souvenir: item.souvenir,
+                    pihakPengundang: item.pihak_pengundang,
+                    alamat: item.alamat,
+                    realHadir: item.real_hadir,
+                    statusWA: item.status_wa,
+                    statusHadiah: item.status_hadiah,
+                    tandaKasih: item.tanda_kasih,
+                    sesi: item.sesi
+                }));
             } catch (e) { console.error("Gagal load data tamu:", e); }
         }
 

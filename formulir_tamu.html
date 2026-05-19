@@ -718,11 +718,22 @@
     async function refreshApp() {
         toggleProcessing(true, "SYNCING DATA...");
         try {
-            const response = await fetch(SCRIPT_URL, {
+            // Fetch guest list dari Supabase REST API (Fast layer)
+            const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
+            const sbPromise = fetch(supabaseUrl, {
+                headers: {
+                    "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
+                }
+            }).then(r => r.json());
+
+            // Fetch metadata dari GAS
+            const gasPromise = fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: "getMasterData", ssId: CURRENT_SS_ID })
-            });
-            const result = await response.json();
+            }).then(r => r.json());
+
+            const [sbData, result] = await Promise.all([sbPromise, gasPromise]);
             
             if (result.status === "error") {
                 showSapaModal("Server Error", result.message || "Gagal mengambil data.", "❌");
@@ -730,7 +741,26 @@
                 return;
             }
 
-            MASTER_LIST = result.guestList || [];
+            // Map data snake_case Supabase ke format camelCase frontend
+            MASTER_LIST = (sbData || []).map(item => ({
+                row: item.row,
+                nama: item.nama,
+                whatsapp: item.whatsapp,
+                kategori: item.kategori,
+                kode: item.kode,
+                barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
+                rencanaHadir: item.rencana_hadir,
+                statusHadir: String(item.status_hadir),
+                jamDatang: item.jam_datang,
+                souvenir: item.souvenir,
+                pihakPengundang: item.pihak_pengundang,
+                alamat: item.alamat,
+                realHadir: item.real_hadir,
+                statusWA: item.status_wa,
+                statusHadiah: item.status_hadiah,
+                tandaKasih: item.tanda_kasih,
+                sesi: item.sesi
+            }));
             
             // Sync Dynamic Dropdown from result
             if (result.dropdownOptions && result.dropdownOptions.length > 0) {
@@ -1108,9 +1138,9 @@
             // Clickable area — hanya kalau bisa blast
             const onClickAttr = canBlast ? `onclick="executeBlast('${g.row}','${g.whatsapp}','${g.nama}','${g.kode}')"` : '';
 
-            // Delete button — sembunyikan untuk SENT
-            const deleteBtn = (!isSent && g.syncStatus !== "syncing")
-                ? `<button class="delete-guest-btn" onclick="confirmDeleteGuest(event, '${g.kode}', '${g.nama}')" style="position:absolute; top:12px; right:12px; border:none; background:#FEE2E2; color:#991B1B; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;">✕</button>`
+            // Delete button — selalu tampilkan kecuali sedang syncing (tamu yang sudah di-blast akan memicu konfirmasi ganda)
+            const deleteBtn = (g.syncStatus !== "syncing")
+                ? `<button class="delete-guest-btn" onclick="confirmDeleteGuest(event, '${g.kode}', '${g.nama}', ${isSent})" style="position:absolute; top:12px; right:12px; border:none; background:#FEE2E2; color:#991B1B; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;">✕</button>`
                 : '';
 
             return `
@@ -1217,20 +1247,36 @@
         }
     };
 
-    window.confirmDeleteGuest = function(event, kodeUnik, nama) {
+    window.confirmDeleteGuest = function(event, kodeUnik, nama, isSent) {
         event.stopPropagation();
         const alertBox = document.getElementById('sapatamu-custom-alert');
         const msgBox = document.getElementById('alert-msg');
         const btnConfirm = document.getElementById('btn-dialog-confirm');
         const btnCancel = document.getElementById('btn-dialog-cancel');
 
-        msgBox.innerHTML = `Apakah Anda yakin ingin menghapus <b>${nama}</b> secara permanen?`;
-        alertBox.style.display = 'flex';
+        if (isSent) {
+            // Konfirmasi Tahap 1: Peringatan bahwa undangan sudah terkirim
+            msgBox.innerHTML = `<span style="font-size:24px; display:block; margin-bottom:10px;">⚠️</span><b style="color:#d9534f;">PERINGATAN!</b> Tamu <b>${nama}</b> sudah menerima undangan (BLAST). Jika dihapus, barcode/QR Code mereka <b>tidak bisa digunakan</b> untuk check-in.<br><br>Apakah Anda tetap yakin ingin menghapus?`;
+            alertBox.style.display = 'flex';
+            
+            btnConfirm.onclick = () => {
+                // Konfirmasi Tahap 2: Konfirmasi hapus permanen
+                msgBox.innerHTML = `<span style="font-size:24px; display:block; margin-bottom:10px;">🚨</span><b>KONFIRMASI KEDUA:</b> Hapus <b>${nama}</b> secara permanen dari spreadsheet dan database? Tindakan ini tidak dapat dibatalkan.`;
+                btnConfirm.onclick = async () => {
+                    alertBox.style.display = 'none';
+                    await executeDelete(kodeUnik);
+                };
+            };
+        } else {
+            // Konfirmasi Normal untuk tamu belum di-blast
+            msgBox.innerHTML = `Apakah Anda yakin ingin menghapus <b>${nama}</b> secara permanen?`;
+            alertBox.style.display = 'flex';
 
-        btnConfirm.onclick = async () => {
-            alertBox.style.display = 'none';
-            await executeDelete(kodeUnik);
-        };
+            btnConfirm.onclick = async () => {
+                alertBox.style.display = 'none';
+                await executeDelete(kodeUnik);
+            };
+        }
 
         btnCancel.onclick = () => {
             alertBox.style.display = 'none';

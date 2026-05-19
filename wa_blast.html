@@ -507,8 +507,27 @@
 
     window.refreshData = async function(isInitial = false) {
         try {
-            const response = await fetch(SCRIPT_URL + "?action=getWAForm&ssId=" + CURRENT_SS_ID);
-            localData = await response.json();
+            const sbPromise = fetch("https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID, {
+                headers: {
+                    "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
+                }
+            }).then(r => r.json());
+
+            const gasPromise = fetch(SCRIPT_URL + "?action=getWAForm&ssId=" + CURRENT_SS_ID).then(r => r.json());
+
+            const [sbData, gasData] = await Promise.all([sbPromise, gasPromise]);
+
+            localData = gasData;
+            localData.tamu = (sbData || []).map(item => ({
+                row: item.row,
+                nama: item.nama,
+                kode: item.kode,
+                kategori: item.kategori,
+                nomor: item.whatsapp,
+                status: item.status_wa,
+                sesi: item.sesi
+            }));
             
             const statusEl = document.getElementById('connectionStatus');
             statusEl.innerText = "CONNECTED";
@@ -521,6 +540,7 @@
             renderCategories(localData);
             renderTable();
         } catch (err) {
+            console.error(err);
             const statusEl = document.getElementById('connectionStatus');
             statusEl.innerText = "DISCONNECTED";
             statusEl.style.background = "#FEE2E2";

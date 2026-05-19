@@ -88,6 +88,16 @@
                     <option value="4" class="bg-zinc-900">JALUR 4</option>
                 </select>
             </div>
+            <div class="flex items-center bg-zinc-900 border border-purple-500/30 rounded px-2">
+                <span class="text-[8px] text-purple-500/50 font-bold mr-1">JEDA:</span>
+                <select id="delayInput" class="bg-transparent text-purple-400 text-[10px] font-bold uppercase outline-none py-0.5 cursor-pointer">
+                    <option value="200" class="bg-zinc-900">200ms</option>
+                    <option value="400" class="bg-zinc-900">400ms</option>
+                    <option value="600" class="bg-zinc-900">600ms</option>
+                    <option value="800" class="bg-zinc-900">800ms</option>
+                    <option value="1200" class="bg-zinc-900" selected>1.2s</option>
+                </select>
+            </div>
         </div>
       </div>
     </div>
@@ -153,6 +163,13 @@
         tabInput.value = TAB_ID;
         sourceInput.value = SOURCE_ID;
         jalurInput.value = JALUR_ID;
+        
+        // Load saved delay
+        const savedDelay = localStorage.getItem('worker_print_delay');
+        if (savedDelay) {
+            document.getElementById('delayInput').value = savedDelay;
+        }
+
         if (!CURRENT_SS_ID) {
           log("CRITICAL ERROR: ssId tidak ditemukan! Harap login ulang.", true);
           document.getElementById('connectBtn').disabled = true;
@@ -192,6 +209,11 @@
         newUrl.searchParams.set('jalurId', newJalurId);
         window.history.pushState({path: newUrl.href}, '', newUrl.href);
         log(`Jalur rute diubah ke: ${newJalurId}`);
+    });
+
+    document.getElementById('delayInput').addEventListener('change', (e) => {
+        localStorage.setItem('worker_print_delay', e.target.value);
+        log(`Jeda cetak updated: ${e.target.value}ms`);
     });
 
     const fsButton = document.getElementById('fsButton');
@@ -241,7 +263,7 @@
       if (pollingTimer) clearInterval(pollingTimer);
       pollingTimer = setInterval(() => {
         if (!isProcessing && printCharacteristic) fetchQueue();
-      }, 4000);
+      }, 1500); // Poll every 1.5 seconds for instant response
     }
 
     async function fetchQueue() {
@@ -250,17 +272,46 @@
         TAB_ID = document.getElementById('tabIdInput').value;
         SOURCE_ID = document.getElementById('sourceInput').value;
         JALUR_ID = document.getElementById('jalurInput').value;
-        const ts = new Date().getTime();
-        const targetUrl = `${SCRIPT_URL}?action=getPrintQueue&ssId=${CURRENT_SS_ID}&station=${TAB_ID}&source=${SOURCE_ID}&jalur=${JALUR_ID}&_=${ts}`;
         
-        const response = await fetch(targetUrl);
+        const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/print_queue?ssid=eq." + CURRENT_SS_ID + "&status=eq.WAITING&order=created_at.asc";
+        const response = await fetch(supabaseUrl, {
+            headers: {
+                "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
+            }
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
         
-        const items = await response.json();
-        const count = Array.isArray(items) ? items.length : 0;
+        const rawItems = await response.json();
+        
+        // Filter di frontend sesuai loket (station), source, dan jalur
+        const currentStation = TAB_ID.toUpperCase().trim();
+        const currentSource = SOURCE_ID.toUpperCase().trim();
+        const currentJalur = JALUR_ID.toUpperCase().trim();
+        
+        const items = (rawItems || []).filter(item => {
+          const jenisInfo = item.info ? item.info.toUpperCase().trim() : "";
+          if (currentStation === "LOKET-1" && jenisInfo.indexOf("SOUVENIR") === -1) return false;
+          if (currentStation === "LOKET-2" && jenisInfo.indexOf("CHECKIN") === -1) return false;
+          
+          if (currentSource !== "ALL" || currentJalur !== "ALL") {
+            const rowStationId = item.station_id ? item.station_id.toUpperCase().trim() : "ALL";
+            if (rowStationId !== "ALL" && rowStationId !== "") {
+              let parts = rowStationId.split("-");
+              let rowSource = parts[0];
+              let rowJalur = parts[1] || "ALL";
+              
+              if (currentSource !== "ALL" && rowSource !== currentSource) return false;
+              if (currentJalur !== "ALL" && rowJalur !== currentJalur) return false;
+            }
+          }
+          return true;
+        });
+
+        const count = items.length;
         document.getElementById('queueCounter').innerText = `${count} WAITING`;
         
         if (count > 0 && !isProcessing) {
@@ -276,18 +327,34 @@
     async function processItems(items) {
       isProcessing = true;
       let printedIds = [];
+      const printDelay = parseInt(document.getElementById('delayInput').value) || 1200;
       for (let item of items) {
         try {
           log(`Cetak: ${item.nama || 'GUEST'}`);
           await printLabel(item);
           printedIds.push(item.id);
-          await new Promise(r => setTimeout(r, 1200)); 
+          await new Promise(r => setTimeout(r, printDelay)); 
         } catch (e) { log(`Gagal: ` + e.message, true); break; }
       }
       
       if (printedIds.length > 0) {
         try {
-          await fetch(SCRIPT_URL, {
+          // Update status ke DONE di Supabase secara instan agar antrean langsung kosong
+          const promises = printedIds.map(id => 
+            fetch("https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/print_queue?id=eq." + id, {
+              method: "PATCH",
+              headers: {
+                "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ status: "DONE" })
+            })
+          );
+          await Promise.all(promises);
+
+          // Panggil GAS di background
+          fetch(SCRIPT_URL, {
             method: "POST", mode: "no-cors",
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({ 
