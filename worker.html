@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
   <base target="_top">
@@ -357,13 +357,17 @@
           `PRINT 1,1\r\n`
         ].join('');
         
-        // CHUNKING LOGIC: Kirim dalam potongan 20 byte (standar BLE paling aman) dengan delay kecil
+        // CHUNKING LOGIC: Menggunakan ukuran chunk yang lebih besar (128 byte) & writeValueWithoutResponse jika didukung untuk kecepatan maksimal
         const dataArray = encoder.encode(tspl);
-        const chunkSize = 20; 
+        const chunkSize = 128; 
         for (let i = 0; i < dataArray.length; i += chunkSize) {
           const chunk = dataArray.slice(i, i + chunkSize);
-          await printCharacteristic.writeValue(chunk);
-          await new Promise(r => setTimeout(r, 20)); // Jeda 20ms agar buffer printer tidak penuh
+          if (typeof printCharacteristic.writeValueWithoutResponse === 'function') {
+            await printCharacteristic.writeValueWithoutResponse(chunk);
+          } else {
+            await printCharacteristic.writeValue(chunk);
+          }
+          await new Promise(r => setTimeout(r, 10)); // Jeda 10ms agar buffer printer stabil
         }
       } else {
         // Fallback ESC/POS

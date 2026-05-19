@@ -124,6 +124,10 @@ function handleMainPost(payload) {
         result = getMasterDataV3(ssId); 
         break;
         
+      case "syncSheetToSupabase":
+        result = syncSheetToSupabase(ssId);
+        break;
+        
       case "submitCollection": 
         result = submitGuestCollection(payload); 
         break;
@@ -1094,5 +1098,103 @@ function updateRsvp(ssId, guestId, pax) {
     }
   } catch (e) {
     return { status: "error", message: e.toString() };
+  }
+}
+
+// --- SUPABASE INTEGRATION SCRIPT ---
+const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+
+/**
+ * Sinkronisasi otomatis seluruh data tamu dari Spreadsheet ke Supabase.
+ * Dipicu oleh Frontend untuk inisialisasi data sebelum Hari-H.
+ */
+function syncSheetToSupabase(ssId) {
+  try {
+    if (SUPABASE_URL === "YOUR_SUPABASE_PROJECT_URL" || SUPABASE_KEY === "YOUR_SUPABASE_ANON_KEY") {
+      return { status: "error", message: "API Supabase belum diatur di backend. Harap masukkan URL dan Anon Key Anda di Main.gs." };
+    }
+
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    const lastRow = sheet.getLastRow();
+    
+    if (lastRow < START_ROW) {
+      return { status: "success", message: "Spreadsheet kosong, tidak ada data untuk disinkronkan." };
+    }
+
+    // Ambil tanggal acara dari B2 (Metadata)
+    const eventDateRaw = sheet.getRange("B2").getValue();
+    let eventDate = "";
+    if (eventDateRaw) {
+      try {
+        eventDate = Utilities.formatDate(new Date(eventDateRaw), "GMT+7", "yyyy-MM-dd");
+      } catch (e) {
+        eventDate = new Date().toISOString().split('T')[0]; // Fallback jika format error
+      }
+    } else {
+      eventDate = new Date().toISOString().split('T')[0];
+    }
+
+    // Ambil data tamu
+    const dataRange = sheet.getRange(START_ROW, 1, lastRow - (START_ROW - 1), 19).getValues();
+    const guestList = dataRange.map((row, index) => {
+      let cleanPhone = String(row[3] || "").replace(/\D/g, ''); 
+      if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+      
+      return {
+        ssid: ssId,
+        row: index + START_ROW,
+        kode: String(row[5] || ""),
+        nama: String(row[2] || ""),
+        whatsapp: row[3] ? String(row[3]) : "",
+        kategori: String(row[4] || "Umum"),
+        rencana_hadir: parseInt(row[7]) || 1,
+        real_hadir: parseInt(row[13]) || 0,
+        souvenir: String(row[10] || "tidak"),
+        pihak_pengundang: String(row[11] || "-"),
+        alamat: String(row[12] || "-"),
+        status_hadir: String(row[8] || "0"),
+        status_wa: String(row[15] || "PENDING"),
+        status_hadiah: String(row[16] || "-"),
+        tanda_kasih: parseFloat(row[17]) || 0,
+        sesi: String(row[18] || "-"),
+        jam_datang: String(row[9] || "-"),
+        event_date: eventDate
+      };
+    }).filter(g => g.nama.trim() !== "");
+
+    if (guestList.length === 0) {
+      return { status: "success", message: "Tidak ada tamu valid untuk disinkronkan." };
+    }
+
+    // Lakukan bulk upsert ke Supabase REST API
+    const url = `${SUPABASE_URL}/rest/v1/tamu?on_conflict=ssid,kode`;
+    const headers = {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "resolution=merge-duplicates"
+    };
+
+    const options = {
+      method: "post",
+      headers: headers,
+      payload: JSON.stringify(guestList),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    if (responseCode >= 200 && responseCode < 300) {
+      return { status: "success", message: `Berhasil menyelaraskan ${guestList.length} tamu ke database cepat.` };
+    } else {
+      return { status: "error", message: `Supabase Error (${responseCode}): ${responseText}` };
+    }
+
+  } catch (e) {
+    return { status: "error", message: "Exception: " + e.toString() };
   }
 }
