@@ -299,6 +299,7 @@ function getMasterDataV3(ssId) {
     lokasi: weddingLoc,
     waktu: weddingTime,
     link: weddingLink,
+    template: sheet.getRange("C6").getValue().toString().trim(), // Teks kata pengantar dinamis di kolom C6
     labelSesi: sesiMeta[0], 
     sesiOptions: [sesiMeta[1], sesiMeta[2], sesiMeta[3]]
   };

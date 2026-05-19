@@ -750,6 +750,7 @@
             }
             
             if(result.eventMeta) {
+                window.CUSTOM_TEMPLATE = result.eventMeta.template || "";
                 document.getElementById('view-wedding-name').innerText = result.eventMeta.pengantin || "Event Guestbook";
                 document.getElementById('view-schedule').innerHTML = (result.eventMeta.tanggal || "") + "<br>" + (result.eventMeta.waktu || "");
                 document.getElementById('view-location').innerText = result.eventMeta.lokasi || "";
@@ -913,14 +914,23 @@
         let cleanPhone = String(phone).replace(/\D/g, ''); 
         if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
 
-        let msg = `Kepada Yth. Bapak/Ibu/Saudara/i\n*${name.toUpperCase()}*\n\n` +
-                  `Tanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami. *Tepat pada pukul [${sesi}]*\n\n` +
-                  `*${weddingName}*\n` +
-                  `□ ${schedule}\n` +
-                  `□ ${location}\n\n` +
-                  `Informasi lengkap dapat diakses melalui tautan berikut:\n${personalLink}\n\n` +
-                  `Mohon simpan QR Code ini untuk akses masuk:\n${qrCodeLink}\n\n` +
-                  `Terima kasih.`;
+        // ===== DYNAMIC TEMPLATE COMPILED WITH PLACEHOLDERS =====
+        const defaultTemplate = `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami. *Tepat pada pukul [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n□ {HARI_TANGGAL}\n□ {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code ini untuk akses masuk:\n{LINK_QR}\n\nTerima kasih.`;
+
+        const template = (window.CUSTOM_TEMPLATE && window.CUSTOM_TEMPLATE.trim() !== "")
+            ? window.CUSTOM_TEMPLATE
+            : defaultTemplate;
+
+        let msg = template
+            .replace(/{NAMA_TAMU}/g, name)
+            .replace(/{NAMA_TAMU_KAPITAL}/g, name.toUpperCase())
+            .replace(/{SESI_TAMU}/g, sesi)
+            .replace(/{NAMA_PENGANTIN}/g, weddingName)
+            .replace(/{HARI_TANGGAL}/g, schedule)
+            .replace(/{WAKTU_ACARA}/g, guest.waktu || "-")
+            .replace(/{LOKASI_ACARA}/g, location)
+            .replace(/{LINK_UNDANGAN}/g, personalLink)
+            .replace(/{LINK_QR}/g, qrCodeLink);
 
         window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`, '_blank');
 

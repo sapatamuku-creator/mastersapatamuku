@@ -810,7 +810,23 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                 const dynamicImageUrl = "";
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${t.kode}&size=400x400`;
 
-                const completeMessage = `Kepada Yth. Bapak/Ibu/Saudara/i\n*${guestNameCaps}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\nTepat pada pukul *[${t.sesi || localData.waktuAcara || '-'}]*\n\n*${localData.weddingTitle || 'Pernikahan Kami'}*\n▫️ ${localData.hariTanggal || '-'}\n▫️ Waktu: ${localData.waktuAcara || '-'}\n▫️ Lokasi: ${localData.lokasiAcara || '-'}\n\nInformasi lengkap mengenai jadwal, lokasi, dan kartu akses digital dapat diakses melalui tautan berikut:\n${inviteLink}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara:\n${qrUrl}\n\nMerupakan suatu kehormatan bagi kami apabila Anda berkenan hadir. Terima kasih.`;
+                // ===== DYNAMIC TEMPLATE COMPILED WITH PLACEHOLDERS =====
+                const defaultTemplate = `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\nTepat pada pukul *[{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap mengenai jadwal, lokasi, dan kartu akses digital dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara:\n{LINK_QR}\n\nMerupakan suatu kehormatan bagi kami apabila Anda berkenan hadir. Terima kasih.`;
+
+                const template = (localData.customTemplate && localData.customTemplate.trim() !== "")
+                    ? localData.customTemplate
+                    : defaultTemplate;
+
+                const completeMessage = template
+                    .replace(/{NAMA_TAMU}/g, guestName)
+                    .replace(/{NAMA_TAMU_KAPITAL}/g, guestNameCaps)
+                    .replace(/{SESI_TAMU}/g, t.sesi || localData.waktuAcara || '-')
+                    .replace(/{NAMA_PENGANTIN}/g, localData.weddingTitle || 'Pernikahan Kami')
+                    .replace(/{HARI_TANGGAL}/g, localData.hariTanggal || '-')
+                    .replace(/{WAKTU_ACARA}/g, localData.waktuAcara || '-')
+                    .replace(/{LOKASI_ACARA}/g, localData.lokasiAcara || '-')
+                    .replace(/{LINK_UNDANGAN}/g, inviteLink)
+                    .replace(/{LINK_QR}/g, qrUrl);
 
                 return {
                     row: t.row, target: t.nomor, token: token, url: dynamicImageUrl, 
