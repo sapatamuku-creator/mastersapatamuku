@@ -716,30 +716,17 @@
     }
 
     async function refreshApp() {
-        toggleProcessing(true, "SYNCING DATA...");
+        toggleProcessing(true, "LOADING TAMU...");
         try {
-            // Fetch guest list dari Supabase REST API (Fast layer)
+            // Fetch guest list dari Supabase REST API (Fast layer) - Await langsung agar tampil instan
             const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
-            const sbPromise = fetch(supabaseUrl, {
+            const sbResponse = await fetch(supabaseUrl, {
                 headers: {
                     "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
                     "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
                 }
-            }).then(r => r.json());
-
-            // Fetch metadata dari GAS
-            const gasPromise = fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "getMasterData", ssId: CURRENT_SS_ID })
-            }).then(r => r.json());
-
-            const [sbData, result] = await Promise.all([sbPromise, gasPromise]);
-            
-            if (result.status === "error") {
-                showSapaModal("Server Error", result.message || "Gagal mengambil data.", "❌");
-                toggleProcessing(false);
-                return;
-            }
+            });
+            const sbData = await sbResponse.json();
 
             // Map data snake_case Supabase ke format camelCase frontend
             MASTER_LIST = (sbData || []).map(item => ({
@@ -762,58 +749,96 @@
                 sesi: item.sesi
             }));
             
-            // Sync Dynamic Dropdown from result
-            if (result.dropdownOptions && result.dropdownOptions.length > 0) {
-                const select = document.getElementById('in-l7-pengundang');
-                if (select) {
-                    const map = {
-                        'PENGANTIN PRIA': 'Pengantin Pria',
-                        'PENGANTIN WANITA': 'Pengantin Wanita',
-                        'KELUARGA AYAH PENGANTIN PRIA': 'Keluarga Ayah CPP',
-                        'KELUARGA IBU PENGANTIN PRIA': 'Keluarga Ibu CPP',
-                        'KELUARGA AYAH PENGANTIN WANITA': 'Keluarga Ayah CPW',
-                        'KELUARGA IBU PENGANTIN WANITA': 'Keluarga Ibu CPW'
-                    };
-                    select.innerHTML = "";
-                    result.dropdownOptions.forEach(opt => {
-                        const valUpper = opt.toUpperCase().trim();
-                        const label = map[valUpper] || opt;
-                        const el = document.createElement('option');
-                        el.value = valUpper;
-                        el.innerText = label;
-                        select.appendChild(el);
-                    });
-                }
-            }
-            
-            if(result.eventMeta) {
-                window.CUSTOM_TEMPLATE = result.eventMeta.template || "";
-                window.EVENT_TANGGAL = result.eventMeta.tanggal || "";
-                window.EVENT_WAKTU = result.eventMeta.waktu || "";
-                document.getElementById('view-wedding-name').innerText = result.eventMeta.pengantin || "Event Guestbook";
-                document.getElementById('view-schedule').innerHTML = (result.eventMeta.tanggal || "") + "<br>" + (result.eventMeta.waktu || "");
-                document.getElementById('view-location').innerText = result.eventMeta.lokasi || "";
-                document.getElementById('view-link').innerText = result.eventMeta.link || "";
-                
-                document.getElementById('edit_ev_nama').value = result.eventMeta.pengantin || "";
-                document.getElementById('edit_ev_date').value = result.eventMeta.tanggal || "";
-                document.getElementById('edit_ev_loc').value = result.eventMeta.lokasi || "";
-                document.getElementById('edit_ev_time').value = result.eventMeta.waktu || "";
-                document.getElementById('edit_ev_link').value = result.eventMeta.link || "";
-
-                if(result.eventMeta.sesiOptions && result.eventMeta.sesiOptions.length > 0) {
-                    const sesiSelect = document.getElementById('in-sesi-undangan');
-                    sesiSelect.innerHTML = result.eventMeta.sesiOptions.map((val, index) => {
-                        if(index < 3) document.getElementById(`edit_ev_s${index+1}`).value = val;
-                        return `<option value="${val}">Sesi ${index + 1} (${val})</option>`;
-                    }).join('');
-                }
-            }
+            // Render tamu ke layar secara instan (100ms)
             render(MASTER_LIST);
+            toggleProcessing(false); // Sembunyikan loading screen langsung!
+
+            // Jalankan pengambilan metadata dari GAS di background secara asinkron
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "getMasterData", ssId: CURRENT_SS_ID })
+            })
+            .then(r => r.json())
+            .then(result => {
+                if (result.status === "error") {
+                    console.error("GAS Metadata sync error:", result.message);
+                    return;
+                }
+
+                // Update Dynamic Dropdown "Pengundang"
+                if (result.dropdownOptions && result.dropdownOptions.length > 0) {
+                    const select = document.getElementById('in-l7-pengundang');
+                    if (select) {
+                        const map = {
+                            'PENGANTIN PRIA': 'Pengantin Pria',
+                            'PENGANTIN WANITA': 'Pengantin Wanita',
+                            'KELUARGA AYAH PENGANTIN PRIA': 'Keluarga Ayah CPP',
+                            'KELUARGA IBU PENGANTIN PRIA': 'Keluarga Ibu CPP',
+                            'KELUARGA AYAH PENGANTIN WANITA': 'Keluarga Ayah CPW',
+                            'KELUARGA IBU PENGANTIN WANITA': 'Keluarga Ibu CPW'
+                        };
+                        select.innerHTML = "";
+                        result.dropdownOptions.forEach(opt => {
+                            const valUpper = opt.toUpperCase().trim();
+                            const label = map[valUpper] || opt;
+                            const el = document.createElement('option');
+                            el.value = valUpper;
+                            el.innerText = label;
+                            select.appendChild(el);
+                        });
+                    }
+                }
+                
+                // Update Event Metadata di bagian header
+                if (result.eventMeta) {
+                    window.CUSTOM_TEMPLATE = result.eventMeta.template || "";
+                    window.EVENT_TANGGAL = result.eventMeta.tanggal || "";
+                    window.EVENT_WAKTU = result.eventMeta.waktu || "";
+                    
+                    const nameEl = document.getElementById('view-wedding-name');
+                    if (nameEl) nameEl.innerText = result.eventMeta.pengantin || "Event Guestbook";
+                    
+                    const schedEl = document.getElementById('view-schedule');
+                    if (schedEl) schedEl.innerHTML = (result.eventMeta.tanggal || "") + "<br>" + (result.eventMeta.waktu || "");
+                    
+                    const locEl = document.getElementById('view-location');
+                    if (locEl) locEl.innerText = result.eventMeta.lokasi || "";
+                    
+                    const linkEl = document.getElementById('view-link');
+                    if (linkEl) linkEl.innerText = result.eventMeta.link || "";
+                    
+                    const editNama = document.getElementById('edit_ev_nama');
+                    if (editNama) editNama.value = result.eventMeta.pengantin || "";
+                    
+                    const editDate = document.getElementById('edit_ev_date');
+                    if (editDate) editDate.value = result.eventMeta.tanggal || "";
+                    
+                    const editLoc = document.getElementById('edit_ev_loc');
+                    if (editLoc) editLoc.value = result.eventMeta.lokasi || "";
+                    
+                    const editTime = document.getElementById('edit_ev_time');
+                    if (editTime) editTime.value = result.eventMeta.waktu || "";
+                    
+                    const editLink = document.getElementById('edit_ev_link');
+                    if (editLink) editLink.value = result.eventMeta.link || "";
+
+                    if (result.eventMeta.sesiOptions && result.eventMeta.sesiOptions.length > 0) {
+                        const sesiSelect = document.getElementById('in-sesi-undangan');
+                        if (sesiSelect) {
+                            sesiSelect.innerHTML = result.eventMeta.sesiOptions.map((val, index) => {
+                                const editSesi = document.getElementById(`edit_ev_s${index+1}`);
+                                if (editSesi && index < 3) editSesi.value = val;
+                                return `<option value="${val}">Sesi ${index + 1} (${val})</option>`;
+                            }).join('');
+                        }
+                    }
+                }
+            })
+            .catch(err => console.warn("Background metadata fetch failed:", err));
+
         } catch(err) { 
-            console.error(err);
-            showSapaModal("Connection Error", "Gagal menghubungi server. Pastikan Anda online.", "⚠️");
-        } finally {
+            console.error("Refresh error:", err);
+            showSapaModal("Connection Error", "Gagal menghubungi database Supabase.", "⚠️");
             toggleProcessing(false);
         }
     }

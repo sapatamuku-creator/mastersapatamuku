@@ -667,16 +667,7 @@ function registerNewOnsite(data) {
     try {
       if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
         const eventDateRaw = sheet.getRange("B2").getValue();
-        let eventDate = "";
-        if (eventDateRaw) {
-          try {
-            eventDate = Utilities.formatDate(new Date(eventDateRaw), "GMT+7", "yyyy-MM-dd");
-          } catch(e) {
-            eventDate = new Date().toISOString().split('T')[0];
-          }
-        } else {
-          eventDate = new Date().toISOString().split('T')[0];
-        }
+        const eventDate = Utilities.formatDate(parseEventDate(eventDateRaw), "GMT+7", "yyyy-MM-dd");
 
         const payload = {
           ssid: data.ssId,
@@ -797,16 +788,7 @@ function submitGuestCollection(formData) {
   try {
     if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
       const eventDateRaw = sheet.getRange("B2").getValue();
-      let eventDate = "";
-      if (eventDateRaw) {
-        try {
-          eventDate = Utilities.formatDate(new Date(eventDateRaw), "GMT+7", "yyyy-MM-dd");
-        } catch(e) {
-          eventDate = new Date().toISOString().split('T')[0];
-        }
-      } else {
-        eventDate = new Date().toISOString().split('T')[0];
-      }
+      const eventDate = Utilities.formatDate(parseEventDate(eventDateRaw), "GMT+7", "yyyy-MM-dd");
       
       const payload = {
         ssid: formData.ssId,
@@ -1369,16 +1351,7 @@ function syncSheetToSupabase(ssId) {
 
     // Ambil tanggal acara dari B2 (Metadata)
     const eventDateRaw = sheet.getRange("B2").getValue();
-    let eventDate = "";
-    if (eventDateRaw) {
-      try {
-        eventDate = Utilities.formatDate(new Date(eventDateRaw), "GMT+7", "yyyy-MM-dd");
-      } catch (e) {
-        eventDate = new Date().toISOString().split('T')[0]; // Fallback jika format error
-      }
-    } else {
-      eventDate = new Date().toISOString().split('T')[0];
-    }
+    const eventDate = Utilities.formatDate(parseEventDate(eventDateRaw), "GMT+7", "yyyy-MM-dd");
 
     // Ambil data tamu
     const dataRange = sheet.getRange(START_ROW, 1, lastRow - (START_ROW - 1), 19).getValues();
@@ -1441,4 +1414,69 @@ function syncSheetToSupabase(ssId) {
   } catch (e) {
     return { status: "error", message: "Exception: " + e.toString() };
   }
+}
+
+/**
+ * Helper untuk mem-parse tanggal format bahasa Indonesia (Plain Text)
+ * Contoh: "Senin, 25 Mei 2026" atau "25 Mei 2026"
+ */
+function parseIndonesianDateText(dateStr) {
+  if (!dateStr) return null;
+  let str = String(dateStr).trim();
+  
+  if (str.includes(",")) {
+    str = str.split(",")[1].trim();
+  }
+  
+  const parts = str.split(/\s+/);
+  if (parts.length < 3) return null;
+  
+  const day = parseInt(parts[0]);
+  const monthStr = parts[1].toLowerCase().trim();
+  const year = parseInt(parts[2]);
+  
+  if (isNaN(day) || isNaN(year)) return null;
+  
+  const months = {
+    'januari': 0, 'jan': 0,
+    'februari': 1, 'feb': 1,
+    'maret': 2, 'mar': 2,
+    'april': 3, 'apr': 3,
+    'mei': 4,
+    'juni': 5, 'jun': 5,
+    'juli': 6, 'jul': 6,
+    'agustus': 7, 'agt': 7, 'agu': 7,
+    'september': 8, 'sep': 8,
+    'oktober': 9, 'okt': 9,
+    'november': 10, 'nov': 10,
+    'desember': 11, 'des': 11
+  };
+  
+  const monthIndex = months[monthStr];
+  if (monthIndex === undefined) return null;
+  
+  return new Date(year, monthIndex, day);
+}
+
+/**
+ * Parser tanggal aman dengan fallback hari ini
+ */
+function parseEventDate(eventDateRaw) {
+  if (!eventDateRaw) return new Date();
+  
+  try {
+    const indDate = parseIndonesianDateText(eventDateRaw);
+    if (indDate && !isNaN(indDate.getTime())) {
+      return indDate;
+    }
+  } catch(e) {}
+  
+  try {
+    const jsDate = new Date(eventDateRaw);
+    if (jsDate && !isNaN(jsDate.getTime())) {
+      return jsDate;
+    }
+  } catch(e) {}
+  
+  return new Date();
 }

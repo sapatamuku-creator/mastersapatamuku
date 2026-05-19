@@ -506,19 +506,17 @@
     };
 
     window.refreshData = async function(isInitial = false) {
+        if (isInitial) toggleProcessing(true, "LOADING DATA TAMU...");
         try {
-            const sbPromise = fetch("https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID, {
+            // Fetch tamu dari Supabase (Instant)
+            const sbResponse = await fetch("https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID, {
                 headers: {
                     "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
                     "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
                 }
-            }).then(r => r.json());
+            });
+            const sbData = await sbResponse.json();
 
-            const gasPromise = fetch(SCRIPT_URL + "?action=getWAForm&ssId=" + CURRENT_SS_ID).then(r => r.json());
-
-            const [sbData, gasData] = await Promise.all([sbPromise, gasPromise]);
-
-            localData = gasData;
             localData.tamu = (sbData || []).map(item => ({
                 row: item.row,
                 nama: item.nama,
@@ -528,25 +526,54 @@
                 status: item.status_wa,
                 sesi: item.sesi
             }));
-            
-            const statusEl = document.getElementById('connectionStatus');
-            statusEl.innerText = "CONNECTED";
-            statusEl.style.background = "#D1FAE5";
-            statusEl.style.color = "#065F46";
-            
-            document.getElementById('weddingTitle').innerText = localData.weddingTitle || "--";
-            document.getElementById('masterToken').value = localData.masterToken || '';
-            
-            renderCategories(localData);
+
+            // Tampilkan tabel tamu instan ke layar
             renderTable();
+            if (isInitial) toggleProcessing(false);
+
+            // Ambil status koneksi & token Fonnte dari GAS di background
+            fetch(SCRIPT_URL + "?action=getWAForm&ssId=" + CURRENT_SS_ID)
+            .then(r => r.json())
+            .then(gasData => {
+                localData.categories = gasData.categories || [];
+                localData.liveUsage = gasData.liveUsage || 0;
+                localData.weddingTitle = gasData.weddingTitle || "";
+                localData.masterToken = gasData.masterToken || "";
+                
+                const statusEl = document.getElementById('connectionStatus');
+                if (statusEl) {
+                    statusEl.innerText = "CONNECTED";
+                    statusEl.style.background = "#D1FAE5";
+                    statusEl.style.color = "#065F46";
+                }
+                
+                const titleEl = document.getElementById('weddingTitle');
+                if (titleEl) titleEl.innerText = gasData.weddingTitle || "--";
+                
+                const tokenEl = document.getElementById('masterToken');
+                if (tokenEl) tokenEl.value = gasData.masterToken || '';
+                
+                renderCategories(localData);
+            })
+            .catch(err => {
+                console.warn("Background GAS WA fetch failed:", err);
+                const statusEl = document.getElementById('connectionStatus');
+                if (statusEl) {
+                    statusEl.innerText = "DISCONNECTED";
+                    statusEl.style.background = "#FEE2E2";
+                    statusEl.style.color = "#991B1B";
+                }
+            });
+
         } catch (err) {
             console.error(err);
+            if (isInitial) toggleProcessing(false);
             const statusEl = document.getElementById('connectionStatus');
-            statusEl.innerText = "DISCONNECTED";
-            statusEl.style.background = "#FEE2E2";
-            statusEl.style.color = "#991B1B";
-        } finally {
-            if(isInitial) toggleProcessing(false);
+            if (statusEl) {
+                statusEl.innerText = "DISCONNECTED";
+                statusEl.style.background = "#FEE2E2";
+                statusEl.style.color = "#991B1B";
+            }
         }
     }
 
