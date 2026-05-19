@@ -1348,6 +1348,60 @@ const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
 
 /**
+ * Mirror konfigurasi undangan (invitationData JSON) ke tabel Supabase.
+ * Dipanggil dari frontend setelah save ke Google Sheet berhasil.
+ * Tabel target: config_invitation (ssid TEXT PK, data JSONB, updated_at TIMESTAMPTZ)
+ *
+ * SQL untuk buat tabel (jalankan sekali di Supabase Dashboard > SQL Editor):
+ * ──────────────────────────────────────────────────────────────────────────
+ * CREATE TABLE IF NOT EXISTS config_invitation (
+ *   ssid       TEXT PRIMARY KEY,
+ *   data       JSONB NOT NULL DEFAULT '{}',
+ *   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+ * );
+ * ALTER TABLE config_invitation ENABLE ROW LEVEL SECURITY;
+ * CREATE POLICY "Public read" ON config_invitation FOR SELECT USING (true);
+ * CREATE POLICY "Anon write"  ON config_invitation FOR ALL  USING (true);
+ * ──────────────────────────────────────────────────────────────────────────
+ */
+function mirrorInvConfigToSupabase(ssId, invitationData) {
+  try {
+    if (!SUPABASE_URL || SUPABASE_URL === "YOUR_SUPABASE_PROJECT_URL") return { status: "skip" };
+    if (!ssId || !invitationData) return { status: "error", message: "ssId atau data kosong" };
+
+    const url = SUPABASE_URL + "/rest/v1/config_invitation?on_conflict=ssid";
+    const body = JSON.stringify({
+      ssid: ssId,
+      data: invitationData,
+      updated_at: new Date().toISOString()
+    });
+
+    const response = UrlFetchApp.fetch(url, {
+      method: "post",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+      },
+      payload: body,
+      muteHttpExceptions: true
+    });
+
+    const code = response.getResponseCode();
+    if (code >= 200 && code < 300) {
+      return { status: "success" };
+    } else {
+      console.error("Mirror InvConfig to Supabase failed: " + response.getContentText());
+      return { status: "error", code: code };
+    }
+  } catch (e) {
+    console.error("mirrorInvConfigToSupabase exception: " + e.toString());
+    return { status: "error", message: e.toString() };
+  }
+}
+
+/**
  * Sinkronisasi otomatis seluruh data tamu dari Spreadsheet ke Supabase.
  * Dipicu oleh Frontend untuk inisialisasi data sebelum Hari-H.
  */
@@ -1525,11 +1579,12 @@ function editGuest(payload) {
     const isInstagram = payload.whatsapp && (/[a-zA-Z]/.test(payload.whatsapp) || payload.whatsapp.trim().startsWith('@'));
     const finalPhone = isInstagram ? payload.whatsapp : cleanPhone;
 
-    // Update columns: 3 (Nama), 4 (Whatsapp), 5 (Kategori), 8 (Pax/Rencana), 12 (Pihak Pengundang), 13 (Alamat), 19 (Sesi)
+    // Update columns: 3 (Nama), 4 (Whatsapp), 5 (Kategori), 8 (Pax/Rencana), 11 (Souvenir), 12 (Pihak Pengundang), 13 (Alamat), 19 (Sesi)
     sheet.getRange(rowIndex, 3).setValue(payload.nama);
     sheet.getRange(rowIndex, 4).setValue("'" + finalPhone);
     sheet.getRange(rowIndex, 5).setValue(payload.kategori);
     sheet.getRange(rowIndex, 8).setValue(payload.pax || payload.rencana || 1);
+    sheet.getRange(rowIndex, 11).setValue(payload.souvenir || "tidak");  // ✅ FIX: souvenir col
     sheet.getRange(rowIndex, 12).setValue(payload.pihak);
     sheet.getRange(rowIndex, 13).setValue(payload.alamat);
     sheet.getRange(rowIndex, 19).setValue(payload.sesi || "-");

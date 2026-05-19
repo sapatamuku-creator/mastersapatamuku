@@ -702,107 +702,153 @@
         setTimeout(() => initScanner(), 300);
     };
 
+    // ============================================================
+    // SUPABASE DIRECT CONFIG
+    // Kunci API & URL Supabase — dipakai untuk PATCH langsung dari browser
+    // ============================================================
+    const SB_URL  = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+    const SB_HEADERS = {
+        "apikey": SB_KEY,
+        "Authorization": "Bearer " + SB_KEY,
+        "Content-Type": "application/json"
+    };
+
     window.executeCheckin = async function() {
         if (isBusy) return;
         isBusy = true;
+
         const loading = document.getElementById('loading');
         loading.style.display = 'flex';
-        
-        // --- STEP 1: BLOCK UI ---
+
         const blocker = document.createElement('div');
         blocker.id = "global-blocker";
         blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
         document.body.appendChild(blocker);
 
         try {
-            const adult = document.getElementById('m-pax-adult').innerText;
-            const child = document.getElementById('m-pax-child').innerText;
-            const total = document.getElementById('m-pax-total').innerText;
+            const adult   = document.getElementById('m-pax-adult').innerText;
+            const child   = document.getElementById('m-pax-child').innerText;
+            const total   = document.getElementById('m-pax-total').innerText;
             const paxString = `${total} ( ${adult}D + ${child}A )`;
-            const gift = (document.getElementById('tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('tag-kado').classList.contains('active') ? "KADO" : "");
-            const list = Array.from(selectedIDs);
+            const gift    = (document.getElementById('tag-angpao').classList.contains('active') ? "ANGPAO " : "")
+                          + (document.getElementById('tag-kado').classList.contains('active') ? "KADO" : "");
+            const list    = Array.from(selectedIDs);
+            const nowISO  = new Date().toISOString();
+            const stationId = JALUR_ID === "ALL" ? "CHECKIN-ALL" : "CHECKIN-" + JALUR_ID;
 
-            // --- STEP 2: CORE CHECKIN (Blocking) ---
-            const checkinPromises = list.map(id => 
-                fetch(SCRIPT_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ 
-                        action: "confirm_checkin", 
-                        ssId: CURRENT_SS_ID, 
-                        kodeUnik: id, 
-                        realHadir: paxString, 
-                        statusAngpao: gift || "-",
-                        stationId: JALUR_ID === "ALL" ? "CHECKIN-ALL" : "CHECKIN-" + JALUR_ID
-                    }) 
+            // ────────────────────────────────────────────────────
+            // STEP 1 — OPTIMISTIC UPDATE LOKAL (0ms, instan)
+            //   Perbarui data di memori browser SEKARANG agar list
+            //   langsung hijau tanpa menunggu server apapun.
+            // ────────────────────────────────────────────────────
+            list.forEach(id => {
+                const idx = masterData.findIndex(r => r.kode === id);
+                if (idx !== -1) {
+                    masterData[idx].jamDatang = nowISO;
+                    masterData[idx].realHadir = paxString;
+                    masterData[idx].statusHadiah = gift || "-";
+                }
+            });
+            renderUI(); // UI langsung diperbarui
+
+            // ────────────────────────────────────────────────────
+            // STEP 2 — SUPABASE PATCH LANGSUNG (< 300ms)
+            //   Ini menggantikan "await GAS" yang lambat.
+            //   PATCH langsung ke REST API Supabase dari browser,
+            //   jauh lebih cepat daripada melewati server GAS.
+            // ────────────────────────────────────────────────────
+            const supabasePatchPromises = list.map(id =>
+                fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${id}`, {
+                    method: "PATCH",
+                    headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        status_hadir: "1",
+                        jam_datang: nowISO,
+                        real_hadir: parseInt(total) || 1,
+                        status_hadiah: gift || "-"
+                    })
                 })
             );
+            await Promise.all(supabasePatchPromises); // Ini yang di-await — cepat!
 
-            // 2. Kirim WA & Selfie di latar belakang (NON-CRITICAL for UI Speed)
+            // ────────────────────────────────────────────────────
+            // STEP 3 — GAS SYNC KE GOOGLE SHEET (fire-and-forget)
+            //   GAS tidak di-await. Jalan di latar belakang.
+            //   Tujuannya hanya menyimpan ke Google Sheet.
+            //   Jika GAS lambat/error, UI tidak terpengaruh.
+            // ────────────────────────────────────────────────────
+            list.forEach(id => {
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // no-cors = fire-and-forget, tidak tunggu response
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "confirm_checkin",
+                        ssId: CURRENT_SS_ID,
+                        kodeUnik: id,
+                        realHadir: paxString,
+                        statusAngpao: gift || "-",
+                        stationId: stationId
+                    })
+                }); // Tidak ada .then() atau await — benar-benar background
+            });
+
+            // ────────────────────────────────────────────────────
+            // STEP 4 — KIRIM WA & SELFIE (fire-and-forget)
+            //   Sama seperti sebelumnya — background saja.
+            // ────────────────────────────────────────────────────
             list.forEach(id => {
                 fetch(WA_ENGINE_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
+                    method: 'POST', mode: 'no-cors',
                     body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: id })
                 });
             });
 
             if (capturedBase64 && list.length > 0) {
                 fetch(SELFIE_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
+                    method: 'POST', mode: 'no-cors',
                     body: JSON.stringify({
                         action: "uploadSelfie",
                         image: capturedBase64,
-                        nama: masterData.find(r => r.kode === list[0]).nama,
+                        nama: masterData.find(r => r.kode === list[0])?.nama,
                         kode: list[0],
                         ssId: CURRENT_SS_ID
                     })
                 });
             }
 
-            // Tunggu Database utama selesai saja
-            await Promise.all(checkinPromises);
-
-            // Update status lokal agar tidak perlu refresh data berat
-            list.forEach(id => {
-                const idx = masterData.findIndex(r => r.kode === id);
-                if (idx !== -1) {
-                    masterData[idx].jamDatang = "Tadi"; 
-                    masterData[idx].realHadir = paxString;
-                }
-            });
-
+            // ────────────────────────────────────────────────────
+            // STEP 5 — BERSIHKAN UI & TAMPILKAN SUKSES
+            // ────────────────────────────────────────────────────
             selectedIDs.clear();
             document.getElementById('selected-count').innerText = "0";
             document.getElementById('bulk-btn').style.display = 'none';
-            
             await closeModal();
-            renderUI(); 
-            
-            // --- STEP 4: SUCCESS GREETING MODAL ---
-            document.getElementById('loading').style.display = 'none'; 
-            if(document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+
+            document.getElementById('loading').style.display = 'none';
+            if (document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
             document.body.style.cursor = 'default';
 
             const guestData = list.length > 0 ? masterData.find(r => r.kode === list[0]) : null;
             if (guestData) {
                 await showAlert(
-                    "CHECK-IN BERHASIL", 
-                    `Selamat Datang,\n\n${guestData.nama.toUpperCase()}\n(${guestData.kategori || 'REGULER'})\n\nSilakan Masuk`, 
+                    "CHECK-IN BERHASIL",
+                    `Selamat Datang,\n\n${guestData.nama.toUpperCase()}\n(${guestData.kategori || 'REGULER'})\n\nSilakan Masuk`,
                     "✨"
                 );
             }
 
-            // Refresh data asli di background tanpa mematikan loading
-            fetchData(); 
+            // Refresh dari Supabase di latar belakang setelah modal tutup
+            fetchData();
 
-        } catch (e) { 
-            console.error(e);
-            showAlert("Gagal", "Gagal memproses check-in. Cek internet.", "❌"); 
-        } finally { 
-            isBusy = false; 
-            document.getElementById('loading').style.display = 'none'; 
-            if(document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+        } catch (e) {
+            console.error("Check-in error:", e);
+            showAlert("Gagal", "Gagal memproses check-in. Cek internet.", "❌");
+        } finally {
+            isBusy = false;
+            document.getElementById('loading').style.display = 'none';
+            if (document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
         }
     };
     initApp();

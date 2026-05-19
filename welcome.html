@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -201,69 +201,53 @@
         return parts ? (parseInt(parts[1], 10) * 100) + parseInt(parts[2], 10) : 0;
     }
 
-    async function syncData() {
-        if (!window.SAPATAMU_RESOLVED) {
-            setTimeout(syncData, 100);
-            return;
-        }
-        
-        ssId = getSSID();
-        if (!ssId) {
-            console.error("SSID NOT FOUND");
-            return;
-        }
+    // ================================================================
+    // SUPABASE DIRECT CONFIG — untuk deteksi tamu terbaru secara cepat
+    // ================================================================
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
 
+    // Metadata (couple name, rundown, dll) hanya perlu diambil sekali
+    // dan diperbarui setiap 5 menit — tidak perlu setiap polling.
+    let metadataLoaded = false;
+    let metadataTimer  = null;
+
+    // ────────────────────────────────────────────────────────────
+    // syncMetadata() — Ambil dari GAS (lambat, tapi jarang berubah)
+    //   Dipanggil sekali saat load, lalu setiap 5 menit.
+    //   Mengisi: couple name, tanggal, rundown, slideshow, teks sambutan.
+    // ────────────────────────────────────────────────────────────
+    async function syncMetadata() {
+        if (!ssId) return;
         try {
-            const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${new Date().getTime()}`;
-            console.log("Fetching WS Data:", fetchUrl);
-            
+            const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`;
             const response = await fetch(fetchUrl);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
             const data = await response.json();
-            console.log("WS Data Received:", data);
-            
-            if (data.status === "error" || data.error) {
-                throw new Error(data.message || data.error);
-            }
+            if (data.status === "error" || data.error) throw new Error(data.message || data.error);
 
+            // Update konten statis (couple name, tanggal, dsb)
             document.getElementById('couple-name').innerHTML = (data.weddingName || "SapaTamu.Ku").replace(" & ", " &amp; ");
-            document.getElementById('wedding-date').innerText = data.weddingDate; 
-            
+            document.getElementById('wedding-date').innerText = data.weddingDate;
             if (data.teksSambutan1) document.getElementById('welcome-teks-1').innerText = data.teksSambutan1;
             if (data.teksSambutan2) document.getElementById('welcome-teks-2').innerText = data.teksSambutan2;
-
-            const guest = data.latestGuest;
-            if (guest.nama && guest.nama !== currentGuestName) {
-                const box = document.getElementById('guest-box');
-                box.classList.remove('animate-in');
-                void box.offsetWidth; 
-                box.classList.add('animate-in');
-                box.style.opacity = "1";
-                document.getElementById('guest-name').innerText = guest.nama.toUpperCase();
-                document.getElementById('g-cat').innerText = guest.kategori || "";
-                document.getElementById('g-addr').innerText = guest.alamat || "";
-                currentGuestName = guest.nama;
-            }
-
-            document.getElementById('marquee-log').innerText = data.log ? data.log.toUpperCase() : "MENUNGGU TAMU...";
-
-            // Update Slideshow
             if (data.urlFoto) {
                 const photoUrls = data.urlFoto.split(",").map(u => u.trim()).filter(u => u !== "");
                 initSlideshow(photoUrls);
             } else {
-                // Default fallback image if no photo is configured
                 initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
             }
 
+            // Update Rundown
             const now = new Date();
             const nowVal = (now.getHours() * 100) + now.getMinutes();
             let rundownHtml = "";
             (data.rundown || []).forEach((item, i, arr) => {
                 const startVal = convertToTimeValue(item.syncTime);
                 const nextItem = arr[i + 1];
-                let active = nextItem ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime)) : (nowVal >= startVal);
+                const active = nextItem
+                    ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime))
+                    : (nowVal >= startVal);
                 rundownHtml += `
                     <div class="rundown-item ${active ? 'active-event' : ''}">
                         <div class="event-time">${item.displayTime}</div>
@@ -272,15 +256,88 @@
             });
             document.getElementById('rundown-list').innerHTML = rundownHtml;
 
-            clearTimeout(syncTimer);
-            syncTimer = setTimeout(syncData, data.displayDuration || 12000);
-        } catch (e) { 
-            console.error("Sync Error Details:", e);
-            document.getElementById('couple-name').innerText = "ERROR KONEKSI";
-            document.getElementById('marquee-log').innerText = "Koneksi Bermasalah: " + (e.message || "Unknown Error");
-            clearTimeout(syncTimer);
-            syncTimer = setTimeout(syncData, 5000);
+            metadataLoaded = true;
+        } catch (e) {
+            console.warn("Metadata sync error:", e);
+            if (!metadataLoaded) {
+                // Tampilkan pesan fallback hanya jika belum pernah load sama sekali
+                document.getElementById('couple-name').innerText = "Memuat...";
+            }
         }
+        // Jadwalkan refresh metadata berikutnya dalam 5 menit
+        clearTimeout(metadataTimer);
+        metadataTimer = setTimeout(syncMetadata, 5 * 60 * 1000);
+    }
+
+    // ────────────────────────────────────────────────────────────
+    // syncGuestDisplay() — Ambil tamu terbaru LANGSUNG dari Supabase
+    //   Ini yang sebelumnya dilakukan oleh GAS setiap 5–8 detik.
+    //   Sekarang langsung dari Supabase → latency < 300ms.
+    //   Filter: tamu yang sudah check-in (jam_datang != '-' & != null)
+    //   diurutkan berdasarkan jam_datang terbaru.
+    // ────────────────────────────────────────────────────────────
+    async function syncGuestDisplay() {
+        if (!ssId) return;
+        try {
+            // Ambil 5 tamu terakhir yang sudah check-in, urutkan jam datang terbaru
+            const url = `${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&status_hadir=eq.1&order=jam_datang.desc&limit=5&select=nama,kategori,alamat,jam_datang`;
+            const res = await fetch(url, {
+                headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+            });
+            if (!res.ok) throw new Error(`Supabase error: ${res.status}`);
+            const guests = await res.json();
+
+            if (guests && guests.length > 0) {
+                const latest = guests[0]; // Tamu paling baru check-in
+
+                // Hanya update tampilan jika nama berubah (tamu baru masuk)
+                if (latest.nama && latest.nama !== currentGuestName) {
+                    const box = document.getElementById('guest-box');
+                    box.classList.remove('animate-in');
+                    void box.offsetWidth; // Trigger reflow agar animasi ulang
+                    box.classList.add('animate-in');
+                    box.style.opacity = "1";
+                    document.getElementById('guest-name').innerText = latest.nama.toUpperCase();
+                    document.getElementById('g-cat').innerText = latest.kategori || "";
+                    document.getElementById('g-addr').innerText = latest.alamat || "";
+                    currentGuestName = latest.nama;
+                }
+
+                // Update marquee dengan 5 nama terbaru
+                const names = guests.map(g => g.nama).filter(n => n);
+                if (names.length > 0) {
+                    document.getElementById('marquee-log').innerText =
+                        ("SELAMAT DATANG: " + names.join("  •  ")).toUpperCase();
+                }
+            }
+        } catch (e) {
+            console.warn("Guest display sync error:", e);
+        }
+
+        // Polling setiap 3 detik (jauh lebih cepat dari sebelumnya 5–8 detik via GAS)
+        setTimeout(syncGuestDisplay, 3000);
+    }
+
+    // ────────────────────────────────────────────────────────────
+    // syncData() — Entry point utama (dipanggil saat halaman load)
+    //   Menggantikan fungsi syncData() yang lama.
+    //   Sekarang memisahkan dua tugas:
+    //   1. Metadata (GAS, lambat tapi jarang) → syncMetadata()
+    //   2. Tamu terbaru (Supabase, cepat) → syncGuestDisplay()
+    // ────────────────────────────────────────────────────────────
+    async function syncData() {
+        if (!window.SAPATAMU_RESOLVED) {
+            setTimeout(syncData, 100);
+            return;
+        }
+        ssId = getSSID();
+        if (!ssId) {
+            console.error("SSID NOT FOUND");
+            return;
+        }
+        // Jalankan keduanya bersamaan — tidak saling menunggu
+        syncMetadata();    // GAS: lambat, jarang diulang
+        syncGuestDisplay(); // Supabase: cepat, polling 3 detik
     }
 
     let currentPhotos = [];

@@ -954,29 +954,46 @@
         };
         window.loadDynamicConfig = async function() {
             const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
-            if (!ssId) {
-                hideInitialLoader();
-                return;
+            if (!ssId) { hideInitialLoader(); return; }
+
+            const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+            const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+
+            // ── JALUR 1: Supabase (cepat, < 200ms, tanpa GAS cold start) ──
+            try {
+                const sbRes = await fetch(
+                    `${SB_URL}/rest/v1/config_invitation?ssid=eq.${ssId}&select=data&limit=1`,
+                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                );
+                if (sbRes.ok) {
+                    const rows = await sbRes.json();
+                    if (rows && rows.length > 0 && rows[0].data) {
+                        console.log("✅ Config loaded from Supabase (fast path)");
+                        window.applyLivePreview(rows[0].data);
+                        hideInitialLoader();
+                        return; // Selesai — tidak perlu ke GAS
+                    }
+                }
+            } catch (e) {
+                console.warn("Supabase config fetch failed, trying GAS fallback:", e.message);
             }
 
+            // ── JALUR 2: GAS Fallback (lambat, hanya jika Supabase kosong/gagal) ──
+            // Ini terjadi hanya jika config belum pernah di-save via config_invitation.html baru.
             try {
                 const response = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`);
                 const result = await response.json();
-                
                 if (result.status === "success") {
                     if (result.data.invitationData && Object.keys(result.data.invitationData).length > 0) {
                         const invData = result.data.invitationData;
-                        // Inject fallback root data
                         if (result.data.tanggal) invData.weddingDate = result.data.tanggal;
-                        
                         window.applyLivePreview(invData);
+                        console.log("⚡ Config loaded from GAS (fallback)");
                     }
                     if (result.data.theme === 'modern') document.body.classList.add('modern-theme');
                 }
-            } catch(e) { console.error("Gagal load config", e); }
-            finally {
-                hideInitialLoader();
-            }
+            } catch(e) { console.error("Gagal load config dari GAS:", e); }
+            finally { hideInitialLoader(); }
         };
 
         function hideInitialLoader() {
