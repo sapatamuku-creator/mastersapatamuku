@@ -8,6 +8,7 @@
     <script src="subdomain_resolver.js?v=3.3"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
         :root { 
@@ -429,6 +430,12 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                         <p style="font-size: 11px; font-weight: 900; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase;">Collection Draft</p>
                         <div style="display: flex; align-items: center; gap: 12px;">
+                            <button onclick="openImportExcelModal()" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; padding: 5px;" title="Import Tamu dari Excel">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/>
+                                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                                </svg>
+                            </button>
                             <button onclick="refreshApp()" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; padding: 5px;" title="Refresh Data">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
                             </button>
@@ -442,6 +449,106 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- DYNAMIC EXCEL IMPORT POPUP -->
+    <div id="importExcelModalOverlay" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.3); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+        <div class="modal-content" style="max-width: 600px; padding: 30px;">
+            <span class="close-modal" onclick="closeImportExcelModal()">&times;</span>
+            <div style="margin-bottom: 20px;">
+                <h2 style="font-size: 20px; font-weight: 800; color: #1a1a1a; font-family: 'Lora', serif;">📥 Import Tamu via Excel</h2>
+                <p style="font-size: 10px; font-weight: 600; color: #666; margin-top: 5px;">Unggah file Excel untuk mendaftarkan tamu secara massal per kategori.</p>
+            </div>
+            
+            <!-- Metadata Selection -->
+            <div style="background: rgba(212, 175, 55, 0.05); border: 1.5px solid var(--border); padding: 20px; border-radius: 20px; margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label>Pihak Pengundang</label>
+                    <select id="imp-pihak" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 10px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none;">
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <label>Category</label>
+                    <select id="imp-kategori" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 10px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none;">
+                        <option value="Umum">Umum</option>
+                        <option value="VIP">VIP</option>
+                        <option value="VVIP">VVIP</option>
+                        <option value="Keluarga">Keluarga</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Sesi Undangan</label>
+                    <select id="imp-sesi" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 10px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none;">
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <label>Souvenir</label>
+                    <select id="imp-souvenir" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 10px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none;">
+                        <option value="ya">Ya</option>
+                        <option value="tidak">Tidak</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Excel File Picker / Dropzone -->
+            <div id="imp-dropzone" style="border: 2px dashed var(--border); border-radius: 20px; padding: 25px; text-align: center; background: #fafafa; cursor: pointer; transition: 0.3s; margin-bottom: 20px;" onclick="document.getElementById('imp-file-input').click()">
+                <div style="font-size: 28px; margin-bottom: 10px;">📊</div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-main);">Pilih atau Seret File Excel (.xlsx / .xls)</div>
+                <div style="font-size: 9px; color: var(--text-muted); margin-top: 5px;">Klik untuk telusuri berkas dari komputer Anda</div>
+                <input type="file" id="imp-file-input" accept=".xlsx, .xls" style="display: none;" onchange="handleExcelUpload(event)">
+            </div>
+
+            <!-- Column Mapping Controls -->
+            <div id="imp-mapping-section" style="display: none; background: #FFFDFB; border: 1.5px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">Peta Kolom Excel</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="font-size: 9px;">Kolom Nama Lengkap</label>
+                        <select id="imp-map-nama" style="background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 6px; font-size: 11px; width: 100%; outline: none;" onchange="updateExcelPreview()"></select>
+                    </div>
+                    <div>
+                        <label style="font-size: 9px;">Kolom Alamat / Instansi</label>
+                        <select id="imp-map-alamat" style="background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 6px; font-size: 11px; width: 100%; outline: none;" onchange="updateExcelPreview()"></select>
+                    </div>
+                    <div>
+                        <label style="font-size: 9px;">Kolom WhatsApp (Opsional)</label>
+                        <select id="imp-map-wa" style="background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 6px; font-size: 11px; width: 100%; outline: none;" onchange="updateExcelPreview()">
+                            <option value="">-- Abaikan --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 9px;">Kolom Jumlah Pax (Opsional)</label>
+                        <select id="imp-map-pax" style="background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 6px; font-size: 11px; width: 100%; outline: none;" onchange="updateExcelPreview()">
+                            <option value="">-- Bawaan (1) --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Preview Table -->
+                <div style="border-top: 1px dashed var(--border); padding-top: 15px;">
+                    <h4 style="font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Preview Data (5 Baris Pertama)</h4>
+                    <div style="overflow-x: auto; max-height: 120px;">
+                        <table style="width: 100%; font-size: 10px; text-align: left; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
+                                    <th style="padding: 4px;">Nama</th>
+                                    <th style="padding: 4px;">Alamat</th>
+                                    <th style="padding: 4px;">WA</th>
+                                    <th style="padding: 4px;">Pax</th>
+                                </tr>
+                            </thead>
+                            <tbody id="imp-preview-tbody">
+                                <!-- Will be filled dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="startExcelImport()" id="btn-imp-submit" class="sapatamu-btn" style="background: #1a1a1a; display: none;">MULAI IMPOR KE DRAFT</button>
         </div>
     </div>
 
@@ -1068,6 +1175,288 @@
         } catch (e) {
             showSapaModal("Error", "Gagal menghapus tamu dari koleksi.", "⚠️");
             toggleProcessing(false);
+        }
+    }
+
+    // --- EXCEL IMPORT LOGIC ---
+    let parsedExcelRows = [];
+    let parsedExcelHeaders = [];
+
+    window.openImportExcelModal = function() {
+        // Copy option values from Sisi Kiri
+        const pihakSelectLeft = document.getElementById('in-l7-pengundang');
+        const impPihak = document.getElementById('imp-pihak');
+        impPihak.innerHTML = pihakSelectLeft.innerHTML;
+
+        const sesiSelectLeft = document.getElementById('in-sesi-undangan');
+        const impSesi = document.getElementById('imp-sesi');
+        impSesi.innerHTML = sesiSelectLeft.innerHTML;
+
+        // Reset elements
+        document.getElementById('imp-file-input').value = "";
+        document.getElementById('imp-dropzone').style.display = "block";
+        document.getElementById('imp-mapping-section').style.display = "none";
+        document.getElementById('btn-imp-submit').style.display = "none";
+        parsedExcelRows = [];
+        parsedExcelHeaders = [];
+
+        document.getElementById('importExcelModalOverlay').style.display = 'flex';
+    };
+
+    window.closeImportExcelModal = function() {
+        document.getElementById('importExcelModalOverlay').style.display = 'none';
+    };
+
+    window.handleExcelUpload = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                if (rawRows.length === 0) {
+                    return showSapaModal("File Kosong", "Berkas Excel tidak memiliki data.", "⚠️");
+                }
+
+                parsedExcelHeaders = rawRows[0];
+                parsedExcelRows = rawRows.slice(1);
+
+                if (parsedExcelRows.length === 0) {
+                    return showSapaModal("File Kosong", "Berkas Excel tidak memiliki data baris tamu.", "⚠️");
+                }
+
+                // Populate column selectors
+                const selNama = document.getElementById('imp-map-nama');
+                const selAlamat = document.getElementById('imp-map-alamat');
+                const selWa = document.getElementById('imp-map-wa');
+                const selPax = document.getElementById('imp-map-pax');
+
+                selNama.innerHTML = "";
+                selAlamat.innerHTML = "";
+                selWa.innerHTML = '<option value="">-- Abaikan --</option>';
+                selPax.innerHTML = '<option value="">-- Bawaan (1) --</option>';
+
+                parsedExcelHeaders.forEach((h, idx) => {
+                    const cleanHeader = (h || "").toString().trim() || `Kolom ${idx + 1}`;
+                    
+                    const optNama = document.createElement('option');
+                    optNama.value = idx;
+                    optNama.innerText = cleanHeader;
+                    selNama.appendChild(optNama);
+
+                    const optAlamat = document.createElement('option');
+                    optAlamat.value = idx;
+                    optAlamat.innerText = cleanHeader;
+                    selAlamat.appendChild(optAlamat);
+
+                    const optWa = document.createElement('option');
+                    optWa.value = idx;
+                    optWa.innerText = cleanHeader;
+                    selWa.appendChild(optWa);
+
+                    const optPax = document.createElement('option');
+                    optPax.value = idx;
+                    optPax.innerText = cleanHeader;
+                    selPax.appendChild(optPax);
+                });
+
+                // Auto-detect columns based on names
+                parsedExcelHeaders.forEach((h, idx) => {
+                    const lowerHeader = (h || "").toString().toLowerCase();
+                    if (lowerHeader.includes("nama") || lowerHeader.includes("guest") || lowerHeader.includes("tamu")) {
+                        selNama.value = idx;
+                    }
+                    if (lowerHeader.includes("alamat") || lowerHeader.includes("instansi") || lowerHeader.includes("kota") || lowerHeader.includes("address")) {
+                        selAlamat.value = idx;
+                    }
+                    if (lowerHeader.includes("wa") || lowerHeader.includes("telp") || lowerHeader.includes("phone") || lowerHeader.includes("hp") || lowerHeader.includes("whatsapp")) {
+                        selWa.value = idx;
+                    }
+                    if (lowerHeader.includes("pax") || lowerHeader.includes("jumlah") || lowerHeader.includes("qty") || lowerHeader.includes("hadir")) {
+                        selPax.value = idx;
+                    }
+                });
+
+                // Display UI
+                document.getElementById('imp-dropzone').style.display = "none";
+                document.getElementById('imp-mapping-section').style.display = "block";
+                document.getElementById('btn-imp-submit').style.display = "block";
+
+                updateExcelPreview();
+
+            } catch (err) {
+                console.error(err);
+                showSapaModal("Error", "Gagal membaca file Excel. Pastikan format benar.", "❌");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    window.updateExcelPreview = function() {
+        const selNama = document.getElementById('imp-map-nama').value;
+        const selAlamat = document.getElementById('imp-map-alamat').value;
+        const selWa = document.getElementById('imp-map-wa').value;
+        const selPax = document.getElementById('imp-map-pax').value;
+
+        const tbody = document.getElementById('imp-preview-tbody');
+        tbody.innerHTML = "";
+
+        const previewRows = parsedExcelRows.slice(0, 5);
+        previewRows.forEach(row => {
+            const nama = row[selNama] || "-";
+            const alamat = row[selAlamat] || "-";
+            const wa = selWa !== "" ? (row[selWa] || "-") : "-";
+            const pax = selPax !== "" ? (row[selPax] || 1) : 1;
+
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = "1px solid #f9f9f9";
+            tr.innerHTML = `
+                <td style="padding:4px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>${nama}</b></td>
+                <td style="padding:4px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${alamat}</td>
+                <td style="padding:4px;">${wa}</td>
+                <td style="padding:4px;">${pax}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    };
+
+    // Global background sync queue state
+    let syncQueue = [];
+    let isQueueRunning = false;
+
+    window.startExcelImport = function() {
+        const selNama = document.getElementById('imp-map-nama').value;
+        const selAlamat = document.getElementById('imp-map-alamat').value;
+        const selWa = document.getElementById('imp-map-wa').value;
+        const selPax = document.getElementById('imp-map-pax').value;
+
+        const metadata = {
+            pihak: document.getElementById('imp-pihak').value,
+            kategori: document.getElementById('imp-kategori').value,
+            sesi: document.getElementById('imp-sesi').value,
+            souvenir: document.getElementById('imp-souvenir').value
+        };
+
+        let addedCount = 0;
+
+        parsedExcelRows.forEach(row => {
+            const nama = (row[selNama] || "").toString().trim();
+            if (!nama) return; // Skip empty rows
+
+            const alamat = (row[selAlamat] || "").toString().trim() || "-";
+            const wa = selWa !== "" ? (row[selWa] || "").toString().trim() : "-";
+            const paxRaw = selPax !== "" ? parseInt(row[selPax]) : 1;
+            const pax = isNaN(paxRaw) || paxRaw < 1 ? 1 : paxRaw;
+
+            const tempId = "imp_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
+
+            // Create locally in MASTER_LIST (Optimistic UI)
+            const draftGuest = {
+                id: tempId,
+                row: null,
+                kode: "SYNCING...",
+                nama: nama,
+                whatsapp: wa,
+                kategori: metadata.kategori,
+                pihakPengundang: metadata.pihak,
+                souvenir: metadata.souvenir,
+                alamat: alamat,
+                rencanaHadir: pax,
+                sesi: metadata.sesi,
+                statusWA: "PENDING",
+                syncStatus: "syncing"
+            };
+
+            MASTER_LIST.unshift(draftGuest);
+            
+            // Push to background sync queue
+            syncQueue.push({
+                tempId: tempId,
+                payload: {
+                    nama: nama,
+                    whatsapp: wa,
+                    kategori: metadata.kategori,
+                    pihak: metadata.pihak,
+                    souvenir: metadata.souvenir,
+                    alamat: alamat,
+                    rencana: pax,
+                    sesi: metadata.sesi
+                }
+            });
+
+            addedCount++;
+        });
+
+        if (addedCount > 0) {
+            render(MASTER_LIST);
+            closeImportExcelModal();
+            showSapaModal("Import Berhasil", `${addedCount} tamu dimasukkan ke draft. Sinkronisasi latar belakang dimulai...`, "📥");
+            startQueueProcessor();
+        } else {
+            showSapaModal("Gagal Import", "Tidak ada baris tamu valid untuk diimpor.", "⚠️");
+        }
+    };
+
+    async function startQueueProcessor() {
+        if (isQueueRunning || syncQueue.length === 0) return;
+        isQueueRunning = true;
+
+        while (syncQueue.length > 0) {
+            const task = syncQueue.shift();
+            
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: "submitCollection",
+                        ssId: CURRENT_SS_ID,
+                        ...task.payload,
+                        fastMode: true
+                    })
+                });
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    updateGuestSyncStatus(task.tempId, "done", result.kode, result.row);
+                } else {
+                    updateGuestSyncStatus(task.tempId, "failed");
+                }
+            } catch (err) {
+                console.error("Import sync error:", err);
+                updateGuestSyncStatus(task.tempId, "failed");
+            }
+
+            // Safe delay of 600ms to stay within Apps Script concurrency limits
+            await new Promise(resolve => setTimeout(resolve, 600));
+        }
+
+        isQueueRunning = false;
+    }
+
+    function updateGuestSyncStatus(tempId, syncStatus, kodeUnik, rowNum) {
+        const idx = MASTER_LIST.findIndex(g => g.id === tempId);
+        if (idx !== -1) {
+            MASTER_LIST[idx].syncStatus = syncStatus;
+            if (syncStatus === "done") {
+                MASTER_LIST[idx].row = rowNum;
+                MASTER_LIST[idx].kode = kodeUnik;
+                
+                // Clear the checkmark after 3 seconds
+                setTimeout(() => {
+                    const guest = MASTER_LIST.find(g => g.id === tempId);
+                    if (guest) {
+                        delete guest.syncStatus;
+                        render(MASTER_LIST);
+                    }
+                }, 3000);
+            }
+            render(MASTER_LIST);
         }
     }
 
