@@ -1224,14 +1224,53 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                         const nowStr = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
 
                         // Tandai baris sukses di localData
+                        const successRows = [];
+                        const failedRows = result.failedRows || [];
                         uniqueTargets.forEach(t => {
-                            const entry = localData.tamu.find(x => x.row === t.row);
-                            if (entry) entry.status = '\u2705 [' + nowStr + ']';
+                            if (!failedRows.some(f => f.row === t.row)) {
+                                const entry = localData.tamu.find(x => x.row === t.row);
+                                if (entry) {
+                                    entry.status = '\u2705 [' + nowStr + ']';
+                                    successRows.push(t);
+                                }
+                            }
                         });
+
+                        // Sinkronisasikan status ke Supabase secara langsung dan asinkron (background)
+                        const supabaseApiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+                        
+                        Promise.all(
+                            successRows.map(t => 
+                                fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${t.row}`, {
+                                    method: "PATCH",
+                                    headers: {
+                                        "apikey": supabaseApiKey,
+                                        "Authorization": "Bearer " + supabaseApiKey,
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify({ status_wa: '✅ [' + nowStr + ']' })
+                                }).catch(e => console.error("Supabase sync failed for row", t.row, e))
+                            )
+                        );
+
+                        if (duplicates.length > 0) {
+                            Promise.all(
+                                duplicates.map(t => 
+                                    fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${t.row}`, {
+                                        method: "PATCH",
+                                        headers: {
+                                            "apikey": supabaseApiKey,
+                                            "Authorization": "Bearer " + supabaseApiKey,
+                                            "Content-Type": "application/json"
+                                        },
+                                        body: JSON.stringify({ status_wa: '⚠️ Duplikasi Nomor [' + nowStr + ']' })
+                                    }).catch(e => console.error("Supabase duplicate sync failed for row", t.row, e))
+                                )
+                            );
+                        }
 
                         // Tandai baris error — SESSION ONLY, tidak ditulis ke spreadsheet
                         // Saat user klik "Refresh Data" → kembali jadi BELUM TERKIRIM → bisa retry
-                        const failedRows = result.failedRows || [];
                         failedRows.forEach(f => {
                             const entry = localData.tamu.find(x => x.row === f.row);
                             if (entry) entry.status = '\u274c Gagal: ' + (f.reason || 'Rejected') + ' [' + nowStr + '] (Refresh untuk Retry)';
