@@ -787,8 +787,25 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                 const guestName = (t.nama || "Tamu Undangan").toString();
                 const guestNameCaps = guestName.toUpperCase();
                 const encodedName = encodeURIComponent(guestName).replace(/,/g, '%2C');
-                // --- KEMBALI KE FORMAT AWAL (STATIS) ---
-                const inviteLink = inviteBase ? `${inviteBase}${inviteBase.includes('?') ? '&' : '?'}id=${t.kode}&u=${encodedName}` : "";
+                
+                // ===== DETEKSI LINK DINAMIS (SapaTamu vs Vendor Lain) =====
+                let inviteLink = "";
+                if (inviteBase) {
+                    const isSapaTamu = inviteBase.includes("sapatamu.id") || inviteBase.includes("sapatamu.ku") || inviteBase.includes("localhost");
+                    
+                    if (isSapaTamu) {
+                        // A. Format Asli SapaTamu (Menggunakan id & u)
+                        inviteLink = `${inviteBase}${inviteBase.includes('?') ? '&' : '?'}v=3&id=${t.kode}&u=${encodedName}`;
+                    } else {
+                        // B. Format Vendor Lain (Menggunakan parameter kustom yang ada di B5, misal ?to= atau &to=)
+                        if (inviteBase.endsWith("=")) {
+                            inviteLink = `${inviteBase}${encodedName}`;
+                        } else {
+                            // Cadangan jika klien lupa mengetikkan '=' di akhir link B5
+                            inviteLink = `${inviteBase}${inviteBase.includes('?') ? '&' : '?'}to=${encodedName}`;
+                        }
+                    }
+                }
                 
                 const dynamicImageUrl = "";
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${t.kode}&size=400x400`;
