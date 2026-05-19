@@ -913,9 +913,6 @@
         
         const qrCodeLink = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(code)}&size=400x400`;
         
-        let cleanPhone = String(phone).replace(/\D/g, ''); 
-        if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
-
         // ===== DYNAMIC TEMPLATE COMPILED WITH PLACEHOLDERS =====
         const defaultTemplate = `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami. *Tepat pada pukul [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n□ {HARI_TANGGAL}\n□ {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code ini untuk akses masuk:\n{LINK_QR}\n\nTerima kasih.`;
 
@@ -934,7 +931,22 @@
             .replace(/{LINK_UNDANGAN}/g, personalLink)
             .replace(/{LINK_QR}/g, qrCodeLink);
 
-        window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`, '_blank');
+        const isInstagram = /[a-zA-Z]/.test(phone) || phone.trim().startsWith('@');
+        if (isInstagram) {
+            let username = phone.trim();
+            if (username.startsWith('@')) {
+                username = username.slice(1);
+            }
+            navigator.clipboard.writeText(msg).then(() => {
+                showToast("Teks undangan disalin! Silakan paste (Ctrl+V) di DM.");
+            }).catch(err => console.error("Gagal menyalin teks: ", err));
+
+            window.open(`https://ig.me/m/${username}?text=${encodeURIComponent(msg)}`, '_blank');
+        } else {
+            let cleanPhone = String(phone).replace(/\D/g, ''); 
+            if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+            window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`, '_blank');
+        }
 
         // ===== OPTIMISTIC UPDATE: langsung hijau tanpa tunggu API =====
         // User sudah klik kirim → WA sudah terbuka → tandai SENT di-memory sekarang
@@ -1007,6 +1019,8 @@
             // Duplikat: normalisasi nomor ke 628xxx sebelum cek — agar 08xxx == 628xxx
             const normWA = normalizePhone(g.whatsapp);
             const isDupNumber = !isSent && normWA && pendingNumbers[normWA] > 1;
+
+            const isInstagram = g.whatsapp && (/[a-zA-Z]/.test(g.whatsapp) || g.whatsapp.trim().startsWith('@'));
 
             // ===== CARD STYLES berdasarkan status =====
             let cardBorder, cardBg, statusLabel, statusColor, canBlast;
@@ -1097,7 +1111,7 @@
                                 ${canBlast 
                                     ? `<button 
                                         onclick="executeBlast('${g.row}','${g.whatsapp}','${g.nama}','${g.kode}')"
-                                        title="Klik di sini untuk kirim undangan WA"
+                                        title="${isInstagram ? 'Klik di sini untuk kirim undangan Instagram DM' : 'Klik di sini untuk kirim undangan WA'}"
                                         style="
                                             border: 1.5px dashed ${isPending ? '#D97706' : isDupNumber ? '#D97706' : 'var(--text-muted)'};
                                             background: transparent;
@@ -1117,7 +1131,7 @@
                                         onmouseout="this.style.background='transparent'"
                                         onmousedown="this.style.transform='scale(0.95)'"
                                         onmouseup="this.style.transform='scale(1)'"
-                                      >📨 ${statusLabel.replace('○ ','').replace('● ','')}</button>`
+                                      >${isInstagram ? '📸 IG DM' : `📨 ${statusLabel.replace('○ ','').replace('● ','')}`}</button>`
                                     : `<span style="font-size:9px; font-weight:900; color:${statusColor}; display:flex; align-items:center; gap:4px;">● SENT</span>`
                                 }
                             </div>
