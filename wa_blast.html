@@ -1056,13 +1056,34 @@
                         return;
                     }
 
+                    // Ambil semua nomor HP yang sudah sukses terkirim (mengandung centang hijau ✅)
+                    const sentNumbers = new Set(
+                        localData.tamu
+                            .filter(t => t.status && typeof t.status === 'string' && t.status.includes('✅'))
+                            .map(t => {
+                                let num = (t.nomor || "").toString().trim().replace(/\D/g, '');
+                                if (num.startsWith('0')) num = '62' + num.substring(1);
+                                return num;
+                            })
+                            .filter(Boolean)
+                    );
+
                     const targets = localData.tamu.filter(t => {
                         const tPihak = (t.pihak || "").trim();
-                        return tPihak === kat && !(t.status && typeof t.status === 'string' && t.status.includes('✅'));
+                        if (tPihak !== kat) return false;
+                        
+                        let cleanNum = (t.nomor || "").toString().trim().replace(/\D/g, '');
+                        if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.substring(1);
+                        
+                        // Abaikan jika nomor ini sudah pernah sukses terkirim sebelumnya
+                        if (cleanNum && sentNumbers.has(cleanNum)) return false;
+                        
+                        // Abaikan jika status baris ini sendiri sudah sukses terkirim
+                        return !(t.status && typeof t.status === 'string' && t.status.includes('✅'));
                     });
 
                     if (!targets.length) {
-                        await showAlert("Informasi", "Semua tamu di kategori [" + kat + "] sudah terkirim ✅", "ℹ️");
+                        await showAlert("Informasi", "Semua tamu di kategori [" + kat + "] sudah terkirim atau nomornya sudah menerima blast ✅", "ℹ️");
                         return;
                     }
 
