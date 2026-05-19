@@ -590,6 +590,75 @@
         </div>
     </div>
 
+    <!-- EDIT GUEST MODAL POPUP -->
+    <div id="editGuestModalOverlay" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.3); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+        <div class="modal-content" style="max-width: 600px; padding: 30px; width: 100%;">
+            <span class="close-modal" onclick="closeEditGuestModal()">&times;</span>
+            <div style="margin-bottom: 20px;">
+                <h2 style="font-size: 20px; font-weight: 800; color: #1a1a1a; font-family: 'Lora', serif;">✏️ Edit Data Tamu</h2>
+                <p style="font-size: 10px; font-weight: 600; color: #666; margin-top: 5px;">Perbarui informasi tamu untuk diselaraskan ke Spreadsheet dan Supabase.</p>
+            </div>
+            
+            <input type="hidden" id="edit-guest-kode">
+
+            <!-- Metadata Selection -->
+            <div style="background: rgba(212, 175, 55, 0.05); border: 1.5px solid var(--border); padding: 20px; border-radius: 20px; margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="grid-column: span 2;">
+                    <label style="font-size: 10px; font-weight: 800; color: #666; display: block; margin-bottom: 5px;">NAMA TAMU</label>
+                    <input type="text" id="edit-nama" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none; box-sizing: border-box;">
+                </div>
+                <div style="grid-column: span 2;">
+                    <label style="font-size: 10px; font-weight: 800; color: #666; display: block; margin-bottom: 5px;">NOMOR WHATSAPP / USER IG</label>
+                    <input type="text" id="edit-wa" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #666; display: block; margin-bottom: 5px;">PIHAK PENGUNDANG</label>
+                    <select id="edit-pihak" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none; box-sizing: border-box; width: 100%;">
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #666; display: block; margin-bottom: 5px;">CATEGORY</label>
+                    <select id="edit-kategori" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none; box-sizing: border-box; width: 100%;">
+                        <option value="Umum">Umum</option>
+                        <option value="VIP">VIP</option>
+                        <option value="VVIP">VVIP</option>
+                        <option value="Keluarga">Keluarga</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #666; display: block; margin-bottom: 5px;">SESI UNDANGAN</label>
+                    <select id="edit-sesi" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none; box-sizing: border-box; width: 100%;">
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #666; display: block; margin-bottom: 5px;">SOUVENIR</label>
+                    <select id="edit-souvenir" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none; box-sizing: border-box; width: 100%;">
+                        <option value="ya">Ya</option>
+                        <option value="tidak">Tidak</option>
+                    </select>
+                </div>
+                <div style="grid-column: span 2;">
+                    <label style="font-size: 10px; font-weight: 800; color: #666; display: block; margin-bottom: 5px;">ALAMAT / INSTANSI</label>
+                    <input type="text" id="edit-alamat" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="font-size: 10px; font-weight: 800; color: #666; display: block; margin-bottom: 5px;">JUMLAH PAX</label>
+                    <input type="number" id="edit-pax" min="1" value="1" style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; width: 100%; font-weight: 700; color: var(--text-main); outline: none; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button onclick="closeEditGuestModal()" style="background: #E5E7EB; border: none; cursor: pointer; color: #374151; padding: 10px 20px; border-radius: 50px; font-size: 12px; font-weight: 800; transition: 0.3s;" onmouseover="this.style.background='#D1D5DB'" onmouseout="this.style.background='#E5E7EB'">BATAL</button>
+                <button onclick="saveEditGuest()" id="btn-save-edit" style="background: var(--gold); border: none; cursor: pointer; color: #FFF; padding: 10px 25px; border-radius: 50px; font-size: 12px; font-weight: 800; transition: 0.3s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.filter='brightness(0.9)'" onmouseout="this.style.filter='none'">
+                    <span id="btn-save-edit-text">SIMPAN PERUBAHAN</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- CUSTOM ALERT DIALOG (FOR DELETE CONFIRMATION) -->
     <div id="sapatamu-custom-alert" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
         <div style="background: white; width: 85%; max-width: 320px; border-radius: 25px; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
@@ -971,6 +1040,133 @@
                 render(MASTER_LIST);
             }
         }
+    window.openEditGuestModal = function(event, kode) {
+        if(event) event.stopPropagation();
+        
+        // Find guest in MASTER_LIST
+        const guest = MASTER_LIST.find(g => g.kode === kode);
+        if (!guest) return;
+
+        // Set inputs
+        document.getElementById('edit-guest-kode').value = kode;
+        document.getElementById('edit-nama').value = guest.nama || "";
+        document.getElementById('edit-wa').value = guest.whatsapp || "";
+        
+        // Copy option values
+        const pihakSelectLeft = document.getElementById('in-l7-pengundang');
+        const editPihak = document.getElementById('edit-pihak');
+        editPihak.innerHTML = pihakSelectLeft.innerHTML;
+        editPihak.value = guest.pihakPengundang || "Umum";
+
+        const sesiSelectLeft = document.getElementById('in-sesi-undangan');
+        const editSesi = document.getElementById('edit-sesi');
+        editSesi.innerHTML = sesiSelectLeft.innerHTML;
+        editSesi.value = guest.sesi || "-";
+
+        document.getElementById('edit-kategori').value = guest.kategori || "Umum";
+        document.getElementById('edit-souvenir').value = guest.souvenir || "tidak";
+        document.getElementById('edit-alamat').value = guest.alamat || "";
+        document.getElementById('edit-pax').value = guest.rencanaHadir || 1;
+
+        // Show Modal Overlay
+        document.getElementById('editGuestModalOverlay').style.display = 'flex';
+    };
+
+    window.closeEditGuestModal = function() {
+        document.getElementById('editGuestModalOverlay').style.display = 'none';
+    };
+
+    window.saveEditGuest = async function() {
+        const kode = document.getElementById('edit-guest-kode').value;
+        const guest = MASTER_LIST.find(g => g.kode === kode);
+        if (!guest) return;
+
+        const btn = document.getElementById('btn-save-edit');
+        const btnText = document.getElementById('btn-save-edit-text');
+
+        // Collect new values
+        const editData = {
+            nama: document.getElementById('edit-nama').value.trim(),
+            whatsapp: (function(val) {
+                let clean = val.trim();
+                let isIg = /[a-zA-Z]/.test(clean) || clean.startsWith('@');
+                if (isIg) return clean;
+                let num = clean.replace(/\D/g, '');
+                if (num.startsWith('0')) num = '62' + num.substring(1);
+                return num || clean;
+            })(document.getElementById('edit-wa').value),
+            pihak: document.getElementById('edit-pihak').value,
+            kategori: document.getElementById('edit-kategori').value,
+            sesi: document.getElementById('edit-sesi').value,
+            souvenir: document.getElementById('edit-souvenir').value,
+            alamat: document.getElementById('edit-alamat').value.trim(),
+            pax: parseInt(document.getElementById('edit-pax').value) || 1
+        };
+
+        if (!editData.nama || !editData.whatsapp) {
+            return showSapaModal("Data Belum Lengkap", "Silakan isi Nama & WhatsApp/User IG tamu.", "⚠️");
+        }
+
+        // Show loading state
+        btn.disabled = true;
+        btnText.innerText = "MENYIMPAN...";
+
+        // Step 1: Update Supabase immediately (Direct REST API PATCH)
+        const supabaseApiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+        const supabaseUrl = `https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${kode}`;
+        
+        try {
+            await fetch(supabaseUrl, {
+                method: "PATCH",
+                headers: {
+                    "apikey": supabaseApiKey,
+                    "Authorization": "Bearer " + supabaseApiKey,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    nama: editData.nama,
+                    whatsapp: editData.whatsapp,
+                    pihak_pengundang: editData.pihak,
+                    kategori: editData.kategori,
+                    sesi: editData.sesi,
+                    souvenir: editData.souvenir,
+                    alamat: editData.alamat,
+                    rencana_hadir: editData.pax
+                })
+            });
+
+            // Update local MASTER_LIST immediately
+            guest.nama = editData.nama;
+            guest.whatsapp = editData.whatsapp;
+            guest.pihakPengundang = editData.pihak;
+            guest.kategori = editData.kategori;
+            guest.sesi = editData.sesi;
+            guest.souvenir = editData.souvenir;
+            guest.alamat = editData.alamat;
+            guest.rencanaHadir = editData.pax;
+
+            render(MASTER_LIST);
+            closeEditGuestModal();
+            showSapaModal("Berhasil", "Data tamu berhasil diperbarui.", "✅");
+
+            // Step 2: Update Google Sheet in background (fire-and-forget/non-blocking)
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: "editGuest",
+                    ssId: CURRENT_SS_ID,
+                    kode: kode,
+                    ...editData
+                })
+            }).catch(err => console.warn("Background GS sync failed:", err));
+
+        } catch (e) {
+            console.error("Failed to edit guest:", e);
+            showSapaModal("Gagal", "Gagal memperbarui data tamu: " + e.toString(), "❌");
+        } finally {
+            btn.disabled = false;
+            btnText.innerText = "SIMPAN PERUBAHAN";
+        }
     };
 
     window.executeBlast = function(row, phone, name, code) {
@@ -1170,6 +1366,11 @@
             // Clickable area — hanya kalau bisa blast
             const onClickAttr = canBlast ? `onclick="executeBlast('${g.row}','${g.whatsapp}','${g.nama}','${g.kode}')"` : '';
 
+            // Edit button — hanya jika belum terkirim (not isSent) dan tidak sedang syncing
+            const editBtn = (!isSent && g.syncStatus !== "syncing")
+                ? `<button class="edit-guest-btn" onclick="openEditGuestModal(event, '${g.kode}')" style="position:absolute; top:12px; right:42px; border:none; background:#FEF3C7; color:#D97706; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;" title="Edit Data Tamu">✏️</button>`
+                : '';
+
             // Delete button — selalu tampilkan kecuali sedang syncing (tamu yang sudah di-blast akan memicu konfirmasi ganda)
             const deleteBtn = (g.syncStatus !== "syncing")
                 ? `<button class="delete-guest-btn" onclick="confirmDeleteGuest(event, '${g.kode}', '${g.nama}', ${isSent})" style="position:absolute; top:12px; right:12px; border:none; background:#FEE2E2; color:#991B1B; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;">✕</button>`
@@ -1179,6 +1380,7 @@
                 <div class="guest-item-card" 
                     style="border:${cardBorder}; background:${cardBg}; padding:15px; border-radius:20px; display:flex; flex-direction:column; justify-content:space-between; cursor:default; transition:0.3s; min-height:140px; box-shadow:0 10px 20px rgba(140,117,96,0.03); position:relative;">
                     ${syncIcon}
+                    ${editBtn}
                     ${deleteBtn}
                     <div>
                         <div>

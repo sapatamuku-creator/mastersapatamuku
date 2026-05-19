@@ -176,6 +176,10 @@ function handleMainPost(payload) {
         result = deleteGuest(ssId, payload.kodeUnik);
         break;
         
+      case "editGuest":
+        result = editGuest(payload);
+        break;
+        
       case "uploadSelfie":
         result = handleSelfiePost(payload);
         break;
@@ -1491,4 +1495,74 @@ function parseEventDate(eventDateRaw) {
   } catch(e) {}
   
   return new Date();
+}
+
+/**
+ * Update guest info in Google Sheets & Supabase
+ */
+function editGuest(payload) {
+  try {
+    const ss = getSS(payload.ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < START_ROW) return { status: "error", message: "Data kosong" };
+    
+    // Find the row with the matching kodeUnik
+    const data = sheet.getRange(START_ROW, COL_KODE_UNIK, lastRow - (START_ROW - 1), 1).getValues();
+    let rowIndex = -1;
+    for (let i = 0; i < data.length; i++) {
+      if (String(data[i][0]) === String(payload.kode)) {
+        rowIndex = i + START_ROW;
+        break;
+      }
+    }
+    
+    if (rowIndex === -1) return { status: "error", message: "Tamu tidak ditemukan" };
+    
+    // Normalize phone number
+    let cleanPhone = String(payload.whatsapp || "").replace(/\D/g, ''); 
+    if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+    const isInstagram = payload.whatsapp && (/[a-zA-Z]/.test(payload.whatsapp) || payload.whatsapp.trim().startsWith('@'));
+    const finalPhone = isInstagram ? payload.whatsapp : cleanPhone;
+
+    // Update columns: 3 (Nama), 4 (Whatsapp), 5 (Kategori), 8 (Pax/Rencana), 12 (Pihak Pengundang), 13 (Alamat), 19 (Sesi)
+    sheet.getRange(rowIndex, 3).setValue(payload.nama);
+    sheet.getRange(rowIndex, 4).setValue("'" + finalPhone);
+    sheet.getRange(rowIndex, 5).setValue(payload.kategori);
+    sheet.getRange(rowIndex, 8).setValue(payload.pax || payload.rencana || 1);
+    sheet.getRange(rowIndex, 12).setValue(payload.pihak);
+    sheet.getRange(rowIndex, 13).setValue(payload.alamat);
+    sheet.getRange(rowIndex, 19).setValue(payload.sesi || "-");
+
+    // Also update Supabase
+    try {
+      if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+        const supabasePayload = {
+          nama: payload.nama,
+          whatsapp: finalPhone,
+          kategori: payload.kategori,
+          rencana_hadir: payload.pax || payload.rencana || 1,
+          pihak_pengundang: payload.pihak,
+          alamat: payload.alamat,
+          sesi: payload.sesi || "-"
+        };
+        UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + payload.ssId + "&kode=eq." + payload.kode, {
+          method: "patch",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Content-Type": "application/json"
+          },
+          payload: JSON.stringify(supabasePayload),
+          muteHttpExceptions: true
+        });
+      }
+    } catch (e) {
+      console.error("Failed to update guest in Supabase: " + e.toString());
+    }
+
+    return { status: "success", message: "Data tamu berhasil diperbarui" };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
 }
