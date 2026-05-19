@@ -195,7 +195,20 @@ function directFonnteSend(url, payload, token) {
     };
     const response = UrlFetchApp.fetch(url, options);
     const json = JSON.parse(response.getContentText());
-    return (json.status === true || json.token || json.status === "connect" || json.status === "disconnect") 
+    
+    // Sangat permisif untuk status sukses Fonnte
+    const isSuccess = (
+      json.status === true || 
+      json.status === "true" || 
+      json.token || 
+      json.status === "connect" || 
+      json.status === "disconnect" || 
+      json.process === "pending" ||
+      json.process === "processing" ||
+      (json.target && json.id)
+    );
+    
+    return isSuccess 
       ? { status: true, data: json } 
       : { status: false, msg: json.reason || "Rejected" };
   } catch (e) { return { status: false, msg: "Error" }; }

@@ -90,6 +90,18 @@ function handleMainGet(e) {
 
   // Routing Action Get
   if (action === "getMasterData") return createResponse({ status: "success", data: getMasterDataV3(ssId) });
+  if (action === "findSheetId") {
+    const name = e.parameter.name;
+    const files = DriveApp.getFilesByName(name);
+    if (files.hasNext()) {
+      return createResponse({ status: "success", id: files.next().getId() });
+    }
+    const searchFiles = DriveApp.searchFiles("title contains '" + name + "'");
+    if (searchFiles.hasNext()) {
+      return createResponse({ status: "success", id: searchFiles.next().getId() });
+    }
+    return createResponse({ status: "error", message: "Not found" });
+  }
   if (action === "getMasterDataAngpao") return createResponse({ status: "success", guestList: getMasterDataV3(ssId) });
   if (action === "getSettings") return createResponse(getSettings(ssId, e.parameter.guestId));
   if (action === "getDropdownOptions") return createResponse(getDropdownOptions(ssId));
