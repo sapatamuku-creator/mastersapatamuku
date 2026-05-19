@@ -364,11 +364,12 @@
                             <tr>
                                 <th>NAMA TAMU</th>
                                 <th>KATEGORI</th>
+                                <th>PENGUNDANG</th>
                                 <th style="text-align: right;">STATUS BLAST</th>
                             </tr>
                         </thead>
                         <tbody id="tamuTable">
-                            <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding: 100px; font-size: 14px; font-style: italic;">Memuat data tamu...</td></tr>
+                            <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding: 100px; font-size: 14px; font-style: italic;">Memuat data tamu...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -524,7 +525,8 @@
                 kategori: item.kategori,
                 nomor: item.whatsapp,
                 status: item.status_wa,
-                sesi: item.sesi
+                sesi: item.sesi,
+                pihak: item.pihak_pengundang
             }));
 
             // Tampilkan tabel tamu instan ke layar
@@ -605,19 +607,32 @@
 
     function renderTable() {
         const tbody = document.getElementById('tamuTable');
+        const pihakMap = {
+            'PENGANTIN PRIA': 'Pria',
+            'PENGANTIN WANITA': 'Wanita',
+            'KELUARGA AYAH PENGANTIN PRIA': 'Keluarga CPP',
+            'KELUARGA IBU PENGANTIN PRIA': 'Keluarga CPP',
+            'KELUARGA AYAH PENGANTIN WANITA': 'Keluarga CPW',
+            'KELUARGA IBU PENGANTIN WANITA': 'Keluarga CPW'
+        };
+
         tbody.innerHTML = localData.tamu.length ? localData.tamu.map(t => {
             const statusColor = getStatusColor(t.status);
             const isDuplicate = t.status && typeof t.status === 'string' && 
                 (t.status.includes('⚠️') || t.status.toLowerCase().includes('duplikasi'));
+            
+            const pihakLabel = pihakMap[String(t.pihak || '').toUpperCase().trim()] || t.pihak || '-';
+
             return `
             <tr style="${isDuplicate ? 'background: var(--warning-bg);' : ''}">
                 <td><div style="font-weight: 700;">${t.nama}</div><div style="font-size:10px; color:var(--text-muted);">ID: ${t.kode}</div></td>
                 <td><span style="font-size:11px; background:var(--bg); padding:4px 10px; border-radius:6px; color:var(--text-muted); font-weight:700;">${t.kategori}</span></td>
+                <td><span style="font-size:11px; background:var(--bg); padding:4px 10px; border-radius:6px; color:var(--text-muted); font-weight:700;">${pihakLabel}</span></td>
                 <td style="text-align:right; font-weight:800; color:${statusColor}">
                     ${t.status || 'BELUM TERKIRIM'}
                 </td>
             </tr>`;
-        }).join('') : '<tr><td colspan="3" style="text-align:center; padding: 50px;">Data Tidak Tersedia</td></tr>';
+        }).join('') : '<tr><td colspan="4" style="text-align:center; padding: 50px;">Data Tidak Tersedia</td></tr>';
         document.getElementById('countTamu').innerText = localData.tamu.length;
     }
 
