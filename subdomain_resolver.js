@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SAPATAMU.KU - GLOBAL SUBDOMAIN RESOLVER (VERSI SEDERHANA v1.5)
  */
 
@@ -86,8 +86,8 @@ async function resolveSapatamuSubdomain() {
         }
 
         // 3. SATPAM AKHIR (Hanya di Subdomain): Jika masih kosong, tendang ke login
-        // KECUALI untuk halaman publik (undangan, welcome, worker)
-        const publicPages = ["undangan.html", "welcome.html", "worker.html"];
+        // KECUALI untuk halaman publik (undangan, welcome, worker, formulir_tamu)
+        const publicPages = ["undangan.html", "welcome.html", "worker.html", "formulir_tamu.html"];
         const isPublicPage = publicPages.some(page => window.location.pathname.includes(page));
 
         if (!window.CURRENT_SS_ID && !isPublicPage) {
