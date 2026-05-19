@@ -880,7 +880,14 @@
 
         const formData = {
             nama: document.getElementById('in-c7-nama').value.trim(),
-            whatsapp: document.getElementById('in-d7-wa').value.trim(),
+            whatsapp: (function(val) {
+                let clean = val.trim();
+                let isIg = /[a-zA-Z]/.test(clean) || clean.startsWith('@');
+                if (isIg) return clean;
+                let num = clean.replace(/\D/g, '');
+                if (num.startsWith('0')) num = '62' + num.substring(1);
+                return num || clean;
+            })(document.getElementById('in-d7-wa').value),
             kategori: document.getElementById('in-e7-kategori').value,
             pihak: document.getElementById('in-l7-pengundang').value,
             souvenir: document.getElementById('in-k7-souvenir').value,
@@ -1181,7 +1188,7 @@
                                 <div style="display:flex; align-items:center; gap:5px;">
                                     ${(isDupNumber && !isPending) ? '<span style="font-size:7.5px; font-weight:900; background:#FEF3C7; color:#D97706; padding:2px 6px; border-radius:20px; white-space:nowrap;">⚠ DUPLIKAT</span>' : ''}
                                     ${isPending ? '<span style="font-size:7.5px; font-weight:900; background:#FEF3C7; color:#D97706; padding:2px 6px; border-radius:20px; white-space:nowrap;">⚠ PENDING</span>' : ''}
-                                    <div style="font-size:9px; color:var(--text-muted); font-weight:700;">${g.whatsapp || '-'}</div>
+                                    <div style="font-size:9px; color:var(--text-muted); font-weight:700;">${isInstagram ? g.whatsapp : normalizePhone(g.whatsapp) || '-'}</div>
                                 </div>
                             </div>
                             <div style="font-size:10px; color:var(--text-muted); font-weight:600; margin-top:8px; line-height:1.4; border-top:1px solid var(--border); padding-top:8px;">
@@ -1505,7 +1512,15 @@
             if (!nama) return; // Skip empty rows
 
             const alamat = (row[selAlamat] || "").toString().trim() || "-";
-            const wa = selWa !== "" ? (row[selWa] || "").toString().trim() : "-";
+            let wa = selWa !== "" ? (row[selWa] || "").toString().trim() : "-";
+            if (wa && wa !== "-") {
+                let isIg = /[a-zA-Z]/.test(wa) || wa.startsWith('@');
+                if (!isIg) {
+                    let num = wa.replace(/\D/g, '');
+                    if (num.startsWith('0')) num = '62' + num.substring(1);
+                    wa = num || wa;
+                }
+            }
             const paxRaw = selPax !== "" ? parseInt(row[selPax]) : 1;
             const pax = isNaN(paxRaw) || paxRaw < 1 ? 1 : paxRaw;
 

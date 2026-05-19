@@ -1072,18 +1072,12 @@
                         const tPihak = (t.pihak || "").trim();
                         if (tPihak !== kat) return false;
                         
-                        let cleanNum = (t.nomor || "").toString().trim().replace(/\D/g, '');
-                        if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.substring(1);
-                        
-                        // Abaikan jika nomor ini sudah pernah sukses terkirim sebelumnya
-                        if (cleanNum && sentNumbers.has(cleanNum)) return false;
-                        
-                        // Abaikan jika status baris ini sendiri sudah sukses terkirim
+                        // Hanya abaikan jika baris ini sendiri statusnya sudah sukses terkirim
                         return !(t.status && typeof t.status === 'string' && t.status.includes('✅'));
                     });
 
                     if (!targets.length) {
-                        await showAlert("Informasi", "Semua tamu di kategori [" + kat + "] sudah terkirim atau nomornya sudah menerima blast ✅", "ℹ️");
+                        await showAlert("Informasi", "Semua tamu di kategori [" + kat + "] sudah terkirim ✅", "ℹ️");
                         return;
                     }
 
@@ -1103,7 +1097,8 @@
                         }
                         t.nomor = rawNomor; // update with cleaned number
                         
-                        if (seenNumbers.has(rawNomor)) {
+                        // Jika nomor ini sudah pernah sukses terkirim (di baris lain) ATAU sudah pernah terlihat di batch ini
+                        if (sentNumbers.has(rawNomor) || seenNumbers.has(rawNomor)) {
                             duplicates.push(t);
                         } else {
                             seenNumbers.add(rawNomor);
@@ -1127,6 +1122,32 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                             "⚠️"
                         );
                         if (!proceedAnyway) return;
+
+                        // Sinkronisasikan status duplikat ke Supabase secara langsung dari frontend
+                        const supabaseApiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+                        const now = new Date();
+                        const pad = n => String(n).padStart(2, '0');
+                        const nowStr = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+
+                        Promise.all(
+                            duplicates.map(d => 
+                                fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${d.row}`, {
+                                    method: "PATCH",
+                                    headers: {
+                                        "apikey": supabaseApiKey,
+                                        "Authorization": "Bearer " + supabaseApiKey,
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify({ status_wa: '⚠️ Duplikasi Nomor [' + nowStr + ']' })
+                                }).catch(e => console.error("Supabase duplicate sync failed", e))
+                            )
+                        ).then(() => {
+                            duplicates.forEach(d => {
+                                const entry = localData.tamu.find(x => x.row === d.row);
+                                if (entry) entry.status = '⚠️ Duplikasi Nomor [' + nowStr + ']';
+                            });
+                            renderTable();
+                        });
 
                         // Mark duplicates as warning (yellow) via backend — fire-and-forget
                         const dupPayload = duplicates.map(d => ({
