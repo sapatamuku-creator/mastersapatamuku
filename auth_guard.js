@@ -12,6 +12,20 @@
  */
 
 (function () {
+    window.togglePasswordVisibility = window.togglePasswordVisibility || function(inputId, buttonEl) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        if (isPassword) {
+            buttonEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px; display: inline;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>`;
+            buttonEl.setAttribute('aria-label', 'Sembunyikan password');
+        } else {
+            buttonEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px; display: inline;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>`;
+            buttonEl.setAttribute('aria-label', 'Tampilkan password');
+        }
+    };
+
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
     const SESSION_KEY = 'sapatamu_session';
     const LOCAL_DB = 'sapatamu_db';
@@ -227,8 +241,15 @@
                 <div style="font-size:36px; margin-bottom:10px">🔑</div>
                 <h3>Masuk sebagai Admin</h3>
                 <p>Masukkan password Admin Sapatamu untuk mengaktifkan halaman ini.</p>
-                <input type="password" id="sapa-admin-pass-input" placeholder="••••••" 
-                    onkeydown="if(event.key==='Enter') SapaGuard.verifyAdmin()">
+                <div style="position: relative; width: 100%; margin-bottom: 16px;">
+                    <input type="password" id="sapa-admin-pass-input" placeholder="••••••" 
+                        onkeydown="if(event.key==='Enter') SapaGuard.verifyAdmin()" style="margin-bottom: 0; padding-right: 48px;">
+                    <button type="button" onclick="togglePasswordVisibility('sapa-admin-pass-input', this)" class="sapa-guard-exempt" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; cursor: pointer; color: #8C7560; display: flex; align-items: center; justify-content: center; outline: none;" aria-label="Tampilkan password">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px; display: inline;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                        </svg>
+                    </button>
+                </div>
                 <div id="sapa-admin-err"></div>
                 <div class="sapa-guard-btn-row">
                     <button class="sapa-guard-btn secondary" onclick="SapaGuard.hideAdminModal()">Batal</button>
