@@ -886,7 +886,27 @@
         const schedule = document.getElementById('view-schedule').innerText.replace(/\n/g, ' ');
         const location = document.getElementById('view-location').innerText;
         const baseUrl = document.getElementById('view-link').innerText;
-        const personalLink = `${baseUrl}?id=${encodeURIComponent(code)}&u=${encodeURIComponent(name)}`;
+        
+        // ===== DETEKSI LINK DINAMIS (SapaTamu vs Vendor Lain) =====
+        let personalLink = "";
+        if (baseUrl) {
+            const isSapaTamu = baseUrl.includes("sapatamu.id") || baseUrl.includes("sapatamu.ku") || baseUrl.includes("localhost");
+            const encodedName = encodeURIComponent(name).replace(/,/g, '%2C');
+            
+            if (isSapaTamu) {
+                // A. Format Asli SapaTamu (Menggunakan id & u)
+                personalLink = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}v=3&id=${encodeURIComponent(code)}&u=${encodedName}`;
+            } else {
+                // B. Format Vendor Lain (Menggunakan parameter kustom yang ada di B5, misal ?to= atau &to=)
+                if (baseUrl.endsWith("=")) {
+                    personalLink = `${baseUrl}${encodedName}`;
+                } else {
+                    // Cadangan jika klien lupa mengetikkan '=' di akhir link B5
+                    personalLink = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}to=${encodedName}`;
+                }
+            }
+        }
+        
         const qrCodeLink = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(code)}&size=400x400`;
         
         let cleanPhone = String(phone).replace(/\D/g, ''); 
