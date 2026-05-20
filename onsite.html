@@ -1087,10 +1087,15 @@
                                         tandaKasih: item.tanda_kasih,
                                         sesi: item.sesi
                                     };
-                                    if (!masterData.some(g => g.kode === newItem.kode)) {
+                                    const existingIdx = masterData.findIndex(g => g.kode === newItem.kode);
+                                    if (existingIdx !== -1) {
+                                        masterData[existingIdx].row = newItem.row;
+                                        masterData[existingIdx].statusWA = newItem.statusWA;
+                                        console.log("Updated optimistic onsite guest row number:", newItem.row);
+                                    } else {
                                         masterData.unshift(newItem);
-                                        renderUI();
                                     }
+                                    renderUI();
                                 } else if (eventType === 'UPDATE') {
                                     const item = payload.new;
                                     const idx = masterData.findIndex(g => g.kode === item.kode || g.row === item.row);
@@ -1798,30 +1803,7 @@
                 const timeOnly = new Date().toLocaleTimeString('en-GB', { hour12: false });
 
                 try {
-                    // 1. Insert to tamu
-                    await fetch(`${SB_URL}/rest/v1/tamu`, {
-                        method: "POST",
-                        headers: SB_HEADERS,
-                        body: JSON.stringify({
-                            ssid: CURRENT_SS_ID,
-                            kode: kodeUnik,
-                            nama: nama || "Tanpa Nama",
-                            whatsapp: cleanPhone,
-                            kategori: document.getElementById('reg-kategori').value || "UMUM",
-                            rencana_hadir: 0,
-                            real_hadir: parseInt(adult) + parseInt(child) || 1,
-                            souvenir: document.getElementById('reg-souvenir').value === "tidak" ? "tidak" : "ya",
-                            pihak_pengundang: document.getElementById('reg-host').value || "-",
-                            alamat: document.getElementById('reg-alamat').value || "-",
-                            status_hadir: "1",
-                            status_hadiah: gift || "-",
-                            tanda_kasih: 0,
-                            sesi: document.getElementById('reg-sesi').value || "-",
-                            jam_datang: timeOnly
-                        })
-                    });
-
-                    // 2. Queue print job
+                    // 1. Queue print job directly to Supabase (< 200ms)
                     let catUpper = String(document.getElementById('reg-kategori').value || "").toUpperCase();
                     let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
 
@@ -1883,7 +1865,7 @@
                     }
                     await Promise.all(printPromises);
                 } catch(e) {
-                    console.error("Direct Supabase guest registration / print queuing failed:", e);
+                    console.error("Direct Supabase print queuing failed:", e);
                 }
 
                 const payload = {
@@ -1902,8 +1884,34 @@
                     stationId: stationId,
                     kodeUnik: kodeUnik,
                     customUuid: mainPrintId,
-                    skipSupabase: true
+                    skipSupabase: false, // Let GAS sync this record to Supabase tamu table with the correct row ID
+                    skipSupabasePrint: true // Skip duplicate print queue insertions in Supabase
                 };
+
+                // Optimistic UI Update: Add to local masterData list immediately
+                const localGuest = {
+                    row: null, // Will be updated via realtime sync once GAS writes to database
+                    nama: nama || "Tanpa Nama",
+                    whatsapp: cleanPhone,
+                    kategori: document.getElementById('reg-kategori').value || "UMUM",
+                    kode: kodeUnik,
+                    barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
+                    rencanaHadir: 0,
+                    statusHadir: "1",
+                    jamDatang: timeOnly,
+                    souvenir: document.getElementById('reg-souvenir').value === "tidak" ? "tidak" : "ya",
+                    pihakPengundang: document.getElementById('reg-host').value || "-",
+                    alamat: document.getElementById('reg-alamat').value || "-",
+                    realHadir: paxString,
+                    statusWA: "-",
+                    statusHadiah: gift || "-",
+                    tandaKasih: 0,
+                    sesi: document.getElementById('reg-sesi').value || "-"
+                };
+                if (!masterData.some(g => g.kode === localGuest.kode)) {
+                    masterData.unshift(localGuest);
+                    renderUI();
+                }
 
                 // --- STEP 2: CORE REGISTER (Non-Blocking background sync) ---
                 fetch(SCRIPT_URL, {

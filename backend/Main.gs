@@ -149,7 +149,16 @@ function handleMainPost(payload) {
         break;
       
       case "confirm_checkin": 
-        result = confirmCheckIn(ssId, payload.kodeUnik, payload.realHadir, payload.statusAngpao || payload.catatan, payload.stationId); 
+        result = confirmCheckIn(
+          ssId, 
+          payload.kodeUnik, 
+          payload.realHadir, 
+          payload.statusAngpao || payload.catatan, 
+          payload.stationId, 
+          payload.customUuid, 
+          payload.skipSupabase, 
+          payload.skipSupabasePrint
+        ); 
         break;
         
       case "register_new_onsite": 
@@ -309,7 +318,7 @@ function updateTandaKasih(ssId, kode, nominal) {
   return { status: "error", message: "Kode tamu tidak ditemukan" };
 }
 
-function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId, customUuid, skipSupabase) {
+function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId, customUuid, skipSupabase, skipSupabasePrint) {
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_DATA);
   const data = sheet.getDataRange().getValues();
@@ -325,6 +334,7 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId, customUui
       sheet.getRange(rowIndex, COL_REAL_HADIR).setValue(realHadir);
       sheet.getRange(rowIndex, COL_CATATAN).setValue(catatan);
       
+      SpreadsheetApp.flush(); // Flush updates to spreadsheet so we read correct updated data
       const updatedRowData = sheet.getRange(rowIndex, 1, 1, 19).getValues()[0];
       
       // SINKRONISASI KE SUPABASE SECARA OTOMATIS
@@ -355,7 +365,7 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId, customUui
         }
       }
       
-      processPrintLogic(ssId, updatedRowData, catatan, stationId, customUuid, skipSupabase);
+      processPrintLogic(ssId, updatedRowData, catatan, stationId, customUuid, skipSupabasePrint !== undefined ? skipSupabasePrint : skipSupabase);
       addToRundown(ssId, updatedRowData); // Sinkronisasi ke Welcome Sign Rundown
 
       return { "status": "success", "row": rowIndex, "triggerBlast": true };
@@ -683,6 +693,7 @@ function registerNewOnsite(data) {
       data.alamat || "-", data.realHadir || 1, giftVal, timestampP, "-", 0, data.sesi || "-"
     ];
     sheet.appendRow(newRow);
+    SpreadsheetApp.flush(); // Flush updates to spreadsheet so we read correct row count and values
     const lastRow = sheet.getLastRow();
     const lastRowData = sheet.getRange(lastRow, 1, 1, 19).getValues()[0];
 
@@ -730,7 +741,7 @@ function registerNewOnsite(data) {
       }
     }
 
-    processPrintLogic(data.ssId, lastRowData, giftVal, data.stationId, data.customUuid, data.skipSupabase);
+    processPrintLogic(data.ssId, lastRowData, giftVal, data.stationId, data.customUuid, data.skipSupabasePrint !== undefined ? data.skipSupabasePrint : data.skipSupabase);
     addToRundown(data.ssId, lastRowData); // Sinkronisasi ke Welcome Sign
     return { status: "success", kode: kodeUnik, message: "On-Site Berhasil", triggerBlast: true };
   } catch (e) { return { status: "error", message: e.toString() }; } finally { lock.releaseLock(); }
