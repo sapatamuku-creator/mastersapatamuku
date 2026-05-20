@@ -172,20 +172,19 @@
         </div>
 
         <div class="form-group">
-            <label>Subdomain / Username 
-                <span id="sub-status" style="margin-left: 10px; font-size: 12px; font-weight: 800;"></span>
+            <label>Subdomain / Username
+                <span id="sub-status" style="margin-left: 8px; font-size: 11px; font-weight: 800;"></span>
             </label>
-            <div style="display: flex; gap: 8px; align-items: center;">
-                <div style="position: relative; flex: 1;">
-                    <input type="text" id="reg_subdomain" class="sapatamu-input" placeholder="gildanmita" readonly style="padding-right: 100px; background: #f8fafc; cursor: not-allowed;">
-                    <span style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-weight: 800; font-size: 11px; color: var(--text-muted); pointer-events: none;">.sapatamu.id</span>
-                </div>
-                <button onclick="validateSubdomain()" id="btn_cek_sub" class="gen-btn" style="background: #6366f1; color: white;">
-                    <span id="text_cek_sub">Cek</span>
-                    <span class="loader" id="load_cek_sub"></span>
-                </button>
+            <div style="position: relative;">
+                <input type="text" id="reg_subdomain" class="sapatamu-input" placeholder="gildanmita" readonly
+                    style="padding-right: 140px; background: #f8fafc; cursor: not-allowed;">
+                <!-- Suffix + inline spinner -->
+                <span style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 6px; pointer-events: none;">
+                    <span id="sub-spinner" style="display:none; width:12px; height:12px; border:2px solid #c7d2fe; border-bottom-color:#6366f1; border-radius:50%; animation:rotation 0.7s linear infinite;"></span>
+                    <span style="font-weight: 800; font-size: 11px; color: var(--text-muted);">.sapatamu.id</span>
+                </span>
             </div>
-            <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px; font-weight: 600;">* Subdomain dibuat otomatis berdasarkan Nama di atas.</p>
+            <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px; font-weight: 600;">* Subdomain terdeteksi otomatis saat Anda mengetik nama.</p>
         </div>
 
         <div class="form-group">
@@ -616,51 +615,78 @@
         }
     };
 
-    let subTimeout;
+    let subDebounceTimer = null;
+    let lastCheckedSlug = '';
+
+    // Dipanggil tiap kali nama diketik — auto-generate slug & langsung cek ke Supabase
     window.autoSuggestSubdomain = function(val) {
-        if (!val) return;
         const slug = val.toLowerCase().replace(/[^a-z0-9]/g, '');
-        document.getElementById('reg_subdomain').value = slug;
-        // Tidak lagi memanggil validateSubdomain otomatis
+        const subInput = document.getElementById('reg_subdomain');
         const statusEl = document.getElementById('sub-status');
-        statusEl.innerText = ""; // Reset status saat ada perubahan input
+        const spinner = document.getElementById('sub-spinner');
+        const regBtn = document.getElementById('btn_reg');
+
+        subInput.value = slug;
+
+        if (!slug || slug.length < 3) {
+            statusEl.innerText = slug.length > 0 ? '⚠️ Min. 3 karakter' : '';
+            statusEl.style.color = 'var(--gold)';
+            if (regBtn) regBtn.disabled = true;
+            clearTimeout(subDebounceTimer);
+            return;
+        }
+
+        // Tampilkan spinner, reset status
+        spinner.style.display = 'inline-block';
+        statusEl.innerText = '';
+        if (regBtn) regBtn.disabled = true;
+
+        // Debounce 500ms — beri jeda sebelum query ke Supabase
+        clearTimeout(subDebounceTimer);
+        subDebounceTimer = setTimeout(() => checkSubdomainSupabase(slug), 500);
     };
 
-    window.validateSubdomain = async function() {
-        const val = document.getElementById('reg_subdomain').value.trim();
+    async function checkSubdomainSupabase(slug) {
         const statusEl = document.getElementById('sub-status');
+        const spinner = document.getElementById('sub-spinner');
         const regBtn = document.getElementById('btn_reg');
-        
-        if (!val || val.length < 3) {
-            return showSapaModal("Input Terlalu Pendek", "Subdomain minimal 3 karakter.", "⚠️");
-        }
 
-        setLoading('btn_cek_sub', true);
-        statusEl.innerText = "⌛ Mengecek...";
-        statusEl.style.color = "var(--gold)";
+        if (slug === lastCheckedSlug) {
+            spinner.style.display = 'none';
+            return;
+        }
 
         try {
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify({ action: "checkSubdomain", subdomain: val })
+            // Query langsung ke Supabase clients — cek kolom subdomain
+            const res = await fetch(`${SB_URL}/rest/v1/clients?subdomain=eq.${encodeURIComponent(slug)}&select=subdomain`, {
+                headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
             });
-            const res = await response.json();
-            
-            if (res.status === "available") {
-                statusEl.innerText = "✅ BISA DIGUNAKAN";
-                statusEl.style.color = "var(--success)";
-                if (document.getElementById('reg_ssid').value) regBtn.disabled = false;
+            const data = await res.json();
+            lastCheckedSlug = slug;
+
+            if (data.length === 0) {
+                // Tersedia
+                statusEl.innerText = '✅ TERSEDIA';
+                statusEl.style.color = 'var(--success)';
+                if (regBtn && document.getElementById('reg_ssid').value) regBtn.disabled = false;
             } else {
-                statusEl.innerText = "❌ SUDAH DIGUNAKAN";
-                statusEl.style.color = "#E07B7B";
-                regBtn.disabled = true;
-                const msg = res.message || "Subdomain '" + val + "' sudah dimiliki klien lain.";
-                showSapaModal("Tidak Tersedia", msg, "❌");
+                // Sudah dipakai
+                statusEl.innerText = '❌ SUDAH DIPAKAI';
+                statusEl.style.color = '#E07B7B';
+                if (regBtn) regBtn.disabled = true;
             }
         } catch (e) {
-            statusEl.innerText = "⚠️ Gangguan Koneksi";
+            statusEl.innerText = '⚠️ Gagal cek';
+            statusEl.style.color = 'var(--gold)';
+        } finally {
+            spinner.style.display = 'none';
         }
-        setLoading('btn_cek_sub', false);
+    }
+
+    // Tetap tersedia sebagai alias jika dipanggil dari tempat lain
+    window.validateSubdomain = function() {
+        const slug = document.getElementById('reg_subdomain').value.trim();
+        if (slug.length >= 3) checkSubdomainSupabase(slug);
     };
 
     window.generateSheet = async function() {
