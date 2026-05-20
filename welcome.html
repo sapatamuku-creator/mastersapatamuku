@@ -295,11 +295,17 @@
     //   Filter: tamu yang sudah check-in (jam_datang != '-' & != null)
     //   diurutkan berdasarkan jam_datang terbaru.
     // ────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
+    // syncGuestDisplay() — Ambil tamu terbaru dari welcome_queue
+    //   welcome_queue diisi langsung saat tamu check-in dari
+    //   checkin.html / kiosk.html / onsite.html.
+    //   Lebih cepat karena: INSERT langsung → Realtime EVENT → tampil.
+    //   Polling 10 detik hanya sebagai backup.
+    // ────────────────────────────────────────────────────────────
     async function syncGuestDisplay() {
         if (!ssId) return;
         try {
-            // Ambil 5 tamu terakhir yang sudah check-in, urutkan jam datang terbaru
-            const url = `${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&status_hadir=eq.1&order=jam_datang.desc&limit=5&select=nama,kategori,alamat,jam_datang`;
+            const url = `${SB_URL}/rest/v1/welcome_queue?ssid=eq.${ssId}&status=eq.DISPLAY&order=created_at.desc&limit=5&select=nama,kategori,alamat,pihak,pax,created_at`;
             const res = await fetch(url, {
                 headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
             });
@@ -307,22 +313,11 @@
             const guests = await res.json();
 
             if (guests && guests.length > 0) {
-                const latest = guests[0]; // Tamu paling baru check-in
-
-                // Hanya update tampilan jika nama berubah (tamu baru masuk)
+                const latest = guests[0];
                 if (latest.nama && latest.nama !== currentGuestName) {
-                    const box = document.getElementById('guest-box');
-                    box.classList.remove('animate-in');
-                    void box.offsetWidth; // Trigger reflow agar animasi ulang
-                    box.classList.add('animate-in');
-                    box.style.opacity = "1";
-                    document.getElementById('guest-name').innerText = latest.nama.toUpperCase();
-                    document.getElementById('g-cat').innerText = latest.kategori || "";
-                    document.getElementById('g-addr').innerText = latest.alamat || "";
-                    currentGuestName = latest.nama;
+                    showGuest(latest);
                 }
-
-                // Update marquee dengan 5 nama terbaru
+                // Update marquee dengan 5 nama terbaru dari welcome_queue
                 const names = guests.map(g => g.nama).filter(n => n);
                 if (names.length > 0) {
                     document.getElementById('marquee-log').innerText =
@@ -330,8 +325,20 @@
                 }
             }
         } catch (e) {
-            console.warn("Guest display sync error:", e);
+            console.warn("welcome_queue sync error:", e);
         }
+    }
+
+    function showGuest(guest) {
+        const box = document.getElementById('guest-box');
+        box.classList.remove('animate-in');
+        void box.offsetWidth;
+        box.classList.add('animate-in');
+        box.style.opacity = "1";
+        document.getElementById('guest-name').innerText = (guest.nama || "").toUpperCase();
+        document.getElementById('g-cat').innerText = guest.kategori || "";
+        document.getElementById('g-addr').innerText = guest.alamat || "";
+        currentGuestName = guest.nama;
     }
 
     function initSupabaseRealtimeTamu() {
@@ -339,44 +346,48 @@
         try {
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
-                console.log("Menghubungkan ke Supabase Realtime (Tamu)...");
-                
+                console.log("Menghubungkan ke Supabase Realtime (welcome_queue)...");
+
                 realtimeChannel = supabaseClient
-                    .channel('tamu_changes_channel')
+                    .channel('welcome_queue_channel')
                     .on(
                         'postgres_changes',
                         {
-                            event: '*',
+                            event: 'INSERT',
                             schema: 'public',
-                            table: 'tamu',
+                            table: 'welcome_queue',
                             filter: `ssid=eq.${ssId}`
                         },
                         (payload) => {
-                            console.log("Realtime event (Tamu):", payload);
+                            console.log("Realtime welcome_queue INSERT:", payload);
                             const record = payload.new;
-                            if (record && record.status_hadir == 1) {
-                                console.log(`Realtime Tamu: Tamu baru check-in (${record.nama})`);
-                                syncGuestDisplay();
+                            if (record && record.nama) {
+                                showGuest(record);
+                                // Update marquee langsung dari payload
+                                const currentMarquee = document.getElementById('marquee-log').innerText;
+                                const newEntry = record.nama.toUpperCase();
+                                if (!currentMarquee.includes(newEntry)) {
+                                    document.getElementById('marquee-log').innerText =
+                                        ("SELAMAT DATANG: " + newEntry + (currentMarquee ? "  •  " + currentMarquee.replace("SELAMAT DATANG: ", "") : "")).substring(0, 200);
+                                }
                             }
                         }
                     )
                     .subscribe((status) => {
-                        console.log(`Status Realtime Tamu: ${status}`);
+                        console.log(`Status Realtime welcome_queue: ${status}`);
                         if (status === 'SUBSCRIBED') {
-                            // Lambatkan polling backup ke 15 detik jika realtime aktif
-                            startGuestPolling(15000);
+                            startGuestPolling(30000); // Polling lambat — 30 detik, realtime yg utama
                         } else {
-                            // Cepatkan polling backup ke 3000ms jika realtime offline
-                            startGuestPolling(3000);
+                            startGuestPolling(5000);  // Cepatkan polling jika realtime offline
                         }
                     });
             } else {
-                console.warn("Supabase library tidak termuat, fallback ke Polling cepat.");
-                startGuestPolling(3000);
+                console.warn("Supabase library tidak termuat, fallback ke Polling.");
+                startGuestPolling(5000);
             }
         } catch (e) {
-            console.error("Gagal inisialisasi Realtime Tamu:", e);
-            startGuestPolling(3000);
+            console.error("Gagal inisialisasi Realtime welcome_queue:", e);
+            startGuestPolling(5000);
         }
     }
 

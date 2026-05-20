@@ -1903,6 +1903,24 @@
                         }
                     }
                     await Promise.all(printPromises);
+
+                    // ─── WELCOME QUEUE (fire-and-forget) ───
+                    fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                        method: "POST",
+                        headers: SB_HEADERS,
+                        body: JSON.stringify({
+                            ssid: CURRENT_SS_ID,
+                            nama: nama || "Tanpa Nama",
+                            kategori: document.getElementById('reg-kategori').value || "Umum",
+                            alamat: document.getElementById('reg-alamat').value || "-",
+                            pihak: document.getElementById('reg-host').value || "-",
+                            pax: parseInt(adult) + parseInt(child) || 1,
+                            kode: kodeUnik,
+                            status: "DISPLAY",
+                            created_at: new Date().toISOString()
+                        })
+                    }).catch(e => console.warn("welcome_queue onsite write error:", e));
+
                 } catch(e) {
                     console.error("Direct Supabase guest registration / print queuing failed:", e);
                 }

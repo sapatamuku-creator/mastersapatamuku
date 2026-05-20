@@ -958,7 +958,37 @@
             }
 
             // ────────────────────────────────────────────────────
+            // STEP 2C — SUPABASE WELCOME QUEUE (< 100ms)
+            //   Kirim data tamu ke welcome_queue untuk ditampilkan
+            //   di Welcome Sign secara realtime.
+            //   Berjalan paralel, tidak di-await (fire-and-forget).
+            // ────────────────────────────────────────────────────
+            (async () => {
+                try {
+                    const primaryGuest = list.map(id => masterData.find(r => r.kode === id)).find(g => g);
+                    if (primaryGuest) {
+                        await fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                            method: "POST",
+                            headers: SB_HEADERS,
+                            body: JSON.stringify({
+                                ssid: CURRENT_SS_ID,
+                                nama: primaryGuest.nama || "-",
+                                kategori: primaryGuest.kategori || "Umum",
+                                alamat: primaryGuest.alamat || "-",
+                                pihak: primaryGuest.pihakPengundang || "-",
+                                pax: parseInt(total) || 1,
+                                kode: primaryGuest.kode || "-",
+                                status: "DISPLAY",
+                                created_at: nowISO
+                            })
+                        });
+                    }
+                } catch(e) { console.warn("welcome_queue write error:", e); }
+            })();
+
+            // ────────────────────────────────────────────────────
             // STEP 3 — GAS SYNC KE GOOGLE SHEET (fire-and-forget)
+
             //   GAS tidak di-await. Jalan di latar belakang.
             //   Tujuannya hanya menyimpan ke Google Sheet.
             //   Jika GAS lambat/error, UI tidak terpengaruh.

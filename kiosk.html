@@ -805,11 +805,30 @@
                         }
                     }
                     await Promise.all(printPromises);
+
+                    // ─── WELCOME QUEUE (fire-and-forget) ───
+                    fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                        method: "POST",
+                        headers: SB_HEADERS,
+                        body: JSON.stringify({
+                            ssid: CURRENT_SS_ID,
+                            nama: selectedGuest.nama || "-",
+                            kategori: selectedGuest.kategori || "Umum",
+                            alamat: selectedGuest.alamat || "-",
+                            pihak: selectedGuest.pihakPengundang || "-",
+                            pax: total || 1,
+                            kode: selectedGuest.kode || "-",
+                            status: "DISPLAY",
+                            created_at: new Date().toISOString()
+                        })
+                    }).catch(e => console.warn("welcome_queue kiosk write error:", e));
+
                 } catch (e) {
                     console.error("Direct Supabase update/print failed in kiosk:", e);
                 }
 
                 // --- STEP 2: CORE CHECKIN (Non-Blocking background sync) ---
+
                 fetch(SCRIPT_URL, { 
                     method: 'POST', 
                     mode: 'no-cors',

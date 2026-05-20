@@ -20,6 +20,10 @@ const ADMIN_WA = "6285111567829";
 const ADMIN_EMAIL = "sapatamuku@gmail.com";
 const FONNTE_TOKEN = "fRx1Canf4GYroBZZNfo7";
 
+// CONFIG MIDTRANS PAYMENT GATEWAY
+const MIDTRANS_SERVER_KEY = "SB-Mid-server-yU2Z-1m-T8tZ-T-l1H9X_x1"; // Ganti dengan Server Key Anda
+const MIDTRANS_IS_PRODUCTION = false; // Set ke true jika live production
+
 function handleCentralPost(request) {
   const action = request.action;
   
@@ -34,6 +38,12 @@ function handleCentralPost(request) {
     case 'resolveSubdomain': return handleResolveSubdomain(request);
     case 'checkSubdomain': return handleCheckSubdomain(request);
     case 'uploadFile': return handleUploadFile(request);
+    case 'createMidtransTransaction': return handleCreateMidtransTransaction(request);
+    case 'sendOTP': return handleSendOTP(request);
+    case 'savePendingClient': return handleSavePendingClient(request);
+    case 'registerAndActivate': return handleRegisterAndActivate(request);
+    case 'getOwnerClients': return handleGetOwnerClients(request);
+    case 'updateOwnerClient': return handleUpdateOwnerClient(request);
     case 'syncAllClients': return createResponse({ status: "success", message: syncAllClientsToSupabase() });
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
@@ -63,7 +73,7 @@ function handleRegister(data) {
     file.setName(finalName);
 
     // Append Row ke Master
-    // A: Username (Slug), B: ID, C: Pass, D: WA, E: Date, F: Created, G: Email, H: Status, I: Kategori, J: Subdomain (Slug), K: Nama Klien
+    // A: Username (Slug), B: ID, C: Pass, D: WA, E: Date, F: Created, G: Email, H: Status, I: Kategori, J: Subdomain (Slug), K: Nama Klien, L: Paket
     sheet.appendRow([
       sub,               // A: Username (Slug)
       data.ssId,         // B
@@ -75,7 +85,8 @@ function handleRegister(data) {
       "Active",          // H
       data.category || "wedding", // I
       sub,               // J: Subdomain (Slug)
-      data.clientName    // K: Nama Klien (Full)
+      data.clientName,   // K: Nama Klien (Full)
+      data.package || "Silver" // L: Paket Terpilih
     ]);
 
     // Sinkronisasi ke Supabase
@@ -101,6 +112,199 @@ function handleRegister(data) {
     return createResponse({ status: "success", message: "Pendaftaran berhasil" });
   } catch (err) {
     return createResponse({ status: "error", message: "Gagal pendaftaran: " + err.toString() });
+  }
+}
+
+// --- SIMPAN DATA PENDING KE SUPABASE (Sebelum Aktivasi Spreadsheet) ---
+function handleSavePendingClient(data) {
+  try {
+    const sub = (data.subdomain || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!sub) return createResponse({ status: "error", message: "Subdomain tidak valid" });
+
+    // Cek duplikasi di Master Sheet
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const values = sheet.getDataRange().getValues();
+    for (let i = 1; i < values.length; i++) {
+      const rowSub = String(values[i][9] || values[i][0]).toLowerCase();
+      if (rowSub === sub) return createResponse({ status: "error", message: "Subdomain sudah terdaftar" });
+    }
+
+    // Simpan ke Supabase dengan status PendingActivation, ssid kosong
+    syncClientToSupabaseWithResult({
+      username: sub, ssid: "",
+      password: data.password, whatsapp: data.whatsapp,
+      wedding_date: data.weddingDate || "",
+      created_at: new Date().toISOString(),
+      email: data.email, status: "PendingActivation",
+      category: data.category || "wedding",
+      subdomain: sub, client_name: data.clientName,
+      package: data.package || ""
+    });
+
+    return createResponse({ status: "success", message: "Data pendaftaran tersimpan" });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Gagal simpan pending: " + err.toString() });
+  }
+}
+
+// --- AKTIVASI AKUN: BUAT SPREADSHEET + REGISTER + SYNC SUPABASE ---
+function handleRegisterAndActivate(data) {
+  try {
+    const sub = (data.subdomain || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const values = sheet.getDataRange().getValues();
+
+    // Cek duplikasi di Master Sheet (status Active)
+    for (let i = 1; i < values.length; i++) {
+      const rowSub = String(values[i][9] || values[i][0]).toLowerCase();
+      const rowStatus = String(values[i][7]).toLowerCase();
+      if (rowSub === sub && rowStatus === 'active') {
+        return createResponse({ status: "error", message: "Akun sudah aktif, tidak bisa aktivasi ulang" });
+      }
+    }
+
+    // Buat Spreadsheet dari Template
+    const cat = data.category || 'wedding';
+    const templateId = MASTER_TEMPLATES[cat] || MASTER_TEMPLATES['wedding'];
+    const templateFile = DriveApp.getFileById(templateId);
+    const folder = DriveApp.getFolderById(FOLDER_KLIEN_ID);
+    const tgl = data.weddingDate || 'NoDate';
+    const clientName = data.clientName || sub;
+    const finalFileName = (tgl !== 'NoDate') ? `${tgl} - ${clientName}` : clientName;
+
+    const newFile = templateFile.makeCopy(finalFileName, folder);
+    const newSsId = newFile.getId();
+    const sheet1 = SpreadsheetApp.openById(newSsId).getSheets()[0];
+
+    // Inject data ke Spreadsheet Klien
+    sheet1.getRange("A1:B1").setValues([["Nama Pengantin :", clientName]]);
+    sheet1.getRange("A2:B2").setValues([["Hari & Tanggal :", tgl]]);
+    sheet1.getRange("A3:B3").setValues([["Lokasi Acara :", data.address || ""]]);
+    sheet1.getRange("A4:B4").setValues([["Waktu Acara :", ""]]);
+    sheet1.getRange("A5:B5").setValues([["Link Invitation :", ""]]);
+
+    // Append ke Master Sheet (Kolom A–M)
+    sheet.appendRow([
+      sub, newSsId, data.password, data.whatsapp, tgl, new Date(),
+      data.email, "Active", cat, sub, clientName,
+      data.package || "", tgl  // L: Paket, M: Event Date (slot check)
+    ]);
+
+    // Update/Sync ke Supabase dengan status Active + SSID
+    try {
+      syncClientToSupabase({
+        username: sub, ssid: newSsId,
+        password: data.password, whatsapp: data.whatsapp,
+        wedding_date: tgl, created_at: new Date().toISOString(),
+        email: data.email, status: "Active",
+        category: cat, subdomain: sub,
+        client_name: clientName, package: data.package || ""
+      });
+      syncAdminPasswordToSupabase();
+    } catch (e) {
+      console.error("Sync Supabase aktivasi gagal: " + e.toString());
+    }
+
+    return createResponse({
+      status: "success",
+      message: "Akun berhasil diaktifkan!",
+      data: { ssId: newSsId, fileName: finalFileName }
+    });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Gagal aktivasi: " + err.toString() });
+  }
+}
+
+// --- OWNER DASHBOARD: AMBIL SEMUA DATA CLIENT ---
+function handleGetOwnerClients(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const adminPass = String(sheet.getRange(1, 11).getValue() || "").trim();
+    if (data.adminPassword !== adminPass) {
+      return createResponse({ status: "error", message: "Password admin tidak valid" });
+    }
+    const values = sheet.getDataRange().getValues();
+    const clients = [];
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      if (!row[0]) continue;
+      clients.push({
+        username: row[0], ssid: row[1], password: row[2],
+        whatsapp: row[3], wedding_date: String(row[4] || ""),
+        created_at: String(row[5] || ""), email: row[6],
+        status: row[7], category: row[8], subdomain: row[9],
+        client_name: row[10], package: row[11] || "", event_date_m: row[12] || ""
+      });
+    }
+    return createResponse({ status: "success", data: clients });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Gagal ambil data: " + err.toString() });
+  }
+}
+
+// --- OWNER DASHBOARD: UPDATE CLIENT (SYNC KE SUPABASE + MASTER SHEET) ---
+function handleUpdateOwnerClient(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const adminPass = String(sheet.getRange(1, 11).getValue() || "").trim();
+    if (data.adminPassword !== adminPass) {
+      return createResponse({ status: "error", message: "Password admin tidak valid" });
+    }
+    const values = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+    const targetSub = String(data.originalUsername || "").toLowerCase();
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][0]).toLowerCase() === targetSub) { rowIndex = i + 1; break; }
+    }
+    if (rowIndex === -1) return createResponse({ status: "error", message: "Client tidak ditemukan" });
+
+    const c = data.clientData;
+    const orig = values[rowIndex - 1];
+    const newRow = [
+      c.username || orig[0], c.ssid || orig[1], c.password || orig[2],
+      c.whatsapp || orig[3], c.wedding_date || orig[4], orig[5],
+      c.email || orig[6], c.status || orig[7], c.category || orig[8],
+      c.subdomain || orig[9], c.client_name || orig[10],
+      c.package !== undefined ? c.package : (orig[11] || ""),
+      c.event_date_m !== undefined ? c.event_date_m : (orig[12] || "")
+    ];
+    sheet.getRange(rowIndex, 1, 1, 13).setValues([newRow]);
+
+    // Sync perubahan ke Supabase
+    try {
+      syncClientToSupabase({
+        username: newRow[0], ssid: newRow[1], password: newRow[2],
+        whatsapp: newRow[3], wedding_date: newRow[4],
+        created_at: new Date(newRow[5]).toISOString(),
+        email: newRow[6], status: newRow[7], category: newRow[8],
+        subdomain: newRow[9], client_name: newRow[10], package: newRow[11] || ""
+      });
+    } catch (e) { console.error("Sync update owner ke Supabase gagal: " + e.toString()); }
+
+    return createResponse({ status: "success", message: "Data client berhasil diperbarui" });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Gagal update: " + err.toString() });
+  }
+}
+
+function handleSendOTP(data) {
+  try {
+    if (!data.whatsapp || !data.otp) {
+      return createResponse({ status: "error", message: "WhatsApp dan OTP wajib diisi" });
+    }
+    const message = `*KODE OTP SAPATAMU.KU*\n\nKode OTP Anda adalah: *${data.otp}*\n\nKode ini digunakan untuk verifikasi pendaftaran akun SapaTamu Anda. Rahasiakan kode ini dari siapa pun.`;
+    const res = sendWA(data.whatsapp, message);
+    if (res === "success") {
+      return createResponse({ status: "success", message: "OTP terkirim via WhatsApp" });
+    } else {
+      return createResponse({ status: "error", message: "Gagal mengirim OTP: " + res });
+    }
+  } catch (e) {
+    return createResponse({ status: "error", message: "Terjadi error OTP: " + e.toString() });
   }
 }
 
@@ -646,5 +850,78 @@ function syncAllClientsToSupabase() {
     return "Logs:\n" + logs.join("\n");
   } catch (e) {
     return "Error Sync All Clients: " + e.toString() + "\nLogs:\n" + logs.join("\n");
+  }
+}
+
+/**
+ * GENERATE SNAP TOKEN DARI MIDTRANS API
+ */
+function handleCreateMidtransTransaction(data) {
+  try {
+    const subdomain = data.subdomain.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const timestamp = Utilities.formatDate(new Date(), "GMT+7", "yyyyMMddHHmmss");
+    const orderId = "SAPATAMU-" + subdomain + "-" + timestamp;
+
+    const midtransUrl = MIDTRANS_IS_PRODUCTION 
+      ? "https://app.midtrans.com/snap/v1/transactions"
+      : "https://app.sandbox.midtrans.com/snap/v1/transactions";
+
+    // Setup payload transaksi
+    const payload = {
+      transaction_details: {
+        order_id: orderId,
+        gross_amount: Number(data.price)
+      },
+      item_details: [{
+        id: data.packageName.toLowerCase(),
+        price: Number(data.price),
+        quantity: 1,
+        name: "Paket SapaTamu - " + data.packageName
+      }],
+      customer_details: {
+        first_name: data.clientName,
+        email: data.email,
+        phone: data.whatsapp
+      },
+      // Batasi metode pembayaran agar realtime & instan
+      enabled_payments: ["qris", "credit_card", "bca_va", "bni_va", "bri_va", "mandiri_va", "permata_va", "other_va"]
+    };
+
+    // Base64 Authorization Header: Server Key + ":"
+    const authHeader = "Basic " + Utilities.base64Encode(MIDTRANS_SERVER_KEY + ":");
+
+    const options = {
+      method: "post",
+      contentType: "application/json",
+      headers: {
+        "Authorization": authHeader,
+        "Accept": "application/json"
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(midtransUrl, options);
+    const resText = response.getContentText();
+    const resJson = JSON.parse(resText);
+
+    if (response.getResponseCode() === 200 || response.getResponseCode() === 201) {
+      return createResponse({
+        status: "success",
+        token: resJson.token,
+        redirect_url: resJson.redirect_url,
+        order_id: orderId
+      });
+    } else {
+      return createResponse({
+        status: "error",
+        message: "Midtrans API Error: " + (resJson.error_messages ? resJson.error_messages.join(", ") : resText)
+      });
+    }
+  } catch (err) {
+    return createResponse({
+      status: "error",
+      message: "Exception generating transaction: " + err.toString()
+    });
   }
 }
