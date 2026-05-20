@@ -27,6 +27,8 @@
     };
 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
     const SESSION_KEY = 'sapatamu_session';
     const LOCAL_DB = 'sapatamu_db';
 
@@ -351,32 +353,71 @@
             errEl.innerText = '';
 
             try {
-                const res = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'verifyAdminPassword', password: pass })
+                // ─── JALUR UTAMA: SUPABASE REST API ───
+                const sbUrl = `${SB_URL}/rest/v1/clients?username=eq.admin_global&select=password`;
+                const sbRes = await fetch(sbUrl, {
+                    method: "GET",
+                    headers: {
+                        "apikey": SB_KEY,
+                        "Authorization": `Bearer ${SB_KEY}`
+                    }
                 });
-                const data = await res.json();
 
-                if (data.status === 'success') {
-                    // Upgrade session ke usher
-                    upgradeRoleToUsher();
-                    // Hapus overlay & modal
-                    const overlay = document.getElementById('sapa-guard-overlay');
-                    const modal = document.getElementById('sapa-admin-modal');
-                    if (overlay) overlay.remove();
-                    if (modal) modal.remove();
-                    // Re-enable semua elemen
-                    document.querySelectorAll('button, input, textarea, select').forEach(el => {
-                        el.disabled = false;
-                        el.style.cursor = '';
-                    });
-                } else {
-                    errEl.innerText = '❌ ' + (data.message || 'Password salah');
-                    document.getElementById('sapa-admin-pass-input').value = '';
-                    document.getElementById('sapa-admin-pass-input').focus();
+                if (!sbRes.ok) {
+                    throw new Error("Supabase request failed, falling back to Google Sheets.");
                 }
-            } catch (e) {
-                errEl.innerText = '⚠️ Gagal menghubungi server.';
+
+                const data = await sbRes.json();
+                const adminGlobal = data[0];
+
+                if (!adminGlobal || pass !== adminGlobal.password) {
+                    // Coba fallback ke GAS untuk berjaga-jaga jika ada keterlambatan sync data
+                    throw new Error("Incorrect local password check");
+                }
+
+                // Sukses verifikasi admin via Supabase!
+                upgradeRoleToUsher();
+                const overlay = document.getElementById('sapa-guard-overlay');
+                const modal = document.getElementById('sapa-admin-modal');
+                if (overlay) overlay.remove();
+                if (modal) modal.remove();
+                document.querySelectorAll('button, input, textarea, select').forEach(el => {
+                    el.disabled = false;
+                    el.style.cursor = '';
+                });
+
+            } catch (err) {
+                console.warn("Jalur utama Supabase gagal, beralih ke cadangan GAS Spreadsheet: ", err);
+
+                // ─── JALUR CADANGAN: GOOGLE SPREADSHEET (GAS) ───
+                try {
+                    const res = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'verifyAdminPassword', password: pass })
+                    });
+                    const data = await res.json();
+
+                    if (data.status === 'success') {
+                        // Upgrade session ke usher
+                        upgradeRoleToUsher();
+                        // Hapus overlay & modal
+                        const overlay = document.getElementById('sapa-guard-overlay');
+                        const modal = document.getElementById('sapa-admin-modal');
+                        if (overlay) overlay.remove();
+                        if (modal) modal.remove();
+                        // Re-enable semua elemen
+                        document.querySelectorAll('button, input, textarea, select').forEach(el => {
+                            el.disabled = false;
+                            el.style.cursor = '';
+                        });
+                    } else {
+                        errEl.innerText = '❌ ' + (data.message || 'Password salah');
+                        document.getElementById('sapa-admin-pass-input').value = '';
+                        document.getElementById('sapa-admin-pass-input').focus();
+                    }
+                } catch (e) {
+                    errEl.innerText = '⚠️ Gagal menghubungi server.';
+                }
             }
             btn.disabled = false;
             btn.innerText = 'Konfirmasi';
