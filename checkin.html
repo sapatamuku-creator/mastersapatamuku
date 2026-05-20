@@ -879,12 +879,92 @@
             await Promise.all(supabasePatchPromises); // Ini yang di-await — cepat!
 
             // ────────────────────────────────────────────────────
+            // STEP 2B — SUPABASE PRINT QUEUE LANGSUNG (< 100ms)
+            // ────────────────────────────────────────────────────
+            const printPromises = [];
+            list.forEach(id => {
+                const guest = masterData.find(r => r.kode === id);
+                if (guest) {
+                    let catUpper = String(guest.kategori || "").toUpperCase();
+                    let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
+                    
+                    const mainPrintId = crypto.randomUUID();
+                    guest.customUuid = mainPrintId;
+
+                    printPromises.push(
+                        fetch(`${SB_URL}/rest/v1/print_queue`, {
+                            method: "POST",
+                            headers: SB_HEADERS,
+                            body: JSON.stringify({
+                                id: mainPrintId,
+                                ssid: CURRENT_SS_ID,
+                                nama: guest.nama || "-",
+                                kode: guest.kode || "-",
+                                qr: `https://api.qrserver.com/v1/create-qr-code/?data=${guest.kode}&size=400x400`,
+                                info: labelType,
+                                status: "WAITING",
+                                kategori: guest.kategori || "Umum",
+                                alamat: guest.alamat || "-",
+                                pihak: guest.pihakPengundang || "-",
+                                sesi: guest.sesi || "-",
+                                pax: parseInt(total) || 1,
+                                station_id: stationId || "ALL"
+                            })
+                        })
+                    );
+
+                    if (gift && gift !== "-" && gift !== "ON-SITE") {
+                        const statusUpper = String(gift).toUpperCase();
+                        const queueSouvenir = (souvenirType) => {
+                            const souvenirPrintId = crypto.randomUUID();
+                            printPromises.push(
+                                fetch(`${SB_URL}/rest/v1/print_queue`, {
+                                    method: "POST",
+                                    headers: SB_HEADERS,
+                                    body: JSON.stringify({
+                                        id: souvenirPrintId,
+                                        ssid: CURRENT_SS_ID,
+                                        nama: guest.nama || "-",
+                                        kode: guest.kode || "-",
+                                        qr: `https://api.qrserver.com/v1/create-qr-code/?data=${guest.kode}&size=400x400`,
+                                        info: "SOUVENIR: " + souvenirType,
+                                        status: "WAITING",
+                                        kategori: guest.kategori || "Umum",
+                                        alamat: guest.alamat || "-",
+                                        pihak: guest.pihakPengundang || "-",
+                                        sesi: guest.sesi || "-",
+                                        pax: parseInt(total) || 1,
+                                        station_id: stationId || "ALL"
+                                    })
+                                })
+                            );
+                        };
+
+                        if (statusUpper.includes("ANGPAO") && statusUpper.includes("KADO")) {
+                            queueSouvenir("KADO");
+                            queueSouvenir("ANGPAO");
+                        } else {
+                            queueSouvenir(statusUpper);
+                        }
+                    }
+                }
+            });
+            if (printPromises.length > 0) {
+                try {
+                    await Promise.all(printPromises);
+                } catch(e) {
+                    console.error("Supabase direct print queuing error:", e);
+                }
+            }
+
+            // ────────────────────────────────────────────────────
             // STEP 3 — GAS SYNC KE GOOGLE SHEET (fire-and-forget)
             //   GAS tidak di-await. Jalan di latar belakang.
             //   Tujuannya hanya menyimpan ke Google Sheet.
             //   Jika GAS lambat/error, UI tidak terpengaruh.
             // ────────────────────────────────────────────────────
             list.forEach(id => {
+                const guest = masterData.find(r => r.kode === id);
                 fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors', // no-cors = fire-and-forget, tidak tunggu response
@@ -895,7 +975,9 @@
                         kodeUnik: id,
                         realHadir: paxString,
                         statusAngpao: gift || "-",
-                        stationId: stationId
+                        stationId: stationId,
+                        customUuid: guest ? guest.customUuid : null,
+                        skipSupabase: true
                     })
                 }); // Tidak ada .then() atau await — benar-benar background
             });

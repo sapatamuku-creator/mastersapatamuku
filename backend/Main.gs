@@ -309,7 +309,7 @@ function updateTandaKasih(ssId, kode, nominal) {
   return { status: "error", message: "Kode tamu tidak ditemukan" };
 }
 
-function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId) {
+function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId, customUuid, skipSupabase) {
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_DATA);
   const data = sheet.getDataRange().getValues();
@@ -328,32 +328,34 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId) {
       const updatedRowData = sheet.getRange(rowIndex, 1, 1, 19).getValues()[0];
       
       // SINKRONISASI KE SUPABASE SECARA OTOMATIS
-      try {
-        if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
-          const payload = {
-            status_hadir: "1",
-            jam_datang: timeOnly,
-            real_hadir: parseInt(realHadir) || 1,
-            status_hadiah: catatan || "-",
-            souvenir: updatedRowData[10] === 1 || updatedRowData[10] === "ya" || updatedRowData[10] === "1" ? "ya" : "tidak"
-          };
-          
-          UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kodeUnik, {
-            method: "patch",
-            headers: {
-              "apikey": SUPABASE_KEY,
-              "Authorization": "Bearer " + SUPABASE_KEY,
-              "Content-Type": "application/json"
-            },
-            payload: JSON.stringify(payload),
-            muteHttpExceptions: true
-          });
+      if (!skipSupabase) {
+        try {
+          if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+            const payload = {
+              status_hadir: "1",
+              jam_datang: timeOnly,
+              real_hadir: parseInt(realHadir) || 1,
+              status_hadiah: catatan || "-",
+              souvenir: updatedRowData[10] === 1 || updatedRowData[10] === "ya" || updatedRowData[10] === "1" ? "ya" : "tidak"
+            };
+            
+            UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kodeUnik, {
+              method: "patch",
+              headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization": "Bearer " + SUPABASE_KEY,
+                "Content-Type": "application/json"
+              },
+              payload: JSON.stringify(payload),
+              muteHttpExceptions: true
+            });
+          }
+        } catch (e) {
+          console.error("Failed to sync checkin to Supabase: " + e.toString());
         }
-      } catch (e) {
-        console.error("Failed to sync checkin to Supabase: " + e.toString());
       }
       
-      processPrintLogic(ssId, updatedRowData, catatan, stationId);
+      processPrintLogic(ssId, updatedRowData, catatan, stationId, customUuid, skipSupabase);
       addToRundown(ssId, updatedRowData); // Sinkronisasi ke Welcome Sign Rundown
 
       return { "status": "success", "row": rowIndex, "triggerBlast": true };
@@ -419,7 +421,7 @@ function getMasterDataV3(ssId) {
 
 // --- 4. PRINT & QUEUE FUNCTIONS ---
 
-function processPrintLogic(ssId, guestData, giftStatus, stationId) {
+function processPrintLogic(ssId, guestData, giftStatus, stationId, customUuid, skipSupabase) {
   const guestInfo = { 
     nama: guestData[2], 
     kategori: guestData[4], 
@@ -432,15 +434,15 @@ function processPrintLogic(ssId, guestData, giftStatus, stationId) {
   };
   let catUpper = String(guestInfo.kategori).toUpperCase();
   let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
-  addToQueue(ssId, guestInfo, guestInfo.kategori, labelType, stationId);
+  addToQueue(ssId, guestInfo, guestInfo.kategori, labelType, stationId, customUuid, skipSupabase);
 
   if (giftStatus && giftStatus !== "-" && giftStatus !== "ON-SITE") {
     const statusUpper = String(giftStatus).toUpperCase();
     if (statusUpper.includes("ANGPAO") && statusUpper.includes("KADO")) {
-      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: KADO", stationId);
-      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: ANGPAO", stationId);
+      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: KADO", stationId, null, skipSupabase);
+      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: ANGPAO", stationId, null, skipSupabase);
     } else {
-      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: " + statusUpper, stationId);
+      addToQueue(ssId, guestInfo, guestInfo.kategori, "SOUVENIR: " + statusUpper, stationId, null, skipSupabase);
     }
   }
 }
@@ -498,7 +500,7 @@ function addToRundown(ssId, guestRow) {
   }
 }
 
-function addToQueue(ssId, guest, category, info, stationId) {
+function addToQueue(ssId, guest, category, info, stationId, customUuid, skipSupabase) {
   const ss = getSS(ssId);
   let qSheet = ss.getSheetByName(SHEET_PRINT) || ss.insertSheet(SHEET_PRINT);
   
@@ -516,7 +518,7 @@ function addToQueue(ssId, guest, category, info, stationId) {
   }
 
   const now = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss");
-  const uuid = Utilities.getUuid();
+  const uuid = customUuid || Utilities.getUuid();
   qSheet.appendRow([
     uuid, 
     now, 
@@ -532,6 +534,10 @@ function addToQueue(ssId, guest, category, info, stationId) {
     guest.pax || "1",
     stationId || "ALL"
   ]);
+
+  if (skipSupabase) {
+    return; // Skip posting to Supabase because the frontend handled it directly
+  }
 
   // SINKRONISASI KE SUPABASE SECARA OTOMATIS
   try {
@@ -662,8 +668,9 @@ function registerNewOnsite(data) {
     const timestampP = "[✅ " + Utilities.formatDate(now, "GMT+7", "dd/MM HH:mm") + "]";
     const nowFormatted = Utilities.formatDate(now, "GMT+7", "yyyy-MM-dd HH:mm:ss");
     const timeOnly = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");
-    const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
-    const kodeUnik = "ONS-" + randomPart;
+    
+    // Gunakan kodeUnik dari frontend jika ada untuk konsistensi cepat
+    const kodeUnik = data.kodeUnik || ("ONS-" + Math.random().toString(36).substring(2, 7).toUpperCase());
     const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?data=" + kodeUnik + "&size=400x400";
     let cleanPhone = String(data.whatsapp || "").replace(/\D/g, ''); 
     if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
@@ -680,48 +687,50 @@ function registerNewOnsite(data) {
     const lastRowData = sheet.getRange(lastRow, 1, 1, 19).getValues()[0];
 
     // SINKRONISASI KE SUPABASE SECARA OTOMATIS
-    try {
-      if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
-        const eventDateRaw = sheet.getRange("B2").getValue();
-        const eventDate = Utilities.formatDate(parseEventDate(eventDateRaw), "GMT+7", "yyyy-MM-dd");
+    if (!data.skipSupabase) {
+      try {
+        if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+          const eventDateRaw = sheet.getRange("B2").getValue();
+          const eventDate = Utilities.formatDate(parseEventDate(eventDateRaw), "GMT+7", "yyyy-MM-dd");
 
-        const payload = {
-          ssid: data.ssId,
-          row: lastRow,
-          kode: kodeUnik,
-          nama: data.namaTamu || "Tanpa Nama",
-          whatsapp: cleanPhone,
-          kategori: data.kategori || "UMUM",
-          rencana_hadir: 0,
-          real_hadir: parseInt(data.realHadir) || 1,
-          souvenir: data.souvenir === "tidak" ? "tidak" : "ya",
-          pihak_pengundang: data.host || "-",
-          alamat: data.alamat || "-",
-          status_hadir: "1",
-          status_wa: timestampP,
-          status_hadiah: giftVal,
-          tanda_kasih: 0,
-          sesi: data.sesi || "-",
-          jam_datang: timeOnly,
-          event_date: eventDate
-        };
+          const payload = {
+            ssid: data.ssId,
+            row: lastRow,
+            kode: kodeUnik,
+            nama: data.namaTamu || "Tanpa Nama",
+            whatsapp: cleanPhone,
+            kategori: data.kategori || "UMUM",
+            rencana_hadir: 0,
+            real_hadir: parseInt(data.realHadir) || 1,
+            souvenir: data.souvenir === "tidak" ? "tidak" : "ya",
+            pihak_pengundang: data.host || "-",
+            alamat: data.alamat || "-",
+            status_hadir: "1",
+            status_wa: timestampP,
+            status_hadiah: giftVal,
+            tanda_kasih: 0,
+            sesi: data.sesi || "-",
+            jam_datang: timeOnly,
+            event_date: eventDate
+          };
 
-        UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu", {
-          method: "post",
-          headers: {
-            "apikey": SUPABASE_KEY,
-            "Authorization": "Bearer " + SUPABASE_KEY,
-            "Content-Type": "application/json"
-          },
-          payload: JSON.stringify(payload),
-          muteHttpExceptions: true
-        });
+          UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu", {
+            method: "post",
+            headers: {
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY,
+              "Content-Type": "application/json"
+            },
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
+          });
+        }
+      } catch(e) {
+        console.error("Onsite Supabase sync failed: " + e.toString());
       }
-    } catch(e) {
-      console.error("Onsite Supabase sync failed: " + e.toString());
     }
 
-    processPrintLogic(data.ssId, lastRowData, giftVal, data.stationId);
+    processPrintLogic(data.ssId, lastRowData, giftVal, data.stationId, data.customUuid, data.skipSupabase);
     addToRundown(data.ssId, lastRowData); // Sinkronisasi ke Welcome Sign
     return { status: "success", kode: kodeUnik, message: "On-Site Berhasil", triggerBlast: true };
   } catch (e) { return { status: "error", message: e.toString() }; } finally { lock.releaseLock(); }
