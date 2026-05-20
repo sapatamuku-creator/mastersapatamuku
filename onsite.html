@@ -10,6 +10,7 @@
         href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <script src="subdomain_resolver.js?v=3.3"></script>
 
@@ -803,6 +804,7 @@
                     <option value="3">JALUR 3</option>
                     <option value="4">JALUR 4</option>
                 </select>
+                <span id="realtime-status" style="font-size: 8px; font-weight: 800; margin-left: 8px; padding: 2px 6px; border-radius: 10px; background: #fee2e2; color: #ef4444; transition: 0.3s;">Realtime Off</span>
             </div>
 
             <h1>sapa<span>tamu</span>.ku</h1>
@@ -1037,6 +1039,111 @@
         let selectedGuest = null;
         let JALUR_ID = "ALL";
 
+        const SB_URL  = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+
+        let supabaseClient = null;
+        let realtimeChannel = null;
+
+        function initSupabaseRealtimeTamu() {
+            if (!CURRENT_SS_ID) return;
+            try {
+                if (window.supabase) {
+                    supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+                    console.log("Menghubungkan ke Supabase Realtime (Tamu)...");
+                    
+                    realtimeChannel = supabaseClient
+                        .channel('tamu_changes_channel')
+                        .on(
+                            'postgres_changes',
+                            {
+                                event: '*',
+                                schema: 'public',
+                                table: 'tamu',
+                                filter: `ssid=eq.${CURRENT_SS_ID}`
+                            },
+                            (payload) => {
+                                console.log("Realtime event (Tamu):", payload);
+                                const eventType = payload.eventType;
+                                
+                                if (eventType === 'INSERT') {
+                                    const item = payload.new;
+                                    const newItem = {
+                                        row: item.row,
+                                        nama: item.nama,
+                                        whatsapp: item.whatsapp,
+                                        kategori: item.kategori,
+                                        kode: item.kode,
+                                        barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
+                                        rencanaHadir: item.rencana_hadir,
+                                        statusHadir: String(item.status_hadir),
+                                        jamDatang: item.jam_datang,
+                                        souvenir: item.souvenir,
+                                        pihakPengundang: item.pihak_pengundang,
+                                        alamat: item.alamat,
+                                        realHadir: item.real_hadir,
+                                        statusWA: item.status_wa,
+                                        statusHadiah: item.status_hadiah,
+                                        tandaKasih: item.tanda_kasih,
+                                        sesi: item.sesi
+                                    };
+                                    if (!masterData.some(g => g.kode === newItem.kode)) {
+                                        masterData.unshift(newItem);
+                                        renderUI();
+                                    }
+                                } else if (eventType === 'UPDATE') {
+                                    const item = payload.new;
+                                    const idx = masterData.findIndex(g => g.kode === item.kode || g.row === item.row);
+                                    if (idx !== -1) {
+                                        masterData[idx] = {
+                                            ...masterData[idx],
+                                            nama: item.nama,
+                                            whatsapp: item.whatsapp,
+                                            kategori: item.kategori,
+                                            rencanaHadir: item.rencana_hadir,
+                                            statusHadir: String(item.status_hadir),
+                                            jamDatang: item.jam_datang,
+                                            souvenir: item.souvenir,
+                                            pihakPengundang: item.pihak_pengundang,
+                                            alamat: item.alamat,
+                                            realHadir: item.real_hadir,
+                                            statusWA: item.status_wa,
+                                            statusHadiah: item.status_hadiah,
+                                            tandaKasih: item.tanda_kasih,
+                                            sesi: item.sesi
+                                        };
+                                        renderUI();
+                                    }
+                                } else if (eventType === 'DELETE') {
+                                    const item = payload.old;
+                                    masterData = masterData.filter(g => g.kode !== item.kode && g.row !== item.row);
+                                    renderUI();
+                                }
+                            }
+                        )
+                        .subscribe((status) => {
+                            console.log(`Status Realtime Tamu: ${status}`);
+                            const indicator = document.getElementById('realtime-status');
+                            if (indicator) {
+                                if (status === 'SUBSCRIBED') {
+                                    indicator.innerText = "Realtime On";
+                                    indicator.style.background = "#d1fae5";
+                                    indicator.style.color = "#059669";
+                                } else {
+                                    indicator.innerText = "Realtime Off";
+                                    indicator.style.background = "#fee2e2";
+                                    indicator.style.color = "#ef4444";
+                                }
+                            }
+                        });
+                } else {
+                    console.warn("Supabase library tidak termuat.");
+                }
+            } catch (e) {
+                console.error("Gagal inisialisasi Realtime Tamu:", e);
+            }
+        }
+
         window.showAlert = function (title, msg, icon = "⚠️") {
             return new Promise(resolve => {
                 document.getElementById('st-modal-icon').innerText = icon;
@@ -1096,6 +1203,7 @@
             });
 
             fetchData();
+            initSupabaseRealtimeTamu();
             initScanner();
             initNavScroll();
         }

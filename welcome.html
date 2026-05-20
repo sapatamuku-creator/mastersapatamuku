@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu.ku - Welcome Sign V7.2 (Multi-Client Support)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
     <script src="subdomain_resolver.js?v=3.3"></script>
     <style>
@@ -269,6 +270,24 @@
         metadataTimer = setTimeout(syncMetadata, 5 * 60 * 1000);
     }
 
+    let supabaseClient = null;
+    let realtimeChannel = null;
+    let syncGuestTimer = null;
+    let currentGuestPollingInterval = 3000;
+
+    function startGuestPolling(intervalMs = 3000) {
+        if (syncGuestTimer && currentGuestPollingInterval === intervalMs) return;
+        if (syncGuestTimer) clearTimeout(syncGuestTimer);
+        currentGuestPollingInterval = intervalMs;
+        
+        async function runPoll() {
+            await syncGuestDisplay();
+            syncGuestTimer = setTimeout(runPoll, currentGuestPollingInterval);
+        }
+        runPoll();
+        console.log(`Backup Polling Tamu: Aktif (${intervalMs / 1000}s)`);
+    }
+
     // ────────────────────────────────────────────────────────────
     // syncGuestDisplay() — Ambil tamu terbaru LANGSUNG dari Supabase
     //   Ini yang sebelumnya dilakukan oleh GAS setiap 5–8 detik.
@@ -313,9 +332,52 @@
         } catch (e) {
             console.warn("Guest display sync error:", e);
         }
+    }
 
-        // Polling setiap 3 detik (jauh lebih cepat dari sebelumnya 5–8 detik via GAS)
-        setTimeout(syncGuestDisplay, 3000);
+    function initSupabaseRealtimeTamu() {
+        if (!ssId) return;
+        try {
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+                console.log("Menghubungkan ke Supabase Realtime (Tamu)...");
+                
+                realtimeChannel = supabaseClient
+                    .channel('tamu_changes_channel')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: '*',
+                            schema: 'public',
+                            table: 'tamu',
+                            filter: `ssid=eq.${ssId}`
+                        },
+                        (payload) => {
+                            console.log("Realtime event (Tamu):", payload);
+                            const record = payload.new;
+                            if (record && record.status_hadir == 1) {
+                                console.log(`Realtime Tamu: Tamu baru check-in (${record.nama})`);
+                                syncGuestDisplay();
+                            }
+                        }
+                    )
+                    .subscribe((status) => {
+                        console.log(`Status Realtime Tamu: ${status}`);
+                        if (status === 'SUBSCRIBED') {
+                            // Lambatkan polling backup ke 15 detik jika realtime aktif
+                            startGuestPolling(15000);
+                        } else {
+                            // Cepatkan polling backup ke 3000ms jika realtime offline
+                            startGuestPolling(3000);
+                        }
+                    });
+            } else {
+                console.warn("Supabase library tidak termuat, fallback ke Polling cepat.");
+                startGuestPolling(3000);
+            }
+        } catch (e) {
+            console.error("Gagal inisialisasi Realtime Tamu:", e);
+            startGuestPolling(3000);
+        }
     }
 
     // ────────────────────────────────────────────────────────────
@@ -337,7 +399,8 @@
         }
         // Jalankan keduanya bersamaan — tidak saling menunggu
         syncMetadata();    // GAS: lambat, jarang diulang
-        syncGuestDisplay(); // Supabase: cepat, polling 3 detik
+        syncGuestDisplay(); // Ambil data awal secara langsung
+        initSupabaseRealtimeTamu(); // Supabase: cepat, realtime + backup polling
     }
 
     let currentPhotos = [];
