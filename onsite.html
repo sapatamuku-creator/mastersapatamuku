@@ -1592,9 +1592,11 @@
                     console.error("Direct Supabase update/print failed:", e);
                 }
 
-                // --- STEP 2: CORE CHECKIN (Blocking) ---
-                const res = await fetch(SCRIPT_URL, {
+                // --- STEP 2: CORE CHECKIN (Non-Blocking background sync) ---
+                fetch(SCRIPT_URL, {
                     method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({
                         action: "confirm_checkin",
                         ssId: CURRENT_SS_ID,
@@ -1605,53 +1607,59 @@
                         customUuid: mainPrintId,
                         skipSupabase: true
                     })
-                });
-                const result = await res.json();
+                }).catch(e => console.error("GAS background sync failed:", e));
 
-                if (result.status === "success") {
-                    // --- STEP 3: FAST FEEDBACK ---
-                    if (blocker) blocker.remove();
-                    closeModal();
-                    renderUI();
+                // --- STEP 3: FAST FEEDBACK & LOCAL STATE UPDATE ---
+                if (blocker) blocker.remove();
+                
+                // Update local guest properties immediately
+                selectedGuest.statusHadir = "1";
+                selectedGuest.jamDatang = nowISO;
+                selectedGuest.realHadir = paxString;
+                selectedGuest.statusHadiah = gift || "-";
+                
+                closeModal();
+                renderUI();
 
-                    // --- STEP 4: SUCCESS GREETING MODAL ---
-                    document.getElementById('loading').style.display = 'none';
-                    if (document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
-                    document.body.style.cursor = 'default';
+                // --- STEP 4: SUCCESS GREETING MODAL ---
+                document.getElementById('loading').style.display = 'none';
+                if (document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+                document.body.style.cursor = 'default';
 
-                    await showAlert(
-                        "CHECK-IN BERHASIL",
-                        `Selamat Datang,\n\n${selectedGuest.nama.toUpperCase()}\n(${selectedGuest.kategori || 'UMUM'})\n\nSilakan Masuk`,
-                        "✨"
-                    );
+                await showAlert(
+                    "CHECK-IN BERHASIL",
+                    `Selamat Datang,\n\n${selectedGuest.nama.toUpperCase()}\n(${selectedGuest.kategori || 'UMUM'})\n\nSilakan Masuk`,
+                    "✨"
+                );
 
-                    fetchData(); // Refresh UI list from server background
-                    // Upload Selfie & Blast WA in background
-                    if (capturedBase64) {
-                        fetch(SCRIPT_URL, {
-                            method: 'POST',
-                            body: JSON.stringify({
-                                action: "uploadSelfie",
-                                image: capturedBase64,
-                                nama: selectedGuest.nama,
-                                kode: selectedGuest.kode,
-                                ssId: CURRENT_SS_ID
-                            })
-                        }).catch(e => console.warn("Selfie upload failed in background:", e));
-                    }
+                fetchData(); // Refresh UI list from server background
 
-                    if (result.triggerBlast) {
-                        fetch(SCRIPT_URL, {
-                            method: 'POST',
-                            body: JSON.stringify({
-                                action: "sendAutomationBlast",
-                                ssId: CURRENT_SS_ID,
-                                type: "checkin",
-                                guestData: { nama: selectedGuest.nama, whatsapp: selectedGuest.whatsapp }
-                            })
-                        }).catch(e => console.warn("Background checkin blast failed:", e));
-                    }
+                // Upload Selfie & Blast WA in background
+                if (capturedBase64) {
+                    fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify({
+                            action: "uploadSelfie",
+                            image: capturedBase64,
+                            nama: selectedGuest.nama,
+                            kode: selectedGuest.kode,
+                            ssId: CURRENT_SS_ID
+                        })
+                    }).catch(e => console.warn("Selfie upload failed in background:", e));
                 }
+
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        action: "sendAutomationBlast",
+                        ssId: CURRENT_SS_ID,
+                        type: "checkin",
+                        guestData: { nama: selectedGuest.nama, whatsapp: selectedGuest.whatsapp }
+                    })
+                }).catch(e => console.warn("Background checkin blast failed:", e));
+
             } catch (e) {
                 if (blocker) blocker.remove();
                 alert("Error Connection!");
@@ -1868,67 +1876,68 @@
                     skipSupabase: true
                 };
 
-                // --- STEP 2: CORE REGISTER (Blocking) ---
-                const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-                const json = await res.json();
+                // --- STEP 2: CORE REGISTER (Non-Blocking background sync) ---
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload)
+                }).catch(e => console.error("GAS registration sync failed:", e));
 
-                if (json.status === "success") {
-                    // --- STEP 3: FAST FEEDBACK ---
-                    if (blocker) blocker.remove();
+                // --- STEP 3: FAST FEEDBACK ---
+                if (blocker) blocker.remove();
 
-                    // --- STEP 4: SUCCESS GREETING MODAL ---
-                    document.getElementById('loading').style.display = 'none';
-                    if (document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
-                    document.body.style.cursor = 'default';
+                // --- STEP 4: SUCCESS GREETING MODAL ---
+                document.getElementById('loading').style.display = 'none';
+                if (document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+                document.body.style.cursor = 'default';
 
-                    await showAlert(
-                        "REGISTRASI BERHASIL",
-                        `Selamat Datang,\n\n${nama.toUpperCase()}\n(${payload.kategori || 'UMUM'})\n\nSilakan Masuk`,
-                        "✨"
-                    );
+                await showAlert(
+                    "REGISTRASI BERHASIL",
+                    `Selamat Datang,\n\n${nama.toUpperCase()}\n(${payload.kategori || 'UMUM'})\n\nSilakan Masuk`,
+                    "✨"
+                );
 
-                    // RESET FIELDS
-                    document.getElementById('reg-nama').value = "";
-                    document.getElementById('reg-wa').value = "";
-                    document.getElementById('reg-alamat').value = "";
-                    document.getElementById('reg-pax-adult').innerText = "1";
-                    document.getElementById('reg-pax-child').innerText = "0";
-                    document.getElementById('reg-tag-angpao').classList.remove('active');
-                    document.getElementById('reg-tag-kado').classList.remove('active');
+                // RESET FIELDS
+                document.getElementById('reg-nama').value = "";
+                document.getElementById('reg-wa').value = "";
+                document.getElementById('reg-alamat').value = "";
+                document.getElementById('reg-pax-adult').innerText = "1";
+                document.getElementById('reg-pax-child').innerText = "0";
+                document.getElementById('reg-tag-angpao').classList.remove('active');
+                document.getElementById('reg-tag-kado').classList.remove('active');
 
-                    // Reset registration camera preview container and preview image
-                    document.getElementById('reg-preview-container').style.display = 'none';
-                    document.getElementById('reg-video').style.display = 'block';
-                    const photoPreview = document.getElementById('reg-photo-preview');
-                    if (photoPreview) {
-                        photoPreview.style.display = 'none';
-                        photoPreview.src = "";
-                    }
-
-                    // --- STEP 4: BACKGROUND TASKS ---
-                    if (capturedBase64) {
-                        fetch(SCRIPT_URL, {
-                            method: 'POST',
-                            body: JSON.stringify({
-                                action: "uploadSelfie",
-                                image: capturedBase64,
-                                nama: nama,
-                                kode: json.kode,
-                                ssId: CURRENT_SS_ID
-                            })
-                        }).catch(e => console.warn("Background selfie upload failed:", e));
-                    }
-
-                    // Blast otomatis pendaftaran dihapus sesuai permintaan (Manual Blast Mode)
-
-                    capturedBase64 = null;
-                    document.getElementById('btn-reg-snap').innerText = "📸 AMBIL SELFIE (OPSIONAL)";
-                    document.getElementById('btn-reg-snap').style.background = "white";
-                    document.getElementById('btn-reg-snap').style.color = "var(--gold)";
-
-                    switchTab('scan');
-                    fetchData();
+                // Reset registration camera preview container and preview image
+                document.getElementById('reg-preview-container').style.display = 'none';
+                document.getElementById('reg-video').style.display = 'block';
+                const photoPreview = document.getElementById('reg-photo-preview');
+                if (photoPreview) {
+                    photoPreview.style.display = 'none';
+                    photoPreview.src = "";
                 }
+
+                // --- STEP 5: BACKGROUND TASKS ---
+                if (capturedBase64) {
+                    fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify({
+                            action: "uploadSelfie",
+                            image: capturedBase64,
+                            nama: nama,
+                            kode: kodeUnik,
+                            ssId: CURRENT_SS_ID
+                        })
+                    }).catch(e => console.warn("Background selfie upload failed:", e));
+                }
+
+                capturedBase64 = null;
+                document.getElementById('btn-reg-snap').innerText = "📸 AMBIL SELFIE (OPSIONAL)";
+                document.getElementById('btn-reg-snap').style.background = "white";
+                document.getElementById('btn-reg-snap').style.color = "var(--gold)";
+
+                switchTab('scan');
+                fetchData();
             } catch (e) {
                 if (blocker) blocker.remove();
                 alert("Gagal koneksi.");

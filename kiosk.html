@@ -809,8 +809,11 @@
                     console.error("Direct Supabase update/print failed in kiosk:", e);
                 }
 
-                const res = await fetch(SCRIPT_URL, { 
+                // --- STEP 2: CORE CHECKIN (Non-Blocking background sync) ---
+                fetch(SCRIPT_URL, { 
                     method: 'POST', 
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({ 
                         action: "confirm_checkin", 
                         ssId: CURRENT_SS_ID, 
@@ -821,55 +824,52 @@
                         customUuid: mainPrintId,
                         skipSupabase: true
                     }) 
-                });
-                const result = await res.json();
+                }).catch(e => console.error("GAS kiosk sync failed:", e));
 
-                if (result.status === "success") {
-                    const modal = document.getElementById('kiosk-modal');
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
-                    
-                    // Show success animation
-                    const successModal = document.getElementById('success-modal');
-                    const successContent = document.getElementById('success-content');
-                    successModal.classList.remove('hidden');
-                    
-                    // Trigger animation frame
+                // --- STEP 3: FAST FEEDBACK (Immediate Success Animation) ---
+                const modal = document.getElementById('kiosk-modal');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                
+                // Show success animation
+                const successModal = document.getElementById('success-modal');
+                const successContent = document.getElementById('success-content');
+                successModal.classList.remove('hidden');
+                
+                // Trigger animation frame
+                setTimeout(() => {
+                    successContent.style.opacity = '1';
+                    successContent.style.transform = 'scale(1)';
+                }, 50);
+
+                // Blast WA Automation in background
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ 
+                        action: "sendAutomationBlast", 
+                        ssId: CURRENT_SS_ID, 
+                        type: "checkin",
+                        guestData: { nama: selectedGuest.nama, whatsapp: selectedGuest.whatsapp } 
+                    })
+                }).catch(e => console.warn("Background blast failed:", e));
+
+                // Reset and update local list
+                selectedGuest.statusHadir = "1"; 
+                
+                // Auto close after 3 seconds
+                setTimeout(() => {
+                    successContent.style.opacity = '0';
+                    successContent.style.transform = 'scale(1.5)';
                     setTimeout(() => {
-                        successContent.style.opacity = '1';
-                        successContent.style.transform = 'scale(1)';
-                    }, 50);
+                        successModal.classList.add('hidden');
+                        selectedGuest = null;
+                        // GO BACK TO WELCOME SIGN
+                        returnToIdle();
+                    }, 500);
+                }, 3000);
 
-                    // Blast WA Automation in background
-                    if (result.triggerBlast) {
-                        fetch(SCRIPT_URL, {
-                            method: 'POST',
-                            body: JSON.stringify({ 
-                                action: "sendAutomationBlast", 
-                                ssId: CURRENT_SS_ID, 
-                                type: "checkin",
-                                guestData: { nama: selectedGuest.nama, whatsapp: selectedGuest.whatsapp } 
-                            })
-                        }).catch(e => console.warn("Background blast failed:", e));
-                    }
-
-                    // Reset and update local list
-                    selectedGuest.statusHadir = "1"; 
-                    
-                    // Auto close after 3 seconds
-                    setTimeout(() => {
-                        successContent.style.opacity = '0';
-                        successContent.style.transform = 'scale(1.5)';
-                        setTimeout(() => {
-                            successModal.classList.add('hidden');
-                            selectedGuest = null;
-                            // GO BACK TO WELCOME SIGN
-                            returnToIdle();
-                        }, 500);
-                    }, 3000);
-                } else {
-                    alert("Gagal Check-in: " + result.message);
-                }
             } catch(e) { 
                 alert("Koneksi Error!"); 
                 console.error(e);
