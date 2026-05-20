@@ -425,7 +425,7 @@ function processPrintLogic(ssId, guestData, giftStatus, stationId) {
     kategori: guestData[4], 
     kode: guestData[5], 
     qr: guestData[6],
-    pax: guestData[7],
+    pax: guestData[13] || guestData[7] || "1",
     pihak: guestData[11],
     alamat: guestData[12],
     sesi: guestData[18]
