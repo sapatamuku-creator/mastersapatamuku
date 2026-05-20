@@ -512,6 +512,15 @@ function handleUploadFile(data) {
 
 // --- SINKRONISASI MASTER CLIENTS KE SUPABASE ---
 function syncClientToSupabase(rowData) {
+  try {
+    const resText = syncClientToSupabaseWithResult(rowData);
+    console.log("Supabase Sync Client Result: " + resText);
+  } catch (e) {
+    console.error("Gagal sinkronisasi ke Supabase: " + e.toString());
+  }
+}
+
+function syncClientToSupabaseWithResult(rowData) {
   const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/clients";
   const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
   
@@ -541,12 +550,8 @@ function syncClientToSupabase(rowData) {
     muteHttpExceptions: true
   };
 
-  try {
-    const res = UrlFetchApp.fetch(sbUrl, options);
-    console.log("Supabase Sync Client Response: " + res.getContentText());
-  } catch (e) {
-    console.error("Gagal sinkronisasi ke Supabase: " + e.toString());
-  }
+  const res = UrlFetchApp.fetch(sbUrl, options);
+  return "Status: " + res.getResponseCode() + ", Response: " + res.getContentText();
 }
 
 function syncAdminPasswordToSupabase() {
@@ -555,9 +560,9 @@ function syncAdminPasswordToSupabase() {
     const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
     const adminPassword = String(sheet.getRange(1, 11).getValue() || "").trim();
     
-    if (!adminPassword) return;
+    if (!adminPassword) return "Admin password is empty in sheet K1";
 
-    syncClientToSupabase({
+    return syncClientToSupabaseWithResult({
       username: "admin_global",
       ssid: "",
       password: adminPassword,
@@ -572,41 +577,72 @@ function syncAdminPasswordToSupabase() {
     });
   } catch (e) {
     console.error("Gagal sinkronisasi admin password: " + e.toString());
+    return "Error: " + e.toString();
   }
 }
 
 function syncAllClientsToSupabase() {
+  const logs = [];
   try {
     const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    logs.push("Spreadsheet dibuka sukses. ID: " + MASTER_SS_ID);
+    
+    const sheets = ss.getSheets();
+    logs.push("Daftar sheet yang tersedia: " + sheets.map(s => s.getName()).join(", "));
+    
     const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    if (!sheet) {
+      return "Gagal: Sheet '" + MASTER_SHEET_NAME + "' tidak ditemukan!";
+    }
+    
     const values = sheet.getDataRange().getValues();
+    logs.push("Total baris data (termasuk header): " + values.length);
 
-    // 1. Sinkronisasi Password Admin terlebih dahulu
-    syncAdminPasswordToSupabase();
+    // 1. Sinkronisasi Password Admin
+    const adminRes = syncAdminPasswordToSupabase();
+    logs.push("Sync Admin Global K1: " + adminRes);
 
-    // 2. Loop melalui baris klien (mulai baris kedua/index 1)
-    // Kolom A: Username, B: ID, C: Pass, D: WA, E: Date, F: Created, G: Email, H: Status, I: Kategori, J: Subdomain, K: Nama Klien
+    // 2. Loop klien
     for (let i = 1; i < values.length; i++) {
       const row = values[i];
       const username = String(row[0] || "").trim();
-      if (!username) continue;
+      if (!username) {
+        logs.push("Baris " + (i+1) + ": Username kosong, dilewati.");
+        continue;
+      }
 
-      syncClientToSupabase({
+      let createdAtVal = new Date().toISOString();
+      if (row[5]) {
+        try {
+          createdAtVal = new Date(row[5]).toISOString();
+        } catch (dateErr) {
+          logs.push("Baris " + (i+1) + " (" + username + "): Format tanggal created_at '" + row[5] + "' tidak valid, menggunakan waktu sekarang.");
+        }
+      }
+
+      const clientData = {
         username: username,
         ssid: String(row[1] || "").trim(),
         password: String(row[2] || "").trim(),
         whatsapp: String(row[3] || "").trim(),
         wedding_date: String(row[4] || "").trim(),
-        created_at: row[5] ? new Date(row[5]).toISOString() : new Date().toISOString(),
+        created_at: createdAtVal,
         email: String(row[6] || "").trim(),
         status: String(row[7] || "Active").trim(),
         category: String(row[8] || "wedding").trim(),
         subdomain: String(row[9] || username).trim(),
         client_name: String(row[10] || "").trim()
-      });
+      };
+
+      try {
+        const resText = syncClientToSupabaseWithResult(clientData);
+        logs.push("Baris " + (i+1) + " (" + username + "): " + resText);
+      } catch (syncErr) {
+        logs.push("Baris " + (i+1) + " (" + username + ") Gagal: " + syncErr.toString());
+      }
     }
-    return "Sync All Clients Sukses!";
+    return "Logs:\n" + logs.join("\n");
   } catch (e) {
-    return "Sync All Clients Gagal: " + e.toString();
+    return "Error Sync All Clients: " + e.toString() + "\nLogs:\n" + logs.join("\n");
   }
 }
