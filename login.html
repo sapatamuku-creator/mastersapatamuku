@@ -214,36 +214,40 @@
             </div>
         </div>
 
-        <div class="form-group">
-            <label>WhatsApp (628...)</label>
-            <input type="text" id="reg_wa" class="sapatamu-input" placeholder="6285111567829">
-        </div>
-
-        <div class="form-group">
-            <label>Email (Pemulihan)</label>
-            <input type="email" id="reg_email" class="sapatamu-input" placeholder="wedding@gmail.com">
-        </div>
-
-        <div class="form-group">
-            <label>Password Baru</label>
-            <div class="relative w-full">
-                <input type="password" id="reg_pass" class="sapatamu-input" style="padding-right: 48px;" placeholder="••••••••">
-                <button type="button" onclick="togglePasswordVisibility('reg_pass', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Tampilkan password">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                    </svg>
-                </button>
+        <!-- STEP 2: Data Akun — terkunci sebelum sheet dibuat -->
+        <div id="section-akun" style="opacity:0.4; pointer-events:none; transition:all 0.3s;">
+            <div style="margin: 16px 0 10px; padding: 8px 14px; background:#fef9c3; border:1px solid #fde68a; border-radius:10px; font-size:11px; font-weight:700; color:#92400e;" id="akun-lock-hint">
+                🔒 Isi Nama, Tanggal Acara, pastikan subdomain ✅ tersedia, lalu klik "Siapkan Database" terlebih dahulu.
+            </div>
+            <div class="form-group">
+                <label>WhatsApp Klien (628...)</label>
+                <input type="text" id="reg_wa" class="sapatamu-input" placeholder="6285111567829" oninput="checkRegBtn()" disabled>
+            </div>
+            <div class="form-group">
+                <label>Email (Pemulihan)</label>
+                <input type="email" id="reg_email" class="sapatamu-input" placeholder="wedding@gmail.com" oninput="checkRegBtn()" disabled>
+            </div>
+            <div class="form-group">
+                <label>Password Akun</label>
+                <div class="relative w-full">
+                    <input type="password" id="reg_pass" class="sapatamu-input" style="padding-right: 48px;" placeholder="••••••••" oninput="checkRegBtn()" disabled>
+                    <button type="button" onclick="togglePasswordVisibility('reg_pass', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Tampilkan password" disabled id="btn_toggle_pass">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--bg);">
-            <button onclick="generateSheet()" id="btn_gen_sheet" class="sapatamu-btn" style="background: #fbbf24; margin-bottom: 12px; color: #4A3F35;">
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--bg);">
+            <button onclick="generateSheet()" id="btn_gen_sheet" class="sapatamu-btn" style="background: #fbbf24; margin-bottom: 12px; color: #4A3F35;" disabled>
                 <span id="text_gen_sheet">1. Siapkan Database (Buat Sheet)</span>
                 <span class="loader" id="load_gen_sheet"></span>
             </button>
 
             <button onclick="prosesDaftar()" id="btn_reg" class="sapatamu-btn success-btn" disabled>
-                <span id="text_reg">2. Buat Akun & Konfirmasi WA</span>
+                <span id="text_reg">2. Buat Akun &amp; Konfirmasi WA</span>
                 <span class="loader" id="load_reg"></span>
             </button>
         </div>
@@ -501,6 +505,7 @@
             autoSuggestSubdomain(combined);
         }
         updateSheetPreview();
+        checkGenSheetBtn();
     };
 
     // Helper: ambil nama depan saja
@@ -533,6 +538,67 @@
         } else {
             preview.style.display = 'none';
         }
+        checkGenSheetBtn();
+    };
+
+    // Cek apakah tombol "Siapkan Database" bisa diaktifkan
+    function checkGenSheetBtn() {
+        const btn = document.getElementById('btn_gen_sheet');
+        if (!btn || btn.disabled === undefined) return;
+        // Jangan re-enable jika sudah selesai buat sheet
+        if (document.getElementById('reg_ssid').value) return;
+
+        const cat = document.getElementById('reg_category').value;
+        const tgl = (document.getElementById('ev_date_main').value || '').trim();
+        const subOk = (document.getElementById('sub-status').innerText || '').includes('✅');
+
+        let namaOk = false;
+        if (cat === 'wedding') {
+            const pria = document.getElementById('reg_pria').value.trim();
+            const wanita = document.getElementById('reg_wanita').value.trim();
+            namaOk = !!(pria && wanita);
+        } else {
+            namaOk = !!(document.getElementById('reg_user').value.trim());
+        }
+
+        btn.disabled = !(namaOk && tgl && subOk);
+        btn.style.opacity = btn.disabled ? '0.5' : '1';
+        btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
+    }
+
+    // Unlock WA/Email/Password section setelah sheet berhasil dibuat
+    function unlockAkunSection() {
+        const section = document.getElementById('section-akun');
+        const hint = document.getElementById('akun-lock-hint');
+        if (section) {
+            section.style.opacity = '1';
+            section.style.pointerEvents = 'auto';
+        }
+        if (hint) {
+            hint.style.background = '#f0fdf4';
+            hint.style.borderColor = '#bbf7d0';
+            hint.style.color = '#15803d';
+            hint.innerHTML = '✅ Database siap! Lengkapi WhatsApp, Email, dan Password untuk melanjutkan.';
+        }
+        document.getElementById('reg_wa').disabled = false;
+        document.getElementById('reg_email').disabled = false;
+        document.getElementById('reg_pass').disabled = false;
+        const toggleBtn = document.getElementById('btn_toggle_pass');
+        if (toggleBtn) toggleBtn.disabled = false;
+        document.getElementById('reg_wa').focus();
+    }
+
+    // Cek apakah tombol "Buat Akun" bisa diaktifkan
+    window.checkRegBtn = function() {
+        const wa = (document.getElementById('reg_wa').value || '').trim();
+        const email = (document.getElementById('reg_email').value || '').trim();
+        const pass = (document.getElementById('reg_pass').value || '').trim();
+        const ssid = (document.getElementById('reg_ssid').value || '').trim();
+        const btn = document.getElementById('btn_reg');
+        if (!btn) return;
+        const ok = wa && email && pass && ssid;
+        btn.disabled = !ok;
+        btn.style.opacity = ok ? '1' : '0.5';
     };
 
     function setLoading(btnId, isLoad) {
@@ -708,20 +774,20 @@
 
             if (data.length === 0) {
                 // Tersedia
-                statusEl.innerText = '✅ TERSEDIA';
+                statusEl.innerText = '\u2705 TERSEDIA';
                 statusEl.style.color = 'var(--success)';
-                if (regBtn && document.getElementById('reg_ssid').value) regBtn.disabled = false;
             } else {
                 // Sudah dipakai
-                statusEl.innerText = '❌ SUDAH DIPAKAI';
+                statusEl.innerText = '\u274c SUDAH DIPAKAI';
                 statusEl.style.color = '#E07B7B';
                 if (regBtn) regBtn.disabled = true;
             }
         } catch (e) {
-            statusEl.innerText = '⚠️ Gagal cek';
+            statusEl.innerText = '\u26a0\ufe0f Gagal cek';
             statusEl.style.color = 'var(--gold)';
         } finally {
             spinner.style.display = 'none';
+            checkGenSheetBtn(); // selalu cek ulang setelah hasil subdomain
         }
     }
 
@@ -806,12 +872,10 @@
                     preview.innerHTML = `📋 Siap: <span style="color:#1e40af;">${tgl} - ${shortName}</span> <span style="color:#6b7280;font-weight:500;">(akan direname saat Buat Akun)</span>`;
                 }
 
-                const subStatus = document.getElementById('sub-status').innerText;
-                if (subStatus.includes('✅')) {
-                    document.getElementById('btn_reg').disabled = false;
-                }
+                // Unlock section WA/Email/Password
+                unlockAkunSection();
 
-                showSapaModal("Berhasil!", `Spreadsheet "${tempFileName}" telah dibuat. Lanjut isi data & klik Buat Akun untuk mengaktifkan.`, "📊");
+                showSapaModal("Berhasil!", `Spreadsheet "${tempFileName}" telah dibuat. Lanjut isi WhatsApp, Email & Password untuk aktivasi akun.`, "\ud83d\udcca");
             } else {
                 showSapaModal("Gagal", (res.message || "Gagal membuat spreadsheet."), "❌");
             }
@@ -864,14 +928,24 @@
             });
             const res = await response.json();
             if (res.status === "success") {
-                const pesan = `*Konfirmasi Pendaftaran*%0A*User:* ${data.subdomain}%0A*Pass:* ${data.password}`;
+                // Buka WhatsApp admin segera untuk konfirmasi
+                const pesan = encodeURIComponent(
+                    `*Konfirmasi Pendaftaran SapaTamu*\n` +
+                    `*Nama Acara:* ${clientName}\n` +
+                    `*Tanggal:* ${tgl}\n` +
+                    `*Username/Subdomain:* ${data.subdomain}\n` +
+                    `*Password:* ${data.password}\n` +
+                    `*WA Klien:* ${data.whatsapp}\n` +
+                    `*Email:* ${data.email}`
+                );
                 window.open(`https://wa.me/6285111567829?text=${pesan}`, '_blank');
-                location.reload();
+                showSapaModal("Akun Berhasil Dibuat!", "Anda akan diarahkan ke WhatsApp Admin untuk konfirmasi. Halaman akan direfresh.", "\u2705");
+                setTimeout(() => location.reload(), 2500);
             } else {
-                showSapaModal("Gagal Daftar", res.message, "❌");
+                showSapaModal("Gagal Daftar", res.message, "\u274c");
             }
         } catch (e) { 
-            showSapaModal("Gagal Daftar", "Masalah koneksi: " + e.toString(), "⚠️"); 
+            showSapaModal("Gagal Daftar", "Masalah koneksi: " + e.toString(), "\u26a0\ufe0f"); 
         }
         setLoading('btn_reg', false);
     };
