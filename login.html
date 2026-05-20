@@ -159,7 +159,6 @@
             <input type="text" id="reg_user" class="sapatamu-input" placeholder="Gildan & Mita" oninput="autoSuggestSubdomain(this.value)">
         </div>
 
-        <!-- DOUBLE NAME FOR WEDDING -->
         <div id="group_double_name" style="display: none;">
             <div class="form-group">
                 <label>Nama Mempelai Pria & Wanita</label>
@@ -169,6 +168,16 @@
                     <input type="text" id="reg_wanita" class="sapatamu-input" placeholder="Nama Wanita" oninput="syncWeddingNames()">
                 </div>
             </div>
+        </div>
+
+        <!-- TANGGAL ACARA (Wajib, muncul di semua kategori) -->
+        <div class="form-group" id="group_event_date">
+            <label>📅 Tanggal Acara <span style="color:#E07B7B; font-size:11px;">*Wajib</span></label>
+            <input type="text" id="ev_date_main" class="sapatamu-input" placeholder="Minggu, 14 Juni 2026"
+                oninput="updateSheetPreview()" style="border: 1.5px solid #c7d2fe;">
+            <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px; font-weight: 600;">* Format: Hari, DD Bulan YYYY — akan menjadi nama file Spreadsheet.</p>
+            <!-- Preview nama file sheet -->
+            <div id="sheet-name-preview" style="display:none; margin-top: 8px; padding: 10px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; font-size: 11px; font-weight: 700; color: #15803d;"></div>
         </div>
 
         <div class="form-group">
@@ -193,8 +202,8 @@
         </div>
 
         <div class="inject-box">
-            <p class="inject-title">Detail Acara (Inject ke Master)</p>
-            <div class="form-group"><input type="text" id="ev_date_text" class="sapatamu-input" placeholder="Senin, 25 Mei 2026"></div>
+            <p class="inject-title">Detail Acara Lainnya (Opsional)</p>
+            <div class="form-group"><input type="text" id="ev_date_text" class="sapatamu-input" placeholder="Senin, 25 Mei 2026" style="display:none;"></div>
             <div class="form-group"><input type="text" id="ev_loc" class="sapatamu-input" placeholder="Lokasi Lengkap Acara"></div>
             <div class="form-group"><input type="text" id="ev_time" class="sapatamu-input" placeholder="Akad: 08.00 / Resepsi: 12.30"></div>
             <div class="form-group"><input type="text" id="ev_link" class="sapatamu-input" placeholder="Link Undangan Digital"></div>
@@ -491,6 +500,39 @@
             const combined = (pria + " " + wanita).trim();
             autoSuggestSubdomain(combined);
         }
+        updateSheetPreview();
+    };
+
+    // Helper: ambil nama depan saja
+    function getFirstName(fullName) {
+        return (fullName || '').trim().split(/\s+/)[0];
+    }
+
+    // Helper: bangun display name sesuai kategori
+    function buildDisplayName() {
+        const cat = document.getElementById('reg_category').value;
+        if (cat === 'wedding') {
+            const pria = getFirstName(document.getElementById('reg_pria').value);
+            const wanita = getFirstName(document.getElementById('reg_wanita').value);
+            if (!pria && !wanita) return '';
+            return (pria || '?') + ' & ' + (wanita || '?');
+        } else {
+            return document.getElementById('reg_user').value.trim();
+        }
+    }
+
+    // Update preview nama file sheet
+    window.updateSheetPreview = function() {
+        const tgl = (document.getElementById('ev_date_main').value || '').trim();
+        const nama = buildDisplayName();
+        const preview = document.getElementById('sheet-name-preview');
+        if (!preview) return;
+        if (tgl && nama) {
+            preview.style.display = 'block';
+            preview.innerHTML = `📋 Nama File Sheet: <span style="color:#1e40af;">temp_${tgl} - ${nama}</span>`;
+        } else {
+            preview.style.display = 'none';
+        }
     };
 
     function setLoading(btnId, isLoad) {
@@ -691,30 +733,40 @@
 
     window.generateSheet = async function() {
         const cat = document.getElementById('reg_category').value;
-        let user;
-        let currentBtnId;
+        const tgl = (document.getElementById('ev_date_main').value || '').trim();
+        let user;      // Nama lengkap untuk GAS
+        let shortName; // Nama pendek (depan saja) untuk nama file
+
+        if (!tgl) return showSapaModal("Tanggal Wajib Diisi", "Silakan isi Tanggal Acara terlebih dahulu.", "📅");
 
         if (cat === 'wedding') {
             const pria = document.getElementById('reg_pria').value.trim();
             const wanita = document.getElementById('reg_wanita').value.trim();
             if (!pria || !wanita) return showSapaModal("Lengkapi Nama", "Nama Pria & Wanita diperlukan.", "⚠️");
             user = pria + " & " + wanita;
-            currentBtnId = 'btn_gen_sheet_dual';
+            shortName = getFirstName(pria) + " & " + getFirstName(wanita);
         } else {
             user = document.getElementById('reg_user').value.trim();
             if (!user) return showSapaModal("Isi Nama Klien", "Nama klien diperlukan untuk membuat Google Sheets baru.", "⚠️");
-            currentBtnId = 'btn_gen_sheet';
+            shortName = user;
         }
+
+        // Sinkronkan ev_date_text (hidden) agar payload GAS konsisten
+        document.getElementById('ev_date_text').value = tgl;
+
+        // Nama file sementara: temp_{tanggal} - {NamaDepan}
+        const tempFileName = `temp_${tgl} - ${shortName}`;
 
         setLoading('btn_gen_sheet', true);
         try {
             const payload = { 
-                action: "copyMaster", 
-                clientName: user,
-                category: document.getElementById('reg_category').value,
+                action: "copyMaster",
+                clientName: tempFileName,   // ← nama file temp di Drive
+                displayName: user,          // ← nama asli untuk inject ke sheet
+                category: cat,
                 eventData: {
                     nama: user,
-                    tgl: document.getElementById('ev_date_text').value,
+                    tgl: tgl,
                     lokasi: document.getElementById('ev_loc').value,
                     waktu: document.getElementById('ev_time').value,
                     link: document.getElementById('ev_link').value,
@@ -732,7 +784,6 @@
             const res = await response.json();
             if (res.status === "success") {
                 const fileId = res.data.fileId || res.data.id;
-                console.log("File ID diterima:", fileId);
                 
                 const inputSsid = document.getElementById('reg_ssid');
                 if (inputSsid) {
@@ -740,21 +791,27 @@
                     inputSsid.classList.add('success-highlight');
                 }
 
-                // Kunci input nama agar tidak diubah setelah sheet dibuat
-                document.getElementById('reg_user').readOnly = true; 
+                // Kunci input setelah sheet dibuat
+                document.getElementById('ev_date_main').readOnly = true;
                 if (document.getElementById('reg_pria')) document.getElementById('reg_pria').readOnly = true;
                 if (document.getElementById('reg_wanita')) document.getElementById('reg_wanita').readOnly = true;
-                
+                if (document.getElementById('reg_user')) document.getElementById('reg_user').readOnly = true;
+
                 document.getElementById('btn_gen_sheet').disabled = true;
-                document.getElementById('text_gen_sheet').innerText = "✅ Database Siap";
-                
-                // Aktifkan tombol daftar jika subdomain juga sudah dicek/aman
+                document.getElementById('text_gen_sheet').innerText = '✅ Database Siap';
+
+                // Update preview ke nama final (tanpa temp_)
+                const preview = document.getElementById('sheet-name-preview');
+                if (preview) {
+                    preview.innerHTML = `📋 Siap: <span style="color:#1e40af;">${tgl} - ${shortName}</span> <span style="color:#6b7280;font-weight:500;">(akan direname saat Buat Akun)</span>`;
+                }
+
                 const subStatus = document.getElementById('sub-status').innerText;
-                if (subStatus.includes("✅")) {
+                if (subStatus.includes('✅')) {
                     document.getElementById('btn_reg').disabled = false;
                 }
-                
-                showSapaModal("Berhasil!", "Spreadsheet baru Anda telah dibuat. Silakan lanjut ke langkah terakhir.", "📊");
+
+                showSapaModal("Berhasil!", `Spreadsheet "${tempFileName}" telah dibuat. Lanjut isi data & klik Buat Akun untuk mengaktifkan.`, "📊");
             } else {
                 showSapaModal("Gagal", (res.message || "Gagal membuat spreadsheet."), "❌");
             }
@@ -765,16 +822,36 @@
     };
 
     window.prosesDaftar = async function() {
+        const cat = document.getElementById('reg_category').value;
+        const tgl = (document.getElementById('ev_date_main').value || '').trim();
+        const ssId = document.getElementById('reg_ssid').value;
+
+        let clientName, shortName;
+        if (cat === 'wedding') {
+            const pria = document.getElementById('reg_pria').value.trim();
+            const wanita = document.getElementById('reg_wanita').value.trim();
+            clientName = pria + ' & ' + wanita;
+            shortName = getFirstName(pria) + ' & ' + getFirstName(wanita);
+        } else {
+            clientName = document.getElementById('reg_user').value.trim();
+            shortName = clientName;
+        }
+
+        const finalFileName = tgl ? `${tgl} - ${shortName}` : clientName;
+
         const data = {
             action: "register",
-            clientName: document.getElementById('reg_user').value,
+            clientName: clientName,
             subdomain: document.getElementById('reg_subdomain').value.toLowerCase().replace(/[^a-z0-9]/g, ''),
-            ssId: document.getElementById('reg_ssid').value,
-            category: document.getElementById('reg_category').value,
+            ssId: ssId,
+            category: cat,
             password: document.getElementById('reg_pass').value,
             whatsapp: document.getElementById('reg_wa').value,
             email: document.getElementById('reg_email').value,
-            weddingDate: document.getElementById('ev_date_text').value
+            weddingDate: tgl,
+            // Rename spreadsheet dari temp_ ke nama final
+            renameSheet: true,
+            finalFileName: finalFileName
         };
 
         setLoading('btn_reg', true);
@@ -787,7 +864,7 @@
             });
             const res = await response.json();
             if (res.status === "success") {
-                const pesan = `*Konfirmasi Pendaftaran*%0A*User:* ${data.username}%0A*Pass:* ${data.password}`;
+                const pesan = `*Konfirmasi Pendaftaran*%0A*User:* ${data.subdomain}%0A*Pass:* ${data.password}`;
                 window.open(`https://wa.me/6285111567829?text=${pesan}`, '_blank');
                 location.reload();
             } else {

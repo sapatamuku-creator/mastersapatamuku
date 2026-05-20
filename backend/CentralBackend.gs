@@ -57,7 +57,9 @@ function handleRegister(data) {
     }
 
     const file = DriveApp.getFileById(data.ssId);
-    const finalName = (data.weddingDate || "NoDate") + " - " + data.clientName;
+    // Gunakan finalFileName dari frontend jika ada (format: "Minggu, 14 Juni 2026 - Alisha & Juan")
+    // Fallback ke format lama untuk kompatibilitas
+    const finalName = data.finalFileName || ((data.weddingDate || "NoDate") + " - " + data.clientName);
     file.setName(finalName);
 
     // Append Row ke Master
