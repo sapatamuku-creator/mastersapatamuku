@@ -173,9 +173,14 @@
         <!-- TANGGAL ACARA (Wajib, muncul di semua kategori) -->
         <div class="form-group" id="group_event_date">
             <label>📅 Tanggal Acara <span style="color:#E07B7B; font-size:11px;">*Wajib</span></label>
-            <input type="text" id="ev_date_main" class="sapatamu-input" placeholder="Minggu, 14 Juni 2026"
-                oninput="updateSheetPreview()" style="border: 1.5px solid #c7d2fe;">
-            <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px; font-weight: 600;">* Format: Hari, DD Bulan YYYY — akan menjadi nama file Spreadsheet.</p>
+            <!-- Native calendar picker -->
+            <input type="date" id="ev_date_picker" class="sapatamu-input"
+                onchange="buildDateFromPicker()"
+                style="cursor:pointer; border: 1.5px solid #c7d2fe; color: var(--text-main);">
+            <!-- Hidden field yang menyimpan plaintext hasil konversi -->
+            <input type="hidden" id="ev_date_main" value="">
+            <!-- Display result: plaintext Indonesia -->
+            <div id="ev_date_display" style="display:none; margin-top:8px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; font-size:13px; font-weight:700; color:#1d4ed8; letter-spacing:0.3px;">—</div>
             <!-- Preview nama file sheet -->
             <div id="sheet-name-preview" style="display:none; margin-top: 8px; padding: 10px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; font-size: 11px; font-weight: 700; color: #15803d;"></div>
         </div>
@@ -451,13 +456,47 @@
     document.addEventListener('DOMContentLoaded', () => {
         initLogin();
         updateCategoryTheme();
-        
+
         // Auto-switch to Register Form if URL hash contains #register or search parameter has form=register
         const urlParams = new URLSearchParams(window.location.search);
         if (window.location.hash === '#register' || urlParams.get('form') === 'register') {
             toggleForm('registerForm');
         }
     });
+
+    // Konversi pilihan native date picker ke plaintext Indonesia "Minggu, 14 Juni 2026"
+    window.buildDateFromPicker = function() {
+        const HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+        const BULAN_NAMA = ['Januari','Februari','Maret','April','Mei','Juni','Juli',
+                            'Agustus','September','Oktober','November','Desember'];
+
+        const val = document.getElementById('ev_date_picker').value; // "2026-06-14"
+        const display = document.getElementById('ev_date_display');
+        const hidden  = document.getElementById('ev_date_main');
+
+        if (!val) {
+            display.style.display = 'none';
+            hidden.value = '';
+            updateSheetPreview();
+            checkGenSheetBtn();
+            return;
+        }
+
+        // Parse tanggal: gunakan UTC+0 agar tidak bergeser zona waktu
+        const [yy, mm, dd] = val.split('-').map(Number);
+        const dateObj = new Date(yy, mm - 1, dd); // bulan 0-indexed
+        const namaHari  = HARI[dateObj.getDay()];
+        const namaBulan = BULAN_NAMA[mm - 1];
+        const plaintext = `${namaHari}, ${dd} ${namaBulan} ${yy}`;
+
+        hidden.value = plaintext;
+        display.style.display = 'block';
+        display.innerHTML = `📅 <strong>${plaintext}</strong>`;
+
+        updateSheetPreview();
+        checkGenSheetBtn();
+    };
+
     window.toggleForm = function(id) {
         const forms = ['loginForm', 'registerForm', 'forgotForm', 'changePassForm'];
         forms.forEach(f => {
@@ -858,7 +897,8 @@
                 }
 
                 // Kunci input setelah sheet dibuat
-                document.getElementById('ev_date_main').readOnly = true;
+                const picker = document.getElementById('ev_date_picker');
+                if (picker) picker.disabled = true;
                 if (document.getElementById('reg_pria')) document.getElementById('reg_pria').readOnly = true;
                 if (document.getElementById('reg_wanita')) document.getElementById('reg_wanita').readOnly = true;
                 if (document.getElementById('reg_user')) document.getElementById('reg_user').readOnly = true;
