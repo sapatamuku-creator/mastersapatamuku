@@ -682,8 +682,16 @@ function registerNewOnsite(data) {
     // Gunakan kodeUnik dari frontend jika ada untuk konsistensi cepat
     const kodeUnik = data.kodeUnik || ("ONS-" + Math.random().toString(36).substring(2, 7).toUpperCase());
     const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?data=" + kodeUnik + "&size=400x400";
-    let cleanPhone = String(data.whatsapp || "").replace(/\D/g, ''); 
-    if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+    const rawContact = String(data.whatsapp || "");
+    const isPhoneNumber = /^[+\d\s()-]{5,}$/.test(rawContact.trim());
+    let cleanPhone;
+    if (isPhoneNumber) {
+      cleanPhone = rawContact.replace(/\D/g, '');
+      if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+    } else {
+      // Preserve Instagram username as-is, ensure @ prefix
+      cleanPhone = rawContact.startsWith('@') ? rawContact.trim() : '@' + rawContact.trim();
+    }
     const giftVal = data.catatan || "-";
     const souvenirVal = data.souvenir === "tidak" ? 0 : 1;
 
@@ -809,8 +817,16 @@ function submitGuestCollection(formData) {
 
   const kodeUnik = prefix + randomPart;
   const baseLink = sheet.getRange("B5").getValue();
-  let cleanPhone = String(formData.whatsapp || "").replace(/\D/g, ''); 
-  if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+  const rawContact = String(formData.whatsapp || "");
+  const isPhoneNumber = /^[+\d\s()-]{5,}$/.test(rawContact.trim());
+  let cleanPhone;
+  if (isPhoneNumber) {
+    cleanPhone = rawContact.replace(/\D/g, '');
+    if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+  } else {
+    // Preserve Instagram username as-is, ensure @ prefix
+    cleanPhone = rawContact.startsWith('@') ? rawContact.trim() : (rawContact.trim() ? '@' + rawContact.trim() : '');
+  }
   const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?data=" + kodeUnik + "&size=400x400";
   
   const newRow = [
@@ -848,12 +864,13 @@ function submitGuestCollection(formData) {
         event_date: eventDate
       };
       
-      UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu", {
+      UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?on_conflict=ssid,kode", {
         method: "post",
         headers: {
           "apikey": SUPABASE_KEY,
           "Authorization": "Bearer " + SUPABASE_KEY,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Prefer": "resolution=merge-duplicates"
         },
         payload: JSON.stringify(payload),
         muteHttpExceptions: true

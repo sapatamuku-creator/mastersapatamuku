@@ -842,8 +842,8 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group" style="flex: 1; margin-bottom: 15px;">
-                        <label>WhatsApp Number</label>
-                        <input type="tel" id="reg-wa" placeholder="08...">
+                        <label>WhatsApp / Instagram</label>
+                        <input type="text" id="reg-wa" placeholder="08... atau @username_ig">
                     </div>
                     <div class="form-group" style="flex: 1; margin-bottom: 15px;">
                         <label>Category</label>
@@ -1803,8 +1803,17 @@
                     "Authorization": "Bearer " + SB_KEY,
                     "Content-Type": "application/json"
                 };
-                let cleanPhone = String(whatsapp || "").replace(/\D/g, '');
-                if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+                // Deteksi: apakah input berupa nomor telepon atau username Instagram
+                const rawContact = String(whatsapp || "");
+                const isPhoneNumber = /^[+\d\s()-]{5,}$/.test(rawContact.trim()); // hanya digit, spasi, +, -, ()
+                let cleanPhone;
+                if (isPhoneNumber) {
+                    cleanPhone = rawContact.replace(/\D/g, '');
+                    if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+                } else {
+                    // Simpan username IG apa adanya, pastikan ada prefix @
+                    cleanPhone = rawContact.startsWith('@') ? rawContact.trim() : '@' + rawContact.trim();
+                }
                 const timeOnly = new Date().toLocaleTimeString('en-GB', { hour12: false });
 
                 try {
