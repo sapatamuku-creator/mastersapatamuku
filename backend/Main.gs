@@ -725,12 +725,13 @@ function registerNewOnsite(data) {
             event_date: eventDate
           };
 
-          UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu", {
+          UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?on_conflict=ssid,kode", {
             method: "post",
             headers: {
               "apikey": SUPABASE_KEY,
               "Authorization": "Bearer " + SUPABASE_KEY,
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
+              "Prefer": "resolution=merge-duplicates"
             },
             payload: JSON.stringify(payload),
             muteHttpExceptions: true
@@ -1445,15 +1446,15 @@ function syncSheetToSupabase(ssId) {
 
     // Ambil data tamu
     const dataRange = sheet.getRange(START_ROW, 1, lastRow - (START_ROW - 1), 19).getValues();
-    const guestList = dataRange.map((row, index) => {
+    let guestList = dataRange.map((row, index) => {
       let cleanPhone = String(row[3] || "").replace(/\D/g, ''); 
       if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
       
       return {
         ssid: ssId,
         row: index + START_ROW,
-        kode: String(row[5] || ""),
-        nama: String(row[2] || ""),
+        kode: String(row[5] || "").trim(),
+        nama: String(row[2] || "").trim(),
         whatsapp: row[3] ? String(row[3]) : "",
         kategori: String(row[4] || "Umum"),
         rencana_hadir: parseInt(row[7]) || 1,
@@ -1469,10 +1470,20 @@ function syncSheetToSupabase(ssId) {
         jam_datang: String(row[9] || "-"),
         event_date: eventDate
       };
-    }).filter(g => g.nama.trim() !== "");
+    }).filter(g => g.nama !== "" && g.kode !== "");
+
+    // Deduplicate by guest code to prevent ON CONFLICT DO UPDATE command cannot affect row a second time
+    const seen = new Set();
+    guestList = guestList.filter(g => {
+      if (seen.has(g.kode)) {
+        return false;
+      }
+      seen.add(g.kode);
+      return true;
+    });
 
     if (guestList.length === 0) {
-      return { status: "success", message: "Tidak ada tamu valid untuk disinkronkan." };
+      return { status: "success", message: "Tidak ada tamu valid (nama & kode tidak kosong) untuk disinkronkan." };
     }
 
     // Lakukan bulk upsert ke Supabase REST API

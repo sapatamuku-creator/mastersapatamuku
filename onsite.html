@@ -1044,6 +1044,7 @@
 
         let supabaseClient = null;
         let realtimeChannel = null;
+        let EVENT_DATE = null;
 
         function initSupabaseRealtimeTamu() {
             if (!CURRENT_SS_ID) return;
@@ -1296,6 +1297,10 @@
                     }
                 });
                 const sbData = await response.json();
+                
+                if (sbData && sbData.length > 0 && sbData[0].event_date) {
+                    EVENT_DATE = sbData[0].event_date;
+                }
                 
                 // Map data snake_case Supabase ke format camelCase frontend
                 masterData = (sbData || []).map(item => ({
@@ -1803,11 +1808,36 @@
                 const timeOnly = new Date().toLocaleTimeString('en-GB', { hour12: false });
 
                 try {
-                    // 1. Queue print job directly to Supabase (< 200ms)
+                    // 1. Insert to tamu directly to Supabase with event_date (< 150ms)
+                    const tamuInsertPromise = fetch(`${SB_URL}/rest/v1/tamu`, {
+                        method: "POST",
+                        headers: SB_HEADERS,
+                        body: JSON.stringify({
+                            ssid: CURRENT_SS_ID,
+                            kode: kodeUnik,
+                            nama: nama || "Tanpa Nama",
+                            whatsapp: cleanPhone,
+                            kategori: document.getElementById('reg-kategori').value || "UMUM",
+                            rencana_hadir: 0,
+                            real_hadir: parseInt(adult) + parseInt(child) || 1,
+                            souvenir: document.getElementById('reg-souvenir').value === "tidak" ? "tidak" : "ya",
+                            pihak_pengundang: document.getElementById('reg-host').value || "-",
+                            alamat: document.getElementById('reg-alamat').value || "-",
+                            status_hadir: "1",
+                            status_hadiah: gift || "-",
+                            tanda_kasih: 0,
+                            sesi: document.getElementById('reg-sesi').value || "-",
+                            jam_datang: timeOnly,
+                            event_date: EVENT_DATE || new Date().toISOString().split('T')[0]
+                        })
+                    });
+
+                    // 2. Queue print job directly to Supabase (< 200ms)
                     let catUpper = String(document.getElementById('reg-kategori').value || "").toUpperCase();
                     let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
 
                     const printPromises = [
+                        tamuInsertPromise,
                         fetch(`${SB_URL}/rest/v1/print_queue`, {
                             method: "POST",
                             headers: SB_HEADERS,
@@ -1865,7 +1895,7 @@
                     }
                     await Promise.all(printPromises);
                 } catch(e) {
-                    console.error("Direct Supabase print queuing failed:", e);
+                    console.error("Direct Supabase guest registration / print queuing failed:", e);
                 }
 
                 const payload = {
