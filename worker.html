@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="subdomain_resolver.js?v=3.3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700&display=swap');
     
@@ -105,11 +106,20 @@
     <!-- MAIN PANEL -->
     <div class="max-w-md mx-auto w-full bg-zinc-900 border border-white/10 rounded-3xl p-6 shadow-2xl">
       <div class="flex items-center justify-between mb-8">
-        <div>
-          <p class="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Printer Engine</p>
-          <div class="flex items-center gap-2">
-              <div id="statusDot" class="w-2 h-2 rounded-full bg-red-500"></div>
-              <span id="statusText" class="text-xs font-bold text-zinc-400 uppercase">Disconnected</span>
+        <div class="flex gap-6">
+          <div>
+            <p class="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Printer Engine</p>
+            <div class="flex items-center gap-2">
+                <div id="statusDot" class="w-2 h-2 rounded-full bg-red-500"></div>
+                <span id="statusText" class="text-xs font-bold text-zinc-400 uppercase">Disconnected</span>
+            </div>
+          </div>
+          <div>
+            <p class="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Jalur Data</p>
+            <div class="flex items-center gap-2">
+                <div id="dbStatusDot" class="w-2 h-2 rounded-full bg-amber-500"></div>
+                <span id="dbStatusText" class="text-xs font-bold text-zinc-400 uppercase">Inisialisasi</span>
+            </div>
           </div>
         </div>
         <button id="connectBtn" class="bg-white text-black text-[10px] font-extrabold px-6 py-3 rounded-full hover:bg-emerald-400 transition-all shadow-lg">PAIR PRINTER</button>
@@ -176,6 +186,7 @@
           document.getElementById('connectBtn').style.opacity = "0.5";
         } else {
           log(`Worker Active | ID: ${CURRENT_SS_ID}`);
+          initSupabaseRealtime();
         }
       } else {
         setTimeout(initApp, 100);
@@ -234,6 +245,10 @@
       logDiv.scrollTop = logDiv.scrollHeight;
     }
 
+    let supabaseClient = null;
+    let realtimeChannel = null;
+    let currentPollingInterval = 1500;
+
     async function handleConnect() {
       try {
         log(`Mencari Bluetooth...`);
@@ -255,15 +270,80 @@
         document.getElementById('statusText').classList.add("text-emerald-500");
         document.getElementById('connectBtn').style.display = 'none';
         
-        startPolling();
+        startPolling(currentPollingInterval);
+        fetchQueue();
       } catch (e) { log("Error: " + e.message, true); }
     }
 
-    function startPolling() {
+    function startPolling(intervalMs = 1500) {
+      if (pollingTimer && currentPollingInterval === intervalMs) return;
       if (pollingTimer) clearInterval(pollingTimer);
+      currentPollingInterval = intervalMs;
       pollingTimer = setInterval(() => {
         if (!isProcessing && printCharacteristic) fetchQueue();
-      }, 1500); // Poll every 1.5 seconds for instant response
+      }, intervalMs);
+      log(`Backup Polling: Aktif (${intervalMs / 1000}s)`);
+    }
+
+    function initSupabaseRealtime() {
+      if (!CURRENT_SS_ID) return;
+      try {
+        const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+        
+        if (window.supabase) {
+          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          log("Menghubungkan ke Supabase Realtime...");
+          
+          realtimeChannel = supabaseClient
+            .channel('print_queue_changes')
+            .on(
+              'postgres_changes',
+              {
+                event: '*',
+                schema: 'public',
+                table: 'print_queue',
+                filter: `ssid=eq.${CURRENT_SS_ID}`
+              },
+              (payload) => {
+                const record = payload.new;
+                if (record && record.status === 'WAITING') {
+                  log(`Realtime: Data cetak baru (${record.nama || 'GUEST'})`);
+                  if (!isProcessing && printCharacteristic) {
+                    fetchQueue();
+                  }
+                }
+              }
+            )
+            .subscribe((status) => {
+              const dot = document.getElementById('dbStatusDot');
+              const txt = document.getElementById('dbStatusText');
+              log(`Status Realtime: ${status}`);
+              
+              if (status === 'SUBSCRIBED') {
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 status-pulse";
+                if (txt) {
+                  txt.innerText = "Realtime Aktif";
+                  txt.className = "text-xs font-bold text-emerald-500 uppercase";
+                }
+                startPolling(8000); // Polling backup lambat (8 detik)
+              } else {
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
+                if (txt) {
+                  txt.innerText = "Offline (Polling)";
+                  txt.className = "text-xs font-bold text-amber-500 uppercase";
+                }
+                startPolling(1500); // Terjadi gangguan websocket, balik ke polling cepat (1.5 detik)
+              }
+            });
+        } else {
+          log("Supabase Library tidak termuat. Menggunakan Polling.", true);
+          startPolling(1500);
+        }
+      } catch (e) {
+        log("Gagal inisialisasi Realtime: " + e.message, true);
+        startPolling(1500);
+      }
     }
 
     async function fetchQueue() {
