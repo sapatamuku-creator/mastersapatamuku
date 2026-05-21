@@ -813,21 +813,24 @@
             statusEl.style.color = 'var(--gold)';
         } finally {
             spinner.style.display = 'none';
-            checkGenSheetBtn();
         }
     }
 
-    window.generateSheet = async function() {
+    window.goToStep2FromStep1 = async function() {
         const cat = document.getElementById('reg_category').value;
         const tgl = (document.getElementById('ev_date_main').value || '').trim();
         const nama = document.getElementById('ev_title').value.trim();
 
-            if (!tgl) return showSapaModal("Tanggal Wajib Diisi", "Silakan isi Tanggal Acara terlebih dahulu.", "📅");
-            if (!nama) return showSapaModal("Nama Acara Kosong", "Silakan isi nama mempelai / klien terlebih dahulu.", "⚠️");
+        if (!tgl) return showSapaModal("Tanggal Wajib Diisi", "Silakan isi Tanggal Acara terlebih dahulu.", "📅");
+        if (!nama) return showSapaModal("Nama Acara Kosong", "Silakan isi nama mempelai / klien terlebih dahulu.", "⚠️");
 
         const tempFileName = `temp_${tgl} - ${nama}`;
 
-        setLoading('btn_gen_sheet', true);
+        const nextBtn = document.getElementById('btn_step1_next');
+        const origHtml = nextBtn.innerHTML;
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = '<span>⏳ Menyiapkan Database...</span>';
+
         try {
             const payload = { 
                 action: "copyMaster",
@@ -862,21 +865,17 @@
                 if (document.getElementById('reg_wanita')) document.getElementById('reg_wanita').disabled = true;
                 if (document.getElementById('reg_user')) document.getElementById('reg_user').disabled = true;
 
-                document.getElementById('btn_gen_sheet').disabled = true;
-                document.getElementById('text_gen_sheet').innerText = '✅ Database Terbuat';
-
-                // Unlock next button
-                const nextBtn = document.getElementById('btn_step1_next');
-                nextBtn.disabled = false;
-                
-                showSapaModal("Berhasil!", `Database "${tempFileName}" telah disiapkan. Klik Lanjut untuk verifikasi akun.`, "🎉");
+                showSapaModal("Berhasil!", `Database "${tempFileName}" telah disiapkan.`, "🎉");
+                nextStep(2);
             } else {
                 showSapaModal("Gagal", (res.message || "Gagal membuat database."), "❌");
             }
         } catch (e) { 
-                showSapaModal("Error", "Gagal siapkan database: " + e.toString(), "⚠️");
+            showSapaModal("Error", "Gagal siapkan database: " + e.toString(), "⚠️");
         }
-        setLoading('btn_gen_sheet', false);
+        
+        nextBtn.innerHTML = origHtml;
+        nextBtn.disabled = false;
     };
 
     function setLoading(btnId, isLoad) {
