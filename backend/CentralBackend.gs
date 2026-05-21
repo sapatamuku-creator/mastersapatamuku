@@ -883,9 +883,7 @@ function handleCreateMidtransTransaction(data) {
         first_name: data.clientName,
         email: data.email,
         phone: data.whatsapp
-      },
-      // Batasi metode pembayaran agar realtime & instan
-      enabled_payments: ["qris", "credit_card", "bca_va", "bni_va", "bri_va", "mandiri_va", "permata_va", "other_va"]
+      }
     };
 
     // Base64 Authorization Header: Server Key + ":"
