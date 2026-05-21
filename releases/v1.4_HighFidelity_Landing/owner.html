@@ -164,7 +164,7 @@
         <div style="font-size: 48px; margin-bottom: 16px;">🛡️</div>
         <h1>Owner Access</h1>
         <p>Masukkan password admin untuk mengakses dashboard pengelolaan klien.</p>
-        <input type="password" id="admin-pass-input" class="input-dark" placeholder="Password Admin" onkeydown="if(event.key==='Enter') doLogin()">
+        <input type="password" id="admin-pass-input" class="input-dark" placeholder="Password Admin">
         <button class="btn-primary" id="btn-login" onclick="doLogin()">Masuk Dashboard</button>
     </div>
 </div>
@@ -327,7 +327,7 @@
                 <td contenteditable="true" oninput="markDirty(${i})">${escHtml(c.whatsapp || '')}</td>
                 <td contenteditable="true" oninput="markDirty(${i})">${escHtml(c.email || '')}</td>
                 <td contenteditable="true" oninput="markDirty(${i})" style="font-family:monospace;font-size:12px;">${escHtml(c.password || '')}</td>
-                <td><span class="badge ${statusBadge}" id="badge-${i}" onclick="cycleStatus(${i})" style="cursor:pointer;">${statusLabel}</span></td>
+                <td><span class="badge ${statusBadge}" id="badge-${i}" data-status="${c.status}" onclick="cycleStatus(${i})" style="cursor:pointer;">${statusLabel}</span></td>
                 <td>${ssidLink}</td>
                 <td style="color:var(--muted);font-size:11px;">${c.created_at ? new Date(c.created_at).toLocaleDateString('id-ID') : '-'}</td>
                 <td><button class="save-row-btn" onclick="saveRow(${i})">💾 Simpan</button></td>
@@ -399,7 +399,14 @@
             if (res.status === "success") {
                 row.classList.remove('dirty');
                 // Update original username in case it changed
-                row.setAttribute('data-original-username', clientData.subdomain);
+                row.setAttribute('data-original-username', clientData.username);
+
+                // Update local array so filtering works properly
+                const targetIdx = allClients.findIndex(c => String(c.username).toLowerCase() === String(originalUsername).toLowerCase());
+                if (targetIdx !== -1) {
+                    allClients[targetIdx] = { ...allClients[targetIdx], ...clientData };
+                }
+
                 showToast("✅ Data klien berhasil diperbarui & disinkronkan!", "green");
             } else {
                 showToast("❌ Gagal: " + res.message, "red");
