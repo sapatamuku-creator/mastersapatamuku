@@ -277,35 +277,40 @@
 
             <button type="button" id="btn-snap" onclick="takeSelfie()" style="background: none; border: 1px solid var(--gold); color: var(--gold); padding: 8px 20px; border-radius: 30px; font-size: 10px; font-weight: 800; cursor: pointer; margin-bottom: 15px;">AMBIL FOTO</button>
 
-            <div class="form-row" style="display: flex; gap: 10px; text-align: left;">
-                <div class="form-group" style="flex: 1;">
-                    <label style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">Kehadiran Pax</label>
-                    <div class="pax-row">
-                        <span class="pax-label">Dewasa</span>
-                        <div class="counter-wrapper">
+            <div style="display: flex; gap: 15px; text-align: left;">
+                <div style="flex: 1.2;">
+                    <label style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">KEHADIRAN
+                        PAX</label>
+                    <div class="pax-row" style="margin: 8px 0;">
+                        <span class="pax-label" style="font-size: 10px; font-weight: 700;">DEWASA</span>
+                        <div class="counter-wrapper" style="width: 80px; height: 32px;">
                             <button type="button" class="btn-step" onclick="updatePax('adult', -1)">-</button>
-                            <div id="m-pax-adult" class="counter-value">1</div>
+                            <div id="m-pax-adult" class="counter-value" style="font-size: 11px;">1</div>
                             <button type="button" class="btn-step" onclick="updatePax('adult', 1)">+</button>
                         </div>
                     </div>
-                    <div class="pax-row">
-                        <span class="pax-label">Anak</span>
-                        <div class="counter-wrapper">
+                    <div class="pax-row" style="margin: 8px 0;">
+                        <span class="pax-label" style="font-size: 10px; font-weight: 700;">ANAK</span>
+                        <div class="counter-wrapper" style="width: 80px; height: 32px;">
                             <button type="button" class="btn-step" onclick="updatePax('child', -1)">-</button>
-                            <div id="m-pax-child" class="counter-value">0</div>
+                            <div id="m-pax-child" class="counter-value" style="font-size: 11px;">0</div>
                             <button type="button" class="btn-step" onclick="updatePax('child', 1)">+</button>
                         </div>
                     </div>
-                    <div style="font-size:9px; font-weight:800; color:var(--gold); text-align:right; margin-top:5px;">TOTAL: <span id="m-pax-total">1</span> PAX</div>
                 </div>
-                <div class="form-group" style="flex: 1.5;">
-                    <label style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">Pemberian</label>
-                    <div class="tag-row" style="margin: 0;">
+                <div style="flex: 0.8;">
+                    <label
+                        style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">PEMBERIAN</label>
+                    <div class="tag-row" style="flex-direction: column;">
                         <div class="tag-item" id="tag-angpao" onclick="this.classList.toggle('active')">ANGPAO</div>
                         <div class="tag-item" id="tag-kado" onclick="this.classList.toggle('active')">KADO</div>
                     </div>
                 </div>
             </div>
+
+            <div id="m-pax-total-label"
+                style="font-size:9px; font-weight:800; color:var(--gold); text-align:center; margin-top:10px; text-transform:uppercase;">
+                TOTAL: <span id="m-pax-total">1</span> PAX</div>
 
             <div class="btn-group">
                 <button class="btn-cancel" onclick="closeModal()">BATAL</button>
@@ -788,6 +793,7 @@
         capturedBase64 = null;
         const firstGuest = selectedList[0];
         document.getElementById('m-nama').innerText = selectedList.length > 1 ? "Konfirmasi Masal" : firstGuest.nama;
+        document.getElementById('m-info').innerText = selectedList.length > 1 ? selectedList.length + " Tamu Terpilih" : `${firstGuest.kategori || 'UMUM'} | ${firstGuest.alamat || '-'}`;
         
         // Reset counters
         const initialAdult = parseInt(firstGuest.rencanaHadir) || 1;
@@ -796,9 +802,12 @@
         document.getElementById('m-pax-total').innerText = initialAdult;
 
         container.innerHTML = selectedList.map(g => `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
-                <div style="font-size:11px; font-weight:700;">${g.nama}</div>
-                <div style="font-size:10px; color:var(--gold); font-weight:800;">${g.kategori || 'REGULER'}</div>
+            <div style="padding:10px; border-bottom:1px solid #eee;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                    <div style="font-size:12px; font-weight:700; color:var(--text-main);">${g.nama}</div>
+                    <div style="font-size:9px; color:var(--gold); font-weight:800; text-transform: uppercase;">${g.kategori || 'UMUM'}</div>
+                </div>
+                <div style="font-size:10px; color:var(--text-muted);">${g.alamat || '-'}</div>
             </div>
         `).join('');
 
