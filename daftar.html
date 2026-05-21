@@ -224,6 +224,7 @@
                 <label class="block text-sm font-bold mb-2">Tanggal Acara <span class="text-red-500">*</span></label>
                 <input type="date" id="ev_date_picker" class="sapatamu-input" onchange="buildDateFromPicker()" style="cursor: pointer;">
                 <input type="hidden" id="ev_date_main" value="">
+                <input type="hidden" id="reg_ssid" value="">
                 <div id="ev_date_display" class="hidden mt-2 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-700"></div>
                 <div id="sheet-name-preview" class="hidden mt-2 p-3 bg-green-50 border border-green-200 rounded-xl text-xs font-bold text-green-700"></div>
             </div>
@@ -816,68 +817,6 @@
         }
     }
 
-    window.goToStep2FromStep1 = async function() {
-        const cat = document.getElementById('reg_category').value;
-        const tgl = (document.getElementById('ev_date_main').value || '').trim();
-        const nama = document.getElementById('ev_title').value.trim();
-
-        if (!tgl) return showSapaModal("Tanggal Wajib Diisi", "Silakan isi Tanggal Acara terlebih dahulu.", "📅");
-        if (!nama) return showSapaModal("Nama Acara Kosong", "Silakan isi nama mempelai / klien terlebih dahulu.", "⚠️");
-
-        const tempFileName = `temp_${tgl} - ${nama}`;
-
-        const nextBtn = document.getElementById('btn_step1_next');
-        const origHtml = nextBtn.innerHTML;
-        nextBtn.disabled = true;
-        nextBtn.innerHTML = '<span>⏳ Menyiapkan Database...</span>';
-
-        try {
-            const payload = { 
-                action: "copyMaster",
-                clientName: tempFileName,
-                displayName: nama,
-                category: cat,
-                eventData: {
-                    nama: nama,
-                    tgl: tgl,
-                    lokasi: "",
-                    waktu: "",
-                    link: "",
-                    s1: "",
-                    s2: "",
-                    s3: ""
-                }
-            };
-            const response = await fetch(SCRIPT_URL, { 
-                method: "POST", 
-                mode: "cors",
-                redirect: "follow",
-                body: JSON.stringify(payload) 
-            });
-            const res = await response.json();
-            if (res.status === "success") {
-                const fileId = res.data.ssId || res.data.fileId || res.data.id;
-                document.getElementById('reg_ssid').value = fileId;
-
-                // Disable step 1 edits
-                document.getElementById('ev_date_picker').disabled = true;
-                if (document.getElementById('reg_pria')) document.getElementById('reg_pria').disabled = true;
-                if (document.getElementById('reg_wanita')) document.getElementById('reg_wanita').disabled = true;
-                if (document.getElementById('reg_user')) document.getElementById('reg_user').disabled = true;
-
-                showSapaModal("Berhasil!", `Database "${tempFileName}" telah disiapkan.`, "🎉");
-                nextStep(2);
-            } else {
-                showSapaModal("Gagal", (res.message || "Gagal membuat database."), "❌");
-            }
-        } catch (e) { 
-            showSapaModal("Error", "Gagal siapkan database: " + e.toString(), "⚠️");
-        }
-        
-        nextBtn.innerHTML = origHtml;
-        nextBtn.disabled = false;
-    };
-
     function setLoading(btnId, isLoad) {
         const btn = document.getElementById(btnId);
         const text = document.getElementById(btnId.replace('btn', 'text'));
@@ -1011,46 +950,12 @@
         const venue = document.getElementById('event_venue').value.trim();
         const city = document.getElementById('event_city').value.trim();
         const guests = document.getElementById('event_guests').value.trim();
-        const ssId = document.getElementById('reg_ssid').value;
 
         if (!addr || !venue || !city || guests === "") {
             return showSapaModal("Data Belum Lengkap", "Silakan isi detail alamat, tempat rekreasi, dan perkiraan tamu.", "⚠️");
         }
 
-        setLoading('btn_submit_details', true);
-        try {
-            // Update spreadsheet cell B3 (alamat) and B1 (nama)
-            const payload = {
-                action: "updateClientData",
-                ssId: ssId,
-                eventData: {
-                    nama: document.getElementById('ev_title').value.trim(),
-                    tgl: document.getElementById('ev_date_main').value.trim(),
-                    lokasi: `${venue}, ${addr}, ${city}`,
-                    waktu: "",
-                    link: "",
-                    s1: "",
-                    s2: "",
-                    s3: "",
-                    waPhone: document.getElementById('reg_wa').value.trim()
-                }
-            };
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST",
-                mode: "cors",
-                redirect: "follow",
-                body: JSON.stringify(payload)
-            });
-            const res = await response.json();
-            if (res.status === "success") {
-                nextStep(3);
-            } else {
-                showSapaModal("Update Gagal", res.message || "Gagal menyisipkan alamat ke database.", "❌");
-            }
-        } catch (e) {
-                showSapaModal("Error Sync", "Masalah koneksi detail: " + e.toString(), "⚠️");
-        }
-        setLoading('btn_submit_details', false);
+        nextStep(3);
     };
 
     // ==============================================
