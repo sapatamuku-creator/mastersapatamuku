@@ -963,6 +963,7 @@
                 <img id="camera-photo-preview"
                     style="display:none; width:100%; height:100%; object-fit:cover; transform:scaleX(-1);" />
                 <canvas id="capture-canvas" style="display:none;"></canvas>
+                <div id="countdown-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; display:none; align-items:center; justify-content:center; font-size: 100px; color: white; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; text-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10; background: rgba(0,0,0,0.2);"></div>
             </div>
             <button id="btn-snap" onclick="takeSelfie()"
                 style="background: none; border: 1px solid var(--gold); color: var(--gold); padding: 8px 20px; border-radius: 30px; font-size: 10px; font-weight: 800; cursor: pointer; margin-bottom: 15px;">AMBIL
@@ -1483,28 +1484,26 @@
 
             // If streaming, take picture and freeze
             if (currentStream) {
-                c.width = v.videoWidth || 640;
-                c.height = v.videoHeight || 480;
-                ctx.translate(c.width, 0);
-                ctx.scale(-1, 1);
-                ctx.drawImage(v, 0, 0, c.width, c.height);
-                capturedBase64 = c.toDataURL('image/jpeg', 0.8);
+                btnSnap.disabled = true;
+                btnSnap.innerText = "MENYIAPKAN...";
 
-                // Stop stream
-                if (currentStream) {
-                    currentStream.getTracks().forEach(t => t.stop());
-                    currentStream = null;
-                }
-
-                v.style.display = 'none';
-                if (photoPreview) {
-                    photoPreview.src = capturedBase64;
-                    photoPreview.style.display = 'block';
-                }
-
-                btnSnap.innerText = "ULANGI FOTO ✓";
-                btnSnap.style.background = "var(--success)";
-                btnSnap.style.color = "white";
+                const overlay = document.getElementById('countdown-overlay');
+                if(overlay) overlay.style.display = 'flex';
+                let count = 3;
+                if(overlay) overlay.innerText = count;
+                
+                const timer = setInterval(() => {
+                    count--;
+                    if (count > 0) {
+                        if(overlay) overlay.innerText = count;
+                    } else if (count === 0) {
+                        if(overlay) overlay.innerText = "📸";
+                    } else {
+                        clearInterval(timer);
+                        if(overlay) overlay.style.display = 'none';
+                        executePhotoCaptureOnsite();
+                    }
+                }, 800);
             }
             // If frozen, restart stream to retake
             else {
@@ -1524,6 +1523,38 @@
                     alert("Kamera tidak diizinkan.");
                 }
             }
+        }
+
+        function executePhotoCaptureOnsite() {
+            const v = document.getElementById('camera-preview');
+            const c = document.getElementById('capture-canvas');
+            const ctx = c.getContext('2d');
+            const photoPreview = document.getElementById('camera-photo-preview');
+            const btnSnap = document.getElementById('btn-snap');
+
+            c.width = v.videoWidth || 640;
+            c.height = v.videoHeight || 480;
+            ctx.translate(c.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(v, 0, 0, c.width, c.height);
+            capturedBase64 = c.toDataURL('image/jpeg', 0.8);
+
+            // Stop stream
+            if (currentStream) {
+                currentStream.getTracks().forEach(t => t.stop());
+                currentStream = null;
+            }
+
+            v.style.display = 'none';
+            if (photoPreview) {
+                photoPreview.src = capturedBase64;
+                photoPreview.style.display = 'block';
+            }
+
+            btnSnap.disabled = false;
+            btnSnap.innerText = "ULANGI FOTO ✓";
+            btnSnap.style.background = "var(--success)";
+            btnSnap.style.color = "white";
         }
 
         async function executeCheckin() {

@@ -228,6 +228,7 @@
             <div class="w-[200px] h-[200px] md:w-[300px] md:h-[300px] bg-black rounded-[30px] overflow-hidden border-4 border-[#F0E6DE] mb-4 shadow-xl relative">
                 <video id="camera-preview" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
                 <canvas id="capture-canvas" style="display:none;"></canvas>
+                <div id="countdown-overlay" class="absolute inset-0 hidden items-center justify-center text-[80px] text-white font-black drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-10 bg-black/20"></div>
             </div>
             <button id="btn-snap" onclick="takeSelfie()" class="px-6 py-2 rounded-full border-2 border-[#C8962E] text-[#C8962E] font-bold tracking-widest hover:bg-[#C8962E] hover:text-white transition-colors uppercase text-xs bg-transparent">
                 AMBIL FOTO
@@ -530,6 +531,36 @@
         }
 
         function takeSelfie() {
+            const btnSnap = document.getElementById('btn-snap');
+            btnSnap.disabled = true;
+            btnSnap.innerText = "MENYIAPKAN...";
+            
+            const overlay = document.getElementById('countdown-overlay');
+            if(overlay) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            }
+            let count = 3;
+            if(overlay) overlay.innerText = count;
+            
+            const timer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    if(overlay) overlay.innerText = count;
+                } else if (count === 0) {
+                    if(overlay) overlay.innerText = "📸";
+                } else {
+                    clearInterval(timer);
+                    if(overlay) {
+                        overlay.classList.add('hidden');
+                        overlay.classList.remove('flex');
+                    }
+                    executePhotoCaptureKiosk();
+                }
+            }, 800);
+        }
+
+        function executePhotoCaptureKiosk() {
             const video = document.getElementById('camera-preview');
             const canvas = document.getElementById('capture-canvas');
             const ctx = canvas.getContext('2d');
@@ -548,6 +579,7 @@
             capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
             
             const btnSnap = document.getElementById('btn-snap');
+            btnSnap.disabled = false;
             btnSnap.innerText = "ULANGI FOTO";
             btnSnap.onclick = resetSnapshot;
         }
