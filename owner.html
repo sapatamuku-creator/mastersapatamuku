@@ -396,18 +396,13 @@
                 })
             });
             const res = await response.json();
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.message || "Supabase PATCH gagal");
-            }
-            
-            // Parse updated data dari Supabase
-            const updatedData = await res.json();
-            if (updatedData && updatedData.length > 0) {
-                const freshClient = updatedData[0];
+            if (res.status === "success") {
+                row.classList.remove('dirty');
+                // Update original username in case it changed
+                row.setAttribute('data-original-username', clientData.username);
                 
-                // Update array lokal agar filter tidak revert
-                const targetIdx = allClients.findIndex(c => c.username === originalUsername);
+                // Update local array so filtering works properly
+                const targetIdx = allClients.findIndex(c => String(c.username).toLowerCase() === String(originalUsername).toLowerCase());
                 if (targetIdx !== -1) {
                     allClients[targetIdx] = { ...allClients[targetIdx], ...clientData };
                 }
