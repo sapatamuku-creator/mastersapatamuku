@@ -44,6 +44,7 @@ function handleCentralPost(request) {
     case 'registerAndActivate': return handleRegisterAndActivate(request);
     case 'getOwnerClients': return handleGetOwnerClients(request);
     case 'updateOwnerClient': return handleUpdateOwnerClient(request);
+    case 'deleteOwnerClient': return handleDeleteOwnerClient(request);
     case 'syncFromSupabase': return handleSyncFromSupabase(request);
     case 'syncAllClients': return createResponse({ status: "success", message: syncAllClientsToSupabase() });
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
@@ -286,11 +287,83 @@ function handleUpdateOwnerClient(data) {
       });
     } catch (e) { console.error("Sync update owner ke Supabase gagal: " + e.toString()); }
 
-    return createResponse({ status: "success", message: "Data client berhasil diperbarui" });
+    return createResponse({ status: "success", message: "Data client berhasil diperbarui." });
   } catch (err) {
-    return createResponse({ status: "error", message: "Gagal update: " + err.toString() });
+    return createResponse({ status: "error", message: "Gagal update data: " + err.toString() });
   }
 }
+
+// --- OWNER DASHBOARD: DELETE CLIENT (HAPUS MASTER ROW, SPREADSHEET FILES, SUPABASE ROW) ---
+function handleDeleteOwnerClient(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const adminPass = String(sheet.getRange(1, 11).getValue() || "").trim();
+    if (data.adminPassword !== adminPass) {
+      return createResponse({ status: "error", message: "Password admin tidak valid" });
+    }
+
+    const values = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+    let ssidToDelete = "";
+    
+    for (let i = 1; i < values.length; i++) {
+      if (values[i][0] === data.username) {
+        if (String(values[i][7]) === 'Active') {
+           return createResponse({ status: "error", message: "Client berstatus Active tidak boleh dihapus! Ubah ke Inactive terlebih dahulu."});
+        }
+        rowIndex = i + 1; // 1-indexed for Sheets
+        ssidToDelete = values[i][1];
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      return createResponse({ status: "error", message: "Data client tidak ditemukan." });
+    }
+
+    // 1. Hapus dari Master Sheet
+    sheet.deleteRow(rowIndex);
+
+    // 2. Hapus Spreadsheet File (pindahkan ke sampah)
+    if (ssidToDelete) {
+      try {
+        DriveApp.getFileById(ssidToDelete).setTrashed(true);
+      } catch (errDrive) {
+        console.error("Gagal hapus file drive: " + errDrive.toString());
+      }
+    }
+
+    // 3. Hapus dari Supabase via REST API
+    try {
+      deleteClientFromSupabaseWithResult(data.username);
+    } catch(errSb) {
+       console.error("Gagal hapus dari supabase: " + errSb.toString());
+    }
+
+    return createResponse({ status: "success", message: "Data client dan spreadsheet berhasil dihapus." });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Gagal hapus client: " + err.toString() });
+  }
+}
+
+function deleteClientFromSupabaseWithResult(username) {
+  const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/clients?username=eq." + encodeURIComponent(username);
+  const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+  
+  const options = {
+    method: "delete",
+    headers: {
+      "apikey": apiKey,
+      "Authorization": "Bearer " + apiKey
+    },
+    muteHttpExceptions: true
+  };
+  
+  const response = UrlFetchApp.fetch(sbUrl, options);
+  return response.getContentText();
+}
+
 
 function handleSendOTP(data) {
   try {

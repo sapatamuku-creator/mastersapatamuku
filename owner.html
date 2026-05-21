@@ -151,6 +151,52 @@
         }
         @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(14, 10, 10, 0.85); backdrop-filter: blur(5px);
+            z-index: 2000; display: none; justify-content: center; align-items: center;
+        }
+        .modal-box {
+            background: var(--surface); padding: 30px; border-radius: 20px;
+            width: 100%; max-width: 500px; border: 1px solid var(--border);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; color: var(--gold); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; }
+        .form-control {
+            width: 100%; background: var(--bg); border: 1px solid var(--border);
+            color: white; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-family: inherit;
+        }
+        .form-control:focus { outline: none; border-color: var(--primary); }
+        .btn-action {
+            width: 100%; padding: 12px; background: var(--gold); color: var(--bg);
+            border: none; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-cancel {
+            width: 100%; padding: 12px; background: transparent; color: var(--muted);
+            border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        /* HIGHLIGHT EXPIRED */
+        .row-expired {
+            background: rgba(224, 123, 123, 0.08) !important;
+        }
+        .row-expired td {
+            color: #d69898 !important;
+        }
+        .btn-delete {
+            padding: 5px 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 8px; color: var(--red); font-size: 11px; font-weight: 700; cursor: pointer;
+            margin-left: 8px;
+        }
+        .btn-delete:hover { background: var(--red); color: white; }
+        .btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
+
         /* LOADER */
         .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-bottom-color: white; border-radius: 50%; animation: rotation 0.8s linear infinite; }
         @keyframes rotation { to { transform: rotate(360deg); } }
@@ -179,6 +225,7 @@
         <div class="top-actions">
             <button class="btn-sm btn-outline" onclick="loadClients()">🔄 Refresh Data</button>
             <button class="btn-sm btn-green" onclick="syncAllPending()">⚡ Sync Semua ke Spreadsheet</button>
+            <button class="btn-sm btn-primary" style="background:var(--gold); border:none;" onclick="openAddClientModal()">➕ Tambah Klien Vendor</button>
             <button class="btn-sm btn-outline" style="color:var(--red); border-color:var(--red);" onclick="doLogout()">Keluar</button>
         </div>
     </div>
@@ -234,6 +281,87 @@
 </div>
 
 <div id="toast"></div>
+
+<!-- ADD CLIENT VENDOR MODAL -->
+<div id="modal-add-client" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-title">➕ Tambah Klien Vendor</div>
+        <p style="font-size:12px; color:var(--muted); margin-bottom:20px;">Klien akan langsung aktif, spreadsheet dibuat otomatis tanpa Midtrans.</p>
+        
+        <div class="form-group">
+            <label>Subdomain (username)</label>
+            <input type="text" id="add-subdomain" class="form-control" placeholder="cth: ryanandin" oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '')">
+        </div>
+        <div class="form-group">
+            <label>Nama Klien / Pengantin</label>
+            <input type="text" id="add-clientname" class="form-control" placeholder="cth: Ryan & Andin">
+        </div>
+        <div class="form-group">
+            <label>Tanggal Acara</label>
+            <input type="date" id="add-date" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>Kategori Acara</label>
+            <select id="add-category" class="form-control">
+                <option value="wedding">Wedding</option>
+                <option value="corporate">Corporate / Event</option>
+                <option value="birthday">Birthday / Party</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Paket Layanan</label>
+            <select id="add-package" class="form-control">
+                <option value="B2B E-Inv Standard">B2B E-Inv Standard</option>
+                <option value="B2B E-Inv Premium">B2B E-Inv Premium</option>
+                <option value="B2B Guestbook Silver">B2B Guestbook Silver</option>
+                <option value="B2B Guestbook Gold">B2B Guestbook Gold</option>
+                <option value="B2B All-in Collaboration">B2B All-in Collaboration</option>
+            </select>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <div class="form-group" style="flex:1;">
+                <label>WhatsApp</label>
+                <input type="text" id="add-wa" class="form-control" placeholder="628...">
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>Email (Opsional)</label>
+                <input type="email" id="add-email" class="form-control" placeholder="email@...">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Password Akun</label>
+            <input type="text" id="add-pass" class="form-control" placeholder="Password acak / custom">
+        </div>
+
+        <button class="btn-action" id="btn-submit-add" onclick="submitAddClient()">🚀 Buat & Aktifkan Klien</button>
+        <button class="btn-cancel" onclick="closeAddClientModal()">Batal</button>
+    </div>
+</div>
+
+<!-- DELETE CONFIRMATION MODAL -->
+<div id="modal-delete-client" class="modal-overlay">
+    <div class="modal-box" style="border-color: rgba(239, 68, 68, 0.4);">
+        <div class="modal-title" style="color: var(--red);">⚠️ Hapus Permanen Klien</div>
+        <p style="font-size:12px; color:var(--muted); margin-bottom:10px;">
+            Tindakan ini akan menghapus data klien dari <b>Master Sheet</b>, membuang <b>File Spreadsheet</b> ke tempat sampah (Trash), dan menghapus row dari <b>Supabase</b>.
+        </p>
+        <p style="font-size:12px; color:var(--gold); margin-bottom:20px; font-weight:bold;">
+            Hanya klien dengan status <span style="color:var(--red)">Selain Active</span> yang bisa dihapus.
+        </p>
+        
+        <div class="form-group">
+            <label>Subdomain yang akan dihapus</label>
+            <input type="text" id="del-subdomain" class="form-control" disabled style="background: rgba(0,0,0,0.2); color: var(--red); font-weight:bold;">
+        </div>
+        <div class="form-group">
+            <label>Masukkan Password Admin untuk Konfirmasi</label>
+            <input type="password" id="del-admin-pass" class="form-control" placeholder="Password Admin">
+        </div>
+
+        <button class="btn-action" style="background: var(--red); color: white;" id="btn-submit-del" onclick="submitDeleteClient()">🗑️ Ya, Hapus Permanen!</button>
+        <button class="btn-cancel" onclick="closeDeleteModal()">Batal</button>
+    </div>
+</div>
 
 <script>
     const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
@@ -300,6 +428,21 @@
             tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:40px; color:var(--muted);">Tidak ada klien ditemukan.</td></tr>';
             return;
         }
+        
+        // Helper to parse Indonesian date format 'Minggu, 25 Agustus 2026' or ISO format
+        const parseIndonesianDate = (str) => {
+            if (!str) return null;
+            const months = {'Januari':0, 'Februari':1, 'Maret':2, 'April':3, 'Mei':4, 'Juni':5, 'Juli':6, 'Agustus':7, 'September':8, 'Oktober':9, 'November':10, 'Desember':11};
+            const parts = str.replace(',', '').split(' ');
+            if (parts.length >= 3 && months[parts[2]] !== undefined) {
+                return new Date(parseInt(parts[3]), months[parts[2]], parseInt(parts[1]));
+            }
+            const isoParsed = new Date(str);
+            return isNaN(isoParsed) ? null : isoParsed;
+        };
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
         tbody.innerHTML = clients.map((c, i) => {
             const st = c.status || 'Inactive';
             let badgeCls = 'badge-inactive';
@@ -311,7 +454,17 @@
 
             const ssIdHtml = c.ssid ? `<a href="https://docs.google.com/spreadsheets/d/${esc(c.ssid)}/edit" target="_blank" style="color:var(--gold); text-decoration:none;">🔗 Buka Sheet</a>` : `<span style="color:var(--muted)">Belum Dibuat</span>`;
 
-            return `<tr id="row-${i}" data-username="${esc(c.username)}">
+            // Highlight Logic
+            const eventDate = parseIndonesianDate(c.wedding_date);
+            let rowClass = '';
+            if (eventDate && eventDate < today) {
+                rowClass = 'row-expired';
+            }
+
+            // Delete Button Logic (Disabled if active)
+            const disableDelete = (st === 'Active') ? 'disabled title="Ubah status selain Active untuk menghapus"' : '';
+
+            return `<tr id="row-${i}" data-username="${esc(c.username)}" class="${rowClass}">
                 <td style="color:var(--muted)">${i + 1}</td>
                 <td contenteditable="true" oninput="markDirty(${i})">${esc(c.client_name)}</td>
                 <td contenteditable="true" oninput="markDirty(${i})">${esc(c.subdomain)}</td>
@@ -326,7 +479,10 @@
                 </td>
                 <td>${ssIdHtml}</td>
                 <td style="color:var(--muted); font-size:11px;">${dateStr}</td>
-                <td><button class="save-row-btn" onclick="saveRow(${i})">💾 Simpan</button></td>
+                <td style="white-space:nowrap;">
+                    <button class="save-row-btn" onclick="saveRow(${i})">💾 Simpan</button>
+                    <button class="btn-delete" ${disableDelete} onclick="openDeleteModal('${esc(c.username)}')">🗑️</button>
+                </td>
             </tr>`;
         }).join('');
     }
@@ -433,6 +589,114 @@
         toast.innerText = msg; toast.style.borderColor = colors[type] || '#E07B7B';
         toast.style.display = 'block'; clearTimeout(toast._timer);
         toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    }
+
+    // --- ADD CLIENT VENDOR LOGIC ---
+    function openAddClientModal() {
+        document.getElementById('modal-add-client').style.display = 'flex';
+        // reset form
+        document.getElementById('add-subdomain').value = '';
+        document.getElementById('add-clientname').value = '';
+        document.getElementById('add-date').value = '';
+        document.getElementById('add-wa').value = '';
+        document.getElementById('add-email').value = '';
+        document.getElementById('add-pass').value = Math.random().toString(36).substring(2,8);
+    }
+    function closeAddClientModal() { document.getElementById('modal-add-client').style.display = 'none'; }
+    
+    function formatIndonesianDate(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d)) return dateStr;
+        const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+        const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+        return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    async function submitAddClient() {
+        const subdomain = document.getElementById('add-subdomain').value.trim();
+        const clientName = document.getElementById('add-clientname').value.trim();
+        const rawDate = document.getElementById('add-date').value;
+        const category = document.getElementById('add-category').value;
+        const pkg = document.getElementById('add-package').value;
+        const wa = document.getElementById('add-wa').value.trim();
+        const email = document.getElementById('add-email').value.trim();
+        const pass = document.getElementById('add-pass').value.trim();
+
+        if (!subdomain || !clientName || !rawDate) {
+            return showToast("❌ Subdomain, Nama Klien, dan Tanggal wajib diisi!", "red");
+        }
+
+        const btn = document.getElementById('btn-submit-add');
+        btn.innerHTML = '⏳ Memproses & Membuat Sheet...'; btn.disabled = true;
+
+        const payload = {
+            action: 'registerAndActivate',
+            subdomain: subdomain,
+            password: pass,
+            whatsapp: wa,
+            email: email,
+            category: category,
+            clientName: clientName,
+            weddingDate: formatIndonesianDate(rawDate),
+            package: pkg,
+            address: ""
+        };
+
+        try {
+            const res = await fetch(GAS_SYNC_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            const out = await res.json();
+            if (out.status === 'success') {
+                showToast("✅ Klien berhasil ditambahkan dan diaktifkan!", "green");
+                closeAddClientModal();
+                loadClients();
+            } else {
+                showToast("❌ Gagal: " + out.message, "red");
+            }
+        } catch(e) {
+            showToast("❌ Error: " + e.message, "red");
+        }
+        btn.innerHTML = '🚀 Buat & Aktifkan Klien'; btn.disabled = false;
+    }
+
+    // --- DELETE CLIENT LOGIC ---
+    function openDeleteModal(username) {
+        document.getElementById('modal-delete-client').style.display = 'flex';
+        document.getElementById('del-subdomain').value = username;
+        document.getElementById('del-admin-pass').value = '';
+    }
+    function closeDeleteModal() { document.getElementById('modal-delete-client').style.display = 'none'; }
+
+    async function submitDeleteClient() {
+        const username = document.getElementById('del-subdomain').value;
+        const pass = document.getElementById('del-admin-pass').value.trim();
+        if (!pass) return showToast("❌ Password admin wajib diisi!", "red");
+        
+        const btn = document.getElementById('btn-submit-del');
+        btn.innerHTML = '🗑️ Menghapus...'; btn.disabled = true;
+
+        try {
+            const payload = {
+                action: 'deleteOwnerClient',
+                adminPassword: pass,
+                username: username
+            };
+            const res = await fetch(GAS_SYNC_URL, { method: "POST", body: JSON.stringify(payload) });
+            const out = await res.json();
+            if (out.status === 'success') {
+                showToast("✅ " + out.message, "green");
+                closeDeleteModal();
+                loadClients();
+            } else {
+                showToast("❌ " + out.message, "red");
+            }
+        } catch(e) {
+            showToast("❌ Error: " + e.message, "red");
+        }
+        btn.innerHTML = '🗑️ Ya, Hapus Permanen!'; btn.disabled = false;
     }
 
     document.getElementById('admin-pass-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
