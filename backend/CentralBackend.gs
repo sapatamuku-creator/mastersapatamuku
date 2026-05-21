@@ -21,8 +21,8 @@ const ADMIN_EMAIL = "sapatamuku@gmail.com";
 const FONNTE_TOKEN = "fRx1Canf4GYroBZZNfo7";
 
 // CONFIG MIDTRANS PAYMENT GATEWAY
-const MIDTRANS_SERVER_KEY = "SB-Mid-server-yU2Z-1m-T8tZ-T-l1H9X_x1"; // Ganti dengan Server Key Anda
-const MIDTRANS_IS_PRODUCTION = false; // Set ke true jika live production
+const MIDTRANS_SERVER_KEY = "HIDDEN_PRODUCTION_SERVER_KEY"; // Kunci Asli sudah di-deploy di GAS
+const MIDTRANS_IS_PRODUCTION = true; // Set ke true jika live production
 
 function handleCentralPost(request) {
   const action = request.action;
