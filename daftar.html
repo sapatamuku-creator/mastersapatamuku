@@ -286,9 +286,19 @@
                     Tidak menerima kode OTP? <span id="otp-timer" class="text-red-500 font-bold">02:00</span>
                 </div>
                 <button onclick="sendOTPFonnte()" id="btn_resend_otp" class="text-xs font-bold text-[#E07B7B] block mx-auto hover:underline hidden">Kirim Ulang OTP</button>
-            </div>
+        </div>
 
-            <div class="flex gap-3">
+        <!-- T&C Checkbox -->
+        <div class="form-group mb-6">
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="reg_tnc" class="mt-1 w-4 h-4 text-[#E07B7B] border-gray-300 rounded focus:ring-[#E07B7B]">
+                <span class="text-xs text-gray-500 leading-relaxed">
+                    Saya telah membaca dan menyetujui <a href="terms.html" class="text-[#E07B7B] font-bold hover:underline" target="_blank">Syarat & Ketentuan SapaTamu.ku</a> serta <a href="terms-payment.html" class="text-[#E07B7B] font-bold hover:underline" target="_blank">Kebijakan Pembayaran Midtrans</a>.
+                </span>
+            </label>
+        </div>
+
+        <div class="flex gap-3">
                 <button onclick="prevStep(1)" class="sapatamu-btn bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold flex-1">
                     Kembali
                 </button>
@@ -834,12 +844,16 @@
         const email = document.getElementById('reg_email').value.trim();
         const wa = document.getElementById('reg_wa').value.trim();
         const pass = document.getElementById('reg_pass').value.trim();
+        const tnc = document.getElementById('reg_tnc').checked;
 
         if (!email || !wa || !pass) {
             return showSapaModal("Lengkapi Data", "Silakan lengkapi Email, WhatsApp, dan Password.", "⚠️");
         }
         if (!wa.startsWith("628")) {
             return showSapaModal("Format WA Salah", "Nomor WhatsApp wajib diawali format 628...", "⚠️");
+        }
+        if (!tnc) {
+            return showSapaModal("Syarat & Ketentuan", "Harap setujui Syarat & Ketentuan dan Kebijakan Pembayaran sebelum melanjutkan.", "⚠️");
         }
 
         // Generate 6 digit OTP code
