@@ -58,6 +58,12 @@ function doPost(e) {
       case 'verifyAdminPassword':   // RBAC Guard — cek password admin di K1
       case 'uploadFile':             // Upload asset ke Drive
       case 'syncAllClients':
+      case 'createMidtransTransaction':
+      case 'sendOTP':
+      case 'savePendingClient':
+      case 'registerAndActivate':
+      case 'getOwnerClients':
+      case 'updateOwnerClient':
         return handleCentralPost(payload);
 
       // Media & Selfie (SelfieCheckin.gs)
