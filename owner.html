@@ -236,139 +236,124 @@
 <div id="toast"></div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
+    const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_HEADERS = {
+        "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    };
+    const GAS_SYNC_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
 
     let adminPassword = "";
     let allClients = [];
 
-    // ========================
-    // AUTH
-    // ========================
     async function doLogin() {
         const pass = document.getElementById('admin-pass-input').value.trim();
         if (!pass) return;
         const btn = document.getElementById('btn-login');
-        btn.disabled = true;
+
         btn.innerHTML = '<span class="spin"></span>';
+        btn.disabled = true;
 
         try {
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST", mode: "cors", redirect: "follow",
-                body: JSON.stringify({ action: "getOwnerClients", adminPassword: pass })
-            });
-            const res = await response.json();
-            if (res.status === "success") {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/clients?username=eq.admin_global&password=eq.${encodeURIComponent(pass)}&select=username`, { headers: SB_HEADERS });
+            const rows = await res.json();
+
+            if (Array.isArray(rows) && rows.length > 0) {
                 adminPassword = pass;
-                allClients = res.data || [];
-                document.getElementById('login-gate').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'block';
-                renderTable(allClients);
-                updateStats(allClients);
-                document.getElementById('last-sync-info').innerText = `Terakhir sync: ${new Date().toLocaleString('id-ID')}`;
+                document.getElementById('login-overlay').style.display = 'none';
+                loadData();
             } else {
-                showToast("❌ " + (res.message || "Password tidak valid"), "red");
+                showToast("❌ Akses Ditolak: Password Salah!", "red");
             }
         } catch (e) {
-            showToast("❌ Gagal koneksi: " + e.toString(), "red");
+            showToast("❌ Error Koneksi: " + e.toString(), "red");
         }
-        btn.disabled = false;
         btn.innerHTML = 'Masuk Dashboard';
+        btn.disabled = false;
     }
 
-    function doLogout() {
-        adminPassword = "";
-        allClients = [];
-        document.getElementById('admin-pass-input').value = "";
-        document.getElementById('dashboard').style.display = 'none';
-        document.getElementById('login-gate').style.display = 'flex';
-    }
-
-    async function loadClients() {
+    async function loadData() {
+        const tbody = document.getElementById('clients-tbody');
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:40px;"><span class="spin" style="border-color:var(--gold); width:24px; height:24px;"></span></td></tr>';
         try {
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST", mode: "cors", redirect: "follow",
-                body: JSON.stringify({ action: "getOwnerClients", adminPassword })
-            });
-            const res = await response.json();
-            if (res.status === "success") {
-                allClients = res.data || [];
-                renderTable(allClients);
-                updateStats(allClients);
-                document.getElementById('last-sync-info').innerText = `Terakhir sync: ${new Date().toLocaleString('id-ID')}`;
-                showToast("✅ Data berhasil diperbarui", "green");
-            }
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/clients?username=neq.admin_global&order=created_at.desc`, { headers: SB_HEADERS });
+            if (!res.ok) throw new Error("Gagal mengambil data dari database");
+            allClients = await res.json();
+            updateStats(allClients);
+            renderTable(allClients);
         } catch (e) {
-            showToast("❌ Gagal refresh: " + e.toString(), "red");
+            tbody.innerHTML = `<tr><td colspan="13" style="text-align:center; color:var(--red); padding:40px;">❌ Error: ${e.message}</td></tr>`;
         }
     }
 
-    // ========================
-    // TABLE RENDER
-    // ========================
+    function esc(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function renderTable(clients) {
         const tbody = document.getElementById('clients-tbody');
         if (!clients || clients.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--muted);">Tidak ada data klien</td></tr>`;
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:40px; color:var(--muted);">Tidak ada klien ditemukan.</td></tr>';
             return;
         }
-
         tbody.innerHTML = clients.map((c, i) => {
-            const statusBadge = c.status === 'Active' ? 'badge-active' : (c.status === 'PendingActivation' ? 'badge-pending' : 'badge-inactive');
-            const statusLabel = c.status === 'PendingActivation' ? 'Pending' : (c.status || '-');
-            const ssidLink = c.ssid ? `<a href="https://docs.google.com/spreadsheets/d/${c.ssid}" target="_blank" style="color:var(--primary); font-size:11px;">🔗 Buka Sheet</a>` : `<span style="color:var(--muted);font-size:11px;">Belum ada</span>`;
+            const st = c.status || 'Inactive';
+            let badgeCls = 'badge-inactive';
+            if (st === 'Active') badgeCls = 'badge-active';
+            else if (st === 'PendingActivation') badgeCls = 'badge-pending';
 
-            return `<tr id="row-${i}" data-original-username="${escHtml(c.username)}">
+            const rawDate = c.created_at ? new Date(c.created_at) : null;
+            const dateStr = rawDate ? rawDate.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) : '-';
+
+            const ssIdHtml = c.ssid ? `<a href="https://docs.google.com/spreadsheets/d/${esc(c.ssid)}/edit" target="_blank" style="color:var(--gold); text-decoration:none;">🔗 Buka Sheet</a>` : `<span style="color:var(--muted)">Belum Dibuat</span>`;
+
+            return `<tr id="row-${i}" data-username="${esc(c.username)}">
                 <td style="color:var(--muted)">${i + 1}</td>
-                <td contenteditable="true" oninput="markDirty(${i})">${escHtml(c.client_name || '')}</td>
-                <td contenteditable="true" oninput="markDirty(${i})">${escHtml(c.subdomain || '')}</td>
-                <td contenteditable="true" oninput="markDirty(${i})">${escHtml(c.package || '')}</td>
-                <td contenteditable="true" oninput="markDirty(${i})">${escHtml(c.wedding_date || '')}</td>
-                <td contenteditable="true" oninput="markDirty(${i})">${escHtml(c.category || '')}</td>
-                <td contenteditable="true" oninput="markDirty(${i})">${escHtml(c.whatsapp || '')}</td>
-                <td contenteditable="true" oninput="markDirty(${i})">${escHtml(c.email || '')}</td>
-                <td contenteditable="true" oninput="markDirty(${i})" style="font-family:monospace;font-size:12px;">${escHtml(c.password || '')}</td>
-                <td><span class="badge ${statusBadge}" id="badge-${i}" data-status="${c.status}" onclick="cycleStatus(${i})" style="cursor:pointer;">${statusLabel}</span></td>
-                <td>${ssidLink}</td>
-                <td style="color:var(--muted);font-size:11px;">${c.created_at ? new Date(c.created_at).toLocaleDateString('id-ID') : '-'}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.client_name)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.subdomain)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.package)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.wedding_date)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.category)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.whatsapp)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.email)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.password)}</td>
+                <td style="cursor:pointer;" onclick="toggleStatus(${i})">
+                    <span id="badge-${i}" class="badge ${badgeCls}" data-status="${st}">${st}</span>
+                </td>
+                <td>${ssIdHtml}</td>
+                <td style="color:var(--muted); font-size:11px;">${dateStr}</td>
                 <td><button class="save-row-btn" onclick="saveRow(${i})">💾 Simpan</button></td>
             </tr>`;
         }).join('');
     }
 
-    function escHtml(str) {
-        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
+    function markDirty(i) { document.getElementById('row-' + i).classList.add('dirty'); }
 
-    function markDirty(rowIdx) {
-        const row = document.getElementById('row-' + rowIdx);
-        if (row) row.classList.add('dirty');
-    }
-
-    function cycleStatus(rowIdx) {
-        const badge = document.getElementById('badge-' + rowIdx);
-        const statuses = ['Active', 'Inactive', 'PendingActivation'];
-        const classes = { Active: 'badge-active', Inactive: 'badge-inactive', PendingActivation: 'badge-pending' };
-        const labels = { Active: 'Active', Inactive: 'Inactive', PendingActivation: 'Pending' };
-        const curStatus = badge.getAttribute('data-status') || badge.innerText;
-        const normCur = statuses.find(s => s.toLowerCase() === curStatus.toLowerCase() || labels[s] === curStatus) || 'Active';
-        const nextIdx = (statuses.indexOf(normCur) + 1) % statuses.length;
-        const next = statuses[nextIdx];
-        badge.innerText = labels[next];
-        badge.className = 'badge ' + classes[next];
+    function toggleStatus(i) {
+        const badge = document.getElementById('badge-' + i);
+        let current = badge.getAttribute('data-status');
+        let next = 'Active';
+        if (current === 'Active') next = 'PendingActivation';
+        else if (current === 'PendingActivation') next = 'Inactive';
         badge.setAttribute('data-status', next);
-        markDirty(rowIdx);
+        badge.innerText = next;
+        badge.className = 'badge';
+        if (next === 'Active') badge.classList.add('badge-active');
+        else if (next === 'PendingActivation') badge.classList.add('badge-pending');
+        else badge.classList.add('badge-inactive');
+        markDirty(i);
     }
 
-    // ========================
-    // SAVE ROW
-    // ========================
-    async function saveRow(rowIdx) {
-        const row = document.getElementById('row-' + rowIdx);
+    async function saveRow(i) {
+        const row = document.getElementById('row-' + i);
         const cells = row.querySelectorAll('td[contenteditable="true"]');
-        const originalUsername = row.getAttribute('data-original-username');
-        const badge = document.getElementById('badge-' + rowIdx);
+        const username = row.getAttribute('data-username');
+        const badge = document.getElementById('badge-' + i);
 
-        const clientData = {
+        const payload = {
             client_name: cells[0].innerText.trim(),
             subdomain: cells[1].innerText.trim(),
             package: cells[2].innerText.trim(),
@@ -377,51 +362,50 @@
             whatsapp: cells[5].innerText.trim(),
             email: cells[6].innerText.trim(),
             password: cells[7].innerText.trim(),
-            status: badge.getAttribute('data-status') || badge.innerText,
-            username: cells[1].innerText.trim() // Username = subdomain
+            status: badge.getAttribute('data-status')
         };
 
         const btn = row.querySelector('.save-row-btn');
-        btn.innerText = '⏳...';
-        btn.disabled = true;
+        btn.innerText = '⏳...'; btn.disabled = true;
 
         try {
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST", mode: "cors", redirect: "follow",
-                body: JSON.stringify({
-                    action: "updateOwnerClient",
-                    adminPassword,
-                    originalUsername,
-                    clientData
-                })
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/clients?username=eq.${encodeURIComponent(username)}`, {
+                method: "PATCH", headers: SB_HEADERS, body: JSON.stringify(payload)
             });
-            const res = await response.json();
-            if (res.status === "success") {
-                row.classList.remove('dirty');
-                // Update original username in case it changed
-                row.setAttribute('data-original-username', clientData.username);
-                
-                // Update local array so filtering works properly
-                const targetIdx = allClients.findIndex(c => String(c.username).toLowerCase() === String(originalUsername).toLowerCase());
-                if (targetIdx !== -1) {
-                    allClients[targetIdx] = { ...allClients[targetIdx], ...clientData };
-                }
-
-                showToast("✅ Data klien berhasil diperbarui & disinkronkan!", "green");
-            } else {
-                showToast("❌ Gagal: " + res.message, "red");
+            if (!res.ok) throw new Error("Gagal update di Supabase");
+            const updatedData = await res.json();
+            if (updatedData && updatedData.length > 0) {
+                const freshClient = updatedData[0];
+                const targetIdx = allClients.findIndex(c => c.username === username);
+                if (targetIdx !== -1) allClients[targetIdx] = freshClient;
+                row.setAttribute('data-username', freshClient.username);
             }
+            row.classList.remove('dirty');
+            showToast("✅ Tersimpan di Supabase! Sync ke Spreadsheet berjalan.", "green");
+            triggerGasSyncBackground(username, payload);
         } catch (e) {
-            showToast("❌ Error: " + e.toString(), "red");
+            showToast("❌ Error: " + e.message, "red");
         }
-
-        btn.innerText = '💾 Simpan';
-        btn.disabled = false;
+        btn.innerText = '💾 Simpan'; btn.disabled = false;
     }
 
-    // ========================
-    // STATS
-    // ========================
+    function triggerGasSyncBackground(username, payload) {
+        fetch(GAS_SYNC_URL, {
+            method: "POST", mode: "no-cors",
+            body: JSON.stringify({ action: "syncFromSupabase", username, data: payload })
+        }).catch(() => {});
+    }
+
+    async function triggerGasSync() {
+        showToast("⏳ Meminta sinkronisasi massal Supabase -> Spreadsheet...", "gold");
+        try {
+            fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncAllClients" }) });
+            setTimeout(() => showToast("✅ Permintaan sync dikirim ke GAS!", "green"), 1000);
+        } catch (e) {
+            showToast("❌ Gagal kirim sync: " + e.message, "red");
+        }
+    }
+
     function updateStats(clients) {
         document.getElementById('stat-total').innerText = clients.length;
         document.getElementById('stat-active').innerText = clients.filter(c => c.status === 'Active').length;
@@ -429,63 +413,28 @@
         document.getElementById('stat-inactive').innerText = clients.filter(c => c.status !== 'Active' && c.status !== 'PendingActivation').length;
     }
 
-    // ========================
-    // FILTER & SEARCH
-    // ========================
     function filterTable() {
         const q = document.getElementById('search-input').value.toLowerCase();
         const status = document.getElementById('filter-status').value;
         const cat = document.getElementById('filter-category').value;
-
         const filtered = allClients.filter(c => {
-            const matchQ = !q || 
-                (c.client_name || '').toLowerCase().includes(q) ||
-                (c.subdomain || '').toLowerCase().includes(q) ||
-                (c.email || '').toLowerCase().includes(q) ||
-                (c.whatsapp || '').toLowerCase().includes(q);
+            const matchQ = !q || (c.client_name || '').toLowerCase().includes(q) || (c.subdomain || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q) || (c.whatsapp || '').toLowerCase().includes(q);
             const matchStatus = !status || c.status === status;
             const matchCat = !cat || (c.category || '').toLowerCase() === cat;
             return matchQ && matchStatus && matchCat;
         });
-
         renderTable(filtered);
-        updateStats(filtered);
     }
 
-    // ========================
-    // SYNC ALL TO SPREADSHEET
-    // ========================
-    async function syncAllPending() {
-        showToast("⏳ Menyinkronkan semua data ke Spreadsheet Master...", "gold");
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST", mode: "cors", redirect: "follow",
-                body: JSON.stringify({ action: "syncAllClients" })
-            });
-            const res = await response.json();
-            showToast("✅ Sinkronisasi selesai: " + (res.message || "OK"), "green");
-        } catch (e) {
-            showToast("❌ Gagal sync: " + e.toString(), "red");
-        }
-    }
-
-    // ========================
-    // TOAST
-    // ========================
-    function showToast(msg, type = "green") {
+    function showToast(msg, type = 'green') {
         const toast = document.getElementById('toast');
         const colors = { green: '#10B981', red: '#EF4444', gold: '#C8962E' };
-        toast.innerText = msg;
-        toast.style.borderColor = colors[type] || '#E07B7B';
-        toast.style.display = 'block';
-        clearTimeout(toast._timer);
+        toast.innerText = msg; toast.style.borderColor = colors[type] || '#E07B7B';
+        toast.style.display = 'block'; clearTimeout(toast._timer);
         toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 4000);
     }
 
-    // Enter key on password field
-    document.getElementById('admin-pass-input').addEventListener('keydown', e => {
-        if (e.key === 'Enter') doLogin();
-    });
+    document.getElementById('admin-pass-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 </script>
 </body>
 </html>

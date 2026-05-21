@@ -64,6 +64,7 @@ function doPost(e) {
       case 'registerAndActivate':
       case 'getOwnerClients':
       case 'updateOwnerClient':
+      case 'syncFromSupabase':
         return handleCentralPost(payload);
 
       // Media & Selfie (SelfieCheckin.gs)

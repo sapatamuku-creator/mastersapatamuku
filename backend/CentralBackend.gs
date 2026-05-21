@@ -44,6 +44,7 @@ function handleCentralPost(request) {
     case 'registerAndActivate': return handleRegisterAndActivate(request);
     case 'getOwnerClients': return handleGetOwnerClients(request);
     case 'updateOwnerClient': return handleUpdateOwnerClient(request);
+    case 'syncFromSupabase': return handleSyncFromSupabase(request);
     case 'syncAllClients': return createResponse({ status: "success", message: syncAllClientsToSupabase() });
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
@@ -923,5 +924,41 @@ function handleCreateMidtransTransaction(data) {
       status: "error",
       message: "Exception generating transaction: " + err.toString()
     });
+  }
+}
+
+// --- SYNC DARI SUPABASE KE SPREADSHEET (BACKGROUND) ---
+function handleSyncFromSupabase(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const values = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+    const targetSub = String(data.username || "").toLowerCase();
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][0]).toLowerCase() === targetSub) { rowIndex = i + 1; break; }
+    }
+    if (rowIndex === -1) return createResponse({ status: "error", message: "Client tidak ditemukan di Spreadsheet" });
+    const c = data.data;
+    const orig = values[rowIndex - 1];
+    const newRow = [
+      c.username !== undefined ? c.username : orig[0], 
+      orig[1], // ssid jangan dioverwrite dari payload karena tidak editable
+      c.password !== undefined ? c.password : orig[2],
+      c.whatsapp !== undefined ? c.whatsapp : orig[3], 
+      c.wedding_date !== undefined ? c.wedding_date : orig[4], 
+      orig[5], // created_at
+      c.email !== undefined ? c.email : orig[6], 
+      c.status !== undefined ? c.status : orig[7], 
+      c.category !== undefined ? c.category : orig[8],
+      c.subdomain !== undefined ? c.subdomain : orig[9], 
+      c.client_name !== undefined ? c.client_name : orig[10],
+      c.package !== undefined ? c.package : (orig[11] || ""),
+      orig[12] || "" // event date m
+    ];
+    sheet.getRange(rowIndex, 1, 1, 13).setValues([newRow]);
+    return createResponse({ status: "success", message: "Data client disinkronkan ke Spreadsheet" });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Gagal sync ke Spreadsheet: " + err.toString() });
   }
 }
