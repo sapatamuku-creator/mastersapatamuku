@@ -289,8 +289,11 @@
         <p style="font-size:12px; color:var(--muted); margin-bottom:20px;">Klien akan langsung aktif, spreadsheet dibuat otomatis tanpa Midtrans.</p>
         
         <div class="form-group">
-            <label>Subdomain (username)</label>
-            <input type="text" id="add-subdomain" class="form-control" placeholder="cth: ryanandin" oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9]/g, '')">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <label style="margin-bottom: 0;">Subdomain (username)</label>
+                <span id="sub-status" style="font-size: 10px; font-weight: 800;"></span>
+            </div>
+            <input type="text" id="add-subdomain" class="form-control" placeholder="cth: ryanandin" oninput="handleSubdomainInput(this.value)">
         </div>
         <div class="form-group">
             <label>Nama Klien / Pengantin</label>
@@ -592,9 +595,66 @@
     }
 
     // --- ADD CLIENT VENDOR LOGIC ---
+    let subTimer = null;
+    let isValidSubdomain = false;
+    let lastCheckedSub = '';
+
+    function handleSubdomainInput(val) {
+        val = val.toLowerCase().replace(/[^a-z0-9]/g, '');
+        document.getElementById('add-subdomain').value = val;
+        const statusEl = document.getElementById('sub-status');
+
+        if (!val || val.length < 3) {
+            statusEl.innerText = val.length > 0 ? '⚠️ Min. 3 karakter' : '';
+            statusEl.style.color = 'var(--gold)';
+            isValidSubdomain = false;
+            clearTimeout(subTimer);
+            return;
+        }
+
+        statusEl.innerText = '⏳ Mengecek...';
+        statusEl.style.color = 'var(--muted)';
+        clearTimeout(subTimer);
+        subTimer = setTimeout(() => checkSubdomainSupabase(val), 600);
+    }
+
+    async function checkSubdomainSupabase(slug) {
+        const statusEl = document.getElementById('sub-status');
+        if (slug === lastCheckedSub && isValidSubdomain) {
+            statusEl.innerText = '✅ TERSEDIA';
+            statusEl.style.color = 'var(--green)';
+            return;
+        }
+
+        try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/clients?subdomain=eq.${encodeURIComponent(slug)}&select=subdomain`, {
+                headers: SB_HEADERS
+            });
+            const data = await res.json();
+            lastCheckedSub = slug;
+
+            if (data.length === 0) {
+                statusEl.innerText = '✅ TERSEDIA';
+                statusEl.style.color = 'var(--green)';
+                isValidSubdomain = true;
+            } else {
+                statusEl.innerText = '❌ SUDAH DIPAKAI';
+                statusEl.style.color = '#E07B7B';
+                isValidSubdomain = false;
+            }
+        } catch (e) {
+            statusEl.innerText = '⚠️ Gagal cek koneksi';
+            statusEl.style.color = 'var(--gold)';
+            isValidSubdomain = false;
+        }
+    }
+
     function openAddClientModal() {
         document.getElementById('modal-add-client').style.display = 'flex';
         // reset form
+        isValidSubdomain = false;
+        lastCheckedSub = '';
+        document.getElementById('sub-status').innerText = '';
         document.getElementById('add-subdomain').value = '';
         document.getElementById('add-clientname').value = '';
         document.getElementById('add-date').value = '';
@@ -625,6 +685,10 @@
 
         if (!subdomain || !clientName || !rawDate) {
             return showToast("❌ Subdomain, Nama Klien, dan Tanggal wajib diisi!", "red");
+        }
+
+        if (!isValidSubdomain) {
+            return showToast("❌ Subdomain tidak valid atau sudah dipakai!", "red");
         }
 
         const btn = document.getElementById('btn-submit-add');
