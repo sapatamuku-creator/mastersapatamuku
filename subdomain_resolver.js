@@ -92,7 +92,7 @@ async function resolveSapatamuSubdomain() {
 
         if (!window.CURRENT_SS_ID && !isPublicPage) {
             console.warn("Akses ditolak: Tidak ada sesi valid di subdomain ini.");
-            window.location.replace("https://sapatamu.id/login.html");
+            window.location.replace("https://sapatamu.id/");
             return null;
         }
     }
