@@ -419,7 +419,10 @@
             const wishes = await res.json();
 
             if (wishes && wishes.length > 0) {
-                const wishesText = wishes.map(w => `${w.nama || 'Tamu'}: ${w.ucapan || ''}`).join("  •  ");
+                const wishesText = wishes.map(w => {
+                    const cleanUcapan = (w.ucapan || '').replace(/(\r\n|\n|\r)/gm, " ");
+                    return `${w.nama || 'Tamu'}: ${cleanUcapan}`;
+                }).join("  •  ");
                 document.getElementById('marquee-log').innerText = wishesText;
             } else {
                 document.getElementById('marquee-log').innerText = "BELUM ADA UCAPAN";
@@ -453,7 +456,8 @@
                             const record = payload.new;
                             if (record && record.ucapan) {
                                 const currentMarquee = document.getElementById('marquee-log').innerText;
-                                const newWish = `${record.nama || 'Tamu'}: ${record.ucapan}`;
+                                const cleanUcapan = record.ucapan.replace(/(\r\n|\n|\r)/gm, " ");
+                                const newWish = `${record.nama || 'Tamu'}: ${cleanUcapan}`;
                                 document.getElementById('marquee-log').innerText = newWish + "  •  " + currentMarquee;
                             }
                         }
