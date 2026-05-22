@@ -88,9 +88,11 @@
         <div class="settings-panel">
             <div class="pb-32">
                 <div class="section-title">Invitation Theme & Music</div>
-                <div class="grid grid-cols-2 gap-3 mb-6">
-                    <button id="theme_classic" onclick="selectTheme('classic')" class="theme-btn p-4 border-2 border-primary rounded-2xl bg-primary/5 text-xs font-black text-primary">Classic Alice</button>
-                    <button id="theme_modern" onclick="selectTheme('modern')" class="theme-btn p-4 border-2 border-transparent bg-neutral-100 rounded-2xl text-xs font-bold text-neutral-400">Modern Glass</button>
+                <div class="grid grid-cols-1 gap-3 mb-6">
+                    <button onclick="window.location.href='katalog_undangan.html' + window.location.search" class="theme-btn p-4 border-2 border-primary rounded-2xl bg-primary/5 text-xs font-black text-primary flex items-center justify-center gap-2">
+                        <span>🖼️ JELAJAHI KATALOG TEMA</span>
+                    </button>
+                    <p id="active-theme-label" class="text-[10px] text-center font-bold text-neutral-400 uppercase tracking-widest mt-1">Tema Aktif: <span class="text-primary">Loading...</span></p>
                 </div>
                 <div class="form-group">
                     <label>Background Musik</label>
@@ -380,7 +382,7 @@
         <!-- MAIN AREA: LIVE PREVIEW -->
         <div class="preview-panel">
             <div class="preview-frame-container">
-                <iframe id="preview-iframe" src="undangan.html" class="preview-frame"></iframe>
+                <iframe id="preview-iframe" src="invitation.html" class="preview-frame"></iframe>
             </div>
             
             <!-- Mobile Badge -->
@@ -551,13 +553,7 @@
 
         function selectTheme(theme) {
             currentTheme = theme;
-            document.querySelectorAll('.theme-btn').forEach(btn => {
-                btn.classList.remove('border-primary', 'bg-primary/5', 'text-primary');
-                btn.classList.add('border-transparent', 'bg-neutral-100', 'text-neutral-400');
-            });
-            const selected = document.getElementById('theme_' + theme);
-            selected.classList.remove('border-transparent', 'bg-neutral-100', 'text-neutral-400');
-            selected.classList.add('border-primary', 'bg-primary/5', 'text-primary');
+            document.getElementById('active-theme-label').innerHTML = `Tema Aktif: <span class="text-primary">${theme}</span>`;
             updatePreview();
         }
 
@@ -650,6 +646,20 @@
                     
                     if (s.theme) selectTheme(s.theme);
                     
+                    // Cek apakah ada redirect dari Katalog (membawa theme_id baru)
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const newThemeId = urlParams.get('theme_id');
+                    if (newThemeId && newThemeId !== s.theme) {
+                        selectTheme(newThemeId);
+                        // Hapus parameter theme_id dari URL agar tidak loop save
+                        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?ssId=' + ssId;
+                        window.history.replaceState({path:newUrl}, '', newUrl);
+                        
+                        // Auto-save konfigurasi untuk menempelkan tema baru ke Supabase
+                        console.log("Auto-saving new theme from catalog:", newThemeId);
+                        setTimeout(saveInvitationConfig, 1500);
+                    }
+
                     // Initial Preview update
                     setTimeout(updatePreview, 1000);
                 }
