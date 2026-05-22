@@ -225,6 +225,7 @@
         <div class="top-actions">
             <button class="btn-sm btn-outline" onclick="loadClients()">🔄 Refresh Data</button>
             <button class="btn-sm btn-green" onclick="syncAllPending()">⚡ Sync Semua ke Spreadsheet</button>
+            <button class="btn-sm btn-outline" style="color:#60A5FA; border-color:#60A5FA;" onclick="syncAllToSupabase()">⬆️ Push Semua ke Supabase</button>
             <button class="btn-sm btn-primary" style="background:var(--gold); border:none;" onclick="openAddClientModal()">➕ Tambah Klien Vendor</button>
             <button class="btn-sm btn-outline" style="color:var(--red); border-color:var(--red);" onclick="doLogout()">Keluar</button>
         </div>
@@ -497,6 +498,7 @@
                 <td style="color:var(--muted); font-size:11px;">${dateStr}</td>
                 <td style="white-space:nowrap;">
                     <button class="save-row-btn" onclick="saveRow(${i})">💾 Simpan</button>
+                    <button class="btn-outline btn-sm" style="padding:4px 8px; font-size:10px; margin-left:4px;" title="Push data tamu & ucapan ke Supabase" onclick="pushSingleToSupabase('${esc(c.username)}', '${esc(c.ssid)}')">⬆️ DB</button>
                     <button class="btn-delete" ${disableDelete} onclick="openDeleteModal('${esc(c.username)}')">🗑️</button>
                 </td>
             </tr>`;
@@ -576,6 +578,41 @@
             setTimeout(() => showToast("✅ Permintaan sync dikirim ke GAS!", "green"), 1000);
         } catch (e) {
             showToast("❌ Gagal kirim sync: " + e.message, "red");
+        }
+    }
+
+    async function syncAllToSupabase() {
+        if (!confirm("⚠️ PERINGATAN: Ini akan memaksa push data dari Spreadsheet ke Supabase untuk SEMUA klien aktif secara berurutan. Proses ini mungkin memakan waktu agak lama. Yakin lanjutkan?")) return;
+        
+        const activeClients = allClients.filter(c => c.status === 'Active' && c.ssid);
+        if (activeClients.length === 0) return showToast("Tidak ada klien aktif dengan SSID.", "gold");
+        
+        let successCount = 0;
+        for (let i = 0; i < activeClients.length; i++) {
+            const client = activeClients[i];
+            showToast(`⬆️ Pushing (${i+1}/${activeClients.length}): ${client.client_name}...`, "gold");
+            try {
+                await fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncSheetToSupabase", ssId: client.ssid }) });
+                await fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncWishesToSupabase", ssId: client.ssid }) });
+                successCount++;
+                // Beri jeda 500ms agar GAS tidak kena rate limit
+                await new Promise(r => setTimeout(r, 500));
+            } catch (e) {
+                console.error(`Gagal push ${client.subdomain}:`, e);
+            }
+        }
+        showToast(`✅ Selesai! ${successCount} klien berhasil dipush ke Supabase.`, "green");
+    }
+
+    async function pushSingleToSupabase(username, ssId) {
+        if (!ssId) return showToast("SSID belum tersedia", "red");
+        showToast(`⬆️ Mempush data untuk ${username}...`, "gold");
+        try {
+            await fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncSheetToSupabase", ssId: ssId }) });
+            await fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncWishesToSupabase", ssId: ssId }) });
+            setTimeout(() => showToast(`✅ Data ${username} berhasil dipush!`, "green"), 1500);
+        } catch (e) {
+            showToast("❌ Gagal push: " + e.message, "red");
         }
     }
 

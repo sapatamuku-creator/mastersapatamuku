@@ -140,6 +140,10 @@ function handleMainPost(payload) {
         result = syncSheetToSupabase(ssId);
         break;
         
+      case "syncWishesToSupabase":
+        result = syncWishesToSupabase(ssId);
+        break;
+        
       case "submitCollection": 
         result = submitGuestCollection(payload); 
         break;
@@ -1549,6 +1553,75 @@ function syncSheetToSupabase(ssId) {
 
     if (responseCode >= 200 && responseCode < 300) {
       return { status: "success", message: `Berhasil menyelaraskan ${guestList.length} tamu ke database cepat.` };
+    } else {
+      return { status: "error", message: `Supabase Error (${responseCode}): ${responseText}` };
+    }
+
+  } catch (e) {
+    return { status: "error", message: "Exception: " + e.toString() };
+  }
+}
+
+/**
+ * Sinkronisasi otomatis seluruh data ucapan (Wishes) dari Spreadsheet ke Supabase.
+ * Berguna untuk migrasi data lama agar muncul di Welcome Sign baru.
+ */
+function syncWishesToSupabase(ssId) {
+  try {
+    if (typeof SUPABASE_URL === 'undefined' || SUPABASE_URL === "YOUR_SUPABASE_PROJECT_URL") {
+      return { status: "error", message: "API Supabase belum diatur di backend." };
+    }
+
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName("Wishes");
+    if (!sheet) {
+      return { status: "success", message: "Sheet Wishes tidak ditemukan." };
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { status: "success", message: "Tidak ada ucapan untuk disinkronkan." };
+    }
+
+    const dataRange = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+    let wishesList = dataRange.map(row => {
+      let dateVal = row[0];
+      if (!(dateVal instanceof Date)) {
+         dateVal = new Date();
+      }
+      return {
+        ssid: ssId,
+        created_at: dateVal.toISOString(),
+        nama: String(row[1] || "Tamu").trim(),
+        ucapan: String(row[2] || "").trim()
+      };
+    }).filter(w => w.ucapan !== "");
+
+    if (wishesList.length === 0) {
+      return { status: "success", message: "Tidak ada data ucapan yang valid." };
+    }
+
+    // Lakukan bulk insert ke Supabase REST API
+    const url = `${SUPABASE_URL}/rest/v1/wishes_queue`;
+    const headers = {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json"
+    };
+
+    const options = {
+      method: "post",
+      headers: headers,
+      payload: JSON.stringify(wishesList),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    if (responseCode >= 200 && responseCode < 300) {
+      return { status: "success", message: `Berhasil sinkronisasi ${wishesList.length} ucapan ke Supabase.` };
     } else {
       return { status: "error", message: `Supabase Error (${responseCode}): ${responseText}` };
     }
