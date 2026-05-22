@@ -317,12 +317,7 @@
                 if (latest.nama && latest.nama !== currentGuestName) {
                     showGuest(latest);
                 }
-                // Update marquee dengan 5 nama terbaru dari welcome_queue
-                const names = guests.map(g => g.nama).filter(n => n);
-                if (names.length > 0) {
-                    document.getElementById('marquee-log').innerText =
-                        ("SELAMAT DATANG: " + names.join("  •  ")).toUpperCase();
-                }
+                // Marquee logic removed from here as it now uses wishes_queue
             }
         } catch (e) {
             console.warn("welcome_queue sync error:", e);
@@ -363,13 +358,7 @@
                             const record = payload.new;
                             if (record && record.nama) {
                                 showGuest(record);
-                                // Update marquee langsung dari payload
-                                const currentMarquee = document.getElementById('marquee-log').innerText;
-                                const newEntry = record.nama.toUpperCase();
-                                if (!currentMarquee.includes(newEntry)) {
-                                    document.getElementById('marquee-log').innerText =
-                                        ("SELAMAT DATANG: " + newEntry + (currentMarquee ? "  •  " + currentMarquee.replace("SELAMAT DATANG: ", "") : "")).substring(0, 200);
-                                }
+                                // Marquee is no longer updated here
                             }
                         }
                     )
@@ -412,6 +401,68 @@
         syncMetadata();    // GAS: lambat, jarang diulang
         syncGuestDisplay(); // Ambil data awal secara langsung
         initSupabaseRealtimeTamu(); // Supabase: cepat, realtime + backup polling
+        syncWishesDisplay(); // Ambil daftar ucapan
+        initSupabaseRealtimeWishes(); // Dengarkan ucapan baru
+    }
+
+    // ────────────────────────────────────────────────────────────
+    // JALUR 2: WISHES (UCAPAN) UNTUK MARQUEE
+    // ────────────────────────────────────────────────────────────
+    async function syncWishesDisplay() {
+        if (!ssId) return;
+        try {
+            const url = `${SB_URL}/rest/v1/wishes_queue?ssid=eq.${ssId}&order=created_at.desc&limit=15`;
+            const res = await fetch(url, {
+                headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+            });
+            if (!res.ok) throw new Error(`Supabase error: ${res.status}`);
+            const wishes = await res.json();
+
+            if (wishes && wishes.length > 0) {
+                const wishesText = wishes.map(w => `${w.nama || 'Tamu'}: ${w.ucapan || ''}`).join("  •  ");
+                document.getElementById('marquee-log').innerText = wishesText;
+            } else {
+                document.getElementById('marquee-log').innerText = "BELUM ADA UCAPAN";
+            }
+        } catch (e) {
+            console.warn("wishes_queue sync error:", e);
+        }
+    }
+
+    function initSupabaseRealtimeWishes() {
+        if (!ssId) return;
+        try {
+            if (window.supabase) {
+                if (!supabaseClient) {
+                    supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+                }
+                console.log("Menghubungkan ke Supabase Realtime (wishes_queue)...");
+
+                supabaseClient
+                    .channel('wishes_queue_channel')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'INSERT',
+                            schema: 'public',
+                            table: 'wishes_queue',
+                            filter: `ssid=eq.${ssId}`
+                        },
+                        (payload) => {
+                            console.log("Realtime wishes_queue INSERT:", payload);
+                            const record = payload.new;
+                            if (record && record.ucapan) {
+                                const currentMarquee = document.getElementById('marquee-log').innerText;
+                                const newWish = `${record.nama || 'Tamu'}: ${record.ucapan}`;
+                                document.getElementById('marquee-log').innerText = newWish + "  •  " + currentMarquee;
+                            }
+                        }
+                    )
+                    .subscribe();
+            }
+        } catch (e) {
+            console.error("Gagal inisialisasi Realtime wishes_queue:", e);
+        }
     }
 
     let currentPhotos = [];

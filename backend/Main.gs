@@ -1329,6 +1329,30 @@ function addWish(ssId, name, text) {
       sheet.appendRow(["Timestamp", "Name", "Text"]);
     }
     sheet.appendRow([new Date(), name, text]);
+    
+    // --- INSERT KE SUPABASE wishes_queue ---
+    try {
+      if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+        const payload = {
+          ssid: ssId,
+          nama: name,
+          ucapan: text
+        };
+        UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/wishes_queue", {
+          method: "post",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Content-Type": "application/json"
+          },
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
+        });
+      }
+    } catch(err) {
+      console.error("Gagal insert ke Supabase wishes_queue: " + err.toString());
+    }
+
     return { status: "success" };
   } catch (e) {
     return { status: "error", message: e.toString() };
