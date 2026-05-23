@@ -623,10 +623,15 @@
         const listBody = document.getElementById('guest-list');
         const term = document.getElementById('search-box').value.toLowerCase();
         
-        const filtered = masterData.filter(row => 
-            (row.nama && row.nama.toLowerCase().includes(term)) || 
-            (row.kode && row.kode.toLowerCase().includes(term))
-        );
+        const searchTerms = term.trim().split(/\s+/).filter(Boolean);
+        const filtered = masterData.filter(row => {
+            const rowText = [
+                row.nama || "", row.kode || "", row.whatsapp || "",
+                row.alamat || "", row.pihakPengundang || "",
+                row.sesi || "", row.kategori || "", String(row.rencanaHadir || "")
+            ].join(" ").toLowerCase();
+            return searchTerms.every(t => rowText.includes(t));
+        });
 
         listBody.innerHTML = filtered.map(row => {
             const isDone = row.jamDatang && row.jamDatang !== "-";

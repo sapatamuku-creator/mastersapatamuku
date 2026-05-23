@@ -1377,7 +1377,15 @@
 
         function renderUI() {
             const term = document.getElementById('search-box').value.toLowerCase();
-            const filtered = masterData.filter(g => (g.nama || "").toLowerCase().includes(term) || (g.kode || "").toLowerCase().includes(term));
+            const searchTerms = term.trim().split(/\s+/).filter(Boolean);
+            const filtered = masterData.filter(g => {
+                const rowText = [
+                    g.nama || "", g.kode || "", g.whatsapp || "",
+                    g.alamat || "", g.pihakPengundang || "",
+                    g.sesi || "", g.kategori || "", String(g.rencanaHadir || "")
+                ].join(" ").toLowerCase();
+                return searchTerms.every(t => rowText.includes(t));
+            });
             document.getElementById('guest-list').innerHTML = filtered.map(g => {
                 const isHadir = g.jamDatang && g.jamDatang !== "-";
                 return `
