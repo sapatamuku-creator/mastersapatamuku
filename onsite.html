@@ -1056,7 +1056,7 @@
             const selectedList = Array.from(selectedIDs).map(id => masterData.find(r => r.kode === id));
             if (selectedList.length === 0) return;
             if (selectedList.length > 1) {
-                alert("Pilih 1 tamu saja. Fitur On-Site Check-in khusus untuk melayani registrasi, foto & angpao/kado secara perorangan.");
+                showAlert("Perhatian", "Pilih 1 tamu saja. Fitur On-Site Check-in khusus untuk melayani registrasi, foto & angpao/kado secara perorangan.", "⚠️");
                 return;
             }
             openConfirm(selectedList[0]);
@@ -1372,7 +1372,7 @@
 
             if (guest) {
                 if (String(guest.statusHadir) === "1") {
-                    alert("Tamu '" + guest.nama + "' sudah hadir.");
+                    showAlert("Sudah Hadir", "Tamu '" + guest.nama + "' sudah hadir.", "⚠️");
                     frame.classList.remove('qr-detected');
                 } else {
                     frame.classList.add('qr-success');
@@ -1576,7 +1576,7 @@
                     btnSnap.style.background = "none";
                     btnSnap.style.color = "var(--gold)";
                 } catch (e) {
-                    alert("Kamera tidak diizinkan.");
+                    showAlert("Akses Kamera", "Kamera tidak diizinkan.", "⚠️");
                 }
             }
         }
@@ -1791,7 +1791,7 @@
 
             } catch (e) {
                 if (blocker) blocker.remove();
-                alert("Error Connection!");
+                showAlert("Error Connection", "Terjadi kesalahan koneksi jaringan.", "❌");
             } finally {
                 loading.style.display = 'none';
             }
@@ -1822,7 +1822,7 @@
                     btn.innerText = "📸 JEPRET FOTO";
                     btn.style.background = "white";
                     btn.style.color = "var(--gold)";
-                } catch (e) { alert("Kamera tidak diizinkan."); }
+                } catch (e) { showAlert("Akses Kamera", "Kamera tidak diizinkan.", "⚠️"); }
             }
             // State 2: Camera is active, capture photo and freeze preview
             else if (regStream) {
@@ -1856,14 +1856,14 @@
                     btn.innerText = "📸 JEPRET FOTO";
                     btn.style.background = "white";
                     btn.style.color = "var(--gold)";
-                } catch (e) { alert("Kamera tidak diizinkan."); }
+                } catch (e) { showAlert("Akses Kamera", "Kamera tidak diizinkan.", "⚠️"); }
             }
         }
 
         async function submitOnsite() {
             const nama = document.getElementById('reg-nama').value;
             const whatsapp = document.getElementById('reg-wa').value;
-            if (!nama) return alert("Nama wajib diisi!");
+            if (!nama) { showAlert("Perhatian", "Nama wajib diisi!", "⚠️"); return; }
 
             const loading = document.getElementById('loading');
             loading.style.display = 'flex';
@@ -2124,7 +2124,7 @@
                 fetchData();
             } catch (e) {
                 if (blocker) blocker.remove();
-                alert("Gagal koneksi.");
+                showAlert("Error", "Gagal koneksi.", "❌");
             } finally {
                 loading.style.display = 'none';
             }
