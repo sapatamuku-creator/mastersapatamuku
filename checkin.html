@@ -250,6 +250,13 @@
         </div>
 
         <div class="bottom-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 15px 0;">
+                <span style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Status Kehadiran</span>
+                <div style="display: flex; gap: 8px;">
+                    <span id="checkedin-guests" style="background: var(--gold); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 GUESTS</span>
+                    <span id="checkedin-pax" style="background: var(--primary); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 PAX</span>
+                </div>
+            </div>
             <div class="search-container">
                 <input type="text" class="search-input" id="search-box" placeholder="Cari nama atau kode..." oninput="renderUI()">
                 <button id="bulk-btn" class="multi-action-btn" onclick="openConfirmModal()">KONFIRMASI (<span id="selected-count">0</span>)</button>
@@ -702,8 +709,21 @@
     function updateStats() {
         const rencana = masterData.reduce((acc, r) => acc + (parseInt(r.rencanaHadir) || 0), 0);
         const real = masterData.reduce((acc, r) => acc + (parseInt(r.realHadir) || 0), 0);
-        document.getElementById('stat-count').innerText = `${real} / ${rencana}`;
-        document.getElementById('stat-souvenir').innerText = masterData.filter(r => r.statusHadiah === "SUDAH KLAIM HADIAH").length;
+        
+        const statCount = document.getElementById('stat-count');
+        if (statCount) statCount.innerText = `${real} / ${rencana}`;
+        
+        const statSouvenir = document.getElementById('stat-souvenir');
+        if (statSouvenir) statSouvenir.innerText = masterData.filter(r => r.statusHadiah === "SUDAH KLAIM HADIAH").length;
+        
+        const checkedInGuests = masterData.filter(r => r.jamDatang && r.jamDatang !== "-");
+        const totalGuests = checkedInGuests.length;
+        const totalPax = checkedInGuests.reduce((acc, r) => acc + (parseInt(r.realHadir) || 0), 0);
+        
+        const guestEl = document.getElementById('checkedin-guests');
+        if (guestEl) guestEl.innerText = `${totalGuests} GUESTS`;
+        const paxEl = document.getElementById('checkedin-pax');
+        if (paxEl) paxEl.innerText = `${totalPax} PAX`;
     }
 
     async function startSelfieCamera() {
