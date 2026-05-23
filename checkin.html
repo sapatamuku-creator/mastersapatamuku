@@ -306,8 +306,8 @@
                     <label
                         style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">PEMBERIAN</label>
                     <div class="tag-row" style="flex-direction: column;">
-                        <div class="tag-item" id="tag-angpao" onclick="this.classList.toggle('active')">ANGPAO</div>
-                        <div class="tag-item" id="tag-kado" onclick="this.classList.toggle('active')">KADO</div>
+                        <div class="tag-item" id="tag-angpao" onclick="toggleGiftTag(this)">ANGPAO</div>
+                        <div class="tag-item" id="tag-kado" onclick="toggleGiftTag(this)">KADO</div>
                     </div>
                 </div>
             </div>
@@ -803,12 +803,22 @@
             return;
         }
         nav.style.display = 'block';
-        nav.innerHTML = multiConfig.map((cfg, idx) => `
+        nav.innerHTML = multiConfig.map((cfg, idx) => {
+            let giftIcons = "";
+            if (cfg.gift.includes("ANGPAO")) giftIcons += "🧧";
+            if (cfg.gift.includes("KADO")) giftIcons += "🎁";
+            
+            return `
             <div onclick="setActiveGuest(${idx})" style="padding:10px 15px; margin-bottom:5px; border-radius:12px; cursor:pointer; background:${idx === activeGuestIndex ? '#fdf8f4' : '#fff'}; border:1px solid ${idx === activeGuestIndex ? 'var(--primary)' : '#eee'}; display:flex; justify-content:space-between; align-items:center; transition:0.3s;">
                 <div style="font-size:12px; font-weight:800; color:${idx === activeGuestIndex ? 'var(--primary)' : 'var(--text-main)'};">${cfg.nama}</div>
-                <div style="font-size:9px; font-weight:700; color:var(--text-muted);">${cfg.adult+cfg.child} PAX ${cfg.base64 ? '📸' : ''}</div>
+                <div style="font-size:9px; font-weight:700; color:var(--text-muted); display:flex; gap:5px; align-items:center;">
+                    ${giftIcons ? `<span style="font-size:11px;">${giftIcons}</span>` : ''} 
+                    <span>${cfg.adult+cfg.child} PAX</span>
+                    ${cfg.base64 ? '<span style="font-size:11px;">📸</span>' : ''}
+                </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     function buildSelfieGrid() {
@@ -939,6 +949,12 @@
 
         document.getElementById('modalConfirm').style.display = 'flex';
         startSelfieCamera();
+    };
+
+    window.toggleGiftTag = function(el) {
+        el.classList.toggle('active');
+        saveActiveGuestConfig();
+        buildMultiNav();
     };
 
     window.updatePax = function(type, delta) {
