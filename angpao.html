@@ -6,6 +6,7 @@
     <title>Digital Gift - Sapatamu.ku V10.0 Security Patch</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="subdomain_resolver.js?v=3.3"></script>
     
@@ -213,7 +214,10 @@
 
         <div class="history-container">
             <div class="history-header">
-                <h3 style="font-size: 12px; font-weight: 800; color: var(--gray-500);">RIWAYAT TRANSAKSI</h3>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h3 style="font-size: 12px; font-weight: 800; color: var(--gray-500);">RIWAYAT TRANSAKSI</h3>
+                    <button onclick="downloadExcel()" style="background: var(--success); color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; display: flex; align-items: center; gap: 4px; cursor: pointer;"><i data-lucide="download" style="width:12px; height:12px;"></i> EXCEL</button>
+                </div>
                 <span id="totalNominal" style="font-size: 13px; font-weight: 800; color: var(--gold);">Rp 0</span>
             </div>
             <div id="historyLog"></div>
@@ -505,6 +509,53 @@
     window.triggerSecurityByKode = function(kode) { const user = masterGuests.find(g => g.kode === kode); if (user) triggerSecurity(user); };
     function setLoading(isLoading, label) { document.getElementById('statusLabel').innerText = label; document.getElementById('statusDot').className = isLoading ? 'dot loading' : 'dot'; }
     window.toggleFullScreen = function() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
+    
+    window.downloadExcel = function() {
+        if (!masterGuests || masterGuests.length === 0) {
+            showSapaModal("Data Kosong", "Belum ada data tamu yang dapat diunduh.", "⚠️");
+            return;
+        }
+
+        // Sheet 1: Transaksi Angpao
+        const angpaoData = masterGuests
+            .filter(g => g.tandaKasih > 0)
+            .map((g, index) => ({
+                "No": index + 1,
+                "Kode": g.kode,
+                "Nama Tamu": g.nama,
+                "Kategori": g.kategori || "UMUM",
+                "Nominal Angpao": parseInt(g.tandaKasih)
+            }));
+
+        const totalAngpao = angpaoData.reduce((sum, row) => sum + row["Nominal Angpao"], 0);
+        
+        let ws1;
+        if (angpaoData.length > 0) {
+            angpaoData.push({ "No": "", "Kode": "", "Nama Tamu": "", "Kategori": "TOTAL KESELURUHAN", "Nominal Angpao": totalAngpao });
+            ws1 = XLSX.utils.json_to_sheet(angpaoData);
+        } else {
+            ws1 = XLSX.utils.json_to_sheet([{"Pesan": "Belum ada transaksi Angpao"}]);
+        }
+
+        // Sheet 2: Semua Data Tamu
+        const allData = masterGuests.map((g, index) => ({
+            "No": index + 1,
+            "Kode": g.kode,
+            "Nama Tamu": g.nama,
+            "Kategori": g.kategori || "UMUM",
+            "Status Kehadiran": g.statusHadir === "1" || g.statusHadir === "true" || g.realHadir ? "Hadir" : "Belum Hadir",
+            "Nominal Angpao": parseInt(g.tandaKasih) || 0
+        }));
+        const ws2 = XLSX.utils.json_to_sheet(allData);
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws1, "Transaksi Angpao");
+        XLSX.utils.book_append_sheet(wb, ws2, "Semua Tamu");
+        
+        const dateStr = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `Data_Angpao_${dateStr}.xlsx`);
+    };
+
     initApp();
 </script>
 </body>
