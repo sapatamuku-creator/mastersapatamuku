@@ -468,41 +468,87 @@
       }
 
       if (currentDeviceName.includes("BY") || currentDeviceName.includes("TP") || currentDeviceName.includes("B") || currentDeviceName.includes("RHEBAR")) {
-        let tspl = [
-          `SIZE 75 mm, 45 mm\r\n`, 
-          `GAP 3 mm, 0\r\n`, 
-          `REFERENCE 0,0\r\n`,
-          `DIRECTION 1,0\r\n`,
-          `CLS\r\n`,
-          
-          // 1. HEADER (OPERASIONAL)
-          `SET BOLD 3\r\n`,
-          `TEXT 50,25,"3",0,1,1,"[ ${labelTitle.trim().toUpperCase()} ]"\r\n`,
-          `SET BOLD 0\r\n`,
+        // Helper to wrap text manually (Safe TSPL method)
+        function wrapText(text, maxChars) {
+            if (!text) return [];
+            if (text.length <= maxChars) return [text];
+            let words = text.split(' ');
+            let lines = [];
+            let currentLine = words[0] || "";
+            for (let i = 1; i < words.length; i++) {
+                if (currentLine.length + 1 + words[i].length <= maxChars) {
+                    currentLine += " " + words[i];
+                } else {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        }
 
-          // 2. HERO (NAMA)
-          `SET BOLD 5\r\n`,
-          `TEXT 50,75,"4",0,1,1,"${rawNama}"\r\n`,
-          `SET BOLD 0\r\n`,
-          
-          // 3. BADGE AREA (KATEGORI & PAX)
-          `BOX 50,140,220,180,3\r\n`,
-          `TEXT 65,150,"2",0,1,1,"${kategori}"\r\n`,
-          `SET BOLD 3\r\n`,
-          `TEXT 240,150,"2",0,1,1,"PAX: ${pax}"\r\n`,
-          `SET BOLD 0\r\n`,
+        let tsplLines = [];
+        tsplLines.push(`SIZE 75 mm, 45 mm\r\n`);
+        tsplLines.push(`GAP 3 mm, 0\r\n`);
+        tsplLines.push(`REFERENCE 0,0\r\n`);
+        tsplLines.push(`DIRECTION 1,0\r\n`);
+        tsplLines.push(`CLS\r\n`);
+        
+        // 1. HEADER (OPERASIONAL)
+        tsplLines.push(`SET BOLD 3\r\n`);
+        tsplLines.push(`TEXT 50,25,"3",0,1,1,"[ ${labelTitle.trim().toUpperCase()} ]"\r\n`);
+        tsplLines.push(`SET BOLD 0\r\n`);
 
-          // 4. METADATA
-          `TEXT 50,200,"2",0,1,1,"INV BY  : ${pihak}"\r\n`,
-          `TEXT 50,240,"2",0,1,1,"SESI    : ${sesi}"\r\n`,
-          `TEXT 50,280,"2",0,1,1,"ALAMAT  : ${alamat}"\r\n`,
-          
-          // 5. ANCHOR (QR & ID)
-          `QRCODE 380,60,H,9,A,0,"${rawKode}"\r\n`,
-          `SET BOLD 0\r\n`,
-          `TEXT 380,315,"2",0,1,1,"ID: ${rawKode}"\r\n`,
-          `PRINT 1,1\r\n`
-        ].join('');
+        // 2. HERO (NAMA)
+        tsplLines.push(`SET BOLD 5\r\n`);
+        let currentY = 75;
+        const wrappedNama = wrapText(rawNama, 18); // max 18 chars for font 4 before hitting QR
+        for (let i = 0; i < Math.min(wrappedNama.length, 2); i++) {
+            tsplLines.push(`TEXT 50,${currentY},"4",0,1,1,"${wrappedNama[i]}"\r\n`);
+            currentY += 40;
+        }
+        tsplLines.push(`SET BOLD 0\r\n`);
+        
+        // 3. BADGE AREA (KATEGORI & PAX)
+        if (currentY < 140) currentY = 140; 
+        else currentY += 5; // adjust downward if multiline name
+        
+        tsplLines.push(`BOX 50,${currentY},220,${currentY+40},3\r\n`);
+        tsplLines.push(`TEXT 65,${currentY+10},"2",0,1,1,"${kategori.substring(0, 12)}"\r\n`); 
+        tsplLines.push(`SET BOLD 3\r\n`);
+        tsplLines.push(`TEXT 240,${currentY+10},"2",0,1,1,"PAX: ${pax}"\r\n`);
+        tsplLines.push(`SET BOLD 0\r\n`);
+
+        currentY += 60; 
+
+        // 4. METADATA
+        const wrapMeta = (prefix, val) => {
+            let lines = wrapText(val, 26 - prefix.length);
+            let res = [{ x: 50, text: `${prefix}${lines[0] || ""}` }];
+            for (let i=1; i < Math.min(lines.length, 2); i++) { 
+                res.push({ x: 50, text: `${" ".repeat(prefix.length)}${lines[i]}` });
+            }
+            return res;
+        };
+
+        const metaFields = [
+            ...wrapMeta("INV BY  : ", pihak),
+            ...wrapMeta("SESI    : ", sesi),
+            ...wrapMeta("ALAMAT  : ", alamat)
+        ];
+
+        for (let field of metaFields) {
+            tsplLines.push(`TEXT ${field.x},${currentY},"2",0,1,1,"${field.text}"\r\n`);
+            currentY += 35; 
+        }
+        
+        // 5. ANCHOR (QR & ID)
+        tsplLines.push(`QRCODE 380,60,H,9,A,0,"${rawKode}"\r\n`);
+        tsplLines.push(`SET BOLD 0\r\n`);
+        tsplLines.push(`TEXT 380,315,"2",0,1,1,"ID: ${rawKode}"\r\n`);
+        tsplLines.push(`PRINT 1,1\r\n`);
+
+        let tspl = tsplLines.join('');
         
         // CHUNKING LOGIC: Menggunakan ukuran chunk yang lebih besar (128 byte) & writeValueWithoutResponse jika didukung untuk kecepatan maksimal
         const dataArray = encoder.encode(tspl);
