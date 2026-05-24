@@ -871,27 +871,27 @@
                             queueSouvenir(statusUpper);
                         }
                     }
-                    await Promise.all(printPromises);
+                    printPromises.push(
+                        fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                            method: "POST", headers: SB_HEADERS,
+                            body: JSON.stringify({
+                                id: genUUID(),
+                                ssid: CURRENT_SS_ID,
+                                nama: selectedGuest.nama || "-",
+                                kategori: selectedGuest.kategori || "Umum",
+                                alamat: selectedGuest.alamat || "-",
+                                pihak: selectedGuest.pihakPengundang || "-",
+                                pax: String(total || 1),
+                                kode: selectedGuest.kode || "-",
+                                status: "DISPLAY",
+                                created_at: new Date().toISOString()
+                            })
+                        }).then(async res => {
+                            if (!res.ok) console.error("welcome_queue kiosk write error:", await res.text());
+                        }).catch(e => console.warn(e))
+                    );
 
-                    // ─── WELCOME QUEUE (fire-and-forget) ───
-                    const welcomeRes = await fetch(`${SB_URL}/rest/v1/welcome_queue`, {
-                        method: "POST", headers: SB_HEADERS,
-                        body: JSON.stringify({
-                            id: crypto.randomUUID(),
-                            ssid: CURRENT_SS_ID,
-                            nama: selectedGuest.nama || "-",
-                            kategori: selectedGuest.kategori || "Umum",
-                            alamat: selectedGuest.alamat || "-",
-                            pihak: selectedGuest.pihakPengundang || "-",
-                            pax: String(total || 1),
-                            kode: selectedGuest.kode || "-",
-                            status: "DISPLAY",
-                            created_at: new Date().toISOString()
-                        })
-                    });
-                    if (!welcomeRes.ok) {
-                        console.error("welcome_queue kiosk write error:", await welcomeRes.text());
-                    }
+                    await Promise.all(printPromises);
 
                 } catch (e) {
                     console.error("Direct Supabase update/print failed in kiosk:", e);
@@ -970,3 +970,5 @@
     </script>
 </body>
 </html>
+
+

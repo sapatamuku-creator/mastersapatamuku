@@ -1714,304 +1714,27 @@
                             queueSouvenir(statusUpper);
                         }
                     }
-                    await Promise.all(printPromises);
-                } catch (e) {
-                    console.error("Direct Supabase update/print failed:", e);
-                }
-
-                // --- STEP 2: CORE CHECKIN (Non-Blocking background sync) ---
-                fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({
-                        action: "confirm_checkin",
-                        ssId: CURRENT_SS_ID,
-                        kodeUnik: selectedGuest.kode,
-                        realHadir: paxString,
-                        statusAngpao: gift || "-",
-                        stationId: stationId,
-                        customUuid: mainPrintId,
-                        skipSupabase: true
-                    })
-                }).catch(e => console.error("GAS background sync failed:", e));
-
-                // --- STEP 3: FAST FEEDBACK & LOCAL STATE UPDATE ---
-                if (blocker) blocker.remove();
-                
-                // Update local guest properties immediately
-                selectedGuest.statusHadir = "1";
-                selectedGuest.jamDatang = nowISO;
-                selectedGuest.realHadir = paxString;
-                selectedGuest.statusHadiah = gift || "-";
-                
-                closeModal();
-                selectedIDs.clear();
-                document.getElementById('selected-count').innerText = 0;
-                document.getElementById('bulk-btn').style.display = 'none';
-                renderUI();
-
-                // --- STEP 4: SUCCESS GREETING MODAL ---
-                document.getElementById('loading').style.display = 'none';
-                if (document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
-                document.body.style.cursor = 'default';
-
-                await showAlert(
-                    "CHECK-IN BERHASIL",
-                    `Selamat Datang,\n\n${selectedGuest.nama.toUpperCase()}\n(${selectedGuest.kategori || 'UMUM'})\n\nSilakan Masuk`,
-                    "✨"
-                );
-
-                fetchData(); // Refresh UI list from server background
-
-                // Upload Selfie & Blast WA in background
-                if (capturedBase64) {
-                    fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: JSON.stringify({
-                            action: "uploadSelfie",
-                            image: capturedBase64,
-                            nama: selectedGuest.nama,
-                            kode: selectedGuest.kode,
-                            ssId: CURRENT_SS_ID
-                        })
-                    }).catch(e => console.warn("Selfie upload failed in background:", e));
-                }
-
-                fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({
-                        action: "sendAutomationBlast",
-                        ssId: CURRENT_SS_ID,
-                        type: "checkin",
-                        guestData: { nama: selectedGuest.nama, whatsapp: selectedGuest.whatsapp }
-                    })
-                }).catch(e => console.warn("Background checkin blast failed:", e));
-
-            } catch (e) {
-                if (blocker) blocker.remove();
-                showAlert("Error Connection", "Terjadi kesalahan koneksi jaringan.", "❌");
-            } finally {
-                loading.style.display = 'none';
-            }
-        }
-
-        window.updateRegPax = function (type, delta) {
-            const el = document.getElementById('reg-pax-' + type);
-            let val = parseInt(el.innerText) + delta;
-            if (type === 'adult' && val < 1) val = 1;
-            if (type === 'child' && val < 0) val = 0;
-            el.innerText = val;
-        };
-
-        async function toggleRegSelfie() {
-            const box = document.getElementById('reg-preview-container');
-            const btn = document.getElementById('btn-reg-snap');
-            const video = document.getElementById('reg-video');
-            const photoPreview = document.getElementById('reg-photo-preview');
-
-            // State 1: Camera is not active, start stream
-            if (!regStream && box.style.display === 'none') {
-                try {
-                    regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                    video.srcObject = regStream;
-                    video.style.display = 'block';
-                    if (photoPreview) photoPreview.style.display = 'none';
-                    box.style.display = 'block';
-                    btn.innerText = "📸 JEPRET FOTO";
-                    btn.style.background = "white";
-                    btn.style.color = "var(--gold)";
-                } catch (e) { showAlert("Akses Kamera", "Kamera tidak diizinkan.", "⚠️"); }
-            }
-            // State 2: Camera is active, capture photo and freeze preview
-            else if (regStream) {
-                const canvas = document.getElementById('reg-canvas'), ctx = canvas.getContext('2d');
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 480;
-                ctx.translate(canvas.width, 0);
-                ctx.scale(-1, 1);
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-
-                if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
-
-                video.style.display = 'none';
-                if (photoPreview) {
-                    photoPreview.src = capturedBase64;
-                    photoPreview.style.display = 'block';
-                }
-
-                btn.innerText = "📸 SELFIE BERHASIL (ULANGI?)";
-                btn.style.background = "var(--success)";
-                btn.style.color = "white";
-            }
-            // State 3: Photo is frozen, restart stream to retake
-            else {
-                try {
-                    regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                    video.srcObject = regStream;
-                    video.style.display = 'block';
-                    if (photoPreview) photoPreview.style.display = 'none';
-                    btn.innerText = "📸 JEPRET FOTO";
-                    btn.style.background = "white";
-                    btn.style.color = "var(--gold)";
-                } catch (e) { showAlert("Akses Kamera", "Kamera tidak diizinkan.", "⚠️"); }
-            }
-        }
-
-        async function submitOnsite() {
-            const nama = document.getElementById('reg-nama').value;
-            const whatsapp = document.getElementById('reg-wa').value;
-            if (!nama) { showAlert("Perhatian", "Nama wajib diisi!", "⚠️"); return; }
-
-            const loading = document.getElementById('loading');
-            loading.style.display = 'flex';
-
-            // --- STEP 1: BLOCK UI ---
-            const blocker = document.createElement('div');
-            blocker.id = "global-blocker";
-            blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
-            document.body.appendChild(blocker);
-
-            const adult = document.getElementById('reg-pax-adult').innerText;
-            const child = document.getElementById('reg-pax-child').innerText;
-            const paxString = `${parseInt(adult) + parseInt(child)} ( ${adult}D + ${child}A )`;
-
-            try {
-                const gift = (document.getElementById('reg-tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('reg-tag-kado').classList.contains('active') ? "KADO" : "");
-                
-                // Generate Unique Code and Print UUID on Frontend
-                const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
-                const kodeUnik = "ONS-" + randomPart;
-                const mainPrintId = crypto.randomUUID();
-                const stationId = JALUR_ID === "ALL" ? "ONSITE-ALL" : "ONSITE-" + JALUR_ID;
-
-                // --- STEP 1.5: WRITE tamus & print_queue TO SUPABASE DIRECTLY (< 200ms) ---
-                const SB_HEADERS = {
-                    "apikey": SB_KEY,
-                    "Authorization": "Bearer " + SB_KEY,
-                    "Content-Type": "application/json"
-                };
-                // Deteksi: apakah input berupa nomor telepon atau username Instagram
-                const rawContact = String(whatsapp || "");
-                const isPhoneNumber = /^[+\d\s()-]{5,}$/.test(rawContact.trim()); // hanya digit, spasi, +, -, ()
-                let cleanPhone;
-                if (isPhoneNumber) {
-                    cleanPhone = rawContact.replace(/\D/g, '');
-                    if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
-                } else {
-                    // Simpan username IG apa adanya, pastikan ada prefix @
-                    cleanPhone = rawContact.startsWith('@') ? rawContact.trim() : '@' + rawContact.trim();
-                }
-                const timeOnly = new Date().toLocaleTimeString('en-GB', { hour12: false });
-
-                try {
-                    // 1. Insert to tamu directly to Supabase with event_date (< 150ms)
-                    const tamuInsertPromise = fetch(`${SB_URL}/rest/v1/tamu`, {
-                        method: "POST",
-                        headers: SB_HEADERS,
-                        body: JSON.stringify({
-                            ssid: CURRENT_SS_ID,
-                            kode: kodeUnik,
-                            nama: nama || "Tanpa Nama",
-                            whatsapp: cleanPhone,
-                            kategori: document.getElementById('reg-kategori').value || "UMUM",
-                            rencana_hadir: 0,
-                            real_hadir: parseInt(adult) + parseInt(child) || 1,
-                            souvenir: document.getElementById('reg-souvenir').value === "tidak" ? "tidak" : "ya",
-                            pihak_pengundang: document.getElementById('reg-host').value || "-",
-                            alamat: document.getElementById('reg-alamat').value || "-",
-                            status_hadir: "1",
-                            status_hadiah: gift || "-",
-                            tanda_kasih: 0,
-                            sesi: document.getElementById('reg-sesi').value || "-",
-                            jam_datang: timeOnly,
-                            event_date: EVENT_DATE || new Date().toISOString().split('T')[0]
-                        })
-                    });
-
-                    // 2. Queue print job directly to Supabase (< 200ms)
-                    let catUpper = String(document.getElementById('reg-kategori').value || "").toUpperCase();
-                    let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
-
-                    const printPromises = [
-                        tamuInsertPromise,
-                        fetch(`${SB_URL}/rest/v1/print_queue`, {
-                            method: "POST",
-                            headers: SB_HEADERS,
+                    printPromises.push(
+                        fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                            method: "POST", headers: SB_HEADERS,
                             body: JSON.stringify({
-                                id: mainPrintId,
+                                id: genUUID(),
                                 ssid: CURRENT_SS_ID,
                                 nama: nama || "Tanpa Nama",
-                                kode: kodeUnik,
-                                qr: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
-                                info: labelType,
-                                status: "WAITING",
                                 kategori: document.getElementById('reg-kategori').value || "Umum",
                                 alamat: document.getElementById('reg-alamat').value || "-",
                                 pihak: document.getElementById('reg-host').value || "-",
-                                sesi: document.getElementById('reg-sesi').value || "-",
-                                pax: parseInt(adult) + parseInt(child) || 1,
-                                station_id: stationId
+                                pax: String(parseInt(adult) + parseInt(child) || 1),
+                                kode: kodeUnik,
+                                status: "DISPLAY",
+                                created_at: new Date().toISOString()
                             })
-                        })
-                    ];
+                        }).then(async res => {
+                            if (!res.ok) console.warn("welcome_queue onsite write error:", await res.text());
+                        }).catch(e => console.warn(e))
+                    );
 
-                    if (gift && gift !== "-" && gift !== "ON-SITE") {
-                        const statusUpper = String(gift).toUpperCase();
-                        const queueSouvenir = (souvenirType) => {
-                            const souvenirPrintId = crypto.randomUUID();
-                            printPromises.push(
-                                fetch(`${SB_URL}/rest/v1/print_queue`, {
-                                    method: "POST",
-                                    headers: SB_HEADERS,
-                                    body: JSON.stringify({
-                                        id: souvenirPrintId,
-                                        ssid: CURRENT_SS_ID,
-                                        nama: nama || "Tanpa Nama",
-                                        kode: kodeUnik,
-                                        qr: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
-                                        info: "SOUVENIR: " + souvenirType,
-                                        status: "WAITING",
-                                        kategori: document.getElementById('reg-kategori').value || "Umum",
-                                        alamat: document.getElementById('reg-alamat').value || "-",
-                                        pihak: document.getElementById('reg-host').value || "-",
-                                        sesi: document.getElementById('reg-sesi').value || "-",
-                                        pax: parseInt(adult) + parseInt(child) || 1,
-                                        station_id: stationId
-                                    })
-                                })
-                            );
-                        };
-
-                        if (statusUpper.includes("ANGPAO") && statusUpper.includes("KADO")) {
-                            queueSouvenir("KADO");
-                            queueSouvenir("ANGPAO");
-                        } else {
-                            queueSouvenir(statusUpper);
-                        }
-                    }
                     await Promise.all(printPromises);
-
-                    // ─── WELCOME QUEUE (fire-and-forget) ───
-                    const welcomeRes = await fetch(`${SB_URL}/rest/v1/welcome_queue`, {
-                        method: "POST", headers: SB_HEADERS,
-                        body: JSON.stringify({
-                            id: crypto.randomUUID(),
-                            ssid: CURRENT_SS_ID,
-                            nama: nama || "Tanpa Nama",
-                            kategori: document.getElementById('reg-kategori').value || "Umum",
-                            alamat: document.getElementById('reg-alamat').value || "-",
-                            pihak: document.getElementById('reg-host').value || "-",
-                            pax: String(parseInt(adult) + parseInt(child) || 1),
-                            kode: kodeUnik,
-                            status: "DISPLAY",
-                            created_at: new Date().toISOString()
-                        })
-                    });
-                    if (!welcomeRes.ok) console.warn("welcome_queue onsite write error:", await welcomeRes.text());
 
                 } catch(e) {
                     console.error("Direct Supabase guest registration / print queuing failed:", e);
@@ -2136,3 +1859,4 @@
 </body>
 
 </html>
+

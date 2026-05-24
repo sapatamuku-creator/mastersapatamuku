@@ -1065,9 +1065,19 @@
             await Promise.all(supabasePatchPromises);
 
             const printPromises = [];
+            
+            // Fallback UUID generator
+            const genUUID = () => {
+                if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            };
+
             multiConfig.forEach(cfg => {
                 let labelType = (cfg.kategori.includes("VIP") || cfg.kategori.includes("VVIP") || cfg.kategori.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
-                const mainPrintId = crypto.randomUUID();
+                const mainPrintId = genUUID();
                 
                 const guest = masterData.find(r => r.kode === cfg.id);
                 if (guest) guest.customUuid = mainPrintId;
@@ -1126,35 +1136,32 @@
                     }
                 }
             });
+            const primaryGuest = multiConfig[0];
+            if (primaryGuest) {
+                printPromises.push(
+                    fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                        method: "POST", headers: SB_HEADERS,
+                        body: JSON.stringify({
+                            id: genUUID(),
+                            ssid: CURRENT_SS_ID,
+                            nama: primaryGuest.nama || "-",
+                            kategori: primaryGuest.kategori || "Umum",
+                            alamat: primaryGuest.alamat || "-",
+                            pihak: primaryGuest.pihakPengundang || "-",
+                            pax: String(primaryGuest.adult + primaryGuest.child),
+                            kode: primaryGuest.id || "-",
+                            status: "DISPLAY",
+                            created_at: nowISO
+                        })
+                    }).then(async res => {
+                        if (!res.ok) console.error("Supabase welcome_queue error:", await res.text());
+                    }).catch(e => console.warn(e))
+                );
+            }
+
             if (printPromises.length > 0) {
                 try { await Promise.all(printPromises); } catch(e) { console.error(e); }
             }
-
-            (async () => {
-                try {
-                    const primaryGuest = multiConfig[0];
-                    if (primaryGuest) {
-                        const welcomeRes = await fetch(`${SB_URL}/rest/v1/welcome_queue`, {
-                            method: "POST", headers: SB_HEADERS,
-                            body: JSON.stringify({
-                                id: crypto.randomUUID(),
-                                ssid: CURRENT_SS_ID,
-                                nama: primaryGuest.nama || "-",
-                                kategori: primaryGuest.kategori || "Umum",
-                                alamat: primaryGuest.alamat || "-",
-                                pihak: primaryGuest.pihakPengundang || "-",
-                                pax: String(primaryGuest.adult + primaryGuest.child),
-                                kode: primaryGuest.id || "-",
-                                status: "DISPLAY",
-                                created_at: nowISO
-                            })
-                        });
-                        if (!welcomeRes.ok) {
-                            console.error("Supabase welcome_queue error:", await welcomeRes.text());
-                        }
-                    }
-                } catch(e) { console.warn(e); }
-            })();
 
             multiConfig.forEach(cfg => {
                 const guest = masterData.find(r => r.kode === cfg.id);
