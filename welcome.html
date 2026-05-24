@@ -494,10 +494,26 @@
                     if (latest.nama && latest.nama !== currentGuestName) {
                         showGuest(latest);
                     }
-                    // Marquee logic removed from here as it now uses wishes_queue
+                    return;
                 }
+
+                throw new Error("Data welcome_queue kosong, mencoba fallback GAS...");
             } catch (e) {
-                console.warn("welcome_queue sync error:", e);
+                console.warn("welcome_queue sync info:", e.message);
+                try {
+                    const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`;
+                    const response = await fetch(fetchUrl);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.latestGuest && data.latestGuest.nama) {
+                            if (data.latestGuest.nama !== currentGuestName) {
+                                showGuest(data.latestGuest);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error("Fallback GAS error:", err);
+                }
             }
         }
 
