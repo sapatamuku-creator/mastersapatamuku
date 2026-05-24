@@ -1134,20 +1134,24 @@
                 try {
                     const primaryGuest = multiConfig[0];
                     if (primaryGuest) {
-                        await fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                        const welcomeRes = await fetch(`${SB_URL}/rest/v1/welcome_queue`, {
                             method: "POST", headers: SB_HEADERS,
                             body: JSON.stringify({
+                                id: crypto.randomUUID(),
                                 ssid: CURRENT_SS_ID,
                                 nama: primaryGuest.nama || "-",
                                 kategori: primaryGuest.kategori || "Umum",
                                 alamat: primaryGuest.alamat || "-",
                                 pihak: primaryGuest.pihakPengundang || "-",
-                                pax: primaryGuest.adult + primaryGuest.child,
+                                pax: String(primaryGuest.adult + primaryGuest.child),
                                 kode: primaryGuest.id || "-",
                                 status: "DISPLAY",
                                 created_at: nowISO
                             })
                         });
+                        if (!welcomeRes.ok) {
+                            console.error("Supabase welcome_queue error:", await welcomeRes.text());
+                        }
                     }
                 } catch(e) { console.warn(e); }
             })();
