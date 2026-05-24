@@ -90,7 +90,7 @@ function updateSpreadsheetPhoto(ssId, kode, url) {
   
   for (let i = 0; i < data.length; i++) {
     if (String(data[i][0]) === String(kode)) {
-      sheet.getRange(i + 8, 17).setValue(url); 
+      sheet.getRange(i + 8, 20).setValue(url); // Kolom T (20) di sebelah kanan Sesi
       break;
     }
   }
