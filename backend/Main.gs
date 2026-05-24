@@ -298,7 +298,8 @@ function updateTandaKasih(ssId, kode, nominal, statusHadiah) {
       const targetRow = i + START_ROW;
       sheet.getRange(targetRow, COLUMN_TANDA_KASIH).setValue(nominal);
       if (statusHadiah !== undefined) {
-        sheet.getRange(targetRow, COL_STATUS_HADIAH).setValue(statusHadiah);
+        // Kolom "Jenis Gift" di GS menggunakan index COL_CATATAN (15)
+        sheet.getRange(targetRow, COL_CATATAN).setValue(statusHadiah);
       }
       
       // SINKRONISASI KE SUPABASE SECARA OTOMATIS
