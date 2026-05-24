@@ -1516,7 +1516,7 @@ function syncSheetToSupabase(ssId) {
         alamat: String(row[12] || "-"),
         status_hadir: String(row[8] || "0"),
         status_wa: String(row[15] || "PENDING"),
-        status_hadiah: String(row[16] || "-"),
+        status_hadiah: String(row[14] || "-"), // Kolom O (Index 14) adalah Jenis Gift
         tanda_kasih: parseFloat(row[17]) || 0,
         sesi: String(row[18] || "-"),
         jam_datang: String(row[9] || "-"),
