@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upgrade Layanan - SapaTamu.ku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-1e61_Ke6hzfvj22J"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #E07B7B; 
+            --bg: #FFF9F5;      
+            --card: #FFFFFF;
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --border: #F0E6DE;
+            --input-bg: #FDF8F4;
+            --success: #10B981;
+        }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main);
+        }
+        .sapatamu-btn { 
+            width: 100%; padding: 16px; background: var(--primary); color: white; 
+            border: none; border-radius: 12px; font-weight: 700; font-size: 16px;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px;
+            transition: all 0.2s;
+        }
+        .sapatamu-btn:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+        .sapatamu-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; background-color: #ccc; }
+        
+        .pricing-category-btn {
+            padding: 10px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 700;
+            transition: all 0.2s;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            background: white;
+            color: var(--text-muted);
+        }
+        .pricing-category-btn.active {
+            background: var(--text-main);
+            color: white;
+            border-color: var(--text-main);
+        }
+
+        .pricing-card {
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            background: white;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        .pricing-card.selected {
+            border: 2px solid var(--primary) !important;
+            background: #FFF9F6;
+            box-shadow: 0 10px 25px rgba(224, 123, 123, 0.1);
+        }
+        .pricing-card.selected::after {
+            content: "✔ Pilihan";
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--primary);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        
+        .loader { 
+            width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); 
+            border-bottom-color: transparent; border-radius: 50%; display: none; 
+            animation: rotation 0.8s linear infinite; 
+        }
+        @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* CUSTOM NOTIFICATION MODAL */
+        #sapa-notify-modal { position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999; }
+        .sapa-modal-content { background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .sapa-modal-title { font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px; }
+        .sapa-modal-msg { font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px; }
+        
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-[#FFF9F5] min-h-screen py-10 px-4">
+
+    <!-- NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal">
+        <div class="sapa-modal-content">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
+            <h2 id="notify-title" class="sapa-modal-title">Pesan</h2>
+            <p id="notify-msg" class="sapa-modal-msg">Pesan notifikasi akan muncul di sini.</p>
+            <button onclick="closeSapaModal()" class="sapatamu-btn" style="padding: 15px; border-radius: 15px; font-size: 11px; margin-top: 0; background: var(--text-main); width: 100%; border: none; color: white;">MENGERTI</button>
+        </div>
+    </div>
+
+    <!-- MAIN WRAPPER -->
+    <div class="max-w-[480px] mx-auto bg-white/85 backdrop-blur-xl relative z-10 rounded-3xl shadow-xl p-8 border border-[#F0E6DE]">
+        
+        <!-- HEADER -->
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-extrabold text-[#4A3F35]">Upgrade Layanan</h1>
+            <p class="text-sm text-gray-500">Tingkatkan fitur SapaTamu.ku untuk acara Anda.</p>
+        </div>
+
+        <!-- INFO AKUN SAAT INI -->
+        <div class="bg-[#FDF8F4] border border-[#F0E6DE] rounded-2xl p-5 mb-8">
+            <h3 class="text-xs font-bold text-[#8C7560] mb-3 uppercase tracking-wider">Informasi Akun Saat Ini</h3>
+            <div class="space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500">Nama Klien</span>
+                    <span class="font-extrabold text-gray-800" id="info-nama">-</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500">Subdomain</span>
+                    <span class="font-extrabold text-[#E07B7B]" id="info-subdomain">-</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-500">Tanggal Acara</span>
+                    <span class="font-extrabold text-gray-800" id="info-tanggal">-</span>
+                </div>
+                <hr class="border-[#F0E6DE] my-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500 text-sm font-bold">Paket Saat Ini</span>
+                    <span class="inline-block px-3 py-1 bg-[#4A3F35] text-white text-xs font-bold rounded-full" id="info-paket">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PILIHAN UPGRADE -->
+        <div>
+            <h3 class="text-sm font-extrabold text-[#4A3F35] mb-4">Pilih Paket Upgrade</h3>
+            
+            <div class="flex justify-center gap-2 mb-6">
+                <div class="pricing-category-btn active" id="btn-cat-guestbook" onclick="filterPricingCategory('guestbook')">DIGITAL GUESTBOOK</div>
+                <div class="pricing-category-btn" id="btn-cat-allin" onclick="filterPricingCategory('allin')">ALL-IN COLLABORATION</div>
+            </div>
+
+            <!-- SLOT AVAILABILITY WIDGET -->
+            <div id="slot-checker-widget" class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center">
+                <div class="text-xs font-bold text-[#8C7560] mb-1">📅 Ketersediaan Tanggal Acara:</div>
+                <div id="slot-checker-date" class="text-sm font-extrabold text-gray-800 mb-2">-</div>
+                <div id="slot-checker-status" class="inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-gray-200 text-gray-500">Checking Slot...</div>
+            </div>
+
+            <!-- CARDS GRID -->
+            <div class="flex flex-col gap-4 mb-6">
+                <!-- Digital Guestbook Cards -->
+                <div class="pricing-group guestbook block">
+                    <div class="pricing-card" onclick="selectPricing('Bronze Guestbook', 2500000)">
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Paket Bronze</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 2.500.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Kapasitas &lt;250 Tamu</li>
+                            <li>&#10003; Self-Registration &amp; Real-Time Check-In</li>
+                            <li>&#10003; 1 Station Kiosk QR Scanner</li>
+                            <li>&#10003; 1 Station Onsite Usher</li>
+                        </ul>
+                    </div>
+                    <div class="pricing-card mt-3 selected" onclick="selectPricing('Silver Guestbook', 3500000)">
+                        <div class="absolute -top-3 left-6 bg-[#E07B7B] text-white text-[9px] font-extrabold px-2.5 py-0.5 rounded-full">POPULER</div>
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Paket Silver</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 3.500.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Kapasitas 250-500 Tamu</li>
+                            <li>&#10003; Cetak Label Nama Instan</li>
+                            <li>&#10003; 1 Station Kiosk + 2 Onsite Usher</li>
+                            <li>&#10003; Welcome Sign Display (Greeting Otomatis)</li>
+                        </ul>
+                    </div>
+                    <div class="pricing-card mt-3" onclick="selectPricing('Gold Guestbook', 4500000)">
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Paket Gold</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 4.500.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Kapasitas &gt;500 Tamu</li>
+                            <li>&#10003; 2 Kiosk QR Scanner + 2+1 VIP Ushers</li>
+                            <li>&#10003; AI Gallery Face Finder</li>
+                            <li>&#10003; Analytics Dashboard Real-time</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- All-in Collaboration Cards -->
+                <div class="pricing-group allin hidden">
+                    <div class="pricing-card" onclick="selectPricing('Exclusive Collaboration', 7500000)">
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Exclusive Package</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 7.500.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Undangan Tipe Premium + Guestbook Paket Silver</li>
+                            <li>&#10003; Layanan Foto &amp; Video Premium Knowhere Studio</li>
+                            <li>&#10003; On-site Team: 3 Orang Usher Profesional</li>
+                        </ul>
+                    </div>
+                    <div class="pricing-card mt-3" onclick="selectPricing('Deluxe Collaboration', 10500000)">
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Deluxe Package</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 10.500.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Undangan Tipe Premium + Guestbook Paket Gold</li>
+                            <li>&#10003; Layanan Foto &amp; Video Paket Deluxe Knowhere Studio</li>
+                            <li>&#10003; On-site Team: 4 + 2 VIP Usher</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden input for selected pricing -->
+            <input type="hidden" id="final_package_name" value="Silver Guestbook">
+            <input type="hidden" id="final_package_price" value="3500000">
+
+            <div class="flex gap-3">
+                <button onclick="window.history.back()" class="sapatamu-btn bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold flex-[0.8]">
+                    Batal
+                </button>
+                <button onclick="prosesPembayaranUpgrade()" id="btn_upgrade_pay" class="sapatamu-btn flex-[1.2]" disabled>
+                    <span id="text_upgrade_pay">Bayar Upgrade</span>
+                    <span class="loader" id="load_upgrade_pay"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+
+    let currentUserData = null;
+
+    window.onload = function() {
+        // Ambil session user
+        let sessionData = null;
+        try {
+            sessionData = JSON.parse(sessionStorage.getItem('sapatamu_session')) ||
+                          JSON.parse(localStorage.getItem('sapatamu_db'));
+        } catch (e) {}
+
+        if (!sessionData || !sessionData.username) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        // Fetch detail lengkap klien dari Supabase berdasarkan session
+        fetchClientData(sessionData.username);
+    };
+
+    async function fetchClientData(username) {
+        try {
+            const res = await fetch(`${SB_URL}/rest/v1/clients?username=eq.${encodeURIComponent(username)}`, {
+                headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+            });
+            const data = await res.json();
+            
+            if (data.length > 0) {
+                currentUserData = data[0];
+                renderProfile();
+            } else {
+                showSapaModal("Data Tidak Ditemukan", "Tidak dapat memuat profil Anda.", "❌");
+            }
+        } catch (e) {
+            showSapaModal("Koneksi Gagal", "Gagal menghubungi server database.", "⚠️");
+        }
+    }
+
+    function renderProfile() {
+        document.getElementById('info-nama').innerText = currentUserData.client_name || currentUserData.username;
+        document.getElementById('info-subdomain').innerText = currentUserData.subdomain;
+        document.getElementById('info-tanggal').innerText = currentUserData.wedding_date || "Belum Ditentukan";
+        document.getElementById('info-paket').innerText = currentUserData.package || "Belum ada paket";
+        
+        document.getElementById('slot-checker-date').innerText = currentUserData.wedding_date || "-";
+
+        // Cek ketersediaan untuk paket terpilih (default: Silver Guestbook)
+        triggerSlotCheck();
+    }
+
+    window.filterPricingCategory = function(cat) {
+        // Buttons active style
+        document.getElementById('btn-cat-guestbook').classList.remove('active');
+        document.getElementById('btn-cat-allin').classList.remove('active');
+        document.getElementById('btn-cat-' + cat).classList.add('active');
+
+        // Hide pricing group
+        document.querySelectorAll('.pricing-group').forEach(g => g.classList.replace('block', 'hidden'));
+        document.querySelector('.pricing-group.' + cat).classList.replace('hidden', 'block');
+
+        if (cat === 'guestbook') {
+            selectPricing('Silver Guestbook', 3500000);
+            triggerSlotCheck();
+        } else if (cat === 'allin') {
+            selectPricing('Exclusive Collaboration', 7500000);
+            triggerSlotCheck();
+        }
+    };
+
+    window.selectPricing = function(name, price) {
+        document.querySelectorAll('.pricing-card').forEach(c => c.classList.remove('selected'));
+        
+        const cards = document.querySelectorAll('.pricing-card');
+        cards.forEach(card => {
+            const onclickAttr = card.getAttribute('onclick') || '';
+            if (onclickAttr.includes(`'${name}'`)) {
+                card.classList.add('selected');
+            }
+        });
+
+        document.getElementById('final_package_name').value = name;
+        document.getElementById('final_package_price').value = price;
+    };
+
+    async function triggerSlotCheck() {
+        if (!currentUserData) return;
+        
+        const tgl = currentUserData.wedding_date;
+        const statusEl = document.getElementById('slot-checker-status');
+        const btnPay = document.getElementById('btn_upgrade_pay');
+
+        if (!tgl || tgl === "Belum Ditentukan" || tgl === "Masih belum tahu") {
+            statusEl.innerText = "⚠️ Tanggal Belum Diatur. Hubungi Admin.";
+            statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-100 text-red-700";
+            btnPay.disabled = true;
+            return;
+        }
+
+        statusEl.innerText = "⏳ Sedang Cek Slot...";
+        statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-amber-200 text-amber-800";
+        btnPay.disabled = true;
+
+        try {
+            // Cek ketersediaan: Cari klien lain yang tanggalnya sama DAN paketnya guestbook/allin
+            // Karena ini sekadar validasi tanggal (seperti daftar.html), kita asumsikan 
+            // setiap event butuh usher, jadi cari siapa saja yg sudah booking pada tanggal ini
+            // kecuali user ini sendiri.
+            const query = `${SB_URL}/rest/v1/clients?wedding_date=eq.${encodeURIComponent(tgl)}&username=neq.${encodeURIComponent(currentUserData.username)}&select=username,package`;
+            const res = await fetch(query, {
+                headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+            });
+            const data = await res.json();
+            
+            // Filter hanya user lain yang sudah memesan guestbook/allin (karena e-inv tidak butuh usher)
+            const usherBooked = data.filter(d => 
+                (d.package && d.package.toLowerCase().includes('guestbook')) || 
+                (d.package && d.package.toLowerCase().includes('collaboration'))
+            );
+
+            if (usherBooked.length === 0) {
+                statusEl.innerText = "✅ Slot Usher Tersedia";
+                statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-green-200 text-green-800";
+                btnPay.disabled = false;
+            } else {
+                statusEl.innerText = "❌ Slot Usher Penuh";
+                statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-200 text-red-800";
+                btnPay.disabled = true;
+                showSapaModal("Tanggal Penuh", "Maaf, seluruh slot tim Usher/Guestbook untuk tanggal acara Anda sudah di-booking oleh klien lain. Pembayaran ditangguhkan.", "📅");
+            }
+        } catch (e) {
+            statusEl.innerText = "⚠️ Gagal Sinkronisasi Slot";
+            statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-100 text-red-700";
+        }
+    }
+
+    function setLoading(btnId, isLoad) {
+        const btn = document.getElementById(btnId);
+        const text = document.getElementById(btnId.replace('btn', 'text'));
+        const load = document.getElementById(btnId.replace('btn', 'load'));
+        if (btn) btn.disabled = isLoad;
+        if (text) text.style.display = isLoad ? 'none' : 'block';
+        if (load) load.style.display = isLoad ? 'block' : 'none';
+    }
+
+    window.showSapaModal = function(title, msg, icon = "✨") {
+        document.getElementById('notify-title').innerText = title;
+        document.getElementById('notify-msg').innerText = msg;
+        document.getElementById('notify-icon').innerText = icon;
+        document.getElementById('sapa-notify-modal').style.display = 'flex';
+    };
+
+    window.closeSapaModal = function() {
+        document.getElementById('sapa-notify-modal').style.display = 'none';
+    };
+
+    window.prosesPembayaranUpgrade = async function() {
+        if (!currentUserData) return;
+
+        const newPackage = document.getElementById('final_package_name').value;
+        const price = document.getElementById('final_package_price').value;
+
+        setLoading('btn_upgrade_pay', true);
+
+        try {
+            // Minta Snap Token dari GAS Backend
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "cors",
+                body: JSON.stringify({
+                    action: "createMidtransTransaction",
+                    subdomain: currentUserData.subdomain,
+                    price: price,
+                    packageName: newPackage,
+                    clientName: currentUserData.client_name || currentUserData.username,
+                    email: currentUserData.email || "sapatamuku@gmail.com",
+                    whatsapp: currentUserData.whatsapp || "08123456789"
+                })
+            });
+            const resJson = await response.json();
+
+            if (resJson.status === "success") {
+                snap.pay(resJson.token, {
+                    onSuccess: function(result) {
+                        prosesAktivasiUpgrade(newPackage);
+                    },
+                    onPending: function(result) {
+                        showSapaModal("Menunggu Pembayaran", "Pesanan Anda berstatus pending. Selesaikan instruksi pembayaran.", "⏳");
+                        setLoading('btn_upgrade_pay', false);
+                    },
+                    onError: function(result) {
+                        showSapaModal("Pembayaran Gagal", "Terjadi kesalahan saat memproses pembayaran.", "❌");
+                        setLoading('btn_upgrade_pay', false);
+                    },
+                    onClose: function() {
+                        showSapaModal("Pembayaran Dibatalkan", "Anda menutup popup pembayaran Midtrans.", "⚠️");
+                        setLoading('btn_upgrade_pay', false);
+                    }
+                });
+            } else {
+                showSapaModal("Gagal Membuka Pembayaran", resJson.message, "❌");
+                setLoading('btn_upgrade_pay', false);
+            }
+        } catch (err) {
+            showSapaModal("Kesalahan Sistem", "Gagal menghubungi server pembayaran: " + err, "⚠️");
+            setLoading('btn_upgrade_pay', false);
+        }
+    };
+
+    async function prosesAktivasiUpgrade(newPackage) {
+        setLoading('btn_upgrade_pay', true);
+        document.getElementById('text_upgrade_pay').innerText = "Mengupgrade Akun...";
+
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "cors",
+                body: JSON.stringify({
+                    action: "upgradePackage",
+                    username: currentUserData.username,
+                    newPackage: newPackage
+                })
+            });
+            const resJson = await response.json();
+
+            if (resJson.status === "success") {
+                // Berhasil
+                showSapaModal("Upgrade Berhasil!", "Selamat! Layanan Anda telah di-upgrade secara otomatis. Halaman akan dimuat ulang.", "🎉");
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            } else {
+                showSapaModal("Aktivasi Gagal", resJson.message, "❌");
+                setLoading('btn_upgrade_pay', false);
+            }
+        } catch (err) {
+            showSapaModal("Kesalahan Sistem", "Pembayaran sukses namun aktivasi gagal: " + err, "⚠️");
+            setLoading('btn_upgrade_pay', false);
+        }
+    }
+</script>
+
+</body>
+</html>

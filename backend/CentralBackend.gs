@@ -21,8 +21,8 @@ const ADMIN_EMAIL = "sapatamuku@gmail.com";
 const FONNTE_TOKEN = "fRx1Canf4GYroBZZNfo7";
 
 // CONFIG MIDTRANS PAYMENT GATEWAY
-const MIDTRANS_SERVER_KEY = "HIDDEN_PRODUCTION_SERVER_KEY"; // Kunci Asli sudah di-deploy di GAS
-const MIDTRANS_IS_PRODUCTION = true; // Set ke true jika live production
+const MIDTRANS_SERVER_KEY = "PASTE_KEY_SANDBOX_DISINI"; // Sandbox Server Key
+const MIDTRANS_IS_PRODUCTION = false; // Set ke true jika live production
 
 function handleCentralPost(request) {
   const action = request.action;
@@ -46,6 +46,7 @@ function handleCentralPost(request) {
     case 'updateOwnerClient': return handleUpdateOwnerClient(request);
     case 'deleteOwnerClient': return handleDeleteOwnerClient(request);
     case 'syncFromSupabase': return handleSyncFromSupabase(request);
+    case 'upgradePackage': return handleUpgradePackage(request);
     case 'syncAllClients': return createResponse({ status: "success", message: syncAllClientsToSupabase() });
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
@@ -1031,5 +1032,55 @@ function handleSyncFromSupabase(data) {
     return createResponse({ status: "success", message: "Data client disinkronkan ke Spreadsheet" });
   } catch (err) {
     return createResponse({ status: "error", message: "Gagal sync ke Spreadsheet: " + err.toString() });
+  }
+}
+
+// --- FUNGSI UPGRADE PAKET ---
+function handleUpgradePackage(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const values = sheet.getDataRange().getValues();
+    let rowIndex = -1;
+    const targetSub = String(data.username || "").toLowerCase();
+    
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][0]).toLowerCase() === targetSub || String(values[i][9]).toLowerCase() === targetSub) { 
+        rowIndex = i + 1; 
+        break; 
+      }
+    }
+    
+    if (rowIndex === -1) return createResponse({ status: "error", message: "Client tidak ditemukan di Spreadsheet" });
+    
+    const orig = values[rowIndex - 1];
+    const newPackage = data.newPackage;
+    
+    // Update Kolom L (index 11) dengan paket baru
+    sheet.getRange(rowIndex, 12).setValue(newPackage);
+    
+    // Sync ke Supabase
+    try {
+      syncClientToSupabase({
+        username: orig[0],
+        ssid: orig[1],
+        password: orig[2],
+        whatsapp: orig[3],
+        wedding_date: orig[4],
+        created_at: orig[5] ? new Date(orig[5]).toISOString() : new Date().toISOString(),
+        email: orig[6],
+        status: orig[7],
+        category: orig[8],
+        subdomain: orig[9],
+        client_name: orig[10],
+        package: newPackage
+      });
+    } catch (e) {
+      console.error("Gagal sync upgrade ke Supabase: " + e.toString());
+    }
+    
+    return createResponse({ status: "success", message: "Paket berhasil di-upgrade ke " + newPackage });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Gagal memproses upgrade: " + err.toString() });
   }
 }
