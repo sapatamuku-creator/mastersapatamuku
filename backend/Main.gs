@@ -178,7 +178,7 @@ function handleMainPost(payload) {
         break;
 
       case "update_tanda_kasih": 
-        result = updateTandaKasih(ssId, payload.kodeUnik, payload.nominal); 
+        result = updateTandaKasih(ssId, payload.kodeUnik, payload.nominal, payload.statusHadiah); 
         break;
 
       case "sendAutomationBlast":
@@ -284,7 +284,7 @@ function deleteGuest(ssId, kodeUnik) {
 /**
  * Memperbarui nominal angpao di Kolom R berdasarkan Kode Unik di Kolom F
  */
-function updateTandaKasih(ssId, kode, nominal) {
+function updateTandaKasih(ssId, kode, nominal, statusHadiah) {
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_DATA);
   const lastRow = sheet.getLastRow();
@@ -297,10 +297,16 @@ function updateTandaKasih(ssId, kode, nominal) {
     if (String(dataRange[i][0]) === String(kode)) {
       const targetRow = i + START_ROW;
       sheet.getRange(targetRow, COLUMN_TANDA_KASIH).setValue(nominal);
+      if (statusHadiah !== undefined) {
+        sheet.getRange(targetRow, COL_STATUS_HADIAH).setValue(statusHadiah);
+      }
       
       // SINKRONISASI KE SUPABASE SECARA OTOMATIS
       try {
         if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+          let payload = { tanda_kasih: parseFloat(nominal) || 0 };
+          if (statusHadiah !== undefined) payload.status_hadiah = statusHadiah;
+          
           UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kode, {
             method: "patch",
             headers: {
@@ -308,7 +314,7 @@ function updateTandaKasih(ssId, kode, nominal) {
               "Authorization": "Bearer " + SUPABASE_KEY,
               "Content-Type": "application/json"
             },
-            payload: JSON.stringify({ tanda_kasih: parseFloat(nominal) || 0 }),
+            payload: JSON.stringify(payload),
             muteHttpExceptions: true
           });
         }

@@ -648,6 +648,11 @@
         listBody.innerHTML = filtered.map(row => {
             const isDone = row.jamDatang && row.jamDatang !== "-";
             const isChecked = selectedIDs.has(row.kode);
+            
+            let giftIcons = "";
+            if ((row.statusHadiah && row.statusHadiah.includes("ANGPAO")) || parseFloat(row.tandaKasih) > 0) giftIcons += "🧧";
+            if (row.statusHadiah && row.statusHadiah.includes("KADO")) giftIcons += "🎁";
+
             return `
                 <div class="guest-item ${isDone ? 'checked-in' : ''}" style="border-top: 4px solid ${isDone?'var(--success)':'var(--border)'}">
                     <div class="guest-header">
@@ -656,7 +661,7 @@
                                 ${!isDone ? `<input type="checkbox" ${isChecked ? 'checked' : ''} style="accent-color:var(--gold); transform:scale(1.3); pointer-events:none;">` : '✅'}
                             </div>
                             <div>
-                                <div class="guest-name">${row.nama}</div>
+                                <div class="guest-name">${row.nama} <span style="font-size:14px; margin-left:4px;">${giftIcons}</span></div>
                             </div>
                         </div>
                         <div class="guest-wa">${row.whatsapp || '-'}</div>
