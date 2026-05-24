@@ -42,7 +42,7 @@ function handleWAEnginePost(data) {
       const category = String(sheet.getRange("B6").getValue() || "wedding").toLowerCase();
       
       let greeting = "*SELAMAT DATANG* 🌟";
-      let body = `Halo *${guest.nama}*,\n\nTerima kasih telah melakukan check-in di acara *${eventName}*.`;
+      let body = `Yth. *${guest.nama}*,\n\nTerima kasih atas kehadiran Anda dan memberikan doa restu di acara *${eventName}*.`;
       
       if (category.includes("wedding")) {
         greeting = "💍 *HAPPY WEDDING*";
@@ -55,7 +55,7 @@ function handleWAEnginePost(data) {
         body = `Halo *${guest.nama}*,\n\nTerima kasih telah hadir merayakan hari spesial *${eventName}*.`;
       }
 
-      const footer = `\n\n📸 *Informasi:* \nFoto dokumentasi dapat diakses secara berkala melalui scan QR-Code AI gallery yang tersedia.\n\nSelamat menikmati acara!\n— *SapaTamu.ku x Knowhere Studio*`;
+      const footer = `\n\n📸 *Informasi Penting:* \nFoto dokumentasi kebersamaan Anda dapat diakses secara berkala dengan memindai QR-Code AI Gallery yang tersedia di area visual.\n\nSelamat menikmati seluruh rangkaian acara!\n\nSalam hangat,\n— *sapatamu.id x Knowhere Studio*`;
       const finalMessage = `${greeting}\n\n${body}${footer}`;
       
       return sendToFonnte(cleanedPhone, finalMessage);
