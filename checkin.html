@@ -1136,28 +1136,31 @@
                     }
                 }
             });
-            const primaryGuest = multiConfig[0];
-            if (primaryGuest) {
+            multiConfig.forEach((guest, index) => {
+                const d = new Date();
+                d.setSeconds(d.getSeconds() + index);
+                const staggeredNow = d.toISOString();
+
                 printPromises.push(
                     fetch(`${SB_URL}/rest/v1/welcome_queue`, {
                         method: "POST", headers: SB_HEADERS,
                         body: JSON.stringify({
                             id: genUUID(),
                             ssid: CURRENT_SS_ID,
-                            nama: primaryGuest.nama || "-",
-                            kategori: primaryGuest.kategori || "Umum",
-                            alamat: primaryGuest.alamat || "-",
-                            pihak: primaryGuest.pihakPengundang || "-",
-                            pax: String(primaryGuest.adult + primaryGuest.child),
-                            kode: primaryGuest.id || "-",
+                            nama: guest.nama || "-",
+                            kategori: guest.kategori || "Umum",
+                            alamat: guest.alamat || "-",
+                            pihak: guest.pihakPengundang || "-",
+                            pax: String((parseInt(guest.adult)||1) + (parseInt(guest.child)||0)),
+                            kode: guest.id || "-",
                             status: "DISPLAY",
-                            created_at: nowISO
+                            created_at: staggeredNow
                         })
                     }).then(async res => {
                         if (!res.ok) console.error("Supabase welcome_queue error:", await res.text());
                     }).catch(e => console.warn(e))
                 );
-            }
+            });
 
             if (printPromises.length > 0) {
                 try { await Promise.all(printPromises); } catch(e) { console.error(e); }
@@ -1243,3 +1246,4 @@
 </script>
 </body>
 </html>
+

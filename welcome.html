@@ -517,7 +517,15 @@
             }
         }
 
-        function showGuest(guest) {
+        let localDisplayQueue = [];
+        let isDisplaying = false;
+
+        function processDisplayQueue() {
+            if (isDisplaying || localDisplayQueue.length === 0) return;
+            isDisplaying = true;
+            
+            const guest = localDisplayQueue.shift();
+            
             const box = document.getElementById('guest-box');
             box.classList.remove('animate-in');
             void box.offsetWidth;
@@ -527,6 +535,21 @@
             document.getElementById('g-cat').innerText = guest.kategori || "";
             document.getElementById('g-addr').innerText = guest.alamat || "";
             currentGuestName = guest.nama;
+
+            // Tahan tampilan selama 6 detik, lalu lanjut ke antrean berikutnya
+            setTimeout(() => {
+                isDisplaying = false;
+                processDisplayQueue();
+            }, 6000);
+        }
+
+        function showGuest(guest) {
+            // Hindari duplikasi beruntun
+            if (currentGuestName === guest.nama && localDisplayQueue.length === 0 && isDisplaying) return;
+            if (localDisplayQueue.some(g => g.nama === guest.nama)) return;
+            
+            localDisplayQueue.push(guest);
+            processDisplayQueue();
         }
 
         function initSupabaseRealtimeTamu() {
@@ -728,3 +751,4 @@
 </body>
 
 </html>
+
