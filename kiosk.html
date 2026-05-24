@@ -679,11 +679,15 @@
                 // Encode to base64 to avoid JSON parsing issues with quotes
                 const guestJson = encodeURIComponent(JSON.stringify(row));
                 
+                let giftIcons = "";
+                if ((row.statusHadiah && row.statusHadiah.includes("ANGPAO")) || parseFloat(row.tandaKasih) > 0) giftIcons += "🧧";
+                if (row.statusHadiah && row.statusHadiah.includes("KADO")) giftIcons += "🎁";
+                
                 return `
                     <div class="mb-5 bg-white rounded-3xl p-6 md:p-8 border-2 ${isDone ? 'border-[#10B981] opacity-60' : 'border-[#F0E6DE]'} shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <div class="flex items-center gap-4 mb-3">
-                                <h3 class="text-xl md:text-2xl font-bold text-[#4A3F35] uppercase tracking-wide">${row.nama}</h3>
+                                <h3 class="text-xl md:text-2xl font-bold text-[#4A3F35] uppercase tracking-wide">${row.nama} <span class="ml-1">${giftIcons}</span></h3>
                                 <span class="text-xs bg-[#FFF9F5] text-[#C8962E] px-4 py-1.5 md:py-2 rounded-full font-bold tracking-widest border border-[#F0E6DE]">${row.kategori || 'UMUM'}</span>
                             </div>
                             <div class="flex flex-wrap gap-x-6 md:gap-x-8 gap-y-2 text-sm md:text-base font-bold text-[#8C7560]">
