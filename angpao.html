@@ -624,16 +624,37 @@
         listBody.innerHTML = filtered.map(row => {
             const isDone = row.jamDatang && row.jamDatang !== "-";
             
-            let giftIcons = "";
-            if ((row.statusHadiah && row.statusHadiah.includes("ANGPAO")) || parseFloat(row.tandaKasih) > 0) giftIcons += "🧧";
-            if (row.statusHadiah && row.statusHadiah.includes("KADO")) giftIcons += "🎁";
+            let giftElements = [];
+            let nominalValue = parseFloat(row.tandaKasih) || 0;
+            
+            if (nominalValue > 0) {
+                let formattedNominal = "Rp " + nominalValue.toLocaleString('id-ID');
+                giftElements.push(`<span style="background:#e74c3c; color:#fff; padding:4px 8px; border-radius:8px; font-size:13px; font-weight:800; letter-spacing:0.5px; box-shadow:0 2px 5px rgba(231,76,60,0.3); margin-left:8px; display:inline-flex; align-items:center; gap:4px;">🧧 ${formattedNominal}</span>`);
+            } else if (row.statusHadiah && row.statusHadiah.includes("ANGPAO")) {
+                giftElements.push(`<span style="font-size:16px; margin-left:4px;">🧧</span>`);
+            }
+            
+            if (row.statusHadiah && row.statusHadiah.includes("KADO")) {
+                giftElements.push(`<span style="font-size:16px; margin-left:4px;">🎁</span>`);
+            }
+
+            let finalGiftDisplay = giftElements.join('');
+            
+            // Highlight card jika sudah ada input hadiah
+            let cardStyle = "border-top: 4px solid var(--border);";
+            if (nominalValue > 0 || (row.statusHadiah && row.statusHadiah.includes("KADO")) || (row.statusHadiah && row.statusHadiah.includes("ANGPAO"))) {
+                cardStyle = "background: #fdf5f5; border-top: 4px solid #e74c3c; box-shadow: 0 4px 12px rgba(231,76,60,0.1);";
+            }
 
             return `
-                <div class="guest-item" style="border-top: 4px solid var(--border); cursor:pointer;" onclick="openAngpaoModal('${row.kode}')">
+                <div class="guest-item" style="${cardStyle} cursor:pointer; transition:0.3s;" onclick="openAngpaoModal('${row.kode}')">
                     <div class="guest-header">
                         <div style="display:flex; align-items:center; gap:10px;">
                             <div>
-                                <div class="guest-name">${row.nama} <span style="font-size:14px; margin-left:4px;">${giftIcons}</span></div>
+                                <div class="guest-name" style="display:flex; align-items:center; flex-wrap:wrap;">
+                                    ${row.nama} 
+                                    ${finalGiftDisplay}
+                                </div>
                             </div>
                         </div>
                         <div class="guest-wa">${row.whatsapp || '-'}</div>
@@ -780,14 +801,18 @@
 
         try {
             // Update Supabase
-            await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${activeGuest.kode}`, {
+            const numericVal = parseFloat(val) || 0;
+            const patchRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${activeGuest.kode}`, {
                 method: "PATCH",
                 headers: SB_HEADERS,
                 body: JSON.stringify({
-                    tanda_kasih: val,
+                    tanda_kasih: numericVal,
                     status_hadiah: newStatusHadiah
                 })
             });
+            if (!patchRes.ok) {
+                console.error("Supabase Patch Error:", await patchRes.text());
+            }
 
             // Update GS
             fetch(SCRIPT_URL, {
