@@ -816,7 +816,8 @@ function syncClientToSupabaseWithResult(rowData) {
     status: rowData.status || "Active",
     category: rowData.category,
     subdomain: rowData.subdomain,
-    client_name: rowData.client_name
+    client_name: rowData.client_name,
+    package: rowData.package
   };
 
   const options = {
@@ -912,7 +913,8 @@ function syncAllClientsToSupabase() {
         status: String(row[7] || "Active").trim(),
         category: String(row[8] || "wedding").trim(),
         subdomain: String(row[9] || username).trim(),
-        client_name: String(row[10] || "").trim()
+        client_name: String(row[10] || "").trim(),
+        package: String(row[11] || "").trim()
       };
 
       try {
