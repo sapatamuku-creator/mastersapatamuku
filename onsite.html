@@ -1543,6 +1543,53 @@
             el.innerText = val;
         };
 
+        window.toggleRegSelfie = async function () {
+            const v = document.getElementById('reg-video');
+            const container = document.getElementById('reg-preview-container');
+            const preview = document.getElementById('reg-photo-preview');
+            const btn = document.getElementById('btn-reg-snap');
+            const canvas = document.getElementById('reg-canvas');
+            
+            if (!regStream && !capturedBase64) {
+                try {
+                    regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                    v.srcObject = regStream;
+                    container.style.display = 'block';
+                    v.style.display = 'block';
+                    preview.style.display = 'none';
+                    btn.innerText = "📷 AMBIL FOTO SEKARANG";
+                    btn.style.background = "var(--gold)";
+                    btn.style.color = "white";
+                } catch (err) {
+                    alert("Gagal mengakses kamera: " + err.message);
+                }
+            } else if (regStream && !capturedBase64) {
+                const ctx = canvas.getContext('2d');
+                canvas.width = v.videoWidth || 640;
+                canvas.height = v.videoHeight || 480;
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+                capturedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                
+                regStream.getTracks().forEach(t => t.stop());
+                regStream = null;
+                
+                v.style.display = 'none';
+                preview.src = capturedBase64;
+                preview.style.display = 'block';
+                
+                btn.innerText = "🔄 ULANGI SELFIE";
+                btn.style.background = "white";
+                btn.style.color = "var(--gold)";
+            } else if (capturedBase64) {
+                capturedBase64 = null;
+                preview.style.display = 'none';
+                preview.src = "";
+                toggleRegSelfie();
+            }
+        };
+
         async function takeSelfie() {
             const v = document.getElementById('camera-preview');
             const c = document.getElementById('capture-canvas');
