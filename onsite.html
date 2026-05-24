@@ -1818,6 +1818,132 @@
 
                     await Promise.all(printPromises);
 
+            } catch (e) {
+                if (blocker) blocker.remove();
+                showAlert("Error", "Gagal koneksi.", "❌");
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        window.submitOnsite = async function() {
+            const nama = document.getElementById('reg-nama').value;
+            const whatsapp = document.getElementById('reg-wa').value;
+            if (!nama) { showAlert("Perhatian", "Nama wajib diisi!", "⚠️"); return; }
+            const cleanPhone = whatsapp.replace(/\D/g, '');
+
+            const loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+
+            // --- STEP 1: BLOCK UI ---
+            const blocker = document.createElement('div');
+            blocker.id = "global-blocker";
+            blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
+            document.body.appendChild(blocker);
+
+            const adult = document.getElementById('reg-pax-adult').innerText;
+            const child = document.getElementById('reg-pax-child').innerText;
+            const total = parseInt(adult) + parseInt(child);
+            const paxString = `${total} ( ${adult}D + ${child}A )`;
+            const gift = (document.getElementById('reg-tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('reg-tag-kado').classList.contains('active') ? "KADO" : "");
+            
+            try {
+                // Generate Unique Code and Print UUID on Frontend
+                const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+                const kodeUnik = "ONS-" + randomPart;
+                const mainPrintId = crypto.randomUUID();
+                const stationId = JALUR_ID === "ALL" ? "ONSITE-ALL" : "ONSITE-" + JALUR_ID;
+                const timeOnly = new Date().toLocaleTimeString('en-GB', { hour12: false });
+                const SB_HEADERS = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                };
+
+                try {
+                    // Update print queue and welcome queue first
+                    let catUpper = String(document.getElementById('reg-kategori').value || "").toUpperCase();
+                    let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
+
+                    const printPromises = [
+                        fetch(`${SB_URL}/rest/v1/print_queue`, {
+                            method: "POST",
+                            headers: SB_HEADERS,
+                            body: JSON.stringify({
+                                id: mainPrintId,
+                                ssid: CURRENT_SS_ID,
+                                nama: nama || "-",
+                                kode: kodeUnik,
+                                qr: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
+                                info: labelType,
+                                status: "WAITING",
+                                kategori: document.getElementById('reg-kategori').value || "Umum",
+                                alamat: document.getElementById('reg-alamat').value || "-",
+                                pihak: document.getElementById('reg-host').value || "-",
+                                sesi: document.getElementById('reg-sesi').value || "-",
+                                pax: paxString,
+                                station_id: stationId
+                            })
+                        })
+                    ];
+
+                    if (gift && gift !== "-" && gift !== "ON-SITE") {
+                        const statusUpper = String(gift).toUpperCase();
+                        const queueSouvenir = (souvenirType) => {
+                            const souvenirPrintId = crypto.randomUUID();
+                            printPromises.push(
+                                fetch(`${SB_URL}/rest/v1/print_queue`, {
+                                    method: "POST",
+                                    headers: SB_HEADERS,
+                                    body: JSON.stringify({
+                                        id: souvenirPrintId,
+                                        ssid: CURRENT_SS_ID,
+                                        nama: nama || "-",
+                                        kode: kodeUnik,
+                                        qr: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
+                                        info: "SOUVENIR: " + souvenirType,
+                                        status: "WAITING",
+                                        kategori: document.getElementById('reg-kategori').value || "Umum",
+                                        alamat: document.getElementById('reg-alamat').value || "-",
+                                        pihak: document.getElementById('reg-host').value || "-",
+                                        sesi: document.getElementById('reg-sesi').value || "-",
+                                        pax: paxString,
+                                        station_id: stationId
+                                    })
+                                })
+                            );
+                        };
+
+                        if (statusUpper.includes("ANGPAO") && statusUpper.includes("KADO")) {
+                            queueSouvenir("KADO");
+                            queueSouvenir("ANGPAO");
+                        } else {
+                            queueSouvenir(statusUpper);
+                        }
+                    }
+
+                    printPromises.push(
+                        fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                            method: "POST", headers: SB_HEADERS,
+                            body: JSON.stringify({
+                                id: crypto.randomUUID(),
+                                ssid: CURRENT_SS_ID,
+                                nama: nama || "Tanpa Nama",
+                                kategori: document.getElementById('reg-kategori').value || "Umum",
+                                alamat: document.getElementById('reg-alamat').value || "-",
+                                pihak: document.getElementById('reg-host').value || "-",
+                                pax: paxString,
+                                kode: kodeUnik,
+                                status: "DISPLAY",
+                                created_at: new Date().toISOString()
+                            })
+                        }).then(async res => {
+                            if (!res.ok) console.warn("welcome_queue onsite write error:", await res.text());
+                        }).catch(e => console.warn(e))
+                    );
+
+                    await Promise.all(printPromises);
+
                 } catch(e) {
                     console.error("Direct Supabase guest registration / print queuing failed:", e);
                 }
