@@ -536,6 +536,14 @@
             document.getElementById('g-addr').innerText = guest.alamat || "";
             currentGuestName = guest.nama;
 
+            // Ping ke Google Sheet untuk update status antrean (Rundown: WAITING -> DISPLAY -> DONE)
+            try {
+                if (ssId) {
+                    fetch(`${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`, { mode: "no-cors" })
+                        .catch(e => console.log("Silent sheet sync error", e));
+                }
+            } catch(e) {}
+
             // Tahan tampilan selama 6 detik, lalu lanjut ke antrean berikutnya
             setTimeout(() => {
                 isDisplaying = false;
@@ -751,4 +759,5 @@
 </body>
 
 </html>
+
 
