@@ -355,7 +355,7 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId, customUui
             const payload = {
               status_hadir: "1",
               jam_datang: timeOnly,
-              real_hadir: parseInt(realHadir) || 1,
+              real_hadir: String(realHadir),
               status_hadiah: catatan || "-",
               souvenir: updatedRowData[10] === 1 || updatedRowData[10] === "ya" || updatedRowData[10] === "1" ? "ya" : "tidak"
             };
@@ -731,7 +731,7 @@ function registerNewOnsite(data) {
             whatsapp: cleanPhone,
             kategori: data.kategori || "UMUM",
             rencana_hadir: 0,
-            real_hadir: parseInt(data.realHadir) || 1,
+            real_hadir: String(data.realHadir),
             souvenir: data.souvenir === "tidak" ? "tidak" : "ya",
             pihak_pengundang: data.host || "-",
             alamat: data.alamat || "-",
@@ -873,7 +873,7 @@ function submitGuestCollection(formData) {
         whatsapp: cleanPhone,
         kategori: formData.kategori || "Umum",
         rencana_hadir: parseInt(formData.pax || formData.rencana) || 1,
-        real_hadir: parseInt(realHadir),
+        real_hadir: String(realHadir),
         souvenir: "tidak",
         pihak_pengundang: formData.pihak || "-",
         alamat: formData.alamat || "-",
@@ -1521,7 +1521,7 @@ function syncSheetToSupabase(ssId) {
         whatsapp: row[3] ? String(row[3]) : "",
         kategori: String(row[4] || "Umum"),
         rencana_hadir: parseInt(row[7]) || 1,
-        real_hadir: parseInt(row[13]) || 0,
+        real_hadir: String(row[13]),
         souvenir: String(row[10] || "tidak"),
         pihak_pengundang: String(row[11] || "-"),
         alamat: String(row[12] || "-"),
@@ -1784,3 +1784,4 @@ function editGuest(payload) {
     return { status: "error", message: e.toString() };
   }
 }
+
