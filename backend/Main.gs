@@ -818,6 +818,8 @@ function submitGuestCollection(formData) {
   
   if (formData.source === "onsite") {
     prefix = "ONS-";
+  } else if (formData.source === "offline") {
+    prefix = "OFF-";
   } else {
     if (category.includes("wedding")) prefix = "WDG-";
     else if (category.includes("birthday")) prefix = "BTH-";
@@ -840,10 +842,19 @@ function submitGuestCollection(formData) {
   }
   const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?data=" + kodeUnik + "&size=400x400";
   
+  const statusWA = formData.source === "offline" ? "[TAMU OFFLINE]" : "BELUM TERKIRIM";
+  const statusHadiah = formData.statusHadiah || "-";
+  const tandaKasih = formData.tandaKasih || 0;
+  
+  // Jika offline angpao, otomatis set hadir
+  const statusCheckin = formData.isOfflineAngpao ? 1 : 0;
+  const jamDatang = formData.isOfflineAngpao ? Utilities.formatDate(new Date(), "GMT+7", "HH:mm") : "-";
+  const realHadir = formData.isOfflineAngpao ? (formData.pax || formData.rencana || 1) : 0;
+
   const newRow = [
     "=ROW()-" + (START_ROW - 1), nowFormatted, formData.nama, "'" + cleanPhone, 
-    formData.kategori, kodeUnik, qrUrl, formData.pax || formData.rencana || 1, 0, "-", 0, 
-    formData.pihak, formData.alamat, 0, "-", "BELUM TERKIRIM", "-", 0, formData.sesi || "-"
+    formData.kategori, kodeUnik, qrUrl, formData.pax || formData.rencana || 1, statusCheckin, jamDatang, 0, 
+    formData.pihak, formData.alamat, realHadir, "-", statusWA, statusHadiah, tandaKasih, formData.sesi || "-"
   ];
   sheet.appendRow(newRow);
   const lastRow = sheet.getLastRow();
@@ -862,16 +873,16 @@ function submitGuestCollection(formData) {
         whatsapp: cleanPhone,
         kategori: formData.kategori || "Umum",
         rencana_hadir: parseInt(formData.pax || formData.rencana) || 1,
-        real_hadir: 0,
+        real_hadir: parseInt(realHadir),
         souvenir: "tidak",
         pihak_pengundang: formData.pihak || "-",
         alamat: formData.alamat || "-",
-        status_hadir: "0",
-        status_wa: "PENDING",
-        status_hadiah: "-",
-        tanda_kasih: 0,
+        status_hadir: String(statusCheckin),
+        status_wa: statusWA,
+        status_hadiah: statusHadiah,
+        tanda_kasih: tandaKasih,
+        jam_datang: jamDatang,
         sesi: formData.sesi || "-",
-        jam_datang: "-",
         event_date: eventDate
       };
       

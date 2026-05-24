@@ -257,8 +257,9 @@
                     <span id="checkedin-guests" style="background: var(--gold); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 GUESTS</span>
                 </div>
             </div>
-            <div class="search-container">
-                <input type="text" class="search-input" id="search-box" placeholder="Cari nama atau kode..." oninput="renderUI()">
+            <div class="search-container" style="display:flex; gap:10px;">
+                <input type="text" class="search-input" id="search-box" placeholder="Cari nama atau kode..." oninput="renderUI()" style="flex:1;">
+                <button onclick="openOfflineModal()" style="background:var(--text-main); color:#fff; border:none; border-radius:12px; padding:0 15px; font-weight:800; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:14px;">+</span> TAMU OFFLINE</button>
             </div>
             <div class="list-wrapper" id="guest-list"></div>
         </div>
@@ -278,8 +279,49 @@
     </style>
     <div id="modalConfirm" class="modal-overlay">
         <div class="modal-card">
-            <h3 id="m-nama" style="margin: 0; color: var(--text-main); font-size: 15px; font-weight: 800; text-align: center; text-transform: uppercase;">NAMA TAMU</h3>
-            <p id="m-info" style="font-size: 10px; color: var(--text-muted); margin: 5px 0 15px;">Input Nominal Angpao & Kado</p>
+            
+            <!-- Normal Guest Header -->
+            <div id="m-normal-header">
+                <h3 id="m-nama" style="margin: 0; color: var(--text-main); font-size: 15px; font-weight: 800; text-align: center; text-transform: uppercase;">NAMA TAMU</h3>
+                <p id="m-info" style="font-size: 10px; color: var(--text-muted); margin: 5px 0 15px; text-align: center;">Input Nominal Angpao & Kado</p>
+            </div>
+
+            <!-- Offline Guest Form (Hidden by default) -->
+            <div id="m-offline-header" style="display:none; text-align:left; margin-bottom:15px;">
+                <h3 style="margin: 0 0 10px 0; color: var(--text-main); font-size: 15px; font-weight: 800; text-transform: uppercase; text-align:center;">Tamu Offline & Hadiah</h3>
+                
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:9px; font-weight:800; color:#aaa; margin-bottom:3px; display:block;">NAMA TAMU</label>
+                    <input type="text" id="offNama" oninput="validateInput()" style="width:100%; padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:12px; font-weight:700; outline:none; background:#f9f9f9;" placeholder="Ketik nama...">
+                </div>
+                
+                <div style="display:flex; gap:10px; margin-bottom:8px;">
+                    <div style="flex:1;">
+                        <label style="font-size:9px; font-weight:800; color:#aaa; margin-bottom:3px; display:block;">KATEGORI</label>
+                        <select id="offCat" style="width:100%; padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:12px; font-weight:700; outline:none; background:#f9f9f9;">
+                            <option value="Umum">Umum</option>
+                            <option value="VIP">VIP</option>
+                            <option value="Keluarga">Keluarga</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:9px; font-weight:800; color:#aaa; margin-bottom:3px; display:block;">PENGUNDANG</label>
+                        <select id="offHost" style="width:100%; padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:12px; font-weight:700; outline:none; background:#f9f9f9;">
+                            <option value="Pengantin Pria">Pengantin Pria</option>
+                            <option value="Pengantin Wanita">Pengantin Wanita</option>
+                            <option value="Orang Tua Pria">Orang Tua Pria</option>
+                            <option value="Orang Tua Wanita">Orang Tua Wanita</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:9px; font-weight:800; color:#aaa; margin-bottom:3px; display:block;">ALAMAT / DOMISILI</label>
+                    <input type="text" id="offAlamat" style="width:100%; padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:12px; font-weight:700; outline:none; background:#f9f9f9;" placeholder="-">
+                </div>
+                <hr style="border:none; border-top:1px dashed #ddd; margin: 15px 0 10px;">
+                <label style="font-size:9px; font-weight:800; color:#aaa; margin-bottom:3px; display:block; text-align:center;">NOMINAL ANGPAO</label>
+            </div>
             
             <div class="display-area">
                 <input type="number" id="nomInput" class="nominal-input" placeholder="0" oninput="validateInput()">
@@ -751,8 +793,17 @@
     window.validateInput = function() {
         const val = parseFloat(document.getElementById('nomInput').value) || 0;
         const hasKado = document.getElementById('tag-kado').classList.contains('active');
-        document.getElementById('btn-final-confirm').disabled = !(activeGuest && (val > 0 || hasKado));
-        if (activeGuest && (val > 0 || hasKado)) {
+        
+        let isValid = false;
+        if (isOfflineMode) {
+            const nama = document.getElementById('offNama').value.trim();
+            isValid = (nama !== '') && (val > 0 || hasKado);
+        } else {
+            isValid = activeGuest && (val > 0 || hasKado);
+        }
+        
+        document.getElementById('btn-final-confirm').disabled = !isValid;
+        if (isValid) {
             document.getElementById('btn-final-confirm').style.opacity = "1";
         } else {
             document.getElementById('btn-final-confirm').style.opacity = "0.5";
@@ -771,12 +822,17 @@
     };
 
     window.executeAngpao = async function() {
-        if (isBusy || !activeGuest) return;
+        if (isBusy) return;
+        if (!isOfflineMode && !activeGuest) return;
         isBusy = true;
 
         const val = parseFloat(document.getElementById('nomInput').value) || 0;
         const hasKado = document.getElementById('tag-kado').classList.contains('active');
-        let newStatusHadiah = activeGuest.statusHadiah || "-";
+        let newStatusHadiah = "-";
+        
+        if (!isOfflineMode) {
+            newStatusHadiah = activeGuest.statusHadiah || "-";
+        }
         
         // Build new status_hadiah
         let tags = [];
@@ -800,35 +856,62 @@
         document.body.appendChild(blocker);
 
         try {
-            // Update Supabase
             const numericVal = parseFloat(val) || 0;
-            const patchRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${activeGuest.kode}`, {
-                method: "PATCH",
-                headers: SB_HEADERS,
-                body: JSON.stringify({
-                    tanda_kasih: numericVal,
-                    status_hadiah: newStatusHadiah
-                })
-            });
-            if (!patchRes.ok) {
-                console.error("Supabase Patch Error:", await patchRes.text());
+            
+            if (isOfflineMode) {
+                // Flow Tamu Offline -> submitGuestCollection
+                const payloadOffline = {
+                    action: "submitCollection",
+                    ssId: CURRENT_SS_ID,
+                    source: "offline",
+                    isOfflineAngpao: true,
+                    nama: document.getElementById('offNama').value.trim(),
+                    kategori: document.getElementById('offCat').value,
+                    pihak: document.getElementById('offHost').value,
+                    alamat: document.getElementById('offAlamat').value.trim() || "-",
+                    pax: 1,
+                    whatsapp: "",
+                    tandaKasih: numericVal,
+                    statusHadiah: newStatusHadiah,
+                    sesi: "SESI 1"
+                };
+                
+                // Fetch directly (using await so we can show success after it finishes)
+                const res = await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payloadOffline)
+                });
+                
+                const result = await res.json();
+                if(result.status !== "success") throw new Error("Gagal menyimpan tamu offline.");
+                
+            } else {
+                // Flow Normal -> Update Supabase & GS
+                const patchRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${activeGuest.kode}`, {
+                    method: "PATCH",
+                    headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        tanda_kasih: numericVal,
+                        status_hadiah: newStatusHadiah
+                    })
+                });
+                if (!patchRes.ok) console.error("Supabase Patch Error:", await patchRes.text());
+
+                fetch(SCRIPT_URL, {
+                    method: "POST", mode: "no-cors",
+                    body: JSON.stringify({ action: "update_tanda_kasih", ssId: CURRENT_SS_ID, kodeUnik: activeGuest.kode, nominal: val, statusHadiah: newStatusHadiah })
+                }).catch(e => console.warn("Background sheet sync failed:", e));
+
+                // Update local memory for instant UI reflection
+                const mIdx = masterData.findIndex(g => g.kode === activeGuest.kode);
+                if(mIdx !== -1) {
+                    masterData[mIdx].tandaKasih = val;
+                    masterData[mIdx].statusHadiah = newStatusHadiah;
+                }
+                renderUI();
             }
 
-            // Update GS
-            fetch(SCRIPT_URL, {
-                method: "POST", mode: "no-cors",
-                body: JSON.stringify({ action: "update_tanda_kasih", ssId: CURRENT_SS_ID, kodeUnik: activeGuest.kode, nominal: val, statusHadiah: newStatusHadiah })
-            }).catch(e => console.warn("Background sheet sync failed:", e));
-
-            // Update local memory for instant UI reflection
-            const mIdx = masterData.findIndex(g => g.kode === activeGuest.kode);
-            if(mIdx !== -1) {
-                masterData[mIdx].tandaKasih = val;
-                masterData[mIdx].statusHadiah = newStatusHadiah;
-            }
-            renderUI();
-
-            const guestName = activeGuest.nama;
+            const guestName = isOfflineMode ? document.getElementById('offNama').value.trim() : activeGuest.nama;
             await closeModal();
             
             document.getElementById('loading').style.display = 'none';
@@ -849,3 +932,5 @@
 </script>
 </body>
 </html>
+
+
