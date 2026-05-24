@@ -937,6 +937,7 @@
                             style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
                         <img id="reg-photo-preview"
                             style="display:none; width:100%; height:100%; object-fit:cover; transform:scaleX(-1);" />
+                        <div id="reg-countdown-overlay" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); color:white; font-size:100px; font-weight:800; align-items:center; justify-content:center; z-index:10;"></div>
                     </div>
                     <button id="btn-reg-snap" onclick="toggleRegSelfie()"
                         style="background: white; border: 1px solid var(--gold); color: var(--gold); padding: 10px 20px; border-radius: 30px; font-size: 11px; font-weight: 800; cursor: pointer; width:100%;">📸
@@ -1564,24 +1565,45 @@
                     alert("Gagal mengakses kamera: " + err.message);
                 }
             } else if (regStream && !capturedBase64) {
-                const ctx = canvas.getContext('2d');
-                canvas.width = v.videoWidth || 640;
-                canvas.height = v.videoHeight || 480;
-                ctx.translate(canvas.width, 0);
-                ctx.scale(-1, 1);
-                ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-                capturedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                btn.disabled = true;
+                btn.innerText = "MENYIAPKAN...";
+
+                const overlay = document.getElementById('reg-countdown-overlay');
+                if(overlay) overlay.style.display = 'flex';
+                let count = 3;
+                if(overlay) overlay.innerText = count;
                 
-                regStream.getTracks().forEach(t => t.stop());
-                regStream = null;
-                
-                v.style.display = 'none';
-                preview.src = capturedBase64;
-                preview.style.display = 'block';
-                
-                btn.innerText = "🔄 ULANGI SELFIE";
-                btn.style.background = "white";
-                btn.style.color = "var(--gold)";
+                const timer = setInterval(() => {
+                    count--;
+                    if (count > 0) {
+                        if(overlay) overlay.innerText = count;
+                    } else if (count === 0) {
+                        if(overlay) overlay.innerText = "📸";
+                    } else {
+                        clearInterval(timer);
+                        if(overlay) overlay.style.display = 'none';
+                        
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = v.videoWidth || 640;
+                        canvas.height = v.videoHeight || 480;
+                        ctx.translate(canvas.width, 0);
+                        ctx.scale(-1, 1);
+                        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+                        capturedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                        
+                        regStream.getTracks().forEach(t => t.stop());
+                        regStream = null;
+                        
+                        v.style.display = 'none';
+                        preview.src = capturedBase64;
+                        preview.style.display = 'block';
+                        
+                        btn.disabled = false;
+                        btn.innerText = "🔄 ULANGI SELFIE";
+                        btn.style.background = "white";
+                        btn.style.color = "var(--gold)";
+                    }
+                }, 800);
             } else if (capturedBase64) {
                 capturedBase64 = null;
                 preview.style.display = 'none';
