@@ -119,9 +119,87 @@
         }
 
         .dashboard-grid {
+            position: relative;
+            z-index: 1;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
+        }
+
+        /* ANIMASI BACKGROUND FLOATING HEARTS UNTUK MAIN AREA */
+        .dynamic-bg-main {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            margin: 0; padding: 0;
+        }
+
+        .dynamic-bg-main li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 25px;
+            height: 25px;
+            background: transparent;
+            animation: floatDiagonalMain 22s linear infinite;
+            bottom: -150px;
+        }
+
+        .dynamic-bg-main li::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E07B7B' opacity='0.12'%3E%3Cpath d='M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            animation: pulseHeart 4s ease-in-out infinite alternate;
+        }
+
+        .dynamic-bg-main li:nth-child(1) { left: 5%; width: 45px; height: 45px; animation-delay: 0s; animation-duration: 25s; }
+        .dynamic-bg-main li:nth-child(2) { left: 20%; width: 22px; height: 22px; animation-delay: 3s; animation-duration: 18s; }
+        .dynamic-bg-main li:nth-child(3) { left: 35%; width: 55px; height: 55px; animation-delay: 6s; animation-duration: 28s; }
+        .dynamic-bg-main li:nth-child(4) { left: 50%; width: 32px; height: 32px; animation-delay: 1s; animation-duration: 20s; }
+        .dynamic-bg-main li:nth-child(5) { left: 65%; width: 25px; height: 25px; animation-delay: 8s; animation-duration: 22s; }
+        .dynamic-bg-main li:nth-child(6) { left: 80%; width: 42px; height: 42px; animation-delay: 4s; animation-duration: 26s; }
+        .dynamic-bg-main li:nth-child(7) { left: 15%; width: 30px; height: 30px; animation-delay: 10s; animation-duration: 21s; }
+        .dynamic-bg-main li:nth-child(8) { left: 45%; width: 38px; height: 38px; animation-delay: 12s; animation-duration: 29s; }
+        .dynamic-bg-main li:nth-child(9) { left: 75%; width: 22px; height: 22px; animation-delay: 2s; animation-duration: 16s; }
+        .dynamic-bg-main li:nth-child(10){ left: 90%; width: 48px; height: 48px; animation-delay: 9s; animation-duration: 27s; }
+
+        @keyframes floatDiagonalMain {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(30vw, -120vh) rotate(260deg); opacity: 0; }
+        }
+
+        /* Welcome Mirror Style */
+        .mirror-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1.5px solid rgba(240, 230, 222, 0.7);
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.05);
+        }
+
+        .mirror-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1280px;
+            height: 720px;
+            border: none;
+            pointer-events: none;
+            transform-origin: 0 0;
         }
 
         .full-width {
@@ -510,14 +588,27 @@
                 </div>
             </div>
 
+            <!-- Welcome Mirror Widget -->
+            <div id="welcome-mirror-box" class="mt-6 pt-4 border-t border-gray-100/50">
+                <span class="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-widest">Welcome Screen Mirror</span>
+                <div id="welcome-mirror-container" class="mirror-container">
+                    <iframe id="welcome-mirror-iframe" src="" class="mirror-iframe"></iframe>
+                </div>
+            </div>
+
             <div
-                class="mt-auto pt-8 text-[10px] font-black text-gray-300 tracking-[5px] uppercase text-center border-t border-gray-50 opacity-50">
+                class="mt-auto pt-4 text-[10px] font-black text-gray-300 tracking-[5px] uppercase text-center opacity-50">
                 SapaTamu.ku
             </div>
             </div>
         </div>
 
         <div id="content-panel">
+            <!-- Animasi Background Hearts untuk Main Area -->
+            <ul class="dynamic-bg-main">
+                <li></li><li></li><li></li><li></li><li></li>
+                <li></li><li></li><li></li><li></li><li></li>
+            </ul>
             <div class="dashboard-grid">
                 <div id="box-flow" class="section-box full-width">
                     <div class="section-title"><span>Flow Monitoring Per Sesi</span></div>
@@ -811,12 +902,32 @@
             container.innerHTML = html;
         }
 
+        function resizeWelcomeMirror() {
+            const iframe = document.getElementById('welcome-mirror-iframe');
+            const container = document.getElementById('welcome-mirror-container');
+            if (iframe && container) {
+                const scale = container.offsetWidth / 1280;
+                iframe.style.width = '1280px';
+                iframe.style.height = '720px';
+                iframe.style.transform = `scale(${scale})`;
+            }
+        }
+        window.addEventListener('resize', resizeWelcomeMirror);
+
         async function fetchData() {
             try {
                 const sessionStr = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
                 if (!sessionStr) return;
                 const sessionData = JSON.parse(sessionStr);
                 const ssId = sessionData.ssId;
+
+                // Initialize welcome mirror iframe src
+                const mirrorIframe = document.getElementById('welcome-mirror-iframe');
+                if (mirrorIframe && !mirrorIframe.src) {
+                    mirrorIframe.src = `welcome.html?mode=kiosk&ssId=${ssId}`;
+                    setTimeout(resizeWelcomeMirror, 500);
+                    mirrorIframe.onload = resizeWelcomeMirror;
+                }
 
                 const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + ssId + "&order=row.desc";
                 const response = await fetch(supabaseUrl, {
