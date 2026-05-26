@@ -921,12 +921,17 @@
                 const sessionData = JSON.parse(sessionStr);
                 const ssId = sessionData.ssId;
 
-                // Initialize welcome mirror iframe src
+                // Initialize welcome mirror iframe src (gunakan data-loaded flag, bukan .src check)
                 const mirrorIframe = document.getElementById('welcome-mirror-iframe');
-                if (mirrorIframe && !mirrorIframe.src) {
-                    mirrorIframe.src = `welcome.html?mode=kiosk&ssId=${ssId}`;
-                    setTimeout(resizeWelcomeMirror, 500);
-                    mirrorIframe.onload = resizeWelcomeMirror;
+                if (mirrorIframe && !mirrorIframe.dataset.loaded) {
+                    mirrorIframe.dataset.loaded = '1';
+                    // Pass ssId + user agar subdomain_resolver.js di dalam iframe
+                    // menyimpan ke localStorage (shared same-origin) → welcome.html bisa baca ssId
+                    const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+                    const uname = sessionObj.username || sessionObj.subdomain || 'monitor';
+                    mirrorIframe.src = `welcome.html?mode=kiosk&ssId=${ssId}&user=${encodeURIComponent(uname)}`;
+                    mirrorIframe.onload = () => { resizeWelcomeMirror(); };
+                    setTimeout(resizeWelcomeMirror, 800);
                 }
 
                 const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + ssId + "&order=row.desc";
