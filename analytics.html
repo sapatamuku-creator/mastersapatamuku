@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu.ku - Pro Analytics Node</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
         rel="stylesheet">
     <script src="subdomain_resolver.js?v=3.3"></script>
@@ -200,6 +201,96 @@
             border: none;
             pointer-events: none;
             transform-origin: 0 0;
+        }
+
+        /* ── ARRIVAL NOTIFICATION CARDS ── */
+        .arrival-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .arrival-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.85);
+            border: 1px solid rgba(224,123,123,0.25);
+            border-left: 3px solid #E07B7B;
+            border-radius: 14px;
+            padding: 8px 12px;
+            animation: arrivalSlideIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+            transition: all 0.3s ease;
+        }
+
+        .arrival-card:nth-child(1) { border-left-color: #E07B7B; }
+        .arrival-card:nth-child(2) { border-left-color: #C8962E; }
+        .arrival-card:nth-child(3) { border-left-color: #987BB2; }
+        .arrival-card:nth-child(4) { border-left-color: #99B8A5; }
+        .arrival-card:nth-child(5) { border-left-color: #D4A5B8; }
+
+        .arrival-card-rank {
+            font-size: 9px;
+            font-weight: 900;
+            color: #E07B7B;
+            opacity: 0.5;
+            min-width: 14px;
+            text-align: center;
+        }
+
+        .arrival-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .arrival-card-name {
+            font-size: 10px;
+            font-weight: 800;
+            color: #4A3F35;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .arrival-card-meta {
+            font-size: 8.5px;
+            font-weight: 600;
+            color: #8C7560;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 1px;
+        }
+
+        .arrival-card-time {
+            font-size: 8px;
+            font-weight: 700;
+            color: #C8962E;
+            white-space: nowrap;
+            opacity: 0.8;
+        }
+
+        @keyframes arrivalSlideIn {
+            from { opacity: 0; transform: translateX(-12px) scale(0.96); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+
+        .arrival-realtime-dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #E07B7B;
+            animation: arrival-pulse 1.5s ease-in-out infinite;
+            margin-right: 4px;
+        }
+
+        @keyframes arrival-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.4; transform: scale(0.7); }
         }
 
         .full-width {
@@ -588,8 +679,21 @@
                 </div>
             </div>
 
+            <!-- Panel 5 Tamu Terakhir Realtime -->
+            <div class="mt-6 pt-4 border-t border-gray-100/50">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[9px] font-black uppercase text-gray-400 tracking-widest">
+                        <span class="arrival-realtime-dot"></span>Tamu Baru Hadir
+                    </span>
+                    <span id="arrival-realtime-status" class="text-[7px] font-bold text-green-500 uppercase tracking-wider">Connecting...</span>
+                </div>
+                <div id="arrival-list" class="arrival-list">
+                    <p class="text-[9px] text-gray-300 italic px-2 py-3 text-center">Menunggu data tamu...</p>
+                </div>
+            </div>
+
             <!-- Welcome Mirror Widget -->
-            <div id="welcome-mirror-box" class="mt-6 pt-4 border-t border-gray-100/50">
+            <div id="welcome-mirror-box" class="mt-4 pt-4 border-t border-gray-100/50">
                 <span class="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-widest">Welcome Screen Mirror</span>
                 <div id="welcome-mirror-container" class="mirror-container">
                     <iframe id="welcome-mirror-iframe" src="" class="mirror-iframe"></iframe>
@@ -914,6 +1018,108 @@
         }
         window.addEventListener('resize', resizeWelcomeMirror);
 
+        // ── REALTIME ARRIVAL NOTIFICATIONS ──────────────────────────────
+        const SB_RT_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SB_RT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+        let arrivalRealtimeClient = null;
+        let arrivalRealtimeChannel = null;
+        let arrivalPollTimer = null;
+        let arrivalSsId = null;
+        let lastArrivalIds = new Set();
+
+        function formatArrivalTime(isoStr) {
+            if (!isoStr) return '';
+            try {
+                const d = new Date(isoStr);
+                return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
+            } catch(e) { return ''; }
+        }
+
+        function renderArrivalList(guests) {
+            const list = document.getElementById('arrival-list');
+            if (!list) return;
+            if (!guests || guests.length === 0) {
+                list.innerHTML = '<p class="text-[9px] text-gray-300 italic px-2 py-3 text-center">Belum ada tamu hadir...</p>';
+                return;
+            }
+            list.innerHTML = guests.map((g, i) => {
+                const nama = (g.nama || '-').toUpperCase();
+                const kat  = (g.kategori || g.kategori || '-').toUpperCase();
+                const pihak = (g.pihak || '-').toUpperCase();
+                const jam   = formatArrivalTime(g.created_at);
+                return `<div class="arrival-card" style="animation-delay:${i * 0.07}s">
+                    <div class="arrival-card-rank">${i + 1}</div>
+                    <div class="arrival-card-info">
+                        <div class="arrival-card-name">${nama}</div>
+                        <div class="arrival-card-meta">${kat} &bull; ${pihak}</div>
+                    </div>
+                    <div class="arrival-card-time">${jam}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function fetchArrivalList() {
+            if (!arrivalSsId) return;
+            try {
+                const url = `${SB_RT_URL}/rest/v1/welcome_queue?ssid=eq.${arrivalSsId}&status=eq.DISPLAY&order=created_at.desc&limit=5&select=nama,kategori,pihak,created_at`;
+                const res = await fetch(url, {
+                    headers: { "apikey": SB_RT_KEY, "Authorization": "Bearer " + SB_RT_KEY }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                renderArrivalList(data);
+            } catch(e) { console.warn('Arrival fetch error:', e); }
+        }
+
+        function initArrivalRealtime(ssId) {
+            arrivalSsId = ssId;
+            const statusEl = document.getElementById('arrival-realtime-status');
+
+            // Initial fetch
+            fetchArrivalList();
+
+            // Supabase Realtime
+            try {
+                if (window.supabase) {
+                    arrivalRealtimeClient = window.supabase.createClient(SB_RT_URL, SB_RT_KEY);
+                    arrivalRealtimeChannel = arrivalRealtimeClient
+                        .channel('analytics_arrival_channel')
+                        .on('postgres_changes', {
+                            event: 'INSERT',
+                            schema: 'public',
+                            table: 'welcome_queue',
+                            filter: `ssid=eq.${ssId}`
+                        }, (payload) => {
+                            console.log('Arrival Realtime INSERT:', payload.new);
+                            fetchArrivalList(); // Re-fetch top 5
+                        })
+                        .subscribe((status) => {
+                            if (statusEl) {
+                                if (status === 'SUBSCRIBED') {
+                                    statusEl.textContent = 'Realtime ●';
+                                    statusEl.className = 'text-[7px] font-bold text-green-500 uppercase tracking-wider';
+                                    // Slow polling backup
+                                    if (arrivalPollTimer) clearInterval(arrivalPollTimer);
+                                    arrivalPollTimer = setInterval(fetchArrivalList, 30000);
+                                } else {
+                                    statusEl.textContent = 'Polling';
+                                    statusEl.className = 'text-[7px] font-bold text-yellow-500 uppercase tracking-wider';
+                                    if (arrivalPollTimer) clearInterval(arrivalPollTimer);
+                                    arrivalPollTimer = setInterval(fetchArrivalList, 5000);
+                                }
+                            }
+                        });
+                } else {
+                    throw new Error('Supabase lib not loaded');
+                }
+            } catch(e) {
+                console.warn('Arrival realtime fallback polling:', e);
+                if (statusEl) { statusEl.textContent = 'Polling'; statusEl.className = 'text-[7px] font-bold text-yellow-500 uppercase tracking-wider'; }
+                if (arrivalPollTimer) clearInterval(arrivalPollTimer);
+                arrivalPollTimer = setInterval(fetchArrivalList, 5000);
+            }
+        }
+
         async function fetchData() {
             try {
                 const sessionStr = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
@@ -932,6 +1138,11 @@
                     mirrorIframe.src = `welcome.html?mode=kiosk&ssId=${ssId}&user=${encodeURIComponent(uname)}`;
                     mirrorIframe.onload = () => { resizeWelcomeMirror(); };
                     setTimeout(resizeWelcomeMirror, 800);
+                }
+
+                // Inisialisasi Realtime Arrival (hanya sekali)
+                if (!arrivalSsId) {
+                    initArrivalRealtime(ssId);
                 }
 
                 const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + ssId + "&order=row.desc";
