@@ -386,10 +386,8 @@
     }
 
     function updatePoolStats() {
-        const hadir = masterData.filter(g => {
-            const val = String(g.statusHadir || g.jamDatang || "").trim();
-            return val === "1" || (val !== "-" && val !== "");
-        }); 
+        // Hanya tamu yang SUDAH HADIR (status_hadir = "1") yang masuk pool
+        const hadir = masterData.filter(g => String(g.statusHadir).trim() === "1");
         
         const valid = hadir.filter(g => {
             const hadiah = String(g.statusHadiah || "").trim();
@@ -424,14 +422,15 @@
     window.runLuckyDraw = function() {
         if(isSpinning) return;
         
+        // Filter HANYA tamu yang status_hadir === "1" (konfirmasi hadir) dan belum menang
         const validCandidates = masterData.filter(g => {
-            const isHadir = String(g.statusHadir || g.jamDatang || "").trim() !== "-" && String(g.statusHadir || g.jamDatang || "").trim() !== "";
+            const isHadir = String(g.statusHadir).trim() === "1";
             const isNoGift = String(g.statusHadiah || "").trim() === "-" || String(g.statusHadiah || "").trim() === "";
             return isHadir && isNoGift;
         });
         
         if(validCandidates.length === 0) {
-            showSapaModal("Perhatian", "Tidak ada kandidat valid! Pastikan tamu sudah check-in dan belum menang.", "⚠️");
+            showSapaModal("Perhatian", "Tidak ada kandidat valid! Pastikan tamu sudah check-in (Status Hadir = 1) dan belum menang.", "⚠️");
             return;
         }
         
