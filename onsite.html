@@ -19,6 +19,22 @@
         *, *::before, *::after {
             box-sizing: border-box;
         }
+
+        /* Toggle switch camera */
+        .cam-toggle-wrap { display:flex; align-items:center; gap:5px; }
+        .cam-toggle-label { font-size:8px; font-weight:800; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em; white-space:nowrap; }
+        .cam-toggle { position:relative; width:32px; height:18px; flex-shrink:0; }
+        .cam-toggle input { opacity:0; width:0; height:0; }
+        .cam-toggle-slider {
+          position:absolute; cursor:pointer; inset:0;
+          background:#ddd; border-radius:18px; transition:0.3s;
+        }
+        .cam-toggle-slider:before {
+          content:''; position:absolute; width:12px; height:12px;
+          left:3px; bottom:3px; background:white; border-radius:50%; transition:0.3s;
+        }
+        .cam-toggle input:checked + .cam-toggle-slider { background:#10B981; }
+        .cam-toggle input:checked + .cam-toggle-slider:before { transform:translateX(14px); }
         :root {
             --primary: #E07B7B;
             --bg: #FFF9F5;
@@ -807,6 +823,14 @@
                     <option value="4">JALUR 4</option>
                 </select>
                 <span id="realtime-status" style="font-size: 8px; font-weight: 800; margin-left: 4px; padding: 2px 6px; border-radius: 10px; background: #fee2e2; color: #ef4444; transition: 0.3s;">Realtime Off</span>
+                <!-- Toggle Kamera -->
+                <div class="cam-toggle-wrap">
+                    <span class="cam-toggle-label">CAM</span>
+                    <label class="cam-toggle">
+                        <input type="checkbox" id="cam-toggle-onsite" onchange="toggleScanner(this.checked)">
+                        <span class="cam-toggle-slider"></span>
+                    </label>
+                </div>
                 <!-- pw-btn injected by PrinterWidget.init() -->
             </div>
 
@@ -1047,6 +1071,20 @@
         let masterData = [];
         let html5QrCode;
         let selectedIDs = new Set();
+        let scannerEnabled = false; // default OFF - hemat baterai
+
+        function toggleScanner(enabled) {
+            scannerEnabled = enabled;
+            localStorage.setItem('onsite_cam_on', enabled ? '1' : '0');
+            if (enabled) {
+                initScanner();
+            } else {
+                if (html5QrCode) {
+                    html5QrCode.stop().catch(() => {});
+                    html5QrCode = null;
+                }
+            }
+        }
         
         window.toggleSelect = function(id) {
             if (selectedIDs.has(id)) selectedIDs.delete(id);
@@ -1251,7 +1289,13 @@
             fetchData();
             syncMetadataOptions();
             initSupabaseRealtimeTamu();
-            initScanner();
+
+            const savedCam = localStorage.getItem('onsite_cam_on');
+            scannerEnabled = savedCam === '1';
+            const toggleEl = document.getElementById('cam-toggle-onsite');
+            if (toggleEl) toggleEl.checked = scannerEnabled;
+            if (scannerEnabled) initScanner();
+
             initNavScroll();
         }
 
@@ -1530,7 +1574,7 @@
                 photoPreview.src = "";
             }
 
-            setTimeout(() => initScanner(), 300);
+            if (scannerEnabled) setTimeout(() => initScanner(), 300);
         }
 
         window.updatePax = function (type, delta) {

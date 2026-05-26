@@ -131,6 +131,16 @@
         }
         .spinner { width: 60px; height: 60px; border: 4px solid var(--border); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Toggle switch camera */
+        .cam-toggle-wrap { display:inline-flex; align-items:center; gap:5px; }
+        .cam-toggle-label { font-size:9px; font-weight:800; text-transform:uppercase; color:#8C7560; letter-spacing:0.05em; white-space:nowrap; }
+        .cam-toggle { position:relative; width:32px; height:18px; flex-shrink:0; }
+        .cam-toggle input { opacity:0; width:0; height:0; }
+        .cam-toggle-slider { position:absolute; cursor:pointer; inset:0; background:#ddd; border-radius:18px; transition:0.3s; }
+        .cam-toggle-slider:before { content:''; position:absolute; width:12px; height:12px; left:3px; bottom:3px; background:white; border-radius:50%; transition:0.3s; }
+        .cam-toggle input:checked + .cam-toggle-slider { background:#10B981; }
+        .cam-toggle input:checked + .cam-toggle-slider:before { transform:translateX(14px); }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -154,6 +164,14 @@
                 <option value="3">JALUR 3</option>
                 <option value="4">JALUR 4</option>
             </select>
+            <!-- Toggle Kamera -->
+            <div class="cam-toggle-wrap">
+                <span class="cam-toggle-label">CAM</span>
+                <label class="cam-toggle">
+                    <input type="checkbox" id="cam-toggle-kiosk" onchange="toggleScanner(this.checked)">
+                    <span class="cam-toggle-slider"></span>
+                </label>
+            </div>
             <!-- Printer Widget button injected here by PrinterWidget.init() -->
         </div>
     </div>
@@ -382,6 +400,23 @@
         
         // Settings State
         let JALUR_ID = "ALL";
+        let scannerEnabled = false; // default OFF - hemat baterai
+
+        function toggleScanner(enabled) {
+            scannerEnabled = enabled;
+            localStorage.setItem('kiosk_cam_on', enabled ? '1' : '0');
+            if (enabled) {
+                // Hanya aktifkan jika sudah di scan-state (idle state tersembunyi)
+                const idleVisible = document.getElementById('kiosk-idle-state').style.opacity !== '0';
+                if (!idleVisible) initScanner();
+            } else {
+                if (html5QrCode) {
+                    html5QrCode.stop().catch(() => {});
+                    html5QrCode.clear();
+                    html5QrCode = null;
+                }
+            }
+        }
         
         // Selfie States
         let currentStream = null;
@@ -408,8 +443,14 @@
                 jalurKey: 'kiosk_jalur_id'
             });
 
+            // Restore camera toggle state
+            const savedCam = localStorage.getItem('kiosk_cam_on');
+            scannerEnabled = savedCam === '1';
+            const toggleEl = document.getElementById('cam-toggle-kiosk');
+            if (toggleEl) toggleEl.checked = scannerEnabled;
+
             fetchData();
-            initScanner();
+            if (scannerEnabled) initScanner();
         }
 
         async function fetchData() {
@@ -457,8 +498,8 @@
         }
 
         function restartScanner() {
-            if (!html5QrCode) {
-                document.getElementById('reader').innerHTML = ''; // clean up container
+            if (!html5QrCode && scannerEnabled) {
+                document.getElementById('reader').innerHTML = '';
                 initScanner();
             }
         }
@@ -466,6 +507,7 @@
         function startScanning() {
             document.getElementById('kiosk-idle-state').style.opacity = '0';
             document.getElementById('kiosk-idle-state').style.pointerEvents = 'none';
+            if (scannerEnabled && !html5QrCode) initScanner();
         }
 
         function returnToIdle() {
