@@ -46,11 +46,11 @@
         #sidebar-panel {
             position: relative;
             background: linear-gradient(135deg, #FFF9F5 0%, #FDF2F2 100%);
-            padding: 4vh 2vw;
+            padding: clamp(12px, 2.5vh, 32px) clamp(10px, 1.5vw, 24px);
             border-right: 1px solid #eee;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: hidden; /* hearts clip */
         }
 
         /* ANIMASI BACKGROUND FLOATING HEARTS KHUSUS SIDEBAR */
@@ -529,23 +529,39 @@
         }
 
         .pill-button {
-            padding: 8px 16px;
+            padding: clamp(5px, 0.6vh, 8px) clamp(10px, 1vw, 16px);
             border-radius: 50px;
             background: #eee;
             color: #666;
-            font-size: 10px;
+            font-size: clamp(8px, 0.85vw, 10px);
             font-weight: 800;
             cursor: pointer;
-            transition: 0.3s;
+            transition: background 0.25s, color 0.25s, border-color 0.25s;
             white-space: nowrap;
-            border: 1px solid transparent;
+            border: 1.5px solid transparent;
+            outline: none;
+            user-select: none;
         }
 
         .pill-button.active {
             background: var(--primary);
             color: white;
-            transform: scale(1.05);
+            border-color: var(--primary);
         }
+
+        /* Hide scrollbar tapi tetap bisa scroll */
+        #sidebar-inner::-webkit-scrollbar { display: none; }
+
+        /* Compact arrival cards utk layar kecil */
+        .arrival-card {
+            padding: clamp(5px, 0.7vh, 8px) clamp(8px, 0.8vw, 12px);
+            gap: clamp(6px, 0.6vw, 10px);
+            border-radius: clamp(10px, 1vw, 14px);
+        }
+        .arrival-card-name  { font-size: clamp(8px, 0.75vw, 10px); }
+        .arrival-card-meta  { font-size: clamp(7px, 0.65vw, 8.5px); }
+        .arrival-card-time  { font-size: clamp(7px, 0.6vw, 8px); }
+        .arrival-list       { gap: clamp(3px, 0.4vh, 6px); }
 
         #fs-btn {
             position: fixed;
@@ -639,43 +655,35 @@
                 <li></li><li></li><li></li><li></li><li></li>
             </ul>
 
-            <div style="position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; width: 100%;">
-            <div class="mb-8">
-                <h1 class="text-2xl font-black tracking-tighter uppercase">Analytics<span
-                        class="text-[#D4AF37]">.Node</span></h1>
-                <p id="clock" class="text-gray-400 font-bold tracking-[3px] text-[10px] mt-2">00:00:00</p>
+            <div id="sidebar-inner" style="position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; width: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -ms-overflow-style: none;">
+            <div class="mb-6">
+                <h1 class="font-black tracking-tighter uppercase" style="font-size: clamp(16px, 1.8vw, 24px);">Analytics<span class="text-[#D4AF37]">.Node</span></h1>
+                <p id="clock" class="text-gray-400 font-bold tracking-[3px] mt-1" style="font-size: clamp(7px, 0.7vw, 10px);">00:00:00</p>
             </div>
 
-            <div class="mb-10">
-                <span class="text-[9px] font-black uppercase text-gray-400 block mb-4 tracking-widest">Visual
-                    Control</span>
-                <div id="view-mode-container" class="flex flex-col gap-2">
+            <div class="mb-4">
+                <span class="font-black uppercase text-gray-400 block mb-2 tracking-widest" style="font-size: clamp(7px, 0.7vw, 9px);">Visual Control</span>
+                <div id="view-mode-container" class="flex flex-col gap-1.5">
                     <div class="pill-button active text-center" onclick="setViewMode('ALL', this)">Full Overview</div>
                     <div class="pill-button text-center" onclick="setViewMode('FLOW', this)">Live Flow Monitor</div>
                     <div class="pill-button text-center" onclick="setViewMode('GUEST', this)">Guest Profiling</div>
                 </div>
             </div>
 
-            <div class="space-y-4">
-                <div
-                    class="bg-white/70 backdrop-blur-md p-7 rounded-[32px] border border-[#F0E6DE]/60 shadow-sm transition-all hover:shadow-md">
-                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Kedatangan Pax
-                    </div>
-                    <div id="side-real" class="text-6xl font-black text-gray-800 tracking-tighter">0</div>
-                    <div class="flex items-center gap-2 mt-3">
-                        <span class="relative flex h-2 w-2"><span
-                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span
-                                class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
-                        <span class="text-[9px] font-bold text-green-600 uppercase tracking-tighter">Live Sync
-                            Connected</span>
+            <div class="space-y-3 shrink-0">
+                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm" style="padding: clamp(12px, 1.5vh, 28px) clamp(12px, 1.2vw, 28px);">
+                    <div class="font-bold text-gray-400 uppercase tracking-widest mb-1" style="font-size: clamp(7px, 0.65vw, 10px);">Total Kedatangan Pax</div>
+                    <div id="side-real" class="font-black text-gray-800 tracking-tighter" style="font-size: clamp(36px, 4vh, 64px); line-height:1;">0</div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
+                        <span class="font-bold text-green-600 uppercase tracking-tighter" style="font-size: clamp(7px, 0.65vw, 9px);">Live Sync Connected</span>
                     </div>
                 </div>
 
-                <div class="bg-white/70 backdrop-blur-md p-7 rounded-[32px] border border-[#F0E6DE]/60 shadow-sm">
-                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Akurasi RSVP</div>
-                    <div id="side-acc" class="text-6xl font-black text-[#C8962E] tracking-tighter">0%</div>
-                    <div class="text-[9px] font-bold text-gray-300 mt-2 uppercase tracking-widest">Database Match Rate
-                    </div>
+                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm" style="padding: clamp(12px, 1.5vh, 28px) clamp(12px, 1.2vw, 28px);">
+                    <div class="font-bold text-gray-400 uppercase tracking-widest mb-1" style="font-size: clamp(7px, 0.65vw, 10px);">Akurasi RSVP</div>
+                    <div id="side-acc" class="font-black text-[#C8962E] tracking-tighter" style="font-size: clamp(36px, 4vh, 64px); line-height:1;">0%</div>
+                    <div class="font-bold text-gray-300 mt-1 uppercase tracking-widest" style="font-size: clamp(7px, 0.65vw, 9px);">Database Match Rate</div>
                 </div>
             </div>
 
