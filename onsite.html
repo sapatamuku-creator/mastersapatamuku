@@ -13,6 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <script src="subdomain_resolver.js?v=3.3"></script>
+    <script src="printer_widget.js"></script>
 
     <style>
         *, *::before, *::after {
@@ -794,7 +795,7 @@
         <div class="header" style="position: relative;">
             <!-- JALUR SELECTOR -->
             <div
-                style="position: absolute; top: 60px; left: 15px; z-index: 200; display: flex; align-items: center; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                style="position: absolute; top: 60px; left: 15px; z-index: 200; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
                 <span
                     style="font-size: 8px; color: var(--text-muted); font-weight: 800; margin-right: 5px; text-transform: uppercase;">JALUR:</span>
                 <select id="jalur-selector"
@@ -805,7 +806,8 @@
                     <option value="3">JALUR 3</option>
                     <option value="4">JALUR 4</option>
                 </select>
-                <span id="realtime-status" style="font-size: 8px; font-weight: 800; margin-left: 8px; padding: 2px 6px; border-radius: 10px; background: #fee2e2; color: #ef4444; transition: 0.3s;">Realtime Off</span>
+                <span id="realtime-status" style="font-size: 8px; font-weight: 800; margin-left: 4px; padding: 2px 6px; border-radius: 10px; background: #fee2e2; color: #ef4444; transition: 0.3s;">Realtime Off</span>
+                <!-- pw-btn injected by PrinterWidget.init() -->
             </div>
 
             <h1>sapa<span>tamu</span>.ku</h1>
@@ -1237,6 +1239,13 @@
             document.getElementById('jalur-selector').addEventListener('change', (e) => {
                 JALUR_ID = e.target.value;
                 localStorage.setItem('onsite_jalur_id', JALUR_ID);
+            });
+
+            // Init Bluetooth Printer Widget
+            PrinterWidget.init({
+                sourceId: 'ONSITE',
+                jalurSelectorId: 'jalur-selector',
+                jalurKey: 'onsite_jalur_id'
             });
 
             fetchData();
