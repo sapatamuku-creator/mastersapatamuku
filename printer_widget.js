@@ -316,7 +316,7 @@
           injectAfterEl.insertAdjacentElement('afterend', btn);
         } else {
           const jalurEl = document.getElementById(jalurSelectorId);
-          if (jalurEl) { jalurEl.closest('div').insertAdjacentElement('afterend', btn); }
+          if (jalurEl) { jalurEl.closest('div').appendChild(btn); }
           else { document.body.appendChild(btn); }
         }
       }
