@@ -297,16 +297,25 @@ function updateTandaKasih(ssId, kode, nominal, statusHadiah) {
     if (String(dataRange[i][0]) === String(kode)) {
       const targetRow = i + START_ROW;
       sheet.getRange(targetRow, COLUMN_TANDA_KASIH).setValue(nominal);
+      let cleanedGiftStatus = "-";
       if (statusHadiah !== undefined) {
-        // Kolom "Jenis Gift" di GS menggunakan index COL_CATATAN (15)
-        sheet.getRange(targetRow, COL_CATATAN).setValue(statusHadiah);
+        let tags = [];
+        let upperStatus = String(statusHadiah).toUpperCase();
+        if (upperStatus.includes("ANGPAO")) tags.push("ANGPAO");
+        if (upperStatus.includes("KADO")) tags.push("KADO");
+        cleanedGiftStatus = tags.length > 0 ? tags.join(" ") : "-";
+        sheet.getRange(targetRow, COL_CATATAN).setValue(cleanedGiftStatus);
+      } else {
+        cleanedGiftStatus = String(sheet.getRange(targetRow, COL_CATATAN).getValue() || "").trim();
       }
       
       // SINKRONISASI KE SUPABASE SECARA OTOMATIS
       try {
         if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
-          let payload = { tanda_kasih: parseFloat(nominal) || 0 };
-          if (statusHadiah !== undefined) payload.status_hadiah = statusHadiah;
+          let payload = { 
+            tanda_kasih: parseFloat(nominal) || 0,
+            status_hadiah: cleanedGiftStatus
+          };
           
           UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kode, {
             method: "patch",
@@ -343,7 +352,20 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId, customUui
       sheet.getRange(rowIndex, COL_JAM_DATANG).setValue(timeOnly);
       sheet.getRange(rowIndex, 11).setValue(1); // Print status
       sheet.getRange(rowIndex, COL_REAL_HADIR).setValue(realHadir);
-      sheet.getRange(rowIndex, COL_CATATAN).setValue(catatan);
+      let cleanedCatatan = "-";
+      if (catatan) {
+        let tags = [];
+        let upperC = String(catatan).toUpperCase();
+        if (upperC.includes("ANGPAO")) tags.push("ANGPAO");
+        if (upperC.includes("KADO")) tags.push("KADO");
+        cleanedCatatan = tags.length > 0 ? tags.join(" ") : "-";
+      }
+      sheet.getRange(rowIndex, COL_CATATAN).setValue(cleanedCatatan);
+      
+      const currentKasih = sheet.getRange(rowIndex, COLUMN_TANDA_KASIH).getValue();
+      if (currentKasih === "" || currentKasih === null || currentKasih === undefined) {
+        sheet.getRange(rowIndex, COLUMN_TANDA_KASIH).setValue(0);
+      }
       
       SpreadsheetApp.flush(); // Flush updates to spreadsheet so we read correct updated data
       const updatedRowData = sheet.getRange(rowIndex, 1, 1, 19).getValues()[0];
@@ -356,7 +378,7 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId, customUui
               status_hadir: "1",
               jam_datang: timeOnly,
               real_hadir: String(realHadir),
-              status_hadiah: catatan || "-",
+              status_hadiah: cleanedCatatan,
               souvenir: updatedRowData[10] === 1 || updatedRowData[10] === "ya" || updatedRowData[10] === "1" ? "ya" : "tidak"
             };
             
@@ -787,7 +809,7 @@ function claimLuckyDraw(ssId, kode) {
               "Authorization": "Bearer " + SUPABASE_KEY,
               "Content-Type": "application/json"
             },
-            payload: JSON.stringify({ status_hadiah: "WINNER - SUDAH KLAIM" }),
+            payload: JSON.stringify({ status_undian: "WINNER - SUDAH KLAIM" }),
             muteHttpExceptions: true
           });
         }
@@ -854,7 +876,7 @@ function submitGuestCollection(formData) {
   const newRow = [
     "=ROW()-" + (START_ROW - 1), nowFormatted, formData.nama, "'" + cleanPhone, 
     formData.kategori, kodeUnik, qrUrl, formData.pax || formData.rencana || 1, statusCheckin, jamDatang, 0, 
-    formData.pihak, formData.alamat, realHadir, "-", statusWA, statusHadiah, tandaKasih, formData.sesi || "-"
+    formData.pihak, formData.alamat, realHadir, statusHadiah, statusWA, "-", tandaKasih, formData.sesi || "-"
   ];
   sheet.appendRow(newRow);
   const lastRow = sheet.getLastRow();
@@ -1527,7 +1549,15 @@ function syncSheetToSupabase(ssId) {
         alamat: String(row[12] || "-"),
         status_hadir: String(row[8] || "0"),
         status_wa: String(row[15] || "PENDING"),
-        status_hadiah: String(row[14] || "-"), // Kolom O (Index 14) adalah Jenis Gift
+        status_hadiah: (() => {
+          let colO = String(row[14] || "").trim();
+          let oTags = [];
+          let upperO = colO.toUpperCase();
+          if (upperO.includes("ANGPAO")) oTags.push("ANGPAO");
+          if (upperO.includes("KADO")) oTags.push("KADO");
+          return oTags.length > 0 ? oTags.join(" ") : "-";
+        })(),
+        status_undian: String(row[16] || "-").trim(),
         tanda_kasih: parseFloat(row[17]) || 0,
         sesi: String(row[18] || "-"),
         jam_datang: String(row[9] || "-"),
