@@ -593,10 +593,25 @@
             return m ? m[0].padStart(5, '0') : "00:00";
         }
 
-        // Helper: normalisasi format waktu dari Supabase (bisa berupa "HH:MM:SS" atau "HH.MM" dll)
+        // Helper: normalisasi format waktu dari Supabase (bisa berupa "HH:MM:SS", "HH.MM", atau ISO UTC)
         function cleanTimeText(val) {
             if (!val || val === "-" || val === "") return "00:00";
-            let s = String(val).trim().replace(/\./g, ':');
+            let s = String(val).trim();
+            // Jika format ISO (misal 2026-05-25T07:16:56.785Z), konversi ke GMT+7 (Asia/Jakarta)
+            if (s.includes('T')) {
+                try {
+                    let d = new Date(s);
+                    if (!isNaN(d.getTime())) {
+                        let localTime = d.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false });
+                        let parts = localTime.split('.');
+                        if (parts.length < 3) parts = localTime.split(':');
+                        if (parts.length >= 2) {
+                            return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+                        }
+                    }
+                } catch(e) {}
+            }
+            s = s.replace(/\./g, ':');
             let m = s.match(/(\d{1,2}):(\d{2})/);
             if (m) return m[1].padStart(2, '0') + ':' + m[2];
             return "00:00";

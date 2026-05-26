@@ -1560,7 +1560,23 @@ function syncSheetToSupabase(ssId) {
         status_undian: String(row[16] || "-").trim(),
         tanda_kasih: parseFloat(row[17]) || 0,
         sesi: String(row[18] || "-"),
-        jam_datang: String(row[9] || "-"),
+        jam_datang: (() => {
+          let val = row[9];
+          if (val === "" || val === null || val === undefined || String(val).trim() === "-") return "-";
+          if (val instanceof Date) {
+            return Utilities.formatDate(val, "GMT+7", "HH:mm:ss");
+          }
+          let str = String(val).trim();
+          if (str.includes("T") || str.includes("GMT") || str.length > 10) {
+            try {
+              let parsedDate = new Date(str);
+              if (!isNaN(parsedDate.getTime())) {
+                return Utilities.formatDate(parsedDate, "GMT+7", "HH:mm:ss");
+              }
+            } catch(e) {}
+          }
+          return str;
+        })(),
         event_date: eventDate
       };
     }).filter(g => g.nama !== "" && g.kode !== "");
