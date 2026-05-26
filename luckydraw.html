@@ -390,8 +390,8 @@
         const hadir = masterData.filter(g => String(g.statusHadir).trim() === "1");
         
         const valid = hadir.filter(g => {
-            const hadiah = String(g.statusHadiah || "").trim();
-            return hadiah === "-" || hadiah === "";
+            const hadiah = String(g.statusHadiah || "").toUpperCase();
+            return !hadiah.includes("WINNER");
         }); 
         
         document.getElementById('stat-total-hadir').innerText = hadir.length;
@@ -402,8 +402,8 @@
         const container = document.getElementById('winner-history-list');
         container.innerHTML = "";
         const winners = masterData.filter(g => {
-            const hadiah = String(g.statusHadiah || "").trim();
-            return hadiah !== "-" && hadiah !== "";
+            const hadiah = String(g.statusHadiah || "").toUpperCase();
+            return hadiah.includes("WINNER");
         });
         
         winners.forEach(g => {
@@ -425,7 +425,7 @@
         // Filter HANYA tamu yang status_hadir === "1" (konfirmasi hadir) dan belum menang
         const validCandidates = masterData.filter(g => {
             const isHadir = String(g.statusHadir).trim() === "1";
-            const isNoGift = String(g.statusHadiah || "").trim() === "-" || String(g.statusHadiah || "").trim() === "";
+            const isNoGift = !String(g.statusHadiah || "").toUpperCase().includes("WINNER");
             return isHadir && isNoGift;
         });
         
@@ -477,7 +477,7 @@
             document.getElementById('res-name').innerText = guest.nama;
             document.getElementById('res-code').innerText = guest.kode;
             
-            const isWinner = String(guest.statusHadiah || "").trim() !== "-" && String(guest.statusHadiah || "").trim() !== "";
+            const isWinner = String(guest.statusHadiah || "").toUpperCase().includes("WINNER");
             document.getElementById('res-status-label').innerText = "Status: " + (isWinner ? "SUDAH TERKLAIM (" + guest.statusHadiah + ")" : "Belum Konfirmasi");
             
             const btn = document.getElementById('confirm-btn');
