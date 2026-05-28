@@ -607,13 +607,13 @@
     async function refreshApp() {
         toggleProcessing(true, "SYNCING DATA...");
         try {
-            // Fetch metadata dan tamu secara paralel dari Supabase
+            // Coba fetch dari Supabase (Cepat)
             const [metaRes, tamuRes] = await Promise.all([
                 fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=*`, { headers: SB_HEADERS }),
                 fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&order=row.desc`, { headers: SB_HEADERS })
             ]);
 
-            if (!metaRes.ok || !tamuRes.ok) throw new Error("Gagal mengambil data dari Supabase");
+            if (!metaRes.ok || !tamuRes.ok) throw new Error("Supabase fetch failed");
 
             const metaData = await metaRes.json();
             const tamuData = await tamuRes.json();
@@ -621,7 +621,6 @@
             if (metaData && metaData.length > 0) {
                 const meta = metaData[0];
                 
-                // Simpan template ke global untuk digunakan oleh executeBlast
                 window.WA_TEMPLATE_DEFAULT = meta.format_pesan_wa || "";
                 window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
 
@@ -646,30 +645,69 @@
                 }
             }
 
-            // Map data tamu Supabase ke MASTER_LIST
             MASTER_LIST = tamuData.map(t => ({
-                id: t.kode,
-                row: t.row,
-                kode: t.kode,
-                nama: t.nama,
-                whatsapp: t.whatsapp,
-                kategori: t.kategori,
-                pihakPengundang: t.pihak_pengundang,
-                souvenir: t.souvenir,
-                alamat: t.alamat,
-                rencanaHadir: t.rencana_hadir,
-                sesi: t.sesi,
-                statusWA: t.status_wa,
-                statusHadir: t.status_hadir,
-                jamDatang: t.jam_datang,
-                realHadir: t.real_hadir,
-                syncStatus: "done"
+                id: t.kode, row: t.row, kode: t.kode, nama: t.nama, whatsapp: t.whatsapp,
+                kategori: t.kategori, pihakPengundang: t.pihak_pengundang, souvenir: t.souvenir,
+                alamat: t.alamat, rencanaHadir: t.rencana_hadir, sesi: t.sesi, statusWA: t.status_wa,
+                statusHadir: t.status_hadir, jamDatang: t.jam_datang, realHadir: t.real_hadir, syncStatus: "done"
             }));
             
             render(MASTER_LIST);
-        } catch(err) { 
-            console.error(err);
-            showSapaModal("Connection Error", "Gagal menghubungi server. Pastikan Anda online.", "⚠️");
+        } catch(sbErr) { 
+            console.warn("Supabase fetch failed, falling back to GAS:", sbErr);
+            
+            // FALLBACK KE GAS JIKA SUPABASE ERROR
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: "getMasterData", ssId: CURRENT_SS_ID })
+                });
+                const result = await response.json();
+                
+                if (result.status === "error") throw new Error(result.message);
+
+                MASTER_LIST = result.guestList || [];
+                
+                if (result.dropdownOptions && result.dropdownOptions.length > 0) {
+                    const select = document.getElementById('in-l7-pengundang');
+                    if (select) {
+                        select.innerHTML = "";
+                        result.dropdownOptions.forEach(opt => {
+                            const el = document.createElement('option');
+                            el.value = opt.toUpperCase();
+                            el.innerText = opt;
+                            select.appendChild(el);
+                        });
+                    }
+                }
+                
+                if(result.eventMeta) {
+                    window.WA_TEMPLATE_DEFAULT = result.eventMeta.template || "";
+                    
+                    document.getElementById('view-wedding-name').innerText = result.eventMeta.pengantin || "Event Guestbook";
+                    document.getElementById('view-schedule').innerHTML = (result.eventMeta.tanggal || "") + "<br>" + (result.eventMeta.waktu || "");
+                    document.getElementById('view-location').innerText = result.eventMeta.lokasi || "";
+                    document.getElementById('view-link').innerText = result.eventMeta.link || "";
+                    
+                    document.getElementById('edit_ev_nama').value = result.eventMeta.pengantin || "";
+                    document.getElementById('edit_ev_date').value = result.eventMeta.tanggal || "";
+                    document.getElementById('edit_ev_loc').value = result.eventMeta.lokasi || "";
+                    document.getElementById('edit_ev_time').value = result.eventMeta.waktu || "";
+                    document.getElementById('edit_ev_link').value = result.eventMeta.link || "";
+
+                    if(result.eventMeta.sesiOptions && result.eventMeta.sesiOptions.length > 0) {
+                        const sesiSelect = document.getElementById('in-sesi-undangan');
+                        sesiSelect.innerHTML = result.eventMeta.sesiOptions.map((val, index) => {
+                            if(index < 3) document.getElementById(`edit_ev_s${index+1}`).value = val;
+                            return `<option value="${val}">Sesi ${index + 1} (${val})</option>`;
+                        }).join('');
+                    }
+                }
+                render(MASTER_LIST);
+            } catch(gasErr) {
+                console.error("GAS fallback also failed:", gasErr);
+                showSapaModal("Connection Error", "Gagal menghubungi server (Supabase & GAS offline). Pastikan Anda memiliki koneksi internet.", "⚠️");
+            }
         } finally {
             toggleProcessing(false);
         }
