@@ -1103,31 +1103,51 @@
         const tgl = document.getElementById('ev_date_main').value.trim();
         const statusEl = document.getElementById('slot-checker-status');
         const dateEl = document.getElementById('slot-checker-date');
+        const btnPay = document.getElementById('btn_pricing_next');
         
         dateEl.innerText = tgl;
-                statusEl.innerText = "⏳ Sedang Cek Slot...";
+        statusEl.innerText = "⏳ Sedang Cek Slot...";
         statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-amber-200 text-amber-800";
+        btnPay.disabled = true;
 
         try {
-            // Cek slot via GAS backend (aman - tidak membocorkan data klien lain ke browser)
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify({ action: "checkSlot", date: tgl })
-            });
-            const result = await response.json();
+            // Cek slot via Supabase (langsung baca view publik 'client_public_profile')
+            const qDate = encodeURIComponent(tgl);
             
-            if (result.status === "success" && result.available) {
+            const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?wedding_date=eq.${qDate}&status=eq.Active`, {
+                headers: {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY
+                }
+            });
+            
+            if (!response.ok) throw new Error("Gagal mengambil data slot dari Supabase");
+            const rows = await response.json();
+
+            // Hitung booking yang paketnya guestbook/collaboration (butuh tim usher)
+            let bookedCount = 0;
+            if (rows && rows.length > 0) {
+                rows.forEach(row => {
+                    const pkg = (row.package || "").toLowerCase();
+                    if (pkg.includes('guestbook') || pkg.includes('collaboration')) {
+                        bookedCount++;
+                    }
+                });
+            }
+
+            if (bookedCount === 0) {
                 statusEl.innerText = "✅ Slot Tersedia";
                 statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-green-200 text-green-800";
-                document.getElementById('btn_pricing_next').disabled = false;
+                btnPay.disabled = false;
             } else {
-                statusEl.innerText = "❌ Slot Tidak Tersedia (Penuh)";
+                statusEl.innerText = "❌ Slot Penuh";
                 statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-200 text-red-800";
-                document.getElementById('btn_pricing_next').disabled = true;
-                showSapaModal("Tanggal Penuh", "Maaf, slot untuk tanggal tersebut sudah terisi oleh pelanggan lain. Silakan kembali ke Step 1 untuk mengganti tanggal.", "📅");
+                btnPay.disabled = true;
+                showSapaModal("Tanggal Penuh", "Maaf, seluruh slot tim Usher/Guestbook untuk tanggal acara Anda sudah di-booking oleh klien lain. Pembayaran ditangguhkan.", "📅");
             }
         } catch (e) {
-                statusEl.innerText = "⚠️ Gagal Sinkronisasi Slot";
+            console.error("Slot Sync Error:", e);
+            statusEl.innerText = "⚠️  Gagal Sinkronisasi Slot";
             statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-100 text-red-700";
         }
     }
