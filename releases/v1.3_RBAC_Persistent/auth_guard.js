@@ -350,7 +350,7 @@
                         el.style.cursor = '';
                     });
                 } else {
-                    errEl.innerText = 'âŒ ' + (data.message || 'Password salah');
+                    errEl.innerText = '❌ ' + (data.message || 'Password salah');
                     document.getElementById('sapa-admin-pass-input').value = '';
                     document.getElementById('sapa-admin-pass-input').focus();
                 }
