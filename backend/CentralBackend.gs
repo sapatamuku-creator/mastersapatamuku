@@ -22,7 +22,7 @@ const FONNTE_TOKEN = "fRx1Canf4GYroBZZNfo7";
 
 // CONFIG MIDTRANS PAYMENT GATEWAY
 const MIDTRANS_SERVER_KEY = "PASTE_KEY_SANDBOX_DISINI"; // Sandbox Server Key
-const MIDTRANS_IS_PRODUCTION = false; // Set ke true jika live production
+const MIDTRANS_IS_PRODUCTION = true; // Set ke true jika live production
 
 function handleCentralPost(request) {
   const action = request.action;
