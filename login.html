@@ -442,7 +442,64 @@
         const normalizedUser = user.toLowerCase().replace(/[\s&]/g, '');
 
         try {
-            // ─── JALUR UTAMA: GAS BACKEND (Aman - Password tidak melewati browser) ───
+            // ─── JALUR ALTERNATIF: SUPABASE RPC (Sangat Cepat & Aman) ───
+            let supabaseSuccess = false;
+            let sbData = null;
+            try {
+                // Gunakan config dari file ini (sudah terdefinisi SB_URL dan SB_KEY)
+                const sbRes = await fetch(`${SB_URL}/rest/v1/rpc/auth_client`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "apikey": SB_KEY,
+                        "Authorization": "Bearer " + SB_KEY
+                    },
+                    body: JSON.stringify({ p_username: normalizedUser, p_password: pass })
+                });
+                
+                if (sbRes.ok) {
+                    const data = await sbRes.json();
+                    if (data && !data.error) {
+                        sbData = data;
+                        supabaseSuccess = true;
+                    } else if (data && data.error) {
+                        // Jika Supabase RPC yakin password salah, tidak perlu fallback ke GAS
+                        showSapaModal("Login Gagal", data.error, "❌");
+                        setLoading('btn_login', false);
+                        return;
+                    }
+                }
+            } catch(sbErr) {
+                console.warn("Supabase RPC login gagal atau belum dibuat, menggunakan fallback GAS...");
+            }
+
+            if (supabaseSuccess && sbData) {
+                const sub = (sbData.subdomain || sbData.username).toLowerCase().replace(/[\s&]/g, '');
+                
+                if (sbData.status && sbData.status.toLowerCase() !== 'active') {
+                    showSapaModal("Akun Dinonaktifkan", "Akun ini telah dinonaktifkan oleh Admin. Silakan hubungi pusat.", "⚠️ ");
+                    setLoading('btn_login', false);
+                    return;
+                }
+
+                const userData = { 
+                    ssId: sbData.ssId, 
+                    username: sbData.username, 
+                    subdomain: sub,
+                    role: sbData.role || 'client'
+                };
+                localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+
+                const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
+                const targetPage = (currentPage === "login.html" || currentPage === "") ? "dashboard.html" : currentPage;
+                
+                const targetUrl = `https://${sub}.sapatamu.id/${targetPage}?ssId=${sbData.ssId}&user=${encodeURIComponent(sbData.username)}&category=${sbData.category || 'wedding'}&role=${userData.role}`;
+                window.location.replace(targetUrl);
+                return; // Stop execution, login berhasil via RPC
+            }
+
+            // ─── JALUR UTAMA: GAS BACKEND (Fallback Aman - Password tidak melewati browser) ───
             const response = await fetch(SCRIPT_URL, {
                 method: "POST",
                 mode: "cors",
