@@ -348,19 +348,32 @@
         btnPay.disabled = true;
 
         try {
-            // Cek slot via GAS (aman - data klien lain tidak bocor ke browser)
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify({ 
-                    action: "checkSlot", 
-                    date: tgl, 
-                    excludeUsername: currentUserData.username,
-                    usherOnly: true
-                })
+            // Cek slot via Supabase (langsung baca view aman 'client_public_profile')
+            const qDate = encodeURIComponent(tgl);
+            const qUser = encodeURIComponent(currentUserData.username);
+            
+            const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?wedding_date=eq.${qDate}&status=eq.Active&username=neq.${qUser}`, {
+                headers: {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY
+                }
             });
-            const result = await response.json();
+            
+            if (!response.ok) throw new Error("Gagal mengambil data slot dari Supabase");
+            const rows = await response.json();
 
-            if (result.status === "success" && result.available) {
+            // Hitung booking yang paketnya guestbook/collaboration (karena butuh tim usher)
+            let bookedCount = 0;
+            if (rows && rows.length > 0) {
+                rows.forEach(row => {
+                    const pkg = (row.package || "").toLowerCase();
+                    if (pkg.includes('guestbook') || pkg.includes('collaboration')) {
+                        bookedCount++;
+                    }
+                });
+            }
+
+            if (bookedCount === 0) {
                 statusEl.innerText = "✅ Slot Usher Tersedia";
                 statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-green-200 text-green-800";
                 btnPay.disabled = false;
@@ -371,7 +384,8 @@
                 showSapaModal("Tanggal Penuh", "Maaf, seluruh slot tim Usher/Guestbook untuk tanggal acara Anda sudah di-booking oleh klien lain. Pembayaran ditangguhkan.", "📅");
             }
         } catch (e) {
-            statusEl.innerText = "⚠️ Gagal Sinkronisasi Slot";
+            console.error("Slot Sync Error:", e);
+            statusEl.innerText = "⚠️  Gagal Sinkronisasi Slot";
             statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-100 text-red-700";
         }
     }
