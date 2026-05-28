@@ -1,5 +1,5 @@
 /**
- * printer_widget.js — SapaTamu Bluetooth Printer Widget v1.0
+ * printer_widget.js â€” SapaTamu Bluetooth Printer Widget v1.0
  * Inject tombol printer + modal ke panel jalur di kiosk, checkin, onsite.
  * Panggil: PrinterWidget.init({ sourceId: 'CHECKIN', jalurSelectorId: 'jalur-selector', jalurKey: 'checkin_jalur_id' })
  */
@@ -8,7 +8,7 @@
 
   const SB_URL  = "https://llrapesaaoliyjrrrsjh.supabase.co";
   const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 
   let printCharacteristic = null;
   let isProcessing = false;
@@ -22,7 +22,7 @@
   let TAB_ID = "REGISTRASI";
   let currentPollingInterval = 1500;
 
-  // ── CSS ────────────────────────────────────────────────────────────
+  // â”€â”€ CSS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const CSS = `
     #pw-btn {
       display:inline-flex; align-items:center; gap:5px;
@@ -82,7 +82,7 @@
     .pw-queue-badge { background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); color:#10B981; font-size:8px; font-weight:700; padding:2px 8px; border-radius:6px; text-transform:uppercase; }
   `;
 
-  // ── HTML ────────────────────────────────────────────────────────────
+  // â”€â”€ HTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const HTML = `
     <div id="pw-overlay">
       <div id="pw-modal">
@@ -91,7 +91,7 @@
             <h2>Printer Worker</h2>
             <div class="pw-sub">Bluetooth Print Engine v3.5</div>
           </div>
-          <button class="pw-close" onclick="PrinterWidget.close()">✕</button>
+          <button class="pw-close" onclick="PrinterWidget.close()">âœ•</button>
         </div>
         <div class="pw-row">
           <div style="display:flex;gap:20px">
@@ -292,7 +292,7 @@
     }
   }
 
-  // ── PUBLIC API ──────────────────────────────────────────────────────
+  // â”€â”€ PUBLIC API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   window.PrinterWidget = {
     init({ sourceId = 'CHECKIN', jalurSelectorId = 'jalur-selector', jalurKey = 'jalur_id', injectAfterEl = null } = {}) {
       // Inject CSS
@@ -341,7 +341,7 @@
             if (pwJ) pwJ.value = JALUR_ID;
           });
         }
-        // Sync pw-jalur → parent jalur selector
+        // Sync pw-jalur â†’ parent jalur selector
         const pwJ = document.getElementById('pw-jalur');
         if (pwJ) {
           if (savedJalur) pwJ.value = savedJalur;

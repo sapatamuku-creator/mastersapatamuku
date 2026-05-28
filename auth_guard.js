@@ -1,5 +1,5 @@
 /**
- * auth_guard.js — SapaTamu RBAC Guard
+ * auth_guard.js â€” SapaTamu RBAC Guard
  * =====================================
  * Diinclude di setiap halaman yang dilindungi.
  * Otomatis menerapkan akses berdasarkan role session.
@@ -26,13 +26,13 @@
         }
     };
 
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
     const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
     const SESSION_KEY = 'sapatamu_session';
     const LOCAL_DB = 'sapatamu_db';
 
-    // ─── Baca session & role ───────────────────────────────────────────────
+    // â”€â”€â”€ Baca session & role â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function getSession() {
         try {
             return JSON.parse(sessionStorage.getItem(SESSION_KEY)) ||
@@ -46,7 +46,7 @@
         return getSession().role || undefined;
     }
 
-    // ─── Upgrade role di session (Switch to Admin) ─────────────────────────
+    // â”€â”€â”€ Upgrade role di session (Switch to Admin) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function upgradeRoleToUsher() {
         const s = getSession();
         s.role = 'usher';
@@ -55,7 +55,7 @@
         localStorage.setItem(LOCAL_DB, JSON.stringify(s));
     }
 
-    // ─── Disable seluruh konten (view-only) ───────────────────────────────
+    // â”€â”€â”€ Disable seluruh konten (view-only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // NAV SELALU BEBAS: elemen di dalam #nav-scroll / .nav-scroll-container
     // tidak pernah di-disable agar user tetap bisa pindah halaman
     function isInsideNav(el) {
@@ -129,13 +129,13 @@
         }
     }
 
-    // ─── MODE A: Halaman Lapangan (kiosk/checkin/onsite/worker) ──────────
+    // â”€â”€â”€ MODE A: Halaman Lapangan (kiosk/checkin/onsite/worker) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // CLIENT: tampilkan overlay warning + Switch to Admin
     // USHER : langsung full access
     function applyFieldGuard() {
         const role = getRole();
         // Hanya terapkan guard jika role EKSPLISIT 'client'
-        // Usher → full access | Tidak ada role (sesi lama) → full access (backward compat)
+        // Usher â†’ full access | Tidak ada role (sesi lama) â†’ full access (backward compat)
         if (role !== 'client') return;
         // Cegah double-inject jika initApp() dipanggil ulang saat retry SAPATAMU_RESOLVED
         if (document.getElementById('sapa-guard-overlay')) return;
@@ -157,7 +157,7 @@
                 pointer-events: none;   /* overlay sendiri tidak blokir klik */
             }
             #sapa-guard-overlay.dismissed #sapa-guard-box { display: none; }
-            /* TIDAK ada ::after — nav dan halaman bisa di-scroll/klik sesuai hak */
+            /* TIDAK ada ::after â€” nav dan halaman bisa di-scroll/klik sesuai hak */
             #sapa-guard-box {
                 background: #fff;
                 width: 90%; max-width: 380px;
@@ -224,12 +224,12 @@
         overlay.id = 'sapa-guard-overlay';
         overlay.innerHTML = `
             <div id="sapa-guard-box">
-                <div style="font-size:48px">⚠️</div>
+                <div style="font-size:48px">âš ï¸</div>
                 <h3>Akses Terbatas</h3>
                 <p>Halaman ini hanya dapat dioperasikan oleh <strong>Admin/Usher Sapatamu</strong> yang bertugas.<br><br>Anda dapat melihat halaman ini, namun tidak dapat berinteraksi.</p>
                 <div class="sapa-guard-btn-row">
                     <button class="sapa-guard-btn secondary" onclick="SapaGuard.dismissOverlay()">Mengerti</button>
-                    <button class="sapa-guard-btn primary" onclick="SapaGuard.showAdminModal()">🔑 Masuk Admin</button>
+                    <button class="sapa-guard-btn primary" onclick="SapaGuard.showAdminModal()">ðŸ”‘ Masuk Admin</button>
                 </div>
             </div>
         `;
@@ -240,11 +240,11 @@
         modal.id = 'sapa-admin-modal';
         modal.innerHTML = `
             <div id="sapa-admin-modal-box">
-                <div style="font-size:36px; margin-bottom:10px">🔑</div>
+                <div style="font-size:36px; margin-bottom:10px">ðŸ”‘</div>
                 <h3>Masuk sebagai Admin</h3>
                 <p>Masukkan password Admin Sapatamu untuk mengaktifkan halaman ini.</p>
                 <div style="position: relative; width: 100%; margin-bottom: 16px;">
-                    <input type="password" id="sapa-admin-pass-input" placeholder="••••••" 
+                    <input type="password" id="sapa-admin-pass-input" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢" 
                         onkeydown="if(event.key==='Enter') SapaGuard.verifyAdmin()" style="margin-bottom: 0; padding-right: 48px;">
                     <button type="button" onclick="togglePasswordVisibility('sapa-admin-pass-input', this)" class="sapa-guard-exempt" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; cursor: pointer; color: #8C7560; display: flex; align-items: center; justify-content: center; outline: none;" aria-label="Tampilkan password">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px; display: inline;">
@@ -265,13 +265,13 @@
         applyViewOnlyContent();
     }
 
-    // ─── MODE B: Halaman Sensitif (formulir/wa_blast/config/angpao) ───────
+    // â”€â”€â”€ MODE B: Halaman Sensitif (formulir/wa_blast/config/angpao) â”€â”€â”€â”€â”€â”€â”€
     // USHER : tampilkan banner VIEW ONLY + disable input/button
     // CLIENT: full access, tidak ada guard
     function applySensitiveGuard() {
         const role = getRole();
         // Hanya terapkan view-only jika role EKSPLISIT 'usher'
-        // Client → full access | Tidak ada role (sesi lama) → full access (backward compat)
+        // Client â†’ full access | Tidak ada role (sesi lama) â†’ full access (backward compat)
         if (role !== 'usher') return;
         // Cegah double-inject jika initApp() dipanggil ulang
         if (document.getElementById('sapa-guard-banner')) return;
@@ -300,8 +300,8 @@
         const banner = document.createElement('div');
         banner.id = 'sapa-guard-banner';
         banner.innerHTML = `
-            🔒 Mode Lihat Saja
-            <span>— Halaman ini tidak dapat diedit oleh Usher/Admin Lapangan</span>
+            ðŸ”’ Mode Lihat Saja
+            <span>â€” Halaman ini tidak dapat diedit oleh Usher/Admin Lapangan</span>
         `;
         document.body.prepend(banner);
 
@@ -309,7 +309,7 @@
         applyViewOnlyContent();
     }
 
-    // ─── Public API ────────────────────────────────────────────────────────
+    // â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     window.SapaGuard = {
         apply: function (mode) {
             window.SAPAGUARD_MODE = mode;
@@ -353,7 +353,7 @@
             errEl.innerText = '';
 
             try {
-                // ─── JALUR UTAMA: SUPABASE REST API ───
+                // â”€â”€â”€ JALUR UTAMA: SUPABASE REST API â”€â”€â”€
                 const sbUrl = `${SB_URL}/rest/v1/clients?username=eq.admin_global&select=password`;
                 const sbRes = await fetch(sbUrl, {
                     method: "GET",
@@ -389,7 +389,7 @@
             } catch (err) {
                 console.warn("Jalur utama Supabase gagal, beralih ke cadangan GAS Spreadsheet: ", err);
 
-                // ─── JALUR CADANGAN: GOOGLE SPREADSHEET (GAS) ───
+                // â”€â”€â”€ JALUR CADANGAN: GOOGLE SPREADSHEET (GAS) â”€â”€â”€
                 try {
                     const res = await fetch(SCRIPT_URL, {
                         method: 'POST',
@@ -411,12 +411,12 @@
                             el.style.cursor = '';
                         });
                     } else {
-                        errEl.innerText = '❌ ' + (data.message || 'Password salah');
+                        errEl.innerText = 'âŒ ' + (data.message || 'Password salah');
                         document.getElementById('sapa-admin-pass-input').value = '';
                         document.getElementById('sapa-admin-pass-input').focus();
                     }
                 } catch (e) {
-                    errEl.innerText = '⚠️ Gagal menghubungi server.';
+                    errEl.innerText = 'âš ï¸ Gagal menghubungi server.';
                 }
             }
             btn.disabled = false;

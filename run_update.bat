@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 SETLOCAL EnableDelayedExpansion
 
 echo ==================================================
@@ -31,7 +31,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [STEP 3] Memperbarui Deployment di Google agar menggunakan kode terbaru...
-call clasp deploy -i AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q -d "SapaTamu Master Unified Update %date% %time%"
+call clasp deploy -i AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE -d "SapaTamu Master Unified Update %date% %time%"
 cd ..
 
 echo OK: Kode backend terupdate.
@@ -40,7 +40,7 @@ echo.
 echo.
 echo ==================================================
 echo    SUKSES! Ekosistem SapaTamu.Ku Telah Terupdate.
-echo    URL: https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec
+echo    URL: https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec
 echo ==================================================
 echo.
 pause

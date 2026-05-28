@@ -12,7 +12,7 @@ const newScript = `<script>
         "Content-Type": "application/json",
         "Prefer": "return=representation"
     };
-    const GAS_SYNC_URL = "https://script.google.com/macros/s/AKfycbyFwzgwpC8RAup_73Qi4BaP8n2cBDASntsPXxtVyxg0cXwAMeLiNMivgyie7nCly0Q/exec";
+    const GAS_SYNC_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 
     let adminPassword = "";
     let allClients = [];
@@ -34,10 +34,10 @@ const newScript = `<script>
                 document.getElementById('login-overlay').style.display = 'none';
                 loadData();
             } else {
-                showToast("❌ Akses Ditolak: Password Salah!", "red");
+                showToast("âŒ Akses Ditolak: Password Salah!", "red");
             }
         } catch (e) {
-            showToast("❌ Error Koneksi: " + e.toString(), "red");
+            showToast("âŒ Error Koneksi: " + e.toString(), "red");
         }
         btn.innerHTML = 'Masuk Dashboard';
         btn.disabled = false;
@@ -53,7 +53,7 @@ const newScript = `<script>
             updateStats(allClients);
             renderTable(allClients);
         } catch (e) {
-            tbody.innerHTML = \`<tr><td colspan="13" style="text-align:center; color:var(--red); padding:40px;">❌ Error: \${e.message}</td></tr>\`;
+            tbody.innerHTML = \`<tr><td colspan="13" style="text-align:center; color:var(--red); padding:40px;">âŒ Error: \${e.message}</td></tr>\`;
         }
     }
 
@@ -77,7 +77,7 @@ const newScript = `<script>
             const rawDate = c.created_at ? new Date(c.created_at) : null;
             const dateStr = rawDate ? rawDate.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) : '-';
 
-            const ssIdHtml = c.ssid ? \`<a href="https://docs.google.com/spreadsheets/d/\${esc(c.ssid)}/edit" target="_blank" style="color:var(--gold); text-decoration:none;">🔗 Buka Sheet</a>\` : \`<span style="color:var(--muted)">Belum Dibuat</span>\`;
+            const ssIdHtml = c.ssid ? \`<a href="https://docs.google.com/spreadsheets/d/\${esc(c.ssid)}/edit" target="_blank" style="color:var(--gold); text-decoration:none;">ðŸ”— Buka Sheet</a>\` : \`<span style="color:var(--muted)">Belum Dibuat</span>\`;
 
             return \`<tr id="row-\${i}" data-username="\${esc(c.username)}">
                 <td style="color:var(--muted)">\${i + 1}</td>
@@ -94,7 +94,7 @@ const newScript = `<script>
                 </td>
                 <td>\${ssIdHtml}</td>
                 <td style="color:var(--muted); font-size:11px;">\${dateStr}</td>
-                <td><button class="save-row-btn" onclick="saveRow(\${i})">💾 Simpan</button></td>
+                <td><button class="save-row-btn" onclick="saveRow(\${i})">ðŸ’¾ Simpan</button></td>
             </tr>\`;
         }).join('');
     }
@@ -135,7 +135,7 @@ const newScript = `<script>
         };
 
         const btn = row.querySelector('.save-row-btn');
-        btn.innerText = '⏳...'; btn.disabled = true;
+        btn.innerText = 'â³...'; btn.disabled = true;
 
         try {
             const res = await fetch(\`\${SUPABASE_URL}/rest/v1/clients?username=eq.\${encodeURIComponent(username)}\`, {
@@ -150,12 +150,12 @@ const newScript = `<script>
                 row.setAttribute('data-username', freshClient.username);
             }
             row.classList.remove('dirty');
-            showToast("✅ Tersimpan di Supabase! Sync ke Spreadsheet berjalan.", "green");
+            showToast("âœ… Tersimpan di Supabase! Sync ke Spreadsheet berjalan.", "green");
             triggerGasSyncBackground(username, payload);
         } catch (e) {
-            showToast("❌ Error: " + e.message, "red");
+            showToast("âŒ Error: " + e.message, "red");
         }
-        btn.innerText = '💾 Simpan'; btn.disabled = false;
+        btn.innerText = 'ðŸ’¾ Simpan'; btn.disabled = false;
     }
 
     function triggerGasSyncBackground(username, payload) {
@@ -166,12 +166,12 @@ const newScript = `<script>
     }
 
     async function triggerGasSync() {
-        showToast("⏳ Meminta sinkronisasi massal Supabase -> Spreadsheet...", "gold");
+        showToast("â³ Meminta sinkronisasi massal Supabase -> Spreadsheet...", "gold");
         try {
             fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncAllClients" }) });
-            setTimeout(() => showToast("✅ Permintaan sync dikirim ke GAS!", "green"), 1000);
+            setTimeout(() => showToast("âœ… Permintaan sync dikirim ke GAS!", "green"), 1000);
         } catch (e) {
-            showToast("❌ Gagal kirim sync: " + e.message, "red");
+            showToast("âŒ Gagal kirim sync: " + e.message, "red");
         }
     }
 
