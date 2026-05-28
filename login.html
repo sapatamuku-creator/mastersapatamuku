@@ -549,13 +549,18 @@
         try {
             const response = await fetch(SCRIPT_URL, {
                 method: "POST",
-                body: JSON.stringify({ action: "forgotPassword", username: user, contact: contact })
+                body: JSON.stringify({ 
+                    action: "forgotPassword", 
+                    username: user, 
+                    contact: contact,
+                    baseUrl: window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))
+                })
             });
             const res = await response.json();
             showSapaModal("Hasil", res.message, (res.status === "success" ? "✅" : "❌"));
             if(res.status === "success") toggleForm('loginForm');
         } catch (e) { 
-            showSapaModal("Error", "Masalah koneksi ke server.", "⚠️"); 
+            showSapaModal("Error", "Masalah koneksi ke server.", "⚠️ "); 
         }
         setLoading('btn_forgot', false);
     };

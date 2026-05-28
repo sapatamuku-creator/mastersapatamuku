@@ -33,6 +33,7 @@ function handleCentralPost(request) {
     case 'login': return handleLogin(request);
     case 'verifyAdminPassword': return handleVerifyAdminPassword(request);
     case 'forgotPassword': return handleForgotPassword(request); 
+    case 'resetPasswordWithToken': return handleResetPasswordWithToken(request);
     case 'changePassword': return handleChangePassword(request);
     case 'updateClientData': return handleUpdateClientData(request);  
     case 'resolveSubdomain': return handleResolveSubdomain(request);
@@ -210,6 +211,46 @@ function handleRegisterAndActivate(data) {
       syncAdminPasswordToSupabase();
     } catch (e) {
       console.error("Sync Supabase aktivasi gagal: " + e.toString());
+    }
+
+    // Kirim Email Invoice/Aktivasi
+    if (data.email) {
+      const emailHtml = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #E07B7B; margin: 0; font-size: 28px; font-weight: 800;">SapaTamu.ku</h2>
+          <p style="color: #8C7560; font-size: 14px; margin-top: 5px;">Aktivasi Akun Berhasil</p>
+        </div>
+        <p style="color: #4A3F35; font-size: 16px; line-height: 1.5;">Halo <b>${clientName}</b>,</p>
+        <p style="color: #4A3F35; font-size: 16px; line-height: 1.5;">Terima kasih atas kepercayaan Anda. Pembayaran Anda telah kami terima dan akun SapaTamu Anda kini <b>aktif</b>.</p>
+        
+        <div style="background-color: #FFF9F6; border: 1px solid #F0E6DE; padding: 20px; border-radius: 8px; margin: 25px 0;">
+          <h3 style="margin-top:0; color: #E07B7B; font-size: 16px;">Ringkasan Pesanan:</h3>
+          <ul style="color: #4A3F35; font-size: 14px; padding-left: 20px; line-height: 1.8;">
+            <li><b>Username/Subdomain:</b> ${sub}</li>
+            <li><b>Paket Layanan:</b> ${data.package || "Custom"}</li>
+            <li><b>Tanggal Acara:</b> ${tgl}</li>
+          </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 35px 0;">
+          <a href="https://sapatamuku-creator.github.io/mastersapatamuku/login.html" style="background-color: #E07B7B; color: #ffffff; padding: 14px 28px; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 8px; display: inline-block;">Masuk ke Dashboard Anda</a>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #F0E6DE; margin: 30px 0;">
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">Jika Anda membutuhkan bantuan, silakan hubungi tim Admin kami.</p>
+      </div>`;
+
+      try {
+        GmailApp.sendEmail(
+          data.email, 
+          "SapaTamu.ku - Akun Berhasil Diaktifkan!", 
+          `Akun Anda dengan username ${sub} telah aktif. Silakan login ke dashboard.`,
+          { name: "SapaTamu Activation", htmlBody: emailHtml }
+        );
+      } catch (e) {
+        console.error("Gagal kirim email aktivasi: " + e.toString());
+      }
     }
 
     return createResponse({
@@ -469,15 +510,51 @@ function deleteClientFromSupabaseWithResult(username) {
 
 function handleSendOTP(data) {
   try {
-    if (!data.whatsapp || !data.otp) {
-      return createResponse({ status: "error", message: "WhatsApp dan OTP wajib diisi" });
+    if (!data.otp) {
+      return createResponse({ status: "error", message: "OTP wajib diisi" });
     }
-    const message = `*KODE OTP SAPATAMU.KU*\n\nKode OTP Anda adalah: *${data.otp}*\n\nKode ini digunakan untuk verifikasi pendaftaran akun SapaTamu Anda. Rahasiakan kode ini dari siapa pun.`;
-    const res = sendWA(data.whatsapp, message);
-    if (res === "success") {
-      return createResponse({ status: "success", message: "OTP terkirim via WhatsApp" });
+    
+    const channel = data.channel || "wa";
+
+    if (channel === "email") {
+      if (!data.email) return createResponse({ status: "error", message: "Email tujuan wajib diisi" });
+      
+      const emailHtml = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #E07B7B; margin: 0; font-size: 28px; font-weight: 800;">SapaTamu.ku</h2>
+          <p style="color: #8C7560; font-size: 14px; margin-top: 5px;">Verifikasi Keamanan Akun</p>
+        </div>
+        <p style="color: #4A3F35; font-size: 16px; line-height: 1.5;">Halo,</p>
+        <p style="color: #4A3F35; font-size: 16px; line-height: 1.5;">Berikut adalah kode OTP 6-digit untuk melanjutkan proses pendaftaran atau verifikasi akun SapaTamu Anda:</p>
+        <div style="background-color: #FFF9F6; border: 2px dashed #E07B7B; padding: 20px; text-align: center; border-radius: 8px; margin: 25px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4A3F35;">${data.otp}</span>
+        </div>
+        <p style="color: #4A3F35; font-size: 14px; line-height: 1.5;"><strong>Peringatan Keamanan:</strong> Jangan pernah membagikan kode OTP ini kepada siapa pun, termasuk pihak yang mengaku sebagai tim SapaTamu.ku.</p>
+        <hr style="border: none; border-top: 1px solid #F0E6DE; margin: 30px 0;">
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">Email ini dihasilkan secara otomatis. Mohon tidak membalas email ini.</p>
+      </div>`;
+
+      GmailApp.sendEmail(
+        data.email, 
+        "Kode Verifikasi OTP SapaTamu.ku", 
+        `Kode OTP Anda adalah: ${data.otp}. Jangan bagikan kode ini kepada siapapun.`, 
+        {
+          name: "SapaTamu Security",
+          htmlBody: emailHtml
+        }
+      );
+      return createResponse({ status: "success", message: "OTP terkirim via Email" });
     } else {
-      return createResponse({ status: "error", message: "Gagal mengirim OTP: " + res });
+      // Default to WA
+      if (!data.whatsapp) return createResponse({ status: "error", message: "WhatsApp tujuan wajib diisi" });
+      const message = `*KODE OTP SAPATAMU.KU*\n\nKode OTP Anda adalah: *${data.otp}*\n\nKode ini digunakan untuk verifikasi pendaftaran akun SapaTamu Anda. Rahasiakan kode ini dari siapa pun.`;
+      const res = sendWA(data.whatsapp, message);
+      if (res === "success") {
+        return createResponse({ status: "success", message: "OTP terkirim via WhatsApp" });
+      } else {
+        return createResponse({ status: "error", message: "Gagal mengirim OTP: " + res });
+      }
     }
   } catch (e) {
     return createResponse({ status: "error", message: "Terjadi error OTP: " + e.toString() });
@@ -544,30 +621,89 @@ function handleForgotPassword(data) {
 
     if (!userData) return createResponse({ status: "error", message: "Data akun tidak ditemukan." });
 
-    const formalMsg = 
-      `Yth. Bapak/Ibu *${userData.name}*,\n\n` +
-      `Terima kasih telah menghubungi layanan bantuan *SapaTamu.ku*.\n\n` +
-      `Sesuai permintaan Anda, berikut adalah detail akses akun yang terdaftar:\n` +
-      `--------------------------\n` +
-      `*Username* : ${userData.name}\n` +
-      `*Password* : ${userData.pass}\n` +
-      `--------------------------\n\n` +
-      `Demi keamanan, mohon untuk segera mengganti kata sandi Anda melalui menu 'Ganti Password' di halaman utama.\n\n` +
-      `Terima kasih telah menggunakan layanan kami.\n\n` +
-      `Salam hangat,\n` +
-      `*Management SapaTamu.ku*`;
+    // Generate Token (6 jam valid)
+    const token = Utilities.getUuid();
+    CacheService.getScriptCache().put("reset_" + token, userData.name, 21600); 
 
+    // Build reset link. Either use provided origin, or fallback to default pages
+    const baseUrl = data.baseUrl || "https://sapatamuku-creator.github.io/mastersapatamuku";
+    const resetLink = baseUrl + (baseUrl.endsWith('/') ? '' : '/') + "reset.html?token=" + token;
+
+    const emailHtml = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #E07B7B; margin: 0; font-size: 28px; font-weight: 800;">SapaTamu.ku</h2>
+          <p style="color: #8C7560; font-size: 14px; margin-top: 5px;">Permintaan Reset Password</p>
+        </div>
+        <p style="color: #4A3F35; font-size: 16px; line-height: 1.5;">Halo <b>${userData.name}</b>,</p>
+        <p style="color: #4A3F35; font-size: 16px; line-height: 1.5;">Kami menerima permintaan untuk melakukan pengaturan ulang kata sandi (reset password) pada akun SapaTamu Anda.</p>
+        
+        <div style="text-align: center; margin: 35px 0;">
+          <a href="${resetLink}" style="background-color: #E07B7B; color: #ffffff; padding: 14px 28px; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 8px; display: inline-block;">Reset Password Saya</a>
+        </div>
+        
+        <p style="color: #4A3F35; font-size: 14px; line-height: 1.5;">Tautan ini hanya berlaku selama 6 jam. Jika Anda tidak merasa melakukan permintaan ini, abaikan email ini dan akun Anda akan tetap aman.</p>
+        
+        <hr style="border: none; border-top: 1px solid #F0E6DE; margin: 30px 0;">
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">Email ini dihasilkan secara otomatis. Mohon tidak membalas email ini.</p>
+      </div>`;
+
+    if (userData.email) {
+      GmailApp.sendEmail(
+        userData.email, 
+        "Reset Akses SapaTamu.ku", 
+        `Gunakan link berikut untuk mereset password Anda: ${resetLink}`,
+        {
+          name: "SapaTamu Security",
+          htmlBody: emailHtml
+        }
+      );
+    }
+    
     // Kirim WA Otomatis
+    const formalMsg = `Yth. Bapak/Ibu *${userData.name}*,\n\nKami menerima permintaan pengaturan ulang kata sandi akun SapaTamu Anda. Silakan klik tautan berikut untuk mengganti sandi:\n${resetLink}\n\n(Tautan berlaku selama 6 jam)\n\nJika Anda tidak merasa meminta reset password, abaikan pesan ini.`;
     sendWA(userData.wa, formalMsg);
 
-    // Kirim Email Otomatis (Tanpa simbol bintang Markdown)
-    if (userData.email) {
-      MailApp.sendEmail(userData.email, "Pemulihan Akses SapaTamu.ku", formalMsg.replace(/\*/g, ''));
-    }
-
-    return createResponse({ status: "success", message: "Detail akun telah dikirimkan secara otomatis via WhatsApp & Email." });
+    return createResponse({ status: "success", message: "Tautan reset telah dikirimkan secara otomatis via WhatsApp & Email." });
   } catch (err) {
     return createResponse({ status: "error", message: "Terjadi gangguan sistem. Silakan hubungi Admin." });
+  }
+}
+
+function handleResetPasswordWithToken(data) {
+  try {
+    const token = data.token;
+    const newPass = data.newPass;
+
+    if (!token || !newPass) return createResponse({ status: "error", message: "Token dan password baru wajib diisi." });
+
+    const username = CacheService.getScriptCache().get("reset_" + token);
+    if (!username) return createResponse({ status: "error", message: "Token tidak valid atau sudah kadaluarsa. Silakan minta ulang reset password dari awal." });
+
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const values = sheet.getDataRange().getValues();
+
+    let updated = false;
+    for (let i = 1; i < values.length; i++) {
+      if (values[i][0] == username) {
+        sheet.getRange(i + 1, 3).setValue(newPass); // Update Kolom C
+        updated = true;
+        break;
+      }
+    }
+
+    if (!updated) return createResponse({ status: "error", message: "Akun tidak ditemukan pada sistem." });
+
+    // Hapus token agar tidak bisa digunakan lagi
+    CacheService.getScriptCache().remove("reset_" + token);
+
+    // Minta force sync ke Supabase
+    manualForceSyncAllClients();
+
+    return createResponse({ status: "success", message: "Password berhasil diubah." });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Terjadi kesalahan sistem: " + err.toString() });
   }
 }
 
@@ -1241,8 +1377,47 @@ function handleUpgradePackage(data) {
     } catch (e) {
       console.error("Gagal sync upgrade ke Supabase: " + e.toString());
     }
+
+    // Kirim Email Upgrade
+    if (orig[6]) { 
+      const emailHtml = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #E07B7B; margin: 0; font-size: 28px; font-weight: 800;">SapaTamu.ku</h2>
+          <p style="color: #8C7560; font-size: 14px; margin-top: 5px;">Upgrade Layanan Berhasil</p>
+        </div>
+        <p style="color: #4A3F35; font-size: 16px; line-height: 1.5;">Halo <b>${orig[10] || orig[0]}</b>,</p>
+        <p style="color: #4A3F35; font-size: 16px; line-height: 1.5;">Pembayaran upgrade layanan Anda telah kami verifikasi. Layanan akun Anda kini telah berhasil ditingkatkan!</p>
+        
+        <div style="background-color: #FFF9F6; border: 1px solid #F0E6DE; padding: 20px; border-radius: 8px; margin: 25px 0;">
+          <h3 style="margin-top:0; color: #E07B7B; font-size: 16px;">Detail Baru Anda:</h3>
+          <ul style="color: #4A3F35; font-size: 14px; padding-left: 20px; line-height: 1.8;">
+            <li><b>Username:</b> ${orig[0]}</li>
+            <li><b>Paket Baru:</b> ${newPackage}</li>
+          </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 35px 0;">
+          <a href="https://sapatamuku-creator.github.io/mastersapatamuku/login.html" style="background-color: #E07B7B; color: #ffffff; padding: 14px 28px; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 8px; display: inline-block;">Kembali ke Dashboard</a>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #F0E6DE; margin: 30px 0;">
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">Terima kasih atas kepercayaan Anda pada SapaTamu.ku.</p>
+      </div>`;
+
+      try {
+        GmailApp.sendEmail(
+          orig[6], 
+          "SapaTamu.ku - Upgrade Layanan Berhasil!", 
+          `Akun Anda telah di-upgrade ke paket: ${newPackage}.`,
+          { name: "SapaTamu Billing", htmlBody: emailHtml }
+        );
+      } catch (e) {
+        console.error("Gagal kirim email upgrade: " + e.toString());
+      }
+    }
     
-    return createResponse({ status: "success", message: "Paket berhasil di-upgrade ke " + newPackage });
+    return createResponse({ status: "success", message: "Upgrade berhasil!" });
   } catch (err) {
     return createResponse({ status: "error", message: "Gagal memproses upgrade: " + err.toString() });
   }
