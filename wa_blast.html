@@ -488,7 +488,7 @@
     <nav class="sapatamu-navbar">
         <div class="nav-outer-wrapper">
             <div class="nav-fade nav-fade-left" id="fade-left"></div>
-            <div class="nav-arrow nav-arrow-left">â€¹</div>
+            <div class="nav-arrow nav-arrow-left">‹</div>
 
             <div class="nav-scroll-container" id="nav-scroll">
                 <div class="nav-group">
@@ -514,7 +514,7 @@
                 <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
             </div>
 
-            <div class="nav-arrow nav-arrow-right">â€º</div>
+            <div class="nav-arrow nav-arrow-right">›</div>
             <div class="nav-fade nav-fade-right" id="fade-right"></div>
         </div>
     </nav>
@@ -527,7 +527,7 @@
 
     <div id="st-modal" class="st-modal-overlay">
         <div id="modal-container" class="st-modal-content">
-            <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">âš ï¸</span>
+            <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️</span>
             <div id="st-modal-title" class="st-modal-title">Notifikasi</div>
             <div id="st-modal-msg" class="st-modal-msg" style="white-space: pre-line;">Pesan akan muncul di sini.</div>
             <div id="modal-actions" style="display: flex; gap: 10px; margin-top: 30px;">
@@ -753,7 +753,7 @@
                 document.body.style.pointerEvents = isStart ? 'none' : 'auto';
             }
 
-            window.showAlert = function (title, msg, icon = "âš ï¸") {
+            window.showAlert = function (title, msg, icon = "⚠️") {
                 return new Promise(resolve => {
                     document.getElementById('st-modal-icon').innerText = icon;
                     document.getElementById('st-modal-title').innerText = title;
@@ -887,8 +887,8 @@
 
             function getStatusColor(status) {
                 if (!status || typeof status !== 'string') return 'var(--primary)';
-                if (status.includes('âœ…')) return 'var(--success)';
-                if (status.includes('âš ï¸') || status.toLowerCase().includes('duplikasi')) return 'var(--warning)';
+                if (status.includes('✅')) return 'var(--success)';
+                if (status.includes('⚠️') || status.toLowerCase().includes('duplikasi')) return 'var(--warning)';
                 if (status.includes('âŒ') || status.toLowerCase().includes('gagal')) return '#DC2626';
                 return 'var(--primary)';
             }
@@ -907,7 +907,7 @@
                 tbody.innerHTML = localData.tamu.length ? localData.tamu.map(t => {
                     const statusColor = getStatusColor(t.status);
                     const isDuplicate = t.status && typeof t.status === 'string' &&
-                        (t.status.includes('âš ï¸') || t.status.toLowerCase().includes('duplikasi'));
+                        (t.status.includes('⚠️') || t.status.toLowerCase().includes('duplikasi'));
 
                     const pihakLabel = pihakMap[String(t.pihak || '').toUpperCase().trim()] || t.pihak || '-';
 
@@ -958,7 +958,7 @@
                     return;
                 }
                 const token = document.getElementById('masterToken').value.trim();
-                if (!token) return showToast("âš ï¸ Token tidak boleh kosong!");
+                if (!token) return showToast("⚠️ Token tidak boleh kosong!");
 
                 toggleProcessing(true, "Menyimpan Token...");
                 try {
@@ -968,7 +968,7 @@
                     });
                     const result = await response.json();
                     if (result.status === "success") {
-                        showToast("âœ… Token berhasil disimpan!");
+                        showToast("✅ Token berhasil disimpan!");
                         await refreshData();
                     } else {
                         showToast("âŒ Gagal: " + result.msg);
@@ -992,7 +992,7 @@
                 }
 
                 if (!kat) {
-                    showToast("âš ï¸ Pilih kategori dulu!");
+                    showToast("⚠️ Pilih kategori dulu!");
                     document.getElementById('statusToggle').checked = !isChecked;
                     return;
                 }
@@ -1004,7 +1004,7 @@
                         body: JSON.stringify({ action: "toggleStatus", ssId: CURRENT_SS_ID, kategori: kat, status: newStatus })
                     });
                     await refreshData();
-                    showToast("âœ… Status diperbarui");
+                    showToast("✅ Status diperbarui");
                 } catch (e) { showToast("âŒ Gagal update."); }
                 finally { toggleProcessing(false); }
             };
@@ -1016,7 +1016,7 @@
                 }
                 const kat = document.getElementById('kategoriSelect').value;
                 const phone = document.getElementById('clientPhone').value;
-                if (!kat || !phone) return showToast("âš ï¸ Lengkapi data!");
+                if (!kat || !phone) return showToast("⚠️ Lengkapi data!");
 
                 toggleProcessing(true, "Sinkronisasi Device...");
                 try {
@@ -1026,7 +1026,7 @@
                     });
                     const result = await res.json();
                     if (result.status === "success") {
-                        showToast("âœ… Berhasil! Silahkan Scan QR.");
+                        showToast("✅ Berhasil! Silahkan Scan QR.");
                         window.open("https://md.fonnte.com/new/device.php", "_blank");
                         await refreshData();
                     } else { showToast("âŒ Gagal: " + result.msg); }
@@ -1057,10 +1057,10 @@
                         return;
                     }
 
-                    // Ambil semua nomor HP yang sudah sukses terkirim (mengandung centang hijau âœ…)
+                    // Ambil semua nomor HP yang sudah sukses terkirim (mengandung centang hijau ✅)
                     const sentNumbers = new Set(
                         localData.tamu
-                            .filter(t => t.status && typeof t.status === 'string' && t.status.includes('âœ…'))
+                            .filter(t => t.status && typeof t.status === 'string' && t.status.includes('✅'))
                             .map(t => {
                                 let num = (t.nomor || "").toString().trim().replace(/\D/g, '');
                                 if (num.startsWith('0')) num = '62' + num.substring(1);
@@ -1074,11 +1074,11 @@
                         if (tPihak !== kat) return false;
                         
                         // Hanya abaikan jika baris ini sendiri statusnya sudah sukses terkirim
-                        return !(t.status && typeof t.status === 'string' && t.status.includes('âœ…'));
+                        return !(t.status && typeof t.status === 'string' && t.status.includes('✅'));
                     });
 
                     if (!targets.length) {
-                        await showAlert("Informasi", "Semua tamu di kategori [" + kat + "] sudah terkirim âœ…", "â„¹ï¸");
+                        await showAlert("Informasi", "Semua tamu di kategori [" + kat + "] sudah terkirim ✅", "â„¹ï¸");
                         return;
                     }
 
@@ -1113,14 +1113,14 @@
                         const extraCount = duplicates.length > 5 ? ` (+${duplicates.length - 5} lainnya)` : '';
                         const warnMsg = `Ditemukan ${duplicates.length} tamu dengan nomor HP yang sama.
 
-Tamu duplikat (âš ï¸ akan di-skip):
+Tamu duplikat (⚠️ akan di-skip):
 ${dupNames}${extraCount}
 
 Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                         const proceedAnyway = await showConfirm(
-                            "âš ï¸ DUPLIKASI NOMOR TERDETEKSI",
+                            "⚠️ DUPLIKASI NOMOR TERDETEKSI",
                             warnMsg,
-                            "âš ï¸"
+                            "⚠️"
                         );
                         if (!proceedAnyway) return;
 
@@ -1139,13 +1139,13 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                                         "Authorization": "Bearer " + supabaseApiKey,
                                         "Content-Type": "application/json"
                                     },
-                                    body: JSON.stringify({ status_wa: 'âš ï¸ Duplikasi Nomor [' + nowStr + ']' })
+                                    body: JSON.stringify({ status_wa: '⚠️ Duplikasi Nomor [' + nowStr + ']' })
                                 }).catch(e => console.error("Supabase duplicate sync failed", e))
                             )
                         ).then(() => {
                             duplicates.forEach(d => {
                                 const entry = localData.tamu.find(x => x.row === d.row);
-                                if (entry) entry.status = 'âš ï¸ Duplikasi Nomor [' + nowStr + ']';
+                                if (entry) entry.status = '⚠️ Duplikasi Nomor [' + nowStr + ']';
                             });
                             renderTable();
                         });
@@ -1153,7 +1153,7 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                         // Mark duplicates as warning (yellow) via backend — fire-and-forget
                         const dupPayload = duplicates.map(d => ({
                             row: d.row,
-                            status: "âš ï¸ Gagal Blast (Duplikasi Nomor)"
+                            status: "⚠️ Gagal Blast (Duplikasi Nomor)"
                         }));
                         fetch(SCRIPT_URL, {
                             method: "POST",
@@ -1173,7 +1173,7 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
 
                     const isConfirmed = await showConfirm(
                         "MESIN BLAST READY",
-                        `Target: ${uniqueTargets.length} Tamu (Unik)${duplicates.length > 0 ? '\nâš ï¸ ' + duplicates.length + ' tamu duplikat di-skip' : ''}\nKategori: ${kat}\n\nSistem akan mengirimkan pesan undangan otomatis.`
+                        `Target: ${uniqueTargets.length} Tamu (Unik)${duplicates.length > 0 ? '\n⚠️ ' + duplicates.length + ' tamu duplikat di-skip' : ''}\nKategori: ${kat}\n\nSistem akan mengirimkan pesan undangan otomatis.`
                     );
 
                     if (!isConfirmed) return;
@@ -1270,7 +1270,7 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                                         "Authorization": "Bearer " + supabaseApiKey,
                                         "Content-Type": "application/json"
                                     },
-                                    body: JSON.stringify({ status_wa: 'âœ… [' + nowStr + ']' })
+                                    body: JSON.stringify({ status_wa: '✅ [' + nowStr + ']' })
                                 }).catch(e => console.error("Supabase sync failed for row", t.row, e))
                             )
                         );
@@ -1285,7 +1285,7 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                                             "Authorization": "Bearer " + supabaseApiKey,
                                             "Content-Type": "application/json"
                                         },
-                                        body: JSON.stringify({ status_wa: 'âš ï¸ Duplikasi Nomor [' + nowStr + ']' })
+                                        body: JSON.stringify({ status_wa: '⚠️ Duplikasi Nomor [' + nowStr + ']' })
                                     }).catch(e => console.error("Supabase duplicate sync failed for row", t.row, e))
                                 )
                             );

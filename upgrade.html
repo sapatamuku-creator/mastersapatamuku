@@ -262,21 +262,24 @@
 
     async function fetchClientData(username) {
         try {
-            // Gunakan GAS untuk fetch data klien (aman - password tidak pernah sampai ke browser)
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify({ action: "getClientProfile", username: username })
+            const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?username=eq.${username}&limit=1`, {
+                headers: {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY
+                }
             });
-            const result = await response.json();
             
-            if (result.status === "success" && result.data) {
-                currentUserData = result.data;
+            if (!response.ok) throw new Error("Gagal mengambil data profil dari Supabase");
+            const rows = await response.json();
+            
+            if (rows && rows.length > 0) {
+                currentUserData = rows[0];
                 renderProfile();
             } else {
                 showSapaModal("Data Tidak Ditemukan", "Tidak dapat memuat profil Anda.", "âŒ");
             }
         } catch (e) {
-            showSapaModal("Koneksi Gagal", "Gagal menghubungi server database.", "âš ï¸");
+            showSapaModal("Koneksi Gagal", "Gagal menghubungi server database.", "⚠️");
         }
     }
 
@@ -334,7 +337,7 @@
         const btnPay = document.getElementById('btn_upgrade_pay');
 
         if (!tgl || tgl === "Belum Ditentukan" || tgl === "Masih belum tahu") {
-            statusEl.innerText = "âš ï¸ Tanggal Belum Diatur. Hubungi Admin.";
+            statusEl.innerText = "⚠️ Tanggal Belum Diatur. Hubungi Admin.";
             statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-100 text-red-700";
             btnPay.disabled = true;
             return;
@@ -358,7 +361,7 @@
             const result = await response.json();
 
             if (result.status === "success" && result.available) {
-                statusEl.innerText = "âœ… Slot Usher Tersedia";
+                statusEl.innerText = "✅ Slot Usher Tersedia";
                 statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-green-200 text-green-800";
                 btnPay.disabled = false;
             } else {
@@ -368,7 +371,7 @@
                 showSapaModal("Tanggal Penuh", "Maaf, seluruh slot tim Usher/Guestbook untuk tanggal acara Anda sudah di-booking oleh klien lain. Pembayaran ditangguhkan.", "📅");
             }
         } catch (e) {
-            statusEl.innerText = "âš ï¸ Gagal Sinkronisasi Slot";
+            statusEl.innerText = "⚠️ Gagal Sinkronisasi Slot";
             statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-100 text-red-700";
         }
     }
@@ -432,7 +435,7 @@
                         setLoading('btn_upgrade_pay', false);
                     },
                     onClose: function() {
-                        showSapaModal("Pembayaran Dibatalkan", "Anda menutup popup pembayaran Midtrans.", "âš ï¸");
+                        showSapaModal("Pembayaran Dibatalkan", "Anda menutup popup pembayaran Midtrans.", "⚠️");
                         setLoading('btn_upgrade_pay', false);
                     }
                 });
@@ -441,7 +444,7 @@
                 setLoading('btn_upgrade_pay', false);
             }
         } catch (err) {
-            showSapaModal("Kesalahan Sistem", "Gagal menghubungi server pembayaran: " + err, "âš ï¸");
+            showSapaModal("Kesalahan Sistem", "Gagal menghubungi server pembayaran: " + err, "⚠️");
             setLoading('btn_upgrade_pay', false);
         }
     };
@@ -473,7 +476,7 @@
                 setLoading('btn_upgrade_pay', false);
             }
         } catch (err) {
-            showSapaModal("Kesalahan Sistem", "Pembayaran sukses namun aktivasi gagal: " + err, "âš ï¸");
+            showSapaModal("Kesalahan Sistem", "Pembayaran sukses namun aktivasi gagal: " + err, "⚠️");
             setLoading('btn_upgrade_pay', false);
         }
     }

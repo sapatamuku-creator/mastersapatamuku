@@ -205,7 +205,7 @@
             </div>
             <!-- FORCE RESET -->
             <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #F0E6DE;">
-                <span class="clickable" onclick="forceResetSesi()" style="color: #E07B7B; font-weight: 800; font-size: 10px; letter-spacing: 1px;">âš ï¸ TERJEBAK LOOP? RESET SESI</span>
+                <span class="clickable" onclick="forceResetSesi()" style="color: #E07B7B; font-weight: 800; font-size: 10px; letter-spacing: 1px;">⚠️ TERJEBAK LOOP? RESET SESI</span>
             </div>
         </div>
     </div>
@@ -363,7 +363,7 @@
     window.forceResetSesi = function() {
         localStorage.clear();
         sessionStorage.clear();
-        showSapaModal("Berhasil", "Sesi berhasil direset. Silakan login kembali.", "âœ…");
+        showSapaModal("Berhasil", "Sesi berhasil direset. Silakan login kembali.", "✅");
         setTimeout(() => location.reload(), 2000);
     }
 
@@ -434,7 +434,7 @@
     window.prosesLogin = async function() {
         const user = document.getElementById('log_user').value.trim();
         const pass = document.getElementById('log_pass').value;
-        if (!user || !pass) return showSapaModal("Lengkapi Data", "Silakan masukkan Username / Subdomain dan Password Anda.", "âš ï¸");
+        if (!user || !pass) return showSapaModal("Lengkapi Data", "Silakan masukkan Username / Subdomain dan Password Anda.", "⚠️");
 
         setLoading('btn_login', true);
 
@@ -456,7 +456,7 @@
                 
                 // Cek status aktif
                 if (res.data.status && res.data.status.toLowerCase() !== 'active') {
-                    showSapaModal("Akun Dinonaktifkan", "Akun ini telah dinonaktifkan oleh Admin. Silakan hubungi pusat.", "âš ï¸");
+                    showSapaModal("Akun Dinonaktifkan", "Akun ini telah dinonaktifkan oleh Admin. Silakan hubungi pusat.", "⚠️");
                     setLoading('btn_login', false);
                     return;
                 }
@@ -480,7 +480,7 @@
                 setLoading('btn_login', false);
             }
         } catch (e) {
-            showSapaModal("Koneksi Bermasalah", "Tidak dapat terhubung ke server SapaTamu. Pastikan koneksi internet Anda stabil.", "âš ï¸");
+            showSapaModal("Koneksi Bermasalah", "Tidak dapat terhubung ke server SapaTamu. Pastikan koneksi internet Anda stabil.", "⚠️");
             setLoading('btn_login', false);
         }
     };
@@ -495,10 +495,10 @@
                 body: JSON.stringify({ action: "forgotPassword", username: user, contact: contact })
             });
             const res = await response.json();
-            showSapaModal("Hasil", res.message, (res.status === "success" ? "âœ…" : "âŒ"));
+            showSapaModal("Hasil", res.message, (res.status === "success" ? "✅" : "âŒ"));
             if(res.status === "success") toggleForm('loginForm');
         } catch (e) { 
-            showSapaModal("Error", "Masalah koneksi ke server.", "âš ï¸"); 
+            showSapaModal("Error", "Masalah koneksi ke server.", "⚠️"); 
         }
         setLoading('btn_forgot', false);
     };
@@ -510,15 +510,15 @@
             currentPass: document.getElementById('chg_curr_pass').value,
             newPass: document.getElementById('chg_new_pass').value
         };
-        if(data.newPass !== document.getElementById('chg_conf_pass').value) return showSapaModal("Password Tidak Cocok", "Konfirmasi password baru tidak sesuai.", "âš ï¸");
+        if(data.newPass !== document.getElementById('chg_conf_pass').value) return showSapaModal("Password Tidak Cocok", "Konfirmasi password baru tidak sesuai.", "⚠️");
         
         setLoading('btn_chg', true);
         try {
             const response = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(data) });
             const res = await response.json();
-            showSapaModal("Hasil", res.message, (res.status === "success" ? "âœ…" : "âŒ"));
+            showSapaModal("Hasil", res.message, (res.status === "success" ? "✅" : "âŒ"));
             if(res.status === "success") location.reload();
-        } catch (e) { showSapaModal("Error", "Gagal menghubungi server.", "âš ï¸"); }
+        } catch (e) { showSapaModal("Error", "Gagal menghubungi server.", "⚠️"); }
         setLoading('btn_chg', false);
     };
 

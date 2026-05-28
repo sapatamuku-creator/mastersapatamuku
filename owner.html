@@ -359,7 +359,7 @@
 <!-- DELETE CONFIRMATION MODAL -->
 <div id="modal-delete-client" class="modal-overlay">
     <div class="modal-box" style="border-color: rgba(239, 68, 68, 0.4);">
-        <div class="modal-title" style="color: var(--red);">âš ï¸ Hapus Permanen Klien</div>
+        <div class="modal-title" style="color: var(--red);">⚠️ Hapus Permanen Klien</div>
         <p style="font-size:12px; color:var(--muted); margin-bottom:10px;">
             Tindakan ini akan menghapus data klien dari <b>Master Sheet</b>, membuang <b>File Spreadsheet</b> ke tempat sampah (Trash), dan menghapus row dari <b>Supabase</b>.
         </p>
@@ -557,7 +557,7 @@
                 row.setAttribute('data-username', freshClient.username);
             }
             row.classList.remove('dirty');
-            showToast("âœ… Tersimpan di Supabase! Sync ke Spreadsheet berjalan.", "green");
+            showToast("✅ Tersimpan di Supabase! Sync ke Spreadsheet berjalan.", "green");
             triggerGasSyncBackground(username, payload);
         } catch (e) {
             showToast("âŒ Error: " + e.message, "red");
@@ -576,14 +576,14 @@
         showToast("⏳ Meminta sinkronisasi massal Supabase -> Spreadsheet...", "gold");
         try {
             fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncAllClients" }) });
-            setTimeout(() => showToast("âœ… Permintaan sync dikirim ke GAS!", "green"), 1000);
+            setTimeout(() => showToast("✅ Permintaan sync dikirim ke GAS!", "green"), 1000);
         } catch (e) {
             showToast("âŒ Gagal kirim sync: " + e.message, "red");
         }
     }
 
     async function syncAllToSupabase() {
-        if (!confirm("âš ï¸ PERINGATAN: Ini akan memaksa push data dari Spreadsheet ke Supabase untuk SEMUA klien aktif secara berurutan. Proses ini mungkin memakan waktu agak lama. Yakin lanjutkan?")) return;
+        if (!confirm("⚠️ PERINGATAN: Ini akan memaksa push data dari Spreadsheet ke Supabase untuk SEMUA klien aktif secara berurutan. Proses ini mungkin memakan waktu agak lama. Yakin lanjutkan?")) return;
         
         const activeClients = allClients.filter(c => c.status === 'Active' && c.ssid);
         if (activeClients.length === 0) return showToast("Tidak ada klien aktif dengan SSID.", "gold");
@@ -602,7 +602,7 @@
                 console.error(`Gagal push ${client.subdomain}:`, e);
             }
         }
-        showToast(`âœ… Selesai! ${successCount} klien berhasil dipush ke Supabase.`, "green");
+        showToast(`✅ Selesai! ${successCount} klien berhasil dipush ke Supabase.`, "green");
     }
 
     async function pushSingleToSupabase(username, ssId) {
@@ -611,7 +611,7 @@
         try {
             await fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncSheetToSupabase", ssId: ssId }) });
             await fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncWishesToSupabase", ssId: ssId }) });
-            setTimeout(() => showToast(`âœ… Data ${username} berhasil dipush!`, "green"), 1500);
+            setTimeout(() => showToast(`✅ Data ${username} berhasil dipush!`, "green"), 1500);
         } catch (e) {
             showToast("âŒ Gagal push: " + e.message, "red");
         }
@@ -656,7 +656,7 @@
         const statusEl = document.getElementById('sub-status');
 
         if (!val || val.length < 3) {
-            statusEl.innerText = val.length > 0 ? 'âš ï¸ Min. 3 karakter' : '';
+            statusEl.innerText = val.length > 0 ? '⚠️ Min. 3 karakter' : '';
             statusEl.style.color = 'var(--gold)';
             isValidSubdomain = false;
             clearTimeout(subTimer);
@@ -672,7 +672,7 @@
     async function checkSubdomainSupabase(slug) {
         const statusEl = document.getElementById('sub-status');
         if (slug === lastCheckedSub && isValidSubdomain) {
-            statusEl.innerText = 'âœ… TERSEDIA';
+            statusEl.innerText = '✅ TERSEDIA';
             statusEl.style.color = 'var(--green)';
             return;
         }
@@ -685,7 +685,7 @@
             lastCheckedSub = slug;
 
             if (data.length === 0) {
-                statusEl.innerText = 'âœ… TERSEDIA';
+                statusEl.innerText = '✅ TERSEDIA';
                 statusEl.style.color = 'var(--green)';
                 isValidSubdomain = true;
             } else {
@@ -694,7 +694,7 @@
                 isValidSubdomain = false;
             }
         } catch (e) {
-            statusEl.innerText = 'âš ï¸ Gagal cek koneksi';
+            statusEl.innerText = '⚠️ Gagal cek koneksi';
             statusEl.style.color = 'var(--gold)';
             isValidSubdomain = false;
         }
@@ -765,7 +765,7 @@
             });
             const out = await res.json();
             if (out.status === 'success') {
-                showToast("âœ… Klien berhasil ditambahkan dan diaktifkan!", "green");
+                showToast("✅ Klien berhasil ditambahkan dan diaktifkan!", "green");
                 closeAddClientModal();
                 loadClients();
             } else {
@@ -802,7 +802,7 @@
             const res = await fetch(GAS_SYNC_URL, { method: "POST", body: JSON.stringify(payload) });
             const out = await res.json();
             if (out.status === 'success') {
-                showToast("âœ… " + out.message, "green");
+                showToast("✅ " + out.message, "green");
                 closeDeleteModal();
                 loadClients();
             } else {

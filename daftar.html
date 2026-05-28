@@ -642,9 +642,9 @@
         const tgl = (document.getElementById('ev_date_main').value || '').trim();
         const nama = document.getElementById('ev_title').value.trim();
         const subStatus = (document.getElementById('sub-status').innerText || '');
-        if (!nama) return showSapaModal("Nama Belum Diisi", "Silakan isi nama mempelai / klien.", "âš ï¸");
+        if (!nama) return showSapaModal("Nama Belum Diisi", "Silakan isi nama mempelai / klien.", "⚠️");
         if (!tgl) return showSapaModal("Tanggal Wajib Diisi", "Silakan pilih tanggal acara.", "📅");
-        if (!subStatus.includes('âœ…')) return showSapaModal("Subdomain Belum Valid", "Tunggu hingga subdomain tersedia (âœ… TERSEDIA).", "âš ï¸");
+        if (!subStatus.includes('✅')) return showSapaModal("Subdomain Belum Valid", "Tunggu hingga subdomain tersedia (✅ TERSEDIA).", "⚠️");
         // Simpan data Step 1 ke memori
         regData.category = document.getElementById('reg_category').value;
         regData.clientName = nama;
@@ -817,7 +817,7 @@
             preview.style.display = 'none';
         }
         // Enable Step 1 next button
-        const subOk = (document.getElementById('sub-status').innerText || '').includes('âœ…');
+        const subOk = (document.getElementById('sub-status').innerText || '').includes('✅');
         const nextBtn = document.getElementById('btn_step1_next');
         if (nextBtn) {
             nextBtn.disabled = !(nama && tgl && subOk);
@@ -830,7 +830,7 @@
     // Kept for backward compat if called from checkSubdomainSupabase
     function checkStep1NextBtn() {
         const tgl = (document.getElementById('ev_date_main').value || '').trim();
-            const subOk = (document.getElementById('sub-status').innerText || '').includes('âœ…');
+            const subOk = (document.getElementById('sub-status').innerText || '').includes('✅');
         const nama = document.getElementById('ev_title').value.trim();
         const nextBtn = document.getElementById('btn_step1_next');
         if (nextBtn) {
@@ -851,7 +851,7 @@
         subInput.value = slug;
 
         if (!slug || slug.length < 3) {
-            statusEl.innerText = slug.length > 0 ? 'âš ï¸ Min. 3 karakter' : '';
+            statusEl.innerText = slug.length > 0 ? '⚠️ Min. 3 karakter' : '';
             statusEl.style.color = 'var(--gold)';
             clearTimeout(subDebounceTimer);
             return;
@@ -884,20 +884,20 @@
             lastCheckedSlug = slug;
 
             if (res.status === "available") {
-                statusEl.innerText = 'âœ… TERSEDIA';
+                statusEl.innerText = '✅ TERSEDIA';
                 statusEl.style.color = 'var(--success)';
             } else if (res.status === "taken") {
                 statusEl.innerText = 'âŒ SUDAH DIPAKAI';
                 statusEl.style.color = '#E07B7B';
             } else if (res.status === "too_short") {
-                statusEl.innerText = 'âš ï¸ Minimal 3 Karakter';
+                statusEl.innerText = '⚠️ Minimal 3 Karakter';
                 statusEl.style.color = 'var(--gold)';
             } else {
-                statusEl.innerText = 'âš ï¸ Error Server';
+                statusEl.innerText = '⚠️ Error Server';
                 statusEl.style.color = 'var(--gold)';
             }
         } catch (e) {
-            statusEl.innerText = 'âš ï¸ Gagal cek';
+            statusEl.innerText = '⚠️ Gagal cek';
             statusEl.style.color = 'var(--gold)';
         } finally {
             spinner.style.display = 'none';
@@ -924,13 +924,13 @@
         const tnc = document.getElementById('reg_tnc').checked;
 
         if (!email || !wa || !pass) {
-            return showSapaModal("Lengkapi Data", "Silakan lengkapi Email, WhatsApp, dan Password.", "âš ï¸");
+            return showSapaModal("Lengkapi Data", "Silakan lengkapi Email, WhatsApp, dan Password.", "⚠️");
         }
         if (!wa.startsWith("628")) {
-            return showSapaModal("Format WA Salah", "Nomor WhatsApp wajib diawali format 628...", "âš ï¸");
+            return showSapaModal("Format WA Salah", "Nomor WhatsApp wajib diawali format 628...", "⚠️");
         }
         if (!tnc) {
-            return showSapaModal("Syarat & Ketentuan", "Harap setujui Syarat & Ketentuan dan Kebijakan Pembayaran sebelum melanjutkan.", "âš ï¸");
+            return showSapaModal("Syarat & Ketentuan", "Harap setujui Syarat & Ketentuan dan Kebijakan Pembayaran sebelum melanjutkan.", "⚠️");
         }
 
         // Generate 6 digit OTP code
@@ -961,7 +961,7 @@
                 showSapaModal("Gagal Kirim OTP", res.message, "âŒ");
             }
         } catch (e) {
-                showSapaModal("Error OTP", "Gagal menghubungi server OTP: " + e.toString(), "âš ï¸");
+                showSapaModal("Error OTP", "Gagal menghubungi server OTP: " + e.toString(), "⚠️");
         }
         setLoading('btn_send_otp', false);
     };
@@ -993,7 +993,7 @@
         const inputVal = document.getElementById('otp_input').value.trim();
         if (inputVal === generatedOTPCode) {
             clearInterval(otpTimerInterval);
-                showSapaModal("Verifikasi Sukses!", "WhatsApp Anda telah diverifikasi secara sukses.", "âœ…");
+                showSapaModal("Verifikasi Sukses!", "WhatsApp Anda telah diverifikasi secara sukses.", "✅");
             setTimeout(() => {
                 nextStep('2-5');
             }, 1000);
@@ -1044,7 +1044,7 @@
         const guests = document.getElementById('event_guests').value.trim();
 
         if (!addr || !venue || !city || guests === "") {
-            return showSapaModal("Data Belum Lengkap", "Silakan isi detail alamat, tempat rekreasi, dan perkiraan tamu.", "âš ï¸");
+            return showSapaModal("Data Belum Lengkap", "Silakan isi detail alamat, tempat rekreasi, dan perkiraan tamu.", "⚠️");
         }
 
         nextStep(3);
@@ -1117,7 +1117,7 @@
             const result = await response.json();
             
             if (result.status === "success" && result.available) {
-                statusEl.innerText = "âœ… Slot Tersedia";
+                statusEl.innerText = "✅ Slot Tersedia";
                 statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-green-200 text-green-800";
                 document.getElementById('btn_pricing_next').disabled = false;
             } else {
@@ -1127,7 +1127,7 @@
                 showSapaModal("Tanggal Penuh", "Maaf, slot untuk tanggal tersebut sudah terisi oleh pelanggan lain. Silakan kembali ke Step 1 untuk mengganti tanggal.", "📅");
             }
         } catch (e) {
-                statusEl.innerText = "âš ï¸ Gagal Sinkronisasi Slot";
+                statusEl.innerText = "⚠️ Gagal Sinkronisasi Slot";
             statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-100 text-red-700";
         }
     }
@@ -1228,14 +1228,14 @@
                     btnEl.disabled = false;
                 },
                 onClose: function() {
-                    showSapaModal("Transaksi Batal", "Anda membatalkan pembayaran.", "âš ï¸");
+                    showSapaModal("Transaksi Batal", "Anda membatalkan pembayaran.", "⚠️");
                     btnEl.disabled = false;
                 }
             });
 
         } catch (e) {
             closeSapaModal();
-            showSapaModal("Error Transaksi", "Masalah pembayaran: " + e.toString(), "âš ï¸");
+            showSapaModal("Error Transaksi", "Masalah pembayaran: " + e.toString(), "⚠️");
             btnEl.disabled = false;
         }
     };
@@ -1270,7 +1270,7 @@
             if (res.status === "success") {
                 const pesan = encodeURIComponent(
                     `*Aktivasi Akun SapaTamu.ku* 🎉\n` +
-                    `*Pembayaran:* âœ… LUNAS (Via Midtrans)\n` +
+                    `*Pembayaran:* ✅ LUNAS (Via Midtrans)\n` +
                     `*Paket:* ${regData.pkg}\n` +
                     `*Nama Acara:* ${regData.clientName}\n` +
                     `*Tanggal:* ${regData.weddingDate}\n` +
@@ -1290,7 +1290,7 @@
                 loadEl.style.display = 'none';
             }
         } catch (e) {
-                showSapaModal("Error Aktivasi", "Masalah koneksi saat aktivasi: " + e.toString(), "âš ï¸");
+                showSapaModal("Error Aktivasi", "Masalah koneksi saat aktivasi: " + e.toString(), "⚠️");
             btn.disabled = false;
             textEl.style.display = 'block';
             loadEl.style.display = 'none';
