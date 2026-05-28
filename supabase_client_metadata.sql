@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS public.metadata_client (
     waktu_acara TEXT,
     link_invitation TEXT,
     format_pesan_wa TEXT,
+    format_pesan_wa_custom TEXT,
     sesi_1 TEXT,
     sesi_2 TEXT,
     sesi_3 TEXT,
