@@ -667,8 +667,10 @@ function handleLogin(data) {
         return createResponse({ status: "error", message: "Password salah" });
       }
 
-      // SET STATUS KE ACTIVE SAAT LOGIN (KOLOM H)
-      sheet.getRange(i + 1, 8).setValue("Active");
+      // HANYA SET STATUS KE ACTIVE JIKA BELUM ACTIVE (MENGURANGI LOCK SHEET)
+      if (values[i][7] !== "Active") {
+        sheet.getRange(i + 1, 8).setValue("Active");
+      }
 
       return createResponse({ status: "success", message: "Login Berhasil", data: {
         username:  values[i][10] || values[i][0], // Kolom K (display name) atau A

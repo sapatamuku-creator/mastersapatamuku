@@ -425,9 +425,14 @@
         const tbody = document.getElementById('clients-tbody');
         tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:40px;"><span class="spin" style="border-color:var(--gold); width:24px; height:24px;"></span></td></tr>';
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/clients?username=neq.admin_global&order=created_at.desc`, { headers: SB_HEADERS });
-            if (!res.ok) throw new Error("Gagal mengambil data dari database");
-            allClients = await res.json();
+            const res = await fetch(GAS_SYNC_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getOwnerClients", adminPassword: adminPassword })
+            });
+            const out = await res.json();
+            if (out.status !== 'success') throw new Error(out.message || "Gagal mengambil data dari database");
+            
+            allClients = out.data;
             updateStats(allClients);
             renderTable(allClients);
         } catch (e) {
@@ -545,20 +550,25 @@
         btn.innerText = '⏳...'; btn.disabled = true;
 
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/clients?username=eq.${encodeURIComponent(username)}`, {
-                method: "PATCH", headers: SB_HEADERS, body: JSON.stringify(payload)
+            const res = await fetch(GAS_SYNC_URL, {
+                method: "POST",
+                body: JSON.stringify({ 
+                    action: "updateOwnerClient", 
+                    adminPassword: adminPassword,
+                    originalUsername: username,
+                    clientData: payload
+                })
             });
-            if (!res.ok) throw new Error("Gagal update di Supabase");
-            const updatedData = await res.json();
-            if (updatedData && updatedData.length > 0) {
-                const freshClient = updatedData[0];
-                const targetIdx = allClients.findIndex(c => c.username === username);
-                if (targetIdx !== -1) allClients[targetIdx] = freshClient;
-                row.setAttribute('data-username', freshClient.username);
+            const out = await res.json();
+            if (out.status !== 'success') throw new Error(out.message || "Gagal update di Backend");
+            
+            const targetIdx = allClients.findIndex(c => c.username === username);
+            if (targetIdx !== -1) {
+                allClients[targetIdx] = { ...allClients[targetIdx], ...payload };
             }
+            if (payload.subdomain) row.setAttribute('data-username', payload.subdomain);
             row.classList.remove('dirty');
-            showToast("✅ Tersimpan di Supabase! Sync ke Spreadsheet berjalan.", "green");
-            triggerGasSyncBackground(username, payload);
+            showToast("✅ Tersimpan di Supabase & Spreadsheet!", "green");
         } catch (e) {
             showToast("❌ Error: " + e.message, "red");
         }
@@ -678,7 +688,7 @@
         }
 
         try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/clients?subdomain=eq.${encodeURIComponent(slug)}&select=subdomain`, {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/client_public_profile?subdomain=eq.${encodeURIComponent(slug)}&select=subdomain`, {
                 headers: SB_HEADERS
             });
             const data = await res.json();
