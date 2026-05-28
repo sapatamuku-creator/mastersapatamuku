@@ -533,6 +533,10 @@
         };
 
 
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+    const SB_HEADERS = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json" };
+
     const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
     
     let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
@@ -603,54 +607,65 @@
     async function refreshApp() {
         toggleProcessing(true, "SYNCING DATA...");
         try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "getMasterData", ssId: CURRENT_SS_ID })
-            });
-            const result = await response.json();
-            
-            if (result.status === "error") {
-                showSapaModal("Server Error", result.message || "Gagal mengambil data.", "❌");
-                toggleProcessing(false);
-                return;
-            }
+            // Fetch metadata dan tamu secara paralel dari Supabase
+            const [metaRes, tamuRes] = await Promise.all([
+                fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=*`, { headers: SB_HEADERS }),
+                fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&order=row.desc`, { headers: SB_HEADERS })
+            ]);
 
-            MASTER_LIST = result.guestList || [];
-            
-            // Sync Dynamic Dropdown from result
-            if (result.dropdownOptions && result.dropdownOptions.length > 0) {
-                const select = document.getElementById('in-l7-pengundang');
-                if (select) {
-                    select.innerHTML = "";
-                    result.dropdownOptions.forEach(opt => {
-                        const el = document.createElement('option');
-                        el.value = opt.toUpperCase();
-                        el.innerText = opt;
-                        select.appendChild(el);
-                    });
-                }
-            }
-            
-            if(result.eventMeta) {
-                document.getElementById('view-wedding-name').innerText = result.eventMeta.pengantin || "Event Guestbook";
-                document.getElementById('view-schedule').innerHTML = (result.eventMeta.tanggal || "") + "<br>" + (result.eventMeta.waktu || "");
-                document.getElementById('view-location').innerText = result.eventMeta.lokasi || "";
-                document.getElementById('view-link').innerText = result.eventMeta.link || "";
+            if (!metaRes.ok || !tamuRes.ok) throw new Error("Gagal mengambil data dari Supabase");
+
+            const metaData = await metaRes.json();
+            const tamuData = await tamuRes.json();
+
+            if (metaData && metaData.length > 0) {
+                const meta = metaData[0];
                 
-                document.getElementById('edit_ev_nama').value = result.eventMeta.pengantin || "";
-                document.getElementById('edit_ev_date').value = result.eventMeta.tanggal || "";
-                document.getElementById('edit_ev_loc').value = result.eventMeta.lokasi || "";
-                document.getElementById('edit_ev_time').value = result.eventMeta.waktu || "";
-                document.getElementById('edit_ev_link').value = result.eventMeta.link || "";
+                // Simpan template ke global untuk digunakan oleh executeBlast
+                window.WA_TEMPLATE_DEFAULT = meta.format_pesan_wa || "";
+                window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
 
-                if(result.eventMeta.sesiOptions && result.eventMeta.sesiOptions.length > 0) {
+                document.getElementById('view-wedding-name').innerText = meta.nama_pengantin || "Event Guestbook";
+                document.getElementById('view-schedule').innerHTML = (meta.hari_tanggal || "") + "<br>" + (meta.waktu_acara || "");
+                document.getElementById('view-location').innerText = meta.lokasi_acara || "";
+                document.getElementById('view-link').innerText = meta.link_invitation || "";
+                
+                document.getElementById('edit_ev_nama').value = meta.nama_pengantin || "";
+                document.getElementById('edit_ev_date').value = meta.hari_tanggal || "";
+                document.getElementById('edit_ev_loc').value = meta.lokasi_acara || "";
+                document.getElementById('edit_ev_time').value = meta.waktu_acara || "";
+                document.getElementById('edit_ev_link').value = meta.link_invitation || "";
+
+                const sesiOptions = [meta.sesi_1, meta.sesi_2, meta.sesi_3].filter(s => s);
+                if(sesiOptions.length > 0) {
                     const sesiSelect = document.getElementById('in-sesi-undangan');
-                    sesiSelect.innerHTML = result.eventMeta.sesiOptions.map((val, index) => {
+                    sesiSelect.innerHTML = sesiOptions.map((val, index) => {
                         if(index < 3) document.getElementById(`edit_ev_s${index+1}`).value = val;
                         return `<option value="${val}">Sesi ${index + 1} (${val})</option>`;
                     }).join('');
                 }
             }
+
+            // Map data tamu Supabase ke MASTER_LIST
+            MASTER_LIST = tamuData.map(t => ({
+                id: t.kode,
+                row: t.row,
+                kode: t.kode,
+                nama: t.nama,
+                whatsapp: t.whatsapp,
+                kategori: t.kategori,
+                pihakPengundang: t.pihak_pengundang,
+                souvenir: t.souvenir,
+                alamat: t.alamat,
+                rencanaHadir: t.rencana_hadir,
+                sesi: t.sesi,
+                statusWA: t.status_wa,
+                statusHadir: t.status_hadir,
+                jamDatang: t.jam_datang,
+                realHadir: t.real_hadir,
+                syncStatus: "done"
+            }));
+            
             render(MASTER_LIST);
         } catch(err) { 
             console.error(err);
@@ -753,6 +768,9 @@
         }
     };
 
+    window.WA_TEMPLATE_DEFAULT = "";
+    window.WA_TEMPLATE_CUSTOM = "";
+
     window.executeBlast = function(row, phone, name, code) {
         const guest = MASTER_LIST.find(g => g.row == row);
         if(!guest) return;
@@ -775,7 +793,21 @@
         let cleanPhone = String(phone).replace(/\D/g, ''); 
         if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
 
-        let msg = `Kepada Yth. Bapak/Ibu/Saudara/i\n*${name.toUpperCase()}*\n\n` +
+        let templateString = window.WA_TEMPLATE_CUSTOM || window.WA_TEMPLATE_DEFAULT;
+
+        let msg = "";
+        if (templateString) {
+            msg = templateString
+                .replace(/{NAMA_TAMU_KAPITAL}/g, name.toUpperCase())
+                .replace(/{SESI_TAMU}/g, sesi)
+                .replace(/{NAMA_PENGANTIN}/g, weddingName)
+                .replace(/{HARI_TANGGAL}/g, schedule) // karena kita sudah gabung tanggal & waktu, atau biarkan schedule
+                .replace(/{WAKTU_ACARA}/g, schedule)
+                .replace(/{LOKASI_ACARA}/g, location)
+                .replace(/{LINK_UNDANGAN}/g, personalLink)
+                .replace(/{LINK_QR}/g, qrCodeLink);
+        } else {
+            msg = `Kepada Yth. Bapak/Ibu/Saudara/i\n*${name.toUpperCase()}*\n\n` +
                   `Tanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami. *Tepat pada pukul [${sesi}]*\n\n` +
                   `*${weddingName}*\n` +
                   `□ ${schedule}\n` +
@@ -783,6 +815,7 @@
                   `Informasi lengkap dapat diakses melalui tautan berikut:\n${personalLink}\n\n` +
                   `Mohon simpan QR Code ini untuk akses masuk:\n${qrCodeLink}\n\n` +
                   `Terima kasih.`;
+        }
 
         window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`, '_blank');
 
