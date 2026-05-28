@@ -442,105 +442,46 @@
         const normalizedUser = user.toLowerCase().replace(/[\s&]/g, '');
 
         try {
-            // ─── JALUR UTAMA: SUPABASE REST API ───
-            const sbUrl = `${SB_URL}/rest/v1/clients?or=(username.eq.${normalizedUser},subdomain.eq.${normalizedUser},username.eq.admin_global)&select=*`;
-            const sbRes = await fetch(sbUrl, {
-                method: "GET",
-                headers: {
-                    "apikey": SB_KEY,
-                    "Authorization": `Bearer ${SB_KEY}`
-                }
+            // ─── JALUR UTAMA: GAS BACKEND (Aman - Password tidak melewati browser) ───
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "cors",
+                redirect: "follow",
+                body: JSON.stringify({ action: "login", username: normalizedUser, password: pass })
             });
+            const res = await response.json();
 
-            if (!sbRes.ok) {
-                throw new Error("Supabase request failed, falling back to Google Sheets.");
-            }
-
-            const clients = await sbRes.json();
-            
-            // Temukan baris klien & admin_global
-            const targetClient = clients.find(c => c.username === normalizedUser || c.subdomain === normalizedUser);
-            const adminGlobal = clients.find(c => c.username === 'admin_global');
-
-            if (!targetClient) {
-                throw new Error("Client not found in Supabase");
-            }
-
-            const adminPassword = adminGlobal ? adminGlobal.password : null;
-            const clientPassword = targetClient.password;
-
-            let role = null;
-            if (adminPassword && pass === adminPassword) {
-                role = "usher"; // Login sebagai Admin/Usher
-            } else if (pass === clientPassword) {
-                role = "client"; // Login sebagai Client
-            }
-
-            if (!role) {
-                throw new Error("Incorrect password or out-of-sync");
-            }
-
-            // Cek status aktif
-            if (targetClient.status && targetClient.status.toLowerCase() !== 'active') {
-                showSapaModal("Akun Dinonaktifkan", "Akun ini telah dinonaktifkan oleh Admin. Silakan hubungi pusat.", "⚠️");
-                setLoading('btn_login', false);
-                return;
-            }
-
-            // Login Berhasil!
-            const sub = (targetClient.subdomain || targetClient.username).toLowerCase().replace(/[\s&]/g, '');
-            const userData = { 
-                ssId: targetClient.ssid, 
-                username: targetClient.username, 
-                subdomain: sub,
-                role: role
-            };
-            localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
-            sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
-
-            const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
-            const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
-            
-            const targetUrl = `https://${sub}.sapatamu.id/${targetPage}?ssId=${targetClient.ssid}&user=${encodeURIComponent(targetClient.username)}&category=${targetClient.category || 'wedding'}&role=${role}`;
-            window.location.replace(targetUrl);
-
-        } catch (err) {
-            console.warn("Jalur utama Supabase gagal, beralih ke cadangan GAS Spreadsheet: ", err);
-            
-            // ─── JALUR CADANGAN: GOOGLE SPREADSHEET (GAS) ───
-            try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: "POST",
-                    mode: "cors",
-                    redirect: "follow",
-                    body: JSON.stringify({ action: "login", username: user, password: pass })
-                });
-                const res = await response.json();
-                if (res.status === "success") {
-                    const sub = (res.data.subdomain || res.data.username).toLowerCase().replace(/[\s&]/g, '');
-                    
-                    const userData = { 
-                        ssId: res.data.ssId, 
-                        username: res.data.username, 
-                        subdomain: sub,
-                        role: res.data.role || 'client'
-                    };
-                    localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
-                    sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
-
-                    const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
-                    const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
-                    
-                    const targetUrl = `https://${sub}.sapatamu.id/${targetPage}?ssId=${res.data.ssId}&user=${encodeURIComponent(res.data.username)}&category=${res.data.category || 'wedding'}&role=${userData.role}`;
-                    window.location.replace(targetUrl);
-                } else {
-                    showSapaModal("Login Gagal", res.message, "❌");
+            if (res.status === "success") {
+                const sub = (res.data.subdomain || res.data.username).toLowerCase().replace(/[\s&]/g, '');
+                
+                // Cek status aktif
+                if (res.data.status && res.data.status.toLowerCase() !== 'active') {
+                    showSapaModal("Akun Dinonaktifkan", "Akun ini telah dinonaktifkan oleh Admin. Silakan hubungi pusat.", "⚠️");
                     setLoading('btn_login', false);
+                    return;
                 }
-            } catch (e) {
-                showSapaModal("Koneksi Bermasalah", "Tidak dapat terhubung ke server SapaTamu.", "⚠️");
+
+                const userData = { 
+                    ssId: res.data.ssId, 
+                    username: res.data.username, 
+                    subdomain: sub,
+                    role: res.data.role || 'client'
+                };
+                localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+
+                const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
+                const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
+                
+                const targetUrl = `https://${sub}.sapatamu.id/${targetPage}?ssId=${res.data.ssId}&user=${encodeURIComponent(res.data.username)}&category=${res.data.category || 'wedding'}&role=${userData.role}`;
+                window.location.replace(targetUrl);
+            } else {
+                showSapaModal("Login Gagal", res.message || "Username atau password salah.", "❌");
                 setLoading('btn_login', false);
             }
+        } catch (e) {
+            showSapaModal("Koneksi Bermasalah", "Tidak dapat terhubung ke server SapaTamu. Pastikan koneksi internet Anda stabil.", "⚠️");
+            setLoading('btn_login', false);
         }
     };
 

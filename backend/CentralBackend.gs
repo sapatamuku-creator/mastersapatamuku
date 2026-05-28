@@ -48,6 +48,8 @@ function handleCentralPost(request) {
     case 'syncFromSupabase': return handleSyncFromSupabase(request);
     case 'upgradePackage': return handleUpgradePackage(request);
     case 'syncAllClients': return createResponse({ status: "success", message: syncAllClientsToSupabase() });
+    case 'checkSlot': return handleCheckSlot(request);
+    case 'getClientProfile': return handleGetClientProfile(request);
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
 }
@@ -220,7 +222,86 @@ function handleRegisterAndActivate(data) {
   }
 }
 
-// --- OWNER DASHBOARD: AMBIL SEMUA DATA CLIENT ---
+// --- CEK KETERSEDIAAN SLOT (Aman: Data klien lain tidak bocor ke browser) ---
+function handleCheckSlot(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const values = sheet.getDataRange().getValues();
+    
+    const targetDate = String(data.date || '').trim();
+    if (!targetDate) return createResponse({ status: "error", message: "Tanggal tidak diberikan" });
+    
+    const excludeUser = String(data.excludeUsername || '').toLowerCase();
+    const usherOnly = data.usherOnly === true;
+
+    let bookedCount = 0;
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      const rowDate = String(row[4] || '').trim();
+      const rowUser = String(row[0] || '').toLowerCase();
+      const rowPackage = String(row[11] || '').toLowerCase();
+      const rowStatus = String(row[7] || '').toLowerCase();
+      
+      if (rowStatus !== 'active') continue;
+      if (rowDate !== targetDate) continue;
+      if (excludeUser && rowUser === excludeUser) continue;
+      
+      if (usherOnly) {
+        // Hanya hitung yang paket guestbook/collaboration karena butuh tim usher
+        if (rowPackage.includes('guestbook') || rowPackage.includes('collaboration')) {
+          bookedCount++;
+        }
+      } else {
+        bookedCount++;
+      }
+    }
+
+    return createResponse({ status: "success", available: bookedCount === 0 });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Gagal cek slot: " + err.toString() });
+  }
+}
+
+// --- AMBIL PROFIL KLIEN (Aman: Tidak mengirim password ke browser) ---
+function handleGetClientProfile(data) {
+  try {
+    const username = String(data.username || '').toLowerCase().trim();
+    if (!username) return createResponse({ status: "error", message: "Username tidak diberikan" });
+    
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const values = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      const rowUser = String(row[0] || '').toLowerCase();
+      const rowSub  = String(row[9] || '').toLowerCase();
+      if (rowUser === username || rowSub === username) {
+        // Kembalikan data profil TANPA password
+        return createResponse({
+          status: "success",
+          data: {
+            username:     row[0],
+            ssid:         row[1],
+            whatsapp:     row[3],
+            wedding_date: String(row[4] || ''),
+            email:        row[6],
+            status:       row[7],
+            category:     row[8],
+            subdomain:    row[9],
+            client_name:  row[10],
+            package:      row[11] || ''
+          }
+        });
+      }
+    }
+    return createResponse({ status: "error", message: "Client tidak ditemukan" });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Gagal ambil profil: " + err.toString() });
+  }
+}
+
 function handleGetOwnerClients(data) {
   try {
     const ss = SpreadsheetApp.openById(MASTER_SS_ID);
@@ -350,7 +431,7 @@ function handleDeleteOwnerClient(data) {
 
 function deleteClientFromSupabaseWithResult(username) {
   const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/clients?username=eq." + encodeURIComponent(username);
-  const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+  const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTE3NTY4NSwiZXhwIjoyMDk0NzUxNjg1fQ.Bf0mQybvXLfou-zQVxeLq1Cba3H4DprOhXaj02n9njg";
   
   const options = {
     method: "delete",
@@ -803,7 +884,7 @@ function syncClientToSupabase(rowData) {
 
 function syncClientToSupabaseWithResult(rowData) {
   const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/clients";
-  const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+  const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTE3NTY4NSwiZXhwIjoyMDk0NzUxNjg1fQ.Bf0mQybvXLfou-zQVxeLq1Cba3H4DprOhXaj02n9njg";
   
   const payload = {
     username: rowData.username,

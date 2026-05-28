@@ -1100,13 +1100,14 @@
         statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-amber-200 text-amber-800";
 
         try {
-            // Periksa di database Supabase apakah ada client dengan wedding_date yang sama
-            const res = await fetch(`${SB_URL}/rest/v1/clients?wedding_date=eq.${encodeURIComponent(tgl)}&select=username`, {
-                headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+            // Cek slot via GAS backend (aman - tidak membocorkan data klien lain ke browser)
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "checkSlot", date: tgl })
             });
-            const data = await res.json();
+            const result = await response.json();
             
-            if (data.length === 0) {
+            if (result.status === "success" && result.available) {
                 statusEl.innerText = "✅ Slot Tersedia";
                 statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-green-200 text-green-800";
                 document.getElementById('btn_pricing_next').disabled = false;

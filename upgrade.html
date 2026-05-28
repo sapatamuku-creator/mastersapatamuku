@@ -262,13 +262,15 @@
 
     async function fetchClientData(username) {
         try {
-            const res = await fetch(`${SB_URL}/rest/v1/clients?username=eq.${encodeURIComponent(username)}`, {
-                headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+            // Gunakan GAS untuk fetch data klien (aman - password tidak pernah sampai ke browser)
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getClientProfile", username: username })
             });
-            const data = await res.json();
+            const result = await response.json();
             
-            if (data.length > 0) {
-                currentUserData = data[0];
+            if (result.status === "success" && result.data) {
+                currentUserData = result.data;
                 renderProfile();
             } else {
                 showSapaModal("Data Tidak Ditemukan", "Tidak dapat memuat profil Anda.", "❌");
@@ -343,23 +345,19 @@
         btnPay.disabled = true;
 
         try {
-            // Cek ketersediaan: Cari klien lain yang tanggalnya sama DAN paketnya guestbook/allin
-            // Karena ini sekadar validasi tanggal (seperti daftar.html), kita asumsikan 
-            // setiap event butuh usher, jadi cari siapa saja yg sudah booking pada tanggal ini
-            // kecuali user ini sendiri.
-            const query = `${SB_URL}/rest/v1/clients?wedding_date=eq.${encodeURIComponent(tgl)}&username=neq.${encodeURIComponent(currentUserData.username)}&select=username,package`;
-            const res = await fetch(query, {
-                headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+            // Cek slot via GAS (aman - data klien lain tidak bocor ke browser)
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ 
+                    action: "checkSlot", 
+                    date: tgl, 
+                    excludeUsername: currentUserData.username,
+                    usherOnly: true
+                })
             });
-            const data = await res.json();
-            
-            // Filter hanya user lain yang sudah memesan guestbook/allin (karena e-inv tidak butuh usher)
-            const usherBooked = data.filter(d => 
-                (d.package && d.package.toLowerCase().includes('guestbook')) || 
-                (d.package && d.package.toLowerCase().includes('collaboration'))
-            );
+            const result = await response.json();
 
-            if (usherBooked.length === 0) {
+            if (result.status === "success" && result.available) {
                 statusEl.innerText = "✅ Slot Usher Tersedia";
                 statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-green-200 text-green-800";
                 btnPay.disabled = false;
