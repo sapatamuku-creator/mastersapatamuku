@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Config Invitation - SapaTamu.Ku</title>
+    <script src="subdomain_resolver.js?v=3.3"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --primary: #E07B7B; --bg: #FFF9F5; --text: #4A3F35; --border: #F0E6DE; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; overflow: hidden; }
+        
+        .main-wrapper { display: grid; grid-template-columns: 450px 1fr; height: calc(100vh - 80px); margin-top: 80px; }
+        
+        /* LEFT SIDE: SETTINGS */
+        .settings-panel { 
+            background: white; border-right: 1px solid var(--border); 
+            padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px;
+        }
+        .section-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #8C7560; margin-bottom: 8px; }
+        .stk-input { width: 100%; padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--border); background: #FCF8F5; font-size: 14px; font-weight: 600; transition: 0.3s; }
+        .stk-input:focus { border-color: var(--primary); outline: none; background: #fff; }
+        
+        /* RIGHT SIDE: PREVIEW */
+        .preview-panel { background: #F0E6DE; padding: 40px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .preview-frame-container { 
+            width: 100%; max-width: 400px; height: 100%; max-height: 800px; 
+            background: white; border-radius: 40px; overflow: hidden; 
+            box-shadow: 0 40px 100px rgba(74, 63, 53, 0.2); border: 8px solid #1a1a1a;
+            position: relative;
+        }
+        .preview-frame { width: 100%; height: 100%; border: none; }
+        
+        .floating-save { position: fixed; bottom: 30px; left: 30px; width: 390px; z-index: 100; }
+        .btn-save { background: #1a1a1a; color: white; width: 100%; padding: 20px; border-radius: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; font-size: 12px; cursor: pointer; transition: 0.3s; }
+        .btn-save:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.2); }
+
+        /* NAVBAR CLONE */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; background: var(--bg); }
+        .nav-outer-wrapper { position: relative; max-width: 95%; display: flex; align-items: center; background: #FFFDFB; border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08); border: 1px solid var(--border); overflow: hidden; }
+        .nav-scroll-container { display: flex; align-items: center; gap: 5px; padding: 6px 15px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: #8C7560; padding: 10px 18px; border-radius: 30px; transition: 0.3s; }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
+    </style>
+    <script src="auth_guard.js?v=1.0"></script>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+
+    <nav class="sapatamu-navbar">
+        <div class="nav-outer-wrapper">
+            <div class="nav-scroll-container" id="nav-scroll">
+                <div class="nav-group flex items-center">
+                    <a href="dashboard.html" class="nav-link">Dashboard</a>
+                    <div class="nav-divider"></div>
+                    <a href="formulir_tamu.html" class="nav-link">Formulir</a>
+                    <a href="wa_blast.html" class="nav-link">WA Blast</a>
+                    <a href="undangan.html" class="nav-link">Undangan</a>
+                </div>
+                <div class="nav-divider"></div>
+                <div class="nav-group flex items-center">
+                    <a href="checkin.html" class="nav-link">Check-in</a>
+                    <a href="onsite.html" class="nav-link">On-Site</a>
+                    <a href="analytics.html" class="nav-link">Analytics</a>
+                    <a href="luckydraw.html" class="nav-link">Lucky Draw</a>
+                    <a href="angpao.html" class="nav-link">Angpao</a>
+                    <a href="worker.html" class="nav-link">Worker</a>
+                    <a href="welcome.html" class="nav-link">Welcome</a>
+                    <div class="nav-divider"></div>
+                    
+                    
+                </div>
+                <div class="nav-divider"></div>
+                <a href="logout.html" class="nav-link" style="color: #E07B7B;">Sign Out</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid #F0E6DE; animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
+            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: #4A3F35; margin-bottom: 15px;">Pesan</h2>
+            <p id="notify-msg" style="font-size: 15px; color: #8C7560; line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
+            <button onclick="closeSapaModal()" style="width: 100%; padding: 15px; border-radius: 15px; border: none; font-size: 11px; font-weight: 900; letter-spacing: 2px; cursor: pointer; color: white; background: #4A3F35; box-shadow: 0 8px 20px rgba(74, 63, 53, 0.3);">MENGERTI</button>
+        </div>
+    </div>
+    <style>
+        @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+
+    <div class="main-wrapper">
+        <!-- SIDEBAR: SETTINGS -->
+        <div class="settings-panel">
+            <div class="pb-32">
+                <div class="section-title">Invitation Theme & Music</div>
+                <div class="grid grid-cols-1 gap-3 mb-6">
+                    <button onclick="window.location.href='katalog_undangan.html' + window.location.search" class="theme-btn p-4 border-2 border-primary rounded-2xl bg-primary/5 text-xs font-black text-primary flex items-center justify-center gap-2">
+                        <span>🖼️ JELAJAHI KATALOG TEMA</span>
+                    </button>
+                    <p id="active-theme-label" class="text-[10px] text-center font-bold text-neutral-400 uppercase tracking-widest mt-1">Tema Aktif: <span class="text-primary">Loading...</span></p>
+                </div>
+                <div class="form-group">
+                    <label>Background Musik</label>
+                    <!-- Upload Zone -->
+                    <div id="music-upload-zone"
+                        onclick="document.getElementById('music-file-input').click()"
+                        ondragover="event.preventDefault(); this.classList.add('border-amber-400','bg-amber-50')"
+                        ondragleave="this.classList.remove('border-amber-400','bg-amber-50')"
+                        ondrop="event.preventDefault(); this.classList.remove('border-amber-400','bg-amber-50'); handleMusicFileDrop(event.dataTransfer.files[0])"
+                        class="border-2 border-dashed border-neutral-200 rounded-2xl p-6 text-center cursor-pointer hover:border-amber-300 hover:bg-amber-50/50 transition-all">
+                        <div id="music-upload-idle">
+                            <p class="text-2xl mb-2">🎵</p>
+                            <p class="text-xs font-bold text-neutral-600">Klik atau drag & drop file MP3</p>
+                            <p class="text-[9px] text-neutral-400 mt-1">Maks. 20MB · Format: .mp3</p>
+                        </div>
+                        <div id="music-upload-progress" class="hidden">
+                            <div class="w-8 h-8 border-2 border-amber-400/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-2"></div>
+                            <p id="music-upload-status-text" class="text-xs font-bold text-amber-600">Mengupload...</p>
+                        </div>
+                    </div>
+                    <input type="file" id="music-file-input" accept=".mp3,audio/mpeg" class="hidden" onchange="handleMusicFileSelect(this.files[0])">
+
+                    <!-- Result URL field -->
+                    <div class="mt-2">
+                        <p class="text-[9px] text-neutral-400 mb-1">Atau paste URL MP3 langsung (Cloudinary, GitHub Raw, dll):</p>
+                        <input type="text" id="inv_music" class="stk-input text-[10px]" placeholder="https://..." oninput="updatePreview()">
+                    </div>
+                    <p id="music-convert-status" class="text-[9px] mt-1 hidden"></p>
+                </div>
+
+                <div class="section-title">Hero / Cover Section</div>
+                <div class="form-group">
+                    <label>Cover Background Image</label>
+                    <p class="text-[9px] text-neutral-400 mb-1">☁️ Upload ke Cloudinary (CDN cepat) <span class="text-neutral-300">atau paste URL Google Drive manual</span></p>
+                    <div class="flex gap-2">
+                        <input type="text" id="inv_cover_bg" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
+                        <button onclick="triggerCloudinaryPick('inv_cover_bg')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Hero Image</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="inv_hero_img" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
+                        <button onclick="triggerCloudinaryPick('inv_hero_img')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Invitation Header Label</label>
+                    <input type="text" id="inv_header_label" class="stk-input" placeholder="The Wedding Celebration" oninput="updatePreview()">
+                </div>
+
+                <div class="form-group">
+                    <label>Hashtag</label>
+                    <input type="text" id="inv_hashtag" class="stk-input" placeholder="#SatuBINTANGuntukANISA" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Guest Greeting Text</label>
+                    <input type="text" id="inv_greeting" class="stk-input" placeholder="Yth. Bapak/Ibu/Saudara/i" oninput="updatePreview()">
+                </div>
+
+                <div class="section-title">Groom (Mempelai Pria)</div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <select id="show_groom" class="stk-input" onchange="updatePreview()">
+                        <option value="true">Tampilkan Section</option>
+                        <option value="false">Sembunyikan</option>
+                    </select>
+                    <input type="text" id="groom_header" class="stk-input" placeholder="Header (the Groom)" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Groom Photo</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="groom_photo" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
+                        <button onclick="triggerCloudinaryPick('groom_photo')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="groom_name" class="stk-input" placeholder="Bintang Zahlahar Trijati" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Parents / Description</label>
+                    <textarea id="groom_desc" class="stk-input" rows="2" placeholder="Putra ke-4 dari Bp. Nana Herna Sutisna & Almh. Ibu Eva Refliana" oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Instagram Username</label>
+                    <input type="text" id="groom_ig" class="stk-input" placeholder="@bintangzt" oninput="updatePreview()">
+                </div>
+
+                <div class="section-title">Bride (Mempelai Wanita)</div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <select id="show_bride" class="stk-input" onchange="updatePreview()">
+                        <option value="true">Tampilkan Section</option>
+                        <option value="false">Sembunyikan</option>
+                    </select>
+                    <input type="text" id="bride_header" class="stk-input" placeholder="Header (the Bride)" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Bride Photo</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="bride_photo" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
+                        <button onclick="triggerCloudinaryPick('bride_photo')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="bride_name" class="stk-input" placeholder="Anisa Nur Fitria" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Parents / Description</label>
+                    <textarea id="bride_desc" class="stk-input" rows="2" placeholder="Putri ke-1 dari Bp. Udin Jaenudin & Ibu Susi Yamayanti" oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Instagram Username</label>
+                    <input type="text" id="bride_ig" class="stk-input" placeholder="@anisanrf" oninput="updatePreview()">
+                </div>
+
+                <div class="section-title">Event 1 (e.g. Akad Nikah)</div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <select id="show_events" class="stk-input" onchange="updatePreview()">
+                        <option value="true">Tampilkan Section Events</option>
+                        <option value="false">Sembunyikan Events</option>
+                    </select>
+                    <input type="text" id="events_header" class="stk-input" placeholder="Header (Wedding Events)" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>Event Name</label>
+                    <input type="text" id="ev1_name" class="stk-input" placeholder="Akad Nikah" oninput="updatePreview()">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="ev1_date" class="stk-input" oninput="updateDatePreview('ev1'); updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Time & Zone</label>
+                        <div class="flex gap-2">
+                            <input type="time" id="ev1_time" class="stk-input w-2/3" oninput="updateDatePreview('ev1'); updatePreview()">
+                            <select id="ev1_zone" class="stk-input w-1/3" onchange="updateDatePreview('ev1'); updatePreview()">
+                                <option value="WIB">WIB</option>
+                                <option value="WITA">WITA</option>
+                                <option value="WIT">WIT</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- Preview tanggal terpilih -->
+                <div id="ev1_date_preview" class="-mt-2 mb-4 px-3 py-2 bg-amber-50 border border-amber-100 rounded-xl hidden">
+                    <p class="text-[10px] font-bold text-amber-700" id="ev1_date_preview_text"></p>
+                </div>
+                <div class="form-group">
+                    <label>Location Name</label>
+                    <textarea id="ev1_loc_name" class="stk-input" rows="2" placeholder="Lingkungan Marga Mulya..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Maps Link URL</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="ev1_maps" class="stk-input w-2/3" placeholder="https://goo.gl/maps/..." oninput="updatePreview()">
+                        <button onclick="openMapPicker('ev1_maps')" class="w-1/3 px-4 bg-neutral-100 rounded-xl font-bold text-[10px] text-neutral-500 hover:bg-neutral-200 hover:text-black transition-all text-center">📍 TENTUKAN LOKASI</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Event Photo</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="ev1_photo" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
+                        <button onclick="triggerCloudinaryPick('ev1_photo')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                    </div>
+                </div>
+
+                <div class="section-title">Event 2 (e.g. Resepsi)</div>
+                <div class="form-group">
+                    <label>Event Name</label>
+                    <input type="text" id="ev2_name" class="stk-input" placeholder="Resepsi" oninput="updatePreview()">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="ev2_date" class="stk-input" oninput="updateDatePreview('ev2'); updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>Time & Zone</label>
+                        <div class="flex gap-2">
+                            <input type="time" id="ev2_time" class="stk-input w-2/3" oninput="updateDatePreview('ev2'); updatePreview()">
+                            <select id="ev2_zone" class="stk-input w-1/3" onchange="updateDatePreview('ev2'); updatePreview()">
+                                <option value="WIB">WIB</option>
+                                <option value="WITA">WITA</option>
+                                <option value="WIT">WIT</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- Preview tanggal terpilih -->
+                <div id="ev2_date_preview" class="-mt-2 mb-4 px-3 py-2 bg-amber-50 border border-amber-100 rounded-xl hidden">
+                    <p class="text-[10px] font-bold text-amber-700" id="ev2_date_preview_text"></p>
+                </div>
+                <div class="form-group">
+                    <label>Location Name</label>
+                    <textarea id="ev2_loc_name" class="stk-input" rows="2" placeholder="Lingkungan Marga Mulya..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Maps Link URL</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="ev2_maps" class="stk-input w-2/3" placeholder="https://goo.gl/maps/..." oninput="updatePreview()">
+                        <button onclick="openMapPicker('ev2_maps')" class="w-1/3 px-4 bg-neutral-100 rounded-xl font-bold text-[10px] text-neutral-500 hover:bg-neutral-200 hover:text-black transition-all text-center">📍 TENTUKAN LOKASI</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Event Photo</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="ev2_photo" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
+                        <button onclick="triggerCloudinaryPick('ev2_photo')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                    </div>
+                </div>
+
+                <div class="section-title">Gift / Angpao Digital</div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <select id="show_gift" class="stk-input" onchange="updatePreview()">
+                        <option value="true">Tampilkan Section</option>
+                        <option value="false">Sembunyikan</option>
+                    </select>
+                    <input type="text" id="gift_header" class="stk-input" placeholder="Header (Wedding Gift)" oninput="updatePreview()">
+                </div>
+                <div class="p-4 bg-neutral-50 rounded-2xl mb-4 border border-neutral-100">
+                    <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT CARD 1</div>
+                    <input type="text" id="gift1_bank" class="stk-input mb-2" placeholder="Bank (e.g. BRI)">
+                    <input type="text" id="gift1_acc" class="stk-input mb-2" placeholder="No Rekening">
+                    <input type="text" id="gift1_owner" class="stk-input" placeholder="Atas Nama">
+                </div>
+                <div class="p-4 bg-neutral-50 rounded-2xl mb-4 border border-neutral-100">
+                    <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT CARD 2</div>
+                    <input type="text" id="gift2_bank" class="stk-input mb-2" placeholder="Bank (e.g. BJB)">
+                    <input type="text" id="gift2_acc" class="stk-input mb-2" placeholder="No Rekening">
+                    <input type="text" id="gift2_owner" class="stk-input" placeholder="Atas Nama">
+                </div>
+                <div class="p-4 bg-neutral-50 rounded-2xl mb-4 border border-neutral-100">
+                    <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT CARD 3 (e.g. DANA)</div>
+                    <input type="text" id="gift3_bank" class="stk-input mb-2" placeholder="Bank/E-Wallet">
+                    <input type="text" id="gift3_acc" class="stk-input mb-2" placeholder="No Rek/HP">
+                    <input type="text" id="gift3_owner" class="stk-input" placeholder="Atas Nama">
+                </div>
+
+                <div class="section-title">Gallery Photos</div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <select id="show_gallery" class="stk-input" onchange="updatePreview()">
+                        <option value="true">Tampilkan Section</option>
+                        <option value="false">Sembunyikan</option>
+                    </select>
+                    <input type="text" id="gallery_header" class="stk-input" placeholder="Header (Our Gallery)" oninput="updatePreview()">
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-10">
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_1" class="stk-input text-[10px] p-2" placeholder="URL Photo 1">
+                        <button onclick="pickFile('gal_1')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_2" class="stk-input text-[10px] p-2" placeholder="URL Photo 2">
+                        <button onclick="pickFile('gal_2')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_3" class="stk-input text-[10px] p-2" placeholder="URL Photo 3">
+                        <button onclick="pickFile('gal_3')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_4" class="stk-input text-[10px] p-2" placeholder="URL Photo 4">
+                        <button onclick="pickFile('gal_4')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_5" class="stk-input text-[10px] p-2" placeholder="URL Photo 5">
+                        <button onclick="pickFile('gal_5')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <input type="text" id="gal_6" class="stk-input text-[10px] p-2" placeholder="URL Photo 6">
+                        <button onclick="pickFile('gal_6')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+                    </div>
+                </div>
+
+                <div class="section-title">Wishes & Prayers</div>
+                <div class="grid grid-cols-2 gap-2 mb-10">
+                    <select id="show_wishes" class="stk-input" onchange="updatePreview()">
+                        <option value="true">Tampilkan Section</option>
+                        <option value="false">Sembunyikan</option>
+                    </select>
+                    <input type="text" id="wishes_header" class="stk-input" placeholder="Header (Wishes & Prayers)" oninput="updatePreview()">
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN AREA: LIVE PREVIEW -->
+        <div class="preview-panel">
+            <div class="preview-frame-container">
+                <iframe id="preview-iframe" src="invitation.html" class="preview-frame"></iframe>
+            </div>
+            
+            <!-- Mobile Badge -->
+            <div class="absolute top-10 right-10 bg-white/80 backdrop-blur-md px-6 py-3 rounded-full border border-white shadow-xl flex items-center gap-3">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-[10px] font-black tracking-widest text-neutral-500 uppercase">Live Preview</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-save">
+        <button onclick="saveInvitationConfig()" class="btn-save">SIMPAN KONFIGURASI UNDANGAN</button>
+    </div>
+
+    <input type="file" id="globalFilePicker" style="display: none;" onchange="handleFileChange(event)">
+
+    <script>
+        let currentTheme = "classic";
+        let targetInputId = ""; // Untuk menampung input mana yang sedang diupload
+
+        window.showSapaModal = function(title, msg, icon = "✨") {
+            document.getElementById('notify-title').innerText = title;
+            document.getElementById('notify-msg').innerText = msg;
+            document.getElementById('notify-icon').innerText = icon;
+            document.getElementById('sapa-notify-modal').style.display = 'flex';
+        };
+
+        window.closeSapaModal = function() {
+            document.getElementById('sapa-notify-modal').style.display = 'none';
+        };
+
+        function pickFile(inputId) {
+            targetInputId = inputId;
+            document.getElementById('globalFilePicker').click();
+        }
+
+        /**
+         * Normalizes any date string to YYYY-MM-DD (required by <input type="date">).
+         * Handles: "2026-08-23", "23/08/2026", "2026-08-23T..." ISO strings.
+         */
+        function toDateInputValue(dateStr) {
+            if (!dateStr) return '';
+            // Already YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+            // ISO datetime: "2026-08-23T00:00:00.000Z"
+            if (/^\d{4}-\d{2}-\d{2}T/.test(dateStr)) return dateStr.substring(0, 10);
+            // DD/MM/YYYY
+            const ddmmyyyy = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`;
+            // Try native Date parse as last resort
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+            return '';
+        }
+
+
+        function fromDateInputValue(dateStr) {
+            if (!dateStr) return '';
+            const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (m) return m[3] + '/' + m[2] + '/' + m[1];
+            return dateStr;
+        }
+        function toDateInputValue(dateStr) {
+            if (!dateStr) return '';
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+            if (/^\d{4}-\d{2}-\d{2}T/.test(dateStr)) return dateStr.substring(0,10);
+            const d2=dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (d2) return d2[3]+'-'+d2[2]+'-'+d2[1];
+            const d=new Date(dateStr);
+            if (!isNaN(d.getTime())) return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+            return '';
+        }
+        function updateDatePreview(prefix) {
+            const dateVal=document.getElementById(prefix+'_date').value;
+            const timeVal=document.getElementById(prefix+'_time').value;
+            const zoneVal=document.getElementById(prefix+'_zone').value;
+            const preview=document.getElementById(prefix+'_date_preview');
+            const text=document.getElementById(prefix+'_date_preview_text');
+            if (!dateVal){preview.classList.add('hidden');return;}
+            const d=new Date(dateVal);
+            const days=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+            const months=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+            text.innerText=days[d.getDay()]+', '+d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear()+(timeVal?' · '+timeVal:'')+(zoneVal?' '+zoneVal:'');
+            preview.classList.remove('hidden');
+        }
+        function handleFileChange(event) {
+            if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+                showSapaModal("Perhatian", "🔒 Mode Lihat Saja Aktif! Anda tidak dapat mengupload file.", "⚠️");
+                return;
+            }
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64Data = e.target.result;
+                const fileName = file.name;
+                
+                // Show loading on button or input
+                const input = document.getElementById(targetInputId);
+                const originalVal = input.value;
+                input.value = "UPLOADING...";
+                input.disabled = true;
+
+                const payload = {
+                    action: "uploadFile",
+                    ssId: window.CURRENT_SS_ID,
+                    fileData: base64Data,
+                    fileName: fileName
+                };
+
+                try {
+                    const res = await fetch(window.SCRIPT_URL, { 
+                        method: "POST", 
+                        body: JSON.stringify(payload) 
+                    });
+                    const result = await res.json();
+                    
+                    if (result.status === "success") {
+                        input.value = result.url;
+                        updatePreview();
+                    } else {
+                        showSapaModal("Gagal", "Upload gagal: " + result.message, "❌");
+                        input.value = originalVal;
+                    }
+                } catch (err) {
+                    showSapaModal("Gagal", "Error koneksi upload.", "❌");
+                    input.value = originalVal;
+                } finally {
+                    input.disabled = false;
+                    event.target.value = ""; // Clear file picker
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function autoConvertDriveLink(inputElement) {
+            let url = inputElement.value;
+            let converted = false;
+            if (url.includes('drive.google.com/file/d/')) {
+                const fileId = url.split('/d/')[1].split('/')[0];
+                inputElement.value = `https://lh3.googleusercontent.com/d/${fileId}`;
+                converted = true;
+            } else if (url.includes('drive.google.com/open?id=')) {
+                const fileId = url.split('id=')[1].split('&')[0];
+                inputElement.value = `https://lh3.googleusercontent.com/d/${fileId}`;
+                converted = true;
+            }
+            
+            if(converted) {
+                inputElement.style.transition = "all 0.3s";
+                inputElement.style.borderColor = "#4ade80";
+                inputElement.style.backgroundColor = "#f0fdf4";
+                setTimeout(() => {
+                    inputElement.style.borderColor = "";
+                    inputElement.style.backgroundColor = "";
+                }, 1500);
+                updatePreview();
+            }
+        }
+
+        document.addEventListener('input', function(e) {
+            if(e.target.tagName === 'INPUT' && e.target.type === 'text' && e.target.id !== 'inv_music') {
+                autoConvertDriveLink(e.target);
+            }
+        });
+
+        async function initApp() {
+        SapaGuard.apply('sensitive'); // RBAC Guard
+            if (!window.SAPATAMU_RESOLVED) { setTimeout(initApp, 100); return; }
+            syncNavbar();
+            loadInvitationSettings();
+        }
+
+        function selectTheme(theme) {
+            currentTheme = theme;
+            document.getElementById('active-theme-label').innerHTML = `Tema Aktif: <span class="text-primary">${theme}</span>`;
+            const iframe = document.getElementById('preview-iframe');
+            iframe.src = `invitation.html?theme_id=${theme}`;
+            setTimeout(updatePreview, 1500);
+        }
+
+        function syncNavbar() {
+            const ssId = window.CURRENT_SS_ID || "";
+            document.querySelectorAll('.nav-link').forEach(link => {
+                const base = link.href.split('?')[0];
+                link.href = `${base}?ssId=${ssId}`;
+            });
+        }
+
+        async function loadInvitationSettings() {
+            const ssId = window.CURRENT_SS_ID;
+            if (!ssId) return;
+
+            try {
+                const res = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`);
+                const result = await res.json();
+                if (result.status === "success") {
+                    const s = result.data;
+                    const inv = s.invitationData || {};
+
+                    // Load Hero
+                    document.getElementById('inv_music').value = inv.musicUrl || "";
+                    document.getElementById('inv_cover_bg').value = inv.coverBg || "";
+                    document.getElementById('inv_hero_img').value = inv.heroImg || "";
+                    document.getElementById('inv_header_label').value = inv.headerLabel || "";
+                    document.getElementById('inv_hashtag').value = inv.hashtag || "";
+
+                    // Load Groom
+                    const g = inv.groom || {};
+                    document.getElementById('groom_photo').value = g.photo || "";
+                    document.getElementById('groom_name').value = g.name || "";
+                    document.getElementById('groom_desc').value = g.desc || "";
+                    document.getElementById('groom_ig').value = g.ig || "";
+
+                    // Load Bride
+                    const b = inv.bride || {};
+                    document.getElementById('bride_photo').value = b.photo || "";
+                    document.getElementById('bride_name').value = b.name || "";
+                    document.getElementById('bride_desc').value = b.desc || "";
+                    document.getElementById('bride_ig').value = b.ig || "";
+
+                    // Load Events
+                    const ev1 = inv.ev1 || {};
+                    document.getElementById('ev1_name').value = ev1.name || "";
+                    document.getElementById('ev1_date').value = toDateInputValue(ev1.date || "");
+                    document.getElementById('ev1_time').value = ev1.time || "";
+                    if (ev1.zone) document.getElementById('ev1_zone').value = ev1.zone;
+                    document.getElementById('ev1_loc_name').value = ev1.locName || "";
+                    document.getElementById('ev1_maps').value = ev1.maps || "";
+                    document.getElementById('ev1_photo').value = ev1.photo || "";
+
+                    const ev2 = inv.ev2 || {};
+                    document.getElementById('ev2_name').value = ev2.name || "";
+                    document.getElementById('ev2_date').value = toDateInputValue(ev2.date || "");
+                    document.getElementById('ev2_time').value = ev2.time || "";
+                    if (ev2.zone) document.getElementById('ev2_zone').value = ev2.zone;
+                    document.getElementById('ev2_loc_name').value = ev2.locName || "";
+                    document.getElementById('ev2_maps').value = ev2.maps || "";
+                    document.getElementById('ev2_photo').value = ev2.photo || "";
+
+                    // Load Gifts
+                    document.getElementById('show_gift').value = inv.show_gift !== undefined ? inv.show_gift : "true";
+                    document.getElementById('gift_header').value = inv.gift_header || "";
+                    
+                    const gifts = inv.gifts || [{}, {}, {}];
+                    document.getElementById('gift1_bank').value = gifts[0].bank || "BRI";
+                    document.getElementById('gift1_acc').value = gifts[0].acc || "0046 0101 6863 537";
+                    document.getElementById('gift1_owner').value = gifts[0].owner || "Bintang Zahlahar Trijati";
+                    
+                    document.getElementById('gift2_bank').value = gifts[1].bank || "BJB";
+                    document.getElementById('gift2_acc').value = gifts[1].acc || "0150614368104";
+                    document.getElementById('gift2_owner').value = gifts[1].owner || "Anisa Nur Fitria";
+
+                    document.getElementById('gift3_bank').value = gifts[2].bank || "DANA";
+                    document.getElementById('gift3_acc').value = gifts[2].acc || "082246379369";
+                    document.getElementById('gift3_owner').value = gifts[2].owner || "Anisa Nur Fitria";
+
+                    document.getElementById('inv_greeting').value = inv.greeting || "Yth. Bapak/Ibu/Saudara/i";
+
+                    // Load Gallery & Wishes
+                    document.getElementById('show_gallery').value = inv.show_gallery !== undefined ? inv.show_gallery : "true";
+                    document.getElementById('gallery_header').value = inv.gallery_header || "";
+                    document.getElementById('show_wishes').value = inv.show_wishes !== undefined ? inv.show_wishes : "true";
+                    document.getElementById('wishes_header').value = inv.wishes_header || "";                    const gal = inv.gallery || [];
+                    for(let i=1; i<=6; i++) {
+                        document.getElementById('gal_'+i).value = gal[i-1] || "";
+                    }
+                    
+                    if (s.theme) selectTheme(s.theme);
+                    
+                    // Cek apakah ada redirect dari Katalog (membawa theme_id baru)
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const newThemeId = urlParams.get('theme_id');
+                    if (newThemeId && newThemeId !== s.theme) {
+                        selectTheme(newThemeId);
+                        // Hapus parameter theme_id dari URL agar tidak loop save
+                        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?ssId=' + ssId;
+                        window.history.replaceState({path:newUrl}, '', newUrl);
+                        
+                        // Auto-save konfigurasi untuk menempelkan tema baru ke Supabase
+                        console.log("Auto-saving new theme from catalog:", newThemeId);
+                        setTimeout(saveInvitationConfig, 1500);
+                    }
+
+                    // Initial Preview update
+                    setTimeout(updatePreview, 1000);
+                }
+            } catch (e) { console.error("Load Invitation Error:", e); }
+        }
+
+        function updatePreview() {
+            const iframe = document.getElementById('preview-iframe');
+            if (!iframe.contentWindow) return;
+
+            const data = {
+                musicUrl: document.getElementById('inv_music').value,
+                coverBg: document.getElementById('inv_cover_bg').value,
+                heroImg: document.getElementById('inv_hero_img').value,
+                headerLabel: document.getElementById('inv_header_label').value,
+                hashtag: document.getElementById('inv_hashtag').value,
+                show_groom: document.getElementById('show_groom').value,
+                show_bride: document.getElementById('show_bride').value,
+                show_events: document.getElementById('show_events').value,
+                events_header: document.getElementById('events_header').value,
+                show_gift: document.getElementById('show_gift').value,
+                gift_header: document.getElementById('gift_header').value,
+                show_gallery: document.getElementById('show_gallery').value,
+                gallery_header: document.getElementById('gallery_header').value,
+                show_wishes: document.getElementById('show_wishes').value,
+                wishes_header: document.getElementById('wishes_header').value,
+                groom: {
+                    header: document.getElementById('groom_header').value,
+                    photo: document.getElementById('groom_photo').value,
+                    name: document.getElementById('groom_name').value,
+                    desc: document.getElementById('groom_desc').value,
+                    ig: document.getElementById('groom_ig').value
+                },
+                bride: {
+                    header: document.getElementById('bride_header').value,
+                    photo: document.getElementById('bride_photo').value,
+                    name: document.getElementById('bride_name').value,
+                    desc: document.getElementById('bride_desc').value,
+                    ig: document.getElementById('bride_ig').value
+                },
+                ev1: {
+                    name: document.getElementById('ev1_name').value,
+                    date: fromDateInputValue(document.getElementById('ev1_date').value),
+                    time: document.getElementById('ev1_time').value,
+                    zone: document.getElementById('ev1_zone').value,
+                    locName: document.getElementById('ev1_loc_name').value,
+                    maps: document.getElementById('ev1_maps').value,
+                    photo: document.getElementById('ev1_photo').value
+                },
+                ev2: {
+                    name: document.getElementById('ev2_name').value,
+                    date: fromDateInputValue(document.getElementById('ev2_date').value),
+                    time: document.getElementById('ev2_time').value,
+                    zone: document.getElementById('ev2_zone').value,
+                    locName: document.getElementById('ev2_loc_name').value,
+                    maps: document.getElementById('ev2_maps').value,
+                    photo: document.getElementById('ev2_photo').value
+                },
+                gifts: [
+                    { bank: document.getElementById('gift1_bank').value, acc: document.getElementById('gift1_acc').value, owner: document.getElementById('gift1_owner').value },
+                    { bank: document.getElementById('gift2_bank').value, acc: document.getElementById('gift2_acc').value, owner: document.getElementById('gift2_owner').value },
+                    { bank: document.getElementById('gift3_bank').value, acc: document.getElementById('gift3_acc').value, owner: document.getElementById('gift3_owner').value }
+                ],
+                greeting: document.getElementById('inv_greeting').value,
+                gallery: [
+                    document.getElementById('gal_1').value, document.getElementById('gal_2').value,
+                    document.getElementById('gal_3').value, document.getElementById('gal_4').value,
+                    document.getElementById('gal_5').value, document.getElementById('gal_6').value
+                ]
+            };
+
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                if (typeof iframe.contentWindow.applyLivePreview === 'function') {
+                    iframe.contentWindow.applyLivePreview(data);
+                }
+            } catch (e) {
+                console.warn("Iframe manipulation blocked or not ready yet.");
+            }
+        }
+
+        // ── SUPABASE & CLOUDINARY CONFIG ──────────────────────────────
+        const SB_URL  = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+        const SB_HDRS = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" };
+
+        // Cloudinary Upload Preset (unsigned) — ganti dengan milik Anda
+        // Buat di: cloudinary.com > Settings > Upload Presets > Add preset (mode: Unsigned)
+        const CLD_CLOUD  = "dvygmpmir";         // ✅ Cloud Name Anda
+        const CLD_PRESET = "sapatamu_inv";     // ← nama preset Unsigned yang akan dibuat
+
+        /**
+         * uploadToCloudinary — Upload file gambar ke Cloudinary langsung dari browser.
+         * Mengembalikan URL CDN Cloudinary yang cepat di seluruh dunia.
+         * Jika gagal, user bisa tetap paste URL Google Drive secara manual.
+         */
+        async function uploadToCloudinary(file, targetInputId) {
+            const input = document.getElementById(targetInputId);
+            const oldVal = input.value;
+            input.value = "⏳ Mengupload ke Cloudinary...";
+            input.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("upload_preset", CLD_PRESET);
+                formData.append("folder", "undangan");
+
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`, {
+                    method: "POST",
+                    body: formData
+                });
+                const result = await res.json();
+
+                if (result.secure_url) {
+                    input.value = result.secure_url;
+                    input.style.borderColor = "#4ade80";
+                    setTimeout(() => input.style.borderColor = "", 2000);
+                    updatePreview();
+                    return result.secure_url;
+                } else {
+                    throw new Error(result.error?.message || "Upload gagal");
+                }
+            } catch (e) {
+                showSapaModal("Gagal", "Upload Cloudinary gagal: " + e.message + "\n\nSilakan paste URL Google Drive secara manual.", "❌");
+                input.value = oldVal;
+            } finally {
+                input.disabled = false;
+            }
+        }
+
+        /**
+         * triggerCloudinaryPick — Buka file picker untuk field gambar tertentu.
+         * Cloudinary adalah jalur utama. Jika file picker dibatalkan, input tetap bisa diisi manual.
+         */
+        window.triggerCloudinaryPick = function(inputId) {
+            const picker = document.createElement("input");
+            picker.type = "file";
+            picker.accept = "image/*";
+            picker.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) uploadToCloudinary(file, inputId);
+            };
+            picker.click();
+        };
+
+        async function saveInvitationConfig() {
+            if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+                showSapaModal("Perhatian", "🔒 Mode Lihat Saja Aktif! Anda tidak dapat menyimpan konfigurasi.", "⚠️");
+                return;
+            }
+            const ssId = window.CURRENT_SS_ID;
+            if (!ssId) return;
+
+            const btn = document.querySelector('.btn-save');
+            btn.innerText = "MENYIMPAN...";
+            btn.disabled = true;
+
+            const invData = {
+                musicUrl: document.getElementById('inv_music').value,
+                coverBg: document.getElementById('inv_cover_bg').value,
+                heroImg: document.getElementById('inv_hero_img').value,
+                headerLabel: document.getElementById('inv_header_label').value,
+                hashtag: document.getElementById('inv_hashtag').value,
+                show_groom: document.getElementById('show_groom').value,
+                show_bride: document.getElementById('show_bride').value,
+                show_events: document.getElementById('show_events').value,
+                events_header: document.getElementById('events_header').value,
+                show_gift: document.getElementById('show_gift').value,
+                gift_header: document.getElementById('gift_header').value,
+                show_gallery: document.getElementById('show_gallery').value,
+                gallery_header: document.getElementById('gallery_header').value,
+                show_wishes: document.getElementById('show_wishes').value,
+                wishes_header: document.getElementById('wishes_header').value,
+                groom: {
+                    header: document.getElementById('groom_header').value,
+                    photo: document.getElementById('groom_photo').value,
+                    name: document.getElementById('groom_name').value,
+                    desc: document.getElementById('groom_desc').value,
+                    ig: document.getElementById('groom_ig').value
+                },
+                bride: {
+                    header: document.getElementById('bride_header').value,
+                    photo: document.getElementById('bride_photo').value,
+                    name: document.getElementById('bride_name').value,
+                    desc: document.getElementById('bride_desc').value,
+                    ig: document.getElementById('bride_ig').value
+                },
+                ev1: {
+                    name: document.getElementById('ev1_name').value,
+                    date: fromDateInputValue(document.getElementById('ev1_date').value),
+                    time: document.getElementById('ev1_time').value,
+                    zone: document.getElementById('ev1_zone').value,
+                    locName: document.getElementById('ev1_loc_name').value,
+                    maps: document.getElementById('ev1_maps').value,
+                    photo: document.getElementById('ev1_photo').value
+                },
+                ev2: {
+                    name: document.getElementById('ev2_name').value,
+                    date: fromDateInputValue(document.getElementById('ev2_date').value),
+                    time: document.getElementById('ev2_time').value,
+                    zone: document.getElementById('ev2_zone').value,
+                    locName: document.getElementById('ev2_loc_name').value,
+                    maps: document.getElementById('ev2_maps').value,
+                    photo: document.getElementById('ev2_photo').value
+                },
+                gifts: [
+                    { bank: document.getElementById('gift1_bank').value, acc: document.getElementById('gift1_acc').value, owner: document.getElementById('gift1_owner').value },
+                    { bank: document.getElementById('gift2_bank').value, acc: document.getElementById('gift2_acc').value, owner: document.getElementById('gift2_owner').value },
+                    { bank: document.getElementById('gift3_bank').value, acc: document.getElementById('gift3_acc').value, owner: document.getElementById('gift3_owner').value }
+                ],
+                greeting: document.getElementById('inv_greeting').value,
+                gallery: [
+                    document.getElementById('gal_1').value, document.getElementById('gal_2').value,
+                    document.getElementById('gal_3').value, document.getElementById('gal_4').value,
+                    document.getElementById('gal_5').value, document.getElementById('gal_6').value
+                ],
+                theme: currentTheme
+            };
+
+            try {
+                // ── STEP 1: Simpan ke Google Sheet via GAS (sumber kebenaran) ──
+                const payload = {
+                    action: "updateClientData",
+                    ssId: ssId,
+                    eventData: {
+                        nama: invData.groom.name + " & " + invData.bride.name,
+                        invitationData: invData,
+                        theme: currentTheme
+                    }
+                };
+                const res = await fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+                const result = await res.json();
+                if (result.status !== "success") throw new Error(result.message || "GAS save gagal");
+
+                // ── STEP 2: Mirror ke Supabase langsung dari browser (non-blocking) ──
+                // Ini yang membuat undangan.html bisa load < 200ms tanpa GAS cold start.
+                fetch(`${SB_URL}/rest/v1/config_invitation?on_conflict=ssid`, {
+                    method: "POST",
+                    headers: SB_HDRS,
+                    body: JSON.stringify({ ssid: ssId, data: invData, updated_at: new Date().toISOString() })
+                }).then(r => {
+                    if (!r.ok) console.warn("Mirror Supabase non-fatal:", r.status);
+                    else console.log("✅ Config mirrored to Supabase");
+                }).catch(e => console.warn("Mirror Supabase skip:", e.message));
+
+                btn.innerText = "✅ TERSIMPAN!";
+                setTimeout(() => { btn.innerText = "SIMPAN KONFIGURASI UNDANGAN"; btn.disabled = false; }, 2000);
+
+            } catch (e) {
+                showSapaModal("Error", "Error: " + e.message, "❌");
+                btn.innerText = "SIMPAN KONFIGURASI UNDANGAN";
+                btn.disabled = false;
+            }
+        }
+
+        function convertMusicUrl() {
+            if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+                showSapaModal("Perhatian", "🔒 Mode Lihat Saja Aktif! Anda tidak dapat mengubah musik.", "⚠️");
+                return;
+            }
+            const input = document.getElementById('inv_music');
+            const status = document.getElementById('music-convert-status');
+            const url = input.value.trim();
+            if (!url) return;
+
+            let converted = url;
+            let isConverted = false;
+
+            // Google Drive: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+            const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+            // Google Drive: https://drive.google.com/open?id=FILE_ID
+            const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+            // Google Drive: https://drive.google.com/uc?id=FILE_ID (already partially converted)
+            const driveUcMatch = url.match(/drive\.google\.com\/uc\?.*?id=([a-zA-Z0-9_-]+)/);
+
+            let fileId = null;
+            if (driveFileMatch) fileId = driveFileMatch[1];
+            else if (driveOpenMatch) fileId = driveOpenMatch[1];
+            else if (driveUcMatch) fileId = driveUcMatch[1];
+
+            if (fileId) {
+                // export=download&confirm=t → bypasses virus-scan redirect, serves raw file
+                converted = `https://drive.google.com/uc?export=download&confirm=t&id=${fileId}`;
+                isConverted = true;
+            } else if (url.includes('lh3.googleusercontent.com')) {
+                status.className = 'text-[9px] mt-1 text-orange-500';
+                status.innerText = '⚠️ URL ini adalah link gambar, bukan audio. Paste link Google Drive file MP3 Anda.';
+                status.classList.remove('hidden');
+                return;
+            }
+
+            input.value = converted;
+            status.className = 'text-[9px] mt-1 text-green-600';
+            status.innerText = isConverted
+                ? `✅ Berhasil! Link siap diputar: ...${fileId.slice(-8)}`
+                : '✅ Link MP3 langsung — tidak perlu konversi.';
+            status.classList.remove('hidden');
+            setTimeout(() => status.classList.add('hidden'), 5000);
+            updatePreview();
+        }
+
+        // ─── MUSIC UPLOAD TO GITHUB ───────────────────────────────────────
+        function handleMusicFileDrop(file) { if (file) handleMusicFileSelect(file); }
+
+        function handleMusicFileSelect(file) {
+            if (window.SapaGuard && window.SapaGuard.isRestricted()) {
+                showSapaModal("Perhatian", "🔒 Mode Lihat Saja Aktif! Anda tidak dapat mengupload musik.", "⚠️");
+                return;
+            }
+            if (!file) return;
+            const maxMB = 20;
+            if (file.size > maxMB * 1024 * 1024) {
+                showSapaModal("Perhatian", `File terlalu besar! Maks. ${maxMB}MB. File Anda: ${(file.size/1024/1024).toFixed(1)}MB`, "⚠️");
+                return;
+            }
+            if (!file.type.includes('audio') && !file.name.endsWith('.mp3')) {
+                showSapaModal("Perhatian", "Hanya file MP3 yang diperbolehkan!", "⚠️");
+                return;
+            }
+            // Show loading state
+            document.getElementById('music-upload-idle').classList.add('hidden');
+            document.getElementById('music-upload-progress').classList.remove('hidden');
+            document.getElementById('music-upload-status-text').innerText = 'Membaca file...';
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64 = e.target.result.split(',')[1]; // strip data:audio/mpeg;base64,
+                document.getElementById('music-upload-status-text').innerText = 'Mengupload ke server...';
+                try {
+                    const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
+                    const payload = {
+                        action: 'uploadMusic',
+                        ssId: ssId,
+                        filename: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
+                        base64Content: base64
+                    };
+                    const res = await fetch(window.SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+
+                    if (result.status === 'success') {
+                        const url = result.url;
+                        document.getElementById('inv_music').value = url;
+                        updatePreview();
+                        // Show success in upload zone
+                        document.getElementById('music-upload-progress').classList.add('hidden');
+                        document.getElementById('music-upload-idle').classList.remove('hidden');
+                        document.getElementById('music-upload-idle').innerHTML = `
+                            <p class="text-2xl mb-1">✅</p>
+                            <p class="text-xs font-bold text-green-600">${file.name}</p>
+                            <p class="text-[9px] text-neutral-400 mt-1">Upload berhasil! Klik untuk ganti.</p>`;
+                        // Show status
+                        const st = document.getElementById('music-convert-status');
+                        st.className = 'text-[9px] mt-1 text-green-600';
+                        st.innerText = '✅ Musik berhasil diupload & link tersimpan otomatis!';
+                        st.classList.remove('hidden');
+                        setTimeout(() => st.classList.add('hidden'), 5000);
+                    } else {
+                        throw new Error(result.message || 'Upload gagal');
+                    }
+                } catch (err) {
+                    document.getElementById('music-upload-status-text').innerText = '❌ Gagal: ' + err.message;
+                    setTimeout(() => {
+                        document.getElementById('music-upload-progress').classList.add('hidden');
+                        document.getElementById('music-upload-idle').classList.remove('hidden');
+                    }, 3000);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+        // ─────────────────────────────────────────────────────────────────
+
+        initApp();
+
+    </script>
+
+    <!-- Map Picker Modal -->
+    <div id="map-modal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-5 border-b border-neutral-100 flex justify-between items-center bg-white">
+                <div>
+                    <h3 class="font-bold text-lg">Pilih Lokasi di Peta</h3>
+                    <p class="text-[10px] text-neutral-400 mt-1">Geser dan klik pada peta untuk menjatuhkan pin lokasi.</p>
+                </div>
+                <button onclick="closeMapPicker()" class="text-neutral-400 hover:text-black p-2 bg-neutral-100 rounded-full w-8 h-8 flex items-center justify-center">✖</button>
+            </div>
+            <div id="map-container" class="w-full h-[400px] z-10"></div>
+            <div class="p-4 bg-neutral-50 flex justify-end gap-3 border-t border-neutral-100">
+                <input type="hidden" id="map-target-input">
+                <input type="hidden" id="map-latlng">
+                <button onclick="closeMapPicker()" class="px-6 py-3 rounded-xl text-neutral-500 font-bold text-xs hover:bg-neutral-200 transition-all">BATAL</button>
+                <button onclick="saveMapCoordinates()" class="px-8 py-3 rounded-xl bg-black text-white font-bold text-xs hover:bg-neutral-800 transition-all tracking-widest shadow-lg">SIMPAN KOORDINAT MAPS</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pickerMap = null;
+        let pickerMarker = null;
+
+        function openMapPicker(targetId) {
+            document.getElementById('map-modal').classList.remove('hidden');
+            document.getElementById('map-modal').classList.add('flex');
+            document.getElementById('map-target-input').value = targetId;
+
+            if (!pickerMap) {
+                pickerMap = L.map('map-container').setView([-6.200000, 106.816666], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(pickerMap);
+
+                pickerMap.on('click', function(e) {
+                    if (pickerMarker) pickerMap.removeLayer(pickerMarker);
+                    pickerMarker = L.marker(e.latlng).addTo(pickerMap);
+                    document.getElementById('map-latlng').value = `${e.latlng.lat},${e.latlng.lng}`;
+                });
+            }
+
+            const existingUrl = document.getElementById(targetId).value;
+            const match = existingUrl.match(/q=(●\d+\.\d+),(●\d+\.\d+)/);
+            if (match) {
+                const lat = parseFloat(match[1]);
+                const lng = parseFloat(match[2]);
+                if (pickerMarker) pickerMap.removeLayer(pickerMarker);
+                pickerMarker = L.marker([lat, lng]).addTo(pickerMap);
+                pickerMap.setView([lat, lng], 15);
+                document.getElementById('map-latlng').value = `${lat},${lng}`;
+            }
+
+            setTimeout(() => {
+                pickerMap.invalidateSize();
+            }, 200);
+        }
+
+        function closeMapPicker() {
+            document.getElementById('map-modal').classList.remove('flex');
+            document.getElementById('map-modal').classList.add('hidden');
+        }
+
+        function saveMapCoordinates() {
+            const targetId = document.getElementById('map-target-input').value;
+            const latlng = document.getElementById('map-latlng').value;
+            if (latlng) {
+                document.getElementById(targetId).value = `https://www.google.com/maps?q=${latlng}`;
+                updatePreview();
+            }
+            closeMapPicker();
+        }
+    </script>
+</body>
+</html>

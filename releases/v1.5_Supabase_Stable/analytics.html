@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu.ku - Pro Analytics Node</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="subdomain_resolver.js?v=3.3"></script>
+    <style>
+        :root {
+            --accent: #111;
+            --sidebar-bg: #f9fafb;
+            --content-bg: #ffffff;
+            --gold: #D4AF37;
+            --danger: #ef4444;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: #fff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            cursor: none;
+        }
+
+        .master-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 3.8fr;
+            z-index: 9999;
+            background: white;
+        }
+
+        #sidebar-panel {
+            position: relative;
+            background: linear-gradient(135deg, #FFF9F5 0%, #FDF2F2 100%);
+            padding: clamp(12px, 2.5vh, 32px) clamp(10px, 1.5vw, 24px);
+            border-right: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* hearts clip */
+        }
+
+        /* ANIMASI BACKGROUND FLOATING HEARTS KHUSUS SIDEBAR */
+        .dynamic-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            margin: 0; padding: 0;
+        }
+
+        .dynamic-bg li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 25px;
+            height: 25px;
+            background: transparent;
+            animation: floatDiagonal 18s linear infinite;
+            bottom: -150px;
+        }
+
+        .dynamic-bg li::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E07B7B' opacity='0.25'%3E%3Cpath d='M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            animation: pulseHeart 4s ease-in-out infinite alternate;
+        }
+
+        .dynamic-bg li:nth-child(1) { left: -10%; width: 35px; height: 35px; animation-delay: 0s; animation-duration: 22s; }
+        .dynamic-bg li:nth-child(2) { left: 10%; width: 18px; height: 18px; animation-delay: 2s; animation-duration: 15s; }
+        .dynamic-bg li:nth-child(3) { left: 25%; width: 45px; height: 45px; animation-delay: 4s; animation-duration: 20s; }
+        .dynamic-bg li:nth-child(4) { left: 40%; width: 28px; height: 28px; animation-delay: 0s; animation-duration: 16s; }
+        .dynamic-bg li:nth-child(5) { left: 55%; width: 20px; height: 20px; animation-delay: 6s; animation-duration: 18s; }
+        .dynamic-bg li:nth-child(6) { left: 70%; width: 38px; height: 38px; animation-delay: 3s; animation-duration: 21s; }
+        .dynamic-bg li:nth-child(7) { left: -5%; width: 25px; height: 25px; animation-delay: 8s; animation-duration: 17s; }
+        .dynamic-bg li:nth-child(8) { left: 15%; width: 32px; height: 32px; animation-delay: 10s; animation-duration: 25s; }
+        .dynamic-bg li:nth-child(9) { left: 50%; width: 18px; height: 18px; animation-delay: 1s; animation-duration: 13s; }
+        .dynamic-bg li:nth-child(10){ left: 30%; width: 40px; height: 40px; animation-delay: 7s; animation-duration: 23s; }
+
+        @keyframes floatDiagonal {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(15vw, -120vh) rotate(260deg); opacity: 0; }
+        }
+
+        @keyframes pulseHeart {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
+        }
+
+        #content-panel {
+            position: relative;
+            overflow-y: auto;
+            background: var(--content-bg);
+            padding: 4vh 2vw;
+            scroll-behavior: smooth;
+        }
+
+        .dashboard-grid {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        /* ANIMASI BACKGROUND FLOATING HEARTS UNTUK MAIN AREA */
+        .dynamic-bg-main {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            margin: 0; padding: 0;
+        }
+
+        .dynamic-bg-main li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 25px;
+            height: 25px;
+            background: transparent;
+            animation: floatDiagonalMain 22s linear infinite;
+            bottom: -150px;
+        }
+
+        .dynamic-bg-main li::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E07B7B' opacity='0.12'%3E%3Cpath d='M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            animation: pulseHeart 4s ease-in-out infinite alternate;
+        }
+
+        .dynamic-bg-main li:nth-child(1) { left: 5%; width: 45px; height: 45px; animation-delay: 0s; animation-duration: 25s; }
+        .dynamic-bg-main li:nth-child(2) { left: 20%; width: 22px; height: 22px; animation-delay: 3s; animation-duration: 18s; }
+        .dynamic-bg-main li:nth-child(3) { left: 35%; width: 55px; height: 55px; animation-delay: 6s; animation-duration: 28s; }
+        .dynamic-bg-main li:nth-child(4) { left: 50%; width: 32px; height: 32px; animation-delay: 1s; animation-duration: 20s; }
+        .dynamic-bg-main li:nth-child(5) { left: 65%; width: 25px; height: 25px; animation-delay: 8s; animation-duration: 22s; }
+        .dynamic-bg-main li:nth-child(6) { left: 80%; width: 42px; height: 42px; animation-delay: 4s; animation-duration: 26s; }
+        .dynamic-bg-main li:nth-child(7) { left: 15%; width: 30px; height: 30px; animation-delay: 10s; animation-duration: 21s; }
+        .dynamic-bg-main li:nth-child(8) { left: 45%; width: 38px; height: 38px; animation-delay: 12s; animation-duration: 29s; }
+        .dynamic-bg-main li:nth-child(9) { left: 75%; width: 22px; height: 22px; animation-delay: 2s; animation-duration: 16s; }
+        .dynamic-bg-main li:nth-child(10){ left: 90%; width: 48px; height: 48px; animation-delay: 9s; animation-duration: 27s; }
+
+        @keyframes floatDiagonalMain {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(30vw, -120vh) rotate(260deg); opacity: 0; }
+        }
+
+        /* Welcome Mirror Style */
+        .mirror-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1.5px solid rgba(240, 230, 222, 0.7);
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.05);
+        }
+
+        .mirror-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1280px;
+            height: 720px;
+            border: none;
+            pointer-events: none;
+            transform-origin: 0 0;
+        }
+
+        /* ── ARRIVAL NOTIFICATION CARDS ── */
+        .arrival-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .arrival-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.85);
+            border: 1px solid rgba(224,123,123,0.25);
+            border-left: 3px solid #E07B7B;
+            border-radius: 14px;
+            padding: 8px 12px;
+            animation: arrivalSlideIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+            transition: all 0.3s ease;
+        }
+
+        .arrival-card:nth-child(1) { border-left-color: #E07B7B; }
+        .arrival-card:nth-child(2) { border-left-color: #C8962E; }
+        .arrival-card:nth-child(3) { border-left-color: #987BB2; }
+        .arrival-card:nth-child(4) { border-left-color: #99B8A5; }
+        .arrival-card:nth-child(5) { border-left-color: #D4A5B8; }
+
+        .arrival-card-rank {
+            font-size: 9px;
+            font-weight: 900;
+            color: #E07B7B;
+            opacity: 0.5;
+            min-width: 14px;
+            text-align: center;
+        }
+
+        .arrival-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .arrival-card-name {
+            font-size: 10px;
+            font-weight: 800;
+            color: #4A3F35;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .arrival-card-meta {
+            font-size: 8.5px;
+            font-weight: 600;
+            color: #8C7560;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 1px;
+        }
+
+        .arrival-card-time {
+            font-size: 8px;
+            font-weight: 700;
+            color: #C8962E;
+            white-space: nowrap;
+            opacity: 0.8;
+        }
+
+        @keyframes arrivalSlideIn {
+            from { opacity: 0; transform: translateX(-12px) scale(0.96); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+
+        .arrival-realtime-dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #E07B7B;
+            animation: arrival-pulse 1.5s ease-in-out infinite;
+            margin-right: 4px;
+        }
+
+        @keyframes arrival-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.4; transform: scale(0.7); }
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        .section-box {
+            background: #fff;
+            border-radius: 24px;
+            padding: 25px;
+            border: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+            height: fit-content;
+        }
+
+        .section-title {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #bbb;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #eee;
+        }
+
+        /* Flow UI */
+        .flow-container { 
+            display: flex; flex-direction: column; gap: 10px; 
+        }
+
+        /* ADVANCED NAVBAR STYLES (CLONE FROM ONSITE) */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
+        .nav-outer-wrapper { position: relative; max-width: 95%; display: flex; align-items: center; background: #FFFDFB; border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08); border: 1px solid var(--border); overflow: hidden; }
+        
+        .nav-scroll-container { 
+            display: flex; align-items: center; gap: 5px; padding: 6px 15px;
+            overflow-x: auto; white-space: nowrap; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        }
+        .nav-scroll-container::-webkit-scrollbar { display: none; }
+        
+        .nav-fade { position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none; z-index: 2; transition: opacity 0.3s; opacity: 0; }
+        .nav-fade-left { left: 0; background: linear-gradient(to right, #FFFDFB 20%, transparent); }
+        .nav-fade-right { right: 0; background: linear-gradient(to left, #FFFDFB 20%, transparent); }
+        .nav-fade.visible { opacity: 1; }
+
+        .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; font-size: 10px; color: var(--text-muted); opacity: 0.5; pointer-events: none; transition: 0.3s; }
+        .nav-arrow-left { left: 8px; }
+        .nav-arrow-right { right: 8px; }
+
+        .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: 0.3s; display: flex; align-items: center; white-space: nowrap; }
+        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-link.sign-out { color: #E07B7B !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
+
+        .flow-column {
+            flex: 1;
+            min-width: 320px;
+            background: #fbfbfb;
+            border-radius: 20px;
+            padding: 18px;
+            border: 1px solid #f0f0f0;
+        }
+
+        .column-header {
+            font-size: 11px;
+            font-weight: 900;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+            gap: 10px;
+        }
+
+        .time-card {
+            background: #fff;
+            border: 1px solid #eee;
+            padding: 12px 8px;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.3s ease;
+            min-height: 110px;
+            justify-content: space-between;
+        }
+
+        .sub-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            width: 100%;
+            margin-top: 8px;
+            border-top: 1px solid #f5f5f5;
+            padding-top: 8px;
+        }
+
+        .sub-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .sub-label {
+            font-size: 6px;
+            font-weight: 800;
+            color: #aaa;
+        }
+
+        .sub-value {
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+        .val-s1 {
+            color: #E07B7B;
+        }
+
+        .val-s2 {
+            color: #C8962E;
+        }
+
+        .val-s3 {
+            color: #987BB2;
+        }
+
+        .session-indicator-wrapper {
+            display: flex;
+            gap: 3px;
+            margin-top: 6px;
+            width: 70%;
+            justify-content: center;
+        }
+
+        .mini-pill {
+            height: 3px;
+            flex: 1;
+            border-radius: 10px;
+            background: #f0f0f0;
+        }
+
+        .pill-s1 {
+            background: #E07B7B !important;
+        }
+
+        .pill-s2 {
+            background: #C8962E !important;
+        }
+
+        .pill-s3 {
+            background: #987BB2 !important;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        .is-crowded {
+            animation: pulse-red 2s infinite;
+            border-color: var(--danger) !important;
+            background: #fffcfc;
+        }
+
+        .has-foreign {
+            border-style: dashed !important;
+            border-color: #d1d1d1 !important;
+            border-width: 1.5px;
+        }
+
+        /* Stat Cards */
+        .eval-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(240, 230, 222, 0.6);
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .regional-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2px;
+            background: #eee;
+            border-radius: 16px;
+            border: 2px solid #eee;
+            overflow: hidden;
+        }
+
+        .regional-grid .eval-card {
+            border-radius: 0;
+            margin-bottom: 0;
+            border: none;
+        }
+
+        .progress-bg {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            z-index: 0;
+            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.1;
+        }
+
+        .pill-button {
+            padding: clamp(5px, 0.6vh, 8px) clamp(10px, 1vw, 16px);
+            border-radius: 50px;
+            background: #eee;
+            color: #666;
+            font-size: clamp(8px, 0.85vw, 10px);
+            font-weight: 800;
+            cursor: pointer;
+            transition: background 0.25s, color 0.25s, border-color 0.25s;
+            white-space: nowrap;
+            border: 1.5px solid transparent;
+            outline: none;
+            user-select: none;
+        }
+
+        .pill-button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Hide scrollbar tapi tetap bisa scroll */
+        #sidebar-inner::-webkit-scrollbar { display: none; }
+
+        /* Compact arrival cards utk layar kecil */
+        .arrival-card {
+            padding: clamp(5px, 0.7vh, 8px) clamp(8px, 0.8vw, 12px);
+            gap: clamp(6px, 0.6vw, 10px);
+            border-radius: clamp(10px, 1vw, 14px);
+        }
+        .arrival-card-name  { font-size: clamp(8px, 0.75vw, 10px); }
+        .arrival-card-meta  { font-size: clamp(7px, 0.65vw, 8.5px); }
+        .arrival-card-time  { font-size: clamp(7px, 0.6vw, 8px); }
+        .arrival-list       { gap: clamp(3px, 0.4vh, 6px); }
+
+        #fs-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 10000;
+            background: white;
+            border: 1.5px solid var(--gold);
+            color: var(--gold);
+            padding: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.5s;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .ui-visible {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .cursor-visible {
+            cursor: default !important;
+        }
+
+        .hidden-box {
+            display: none !important;
+        }
+
+        ::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 10px;
+        }
+    </style>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+
+<body class="cursor-visible" onload="initApp()">
+
+    <button id="fs-btn" onclick="toggleFS()"><svg width="20" height="20" fill="none" stroke="currentColor"
+            stroke-width="2" viewBox="0 0 24 24">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+        </svg></button>
+    <nav class="sapatamu-navbar">
+        <div class="nav-outer-wrapper">
+            <div class="nav-fade nav-fade-left" id="fade-left"></div>
+            <div class="nav-arrow nav-arrow-left">‹</div>
+            
+            <div class="nav-scroll-container" id="nav-scroll">
+                <div class="nav-group">
+                    <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+                    <div class="nav-divider"></div>
+                    <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Formulir</a>
+                    <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+                    <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+                </div>
+                <div class="nav-divider"></div>
+                <div class="nav-group">
+                    <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                    <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                    <a href="analytics.html" class="nav-link active" id="nav-analytics">Analytics</a>
+                    <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+                    <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+                    <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+                    <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+                    <div class="nav-divider"></div>
+                    
+                    
+                </div>
+                <div class="nav-divider"></div>
+                <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
+            </div>
+
+            <div class="nav-arrow nav-arrow-right">›</div>
+            <div class="nav-fade nav-fade-right" id="fade-right"></div>
+        </div>
+    </nav>
+
+    <div class="master-container" style="top: 70px;">
+        <div id="sidebar-panel">
+            <!-- Animasi Background Hearts -->
+            <ul class="dynamic-bg">
+                <li></li><li></li><li></li><li></li><li></li>
+                <li></li><li></li><li></li><li></li><li></li>
+            </ul>
+
+            <div id="sidebar-inner" style="position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; width: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -ms-overflow-style: none;">
+            <div class="mb-6">
+                <h1 class="font-black tracking-tighter uppercase" style="font-size: clamp(16px, 1.8vw, 24px);">Analytics<span class="text-[#D4AF37]">.Node</span></h1>
+                <p id="clock" class="text-gray-400 font-bold tracking-[3px] mt-1" style="font-size: clamp(7px, 0.7vw, 10px);">00:00:00</p>
+            </div>
+
+            <div class="mb-4">
+                <span class="font-black uppercase text-gray-400 block mb-2 tracking-widest" style="font-size: clamp(7px, 0.7vw, 9px);">Visual Control</span>
+                <div id="view-mode-container" class="flex flex-col gap-1.5">
+                    <div class="pill-button active text-center" onclick="setViewMode('ALL', this)">Full Overview</div>
+                    <div class="pill-button text-center" onclick="setViewMode('FLOW', this)">Live Flow Monitor</div>
+                    <div class="pill-button text-center" onclick="setViewMode('GUEST', this)">Guest Profiling</div>
+                </div>
+            </div>
+
+            <div class="space-y-3 shrink-0">
+                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm" style="padding: clamp(12px, 1.5vh, 28px) clamp(12px, 1.2vw, 28px);">
+                    <div class="font-bold text-gray-400 uppercase tracking-widest mb-1" style="font-size: clamp(7px, 0.65vw, 10px);">Total Kedatangan Pax</div>
+                    <div id="side-real" class="font-black text-gray-800 tracking-tighter" style="font-size: clamp(36px, 4vh, 64px); line-height:1;">0</div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
+                        <span class="font-bold text-green-600 uppercase tracking-tighter" style="font-size: clamp(7px, 0.65vw, 9px);">Live Sync Connected</span>
+                    </div>
+                </div>
+
+                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm" style="padding: clamp(12px, 1.5vh, 28px) clamp(12px, 1.2vw, 28px);">
+                    <div class="font-bold text-gray-400 uppercase tracking-widest mb-1" style="font-size: clamp(7px, 0.65vw, 10px);">Akurasi RSVP</div>
+                    <div id="side-acc" class="font-black text-[#C8962E] tracking-tighter" style="font-size: clamp(36px, 4vh, 64px); line-height:1;">0%</div>
+                    <div class="font-bold text-gray-300 mt-1 uppercase tracking-widest" style="font-size: clamp(7px, 0.65vw, 9px);">Database Match Rate</div>
+                </div>
+            </div>
+
+            <!-- Panel 5 Tamu Terakhir Realtime -->
+            <div class="mt-6 pt-4 border-t border-gray-100/50">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[9px] font-black uppercase text-gray-400 tracking-widest">
+                        <span class="arrival-realtime-dot"></span>Tamu Baru Hadir
+                    </span>
+                    <span id="arrival-realtime-status" class="text-[7px] font-bold text-green-500 uppercase tracking-wider">Connecting...</span>
+                </div>
+                <div id="arrival-list" class="arrival-list">
+                    <p class="text-[9px] text-gray-300 italic px-2 py-3 text-center">Menunggu data tamu...</p>
+                </div>
+            </div>
+
+            <!-- Welcome Mirror Widget -->
+            <div id="welcome-mirror-box" class="mt-4 pt-4 border-t border-gray-100/50">
+                <span class="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-widest">Welcome Screen Mirror</span>
+                <div id="welcome-mirror-container" class="mirror-container">
+                    <iframe id="welcome-mirror-iframe" src="" class="mirror-iframe"></iframe>
+                </div>
+            </div>
+
+            <div
+                class="mt-auto pt-4 text-[10px] font-black text-gray-300 tracking-[5px] uppercase text-center opacity-50">
+                SapaTamu.ku
+            </div>
+            </div>
+        </div>
+
+        <div id="content-panel">
+            <!-- Animasi Background Hearts untuk Main Area -->
+            <ul class="dynamic-bg-main">
+                <li></li><li></li><li></li><li></li><li></li>
+                <li></li><li></li><li></li><li></li><li></li>
+            </ul>
+            <div class="dashboard-grid">
+                <div id="box-flow" class="section-box full-width">
+                    <div class="section-title"><span>Flow Monitoring Per Sesi</span></div>
+                    <div class="flex flex-wrap justify-between items-center mb-8 gap-4">
+                        <div id="sesi-container" class="flex flex-wrap gap-2"></div>
+                        <div class="flex flex-wrap gap-1 bg-gray-100 p-1.5 rounded-full">
+                            <div class="pill-button" onclick="setIntervalTime(600, this)">10m</div>
+                            <div class="pill-button active" onclick="setIntervalTime(1200, this)">20m</div>
+                            <div class="pill-button" onclick="setIntervalTime(3600, this)">1h</div>
+                        </div>
+                    </div>
+                    <div id="flow-wrapper" class="flow-container">
+                        <p class="text-gray-400 text-xs italic p-10">Mempersiapkan data arus...</p>
+                    </div>
+                </div>
+
+                <div id="box-cat" class="section-box">
+                    <div class="section-title"><span>Kategori Tamu</span></div>
+                    <div id="list-cat" class="space-y-1.5"></div>
+                </div>
+
+                <div id="box-host" class="section-box">
+                    <div class="section-title"><span>Distribusi Host</span></div>
+                    <div id="list-host" class="space-y-1.5"></div>
+                </div>
+
+                <div id="box-addr" class="section-box full-width">
+                    <div class="section-title"><span>Sebaran Wilayah (Detail Alamat)</span></div>
+                    <div id="list-addr" class="regional-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+ 
+        const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+        let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
+
+        function syncNavbar() {
+            const ssId = window.CURRENT_SS_ID || "";
+            const links = document.querySelectorAll('.nav-link');
+            links.forEach(link => {
+                const baseHref = link.getAttribute('href').split('?')[0];
+                link.href = `${baseHref}?ssId=${ssId}`;
+            });
+        }
+
+        async function initApp() {
+            if (window.SAPATAMU_RESOLVED) {
+                CURRENT_SS_ID = window.CURRENT_SS_ID || CURRENT_SS_ID;
+                if (!CURRENT_SS_ID) {
+                    window.location.href = "login.html";
+                    return;
+                }
+                syncNavbar();
+                initNavScroll();
+                await fetchData();
+            } else {
+                setTimeout(initApp, 100);
+            }
+        }
+
+        function initNavScroll() {
+            const container = document.getElementById('nav-scroll');
+            const fLeft = document.getElementById('fade-left');
+            const fRight = document.getElementById('fade-right');
+            if(!container) return;
+            
+            const updateFades = () => {
+                const scrollLeft = container.scrollLeft;
+                const maxScroll = container.scrollWidth - container.clientWidth;
+                if(fLeft) fLeft.classList.toggle('visible', scrollLeft > 10);
+                if(fRight) fRight.classList.toggle('visible', scrollLeft < maxScroll - 10);
+            };
+            
+            container.addEventListener('scroll', updateFades);
+            window.addEventListener('resize', updateFades);
+            setTimeout(updateFades, 500);
+
+            // Auto-scroll to active link
+            const active = container.querySelector('.nav-link.active');
+            if (active) {
+                container.scrollLeft = active.offsetLeft - (container.clientWidth / 2) + (active.clientWidth / 2);
+            }
+        }
+
+        const SESI_COLOR_MAP = {
+            "SESI 1": "#E07B7B", "SESI 2": "#C8962E", "SESI 3": "#987BB2", "DEFAULT": "#666"
+        };
+
+        let globalData = null;
+        let selectedSesi = 'ALL';
+        let selectedInterval = 1200;
+
+        window.setViewMode = function (mode, el) {
+            const btns = document.querySelectorAll('#view-mode-container .pill-button');
+            btns.forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+
+            const boxes = {
+                flow: document.getElementById('box-flow'),
+                cat: document.getElementById('box-cat'),
+                host: document.getElementById('box-host'),
+                addr: document.getElementById('box-addr')
+            };
+
+            Object.values(boxes).forEach(b => b.classList.remove('hidden-box', 'full-width'));
+
+            if (mode === 'FLOW') {
+                [boxes.cat, boxes.host, boxes.addr].forEach(b => b.classList.add('hidden-box'));
+                boxes.flow.classList.add('full-width');
+            } else if (mode === 'GUEST') {
+                boxes.flow.classList.add('hidden-box');
+                [boxes.cat, boxes.host, boxes.addr].forEach(b => b.classList.add('full-width'));
+            } else {
+                boxes.flow.classList.add('full-width');
+                boxes.addr.classList.add('full-width');
+            }
+        };
+
+        window.setSesi = function (val, el) {
+            selectedSesi = val;
+            el.parentElement.querySelectorAll('.pill-button').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            renderFlow();
+        };
+
+        window.setIntervalTime = function (val, el) {
+            selectedInterval = val;
+            el.parentElement.querySelectorAll('.pill-button').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            renderFlow();
+        };
+
+        function cleanTime(timeStr) {
+            if (!timeStr) return "00:00";
+            let c = String(timeStr).replace(/[^0-9.:]/g, '').replace(/\./g, ':');
+            let m = c.match(/\d{1,2}:\d{2}/);
+            return m ? m[0].padStart(5, '0') : "00:00";
+        }
+
+        // Helper: normalisasi format waktu dari Supabase (bisa berupa "HH:MM:SS", "HH.MM", atau ISO UTC)
+        function cleanTimeText(val) {
+            if (!val || val === "-" || val === "") return "00:00";
+            let s = String(val).trim();
+            // Jika format ISO (misal 2026-05-25T07:16:56.785Z), konversi ke GMT+7 (Asia/Jakarta)
+            if (s.includes('T')) {
+                try {
+                    let d = new Date(s);
+                    if (!isNaN(d.getTime())) {
+                        let localTime = d.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false });
+                        let parts = localTime.split('.');
+                        if (parts.length < 3) parts = localTime.split(':');
+                        if (parts.length >= 2) {
+                            return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+                        }
+                    }
+                } catch(e) {}
+            }
+            s = s.replace(/\./g, ':');
+            let m = s.match(/(\d{1,2}):(\d{2})/);
+            if (m) return m[1].padStart(2, '0') + ':' + m[2];
+            return "00:00";
+        }
+
+        // Helper: konversi string waktu "HH:MM" ke total menit
+        function timeToMinutes(timeStr) {
+            if (!timeStr || timeStr === "00:00") return 0;
+            const parts = timeStr.split(':');
+            return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
+        }
+
+        function renderFlow() {
+            if (!globalData || !globalData.flowRaw) return;
+            const wrapper = document.getElementById('flow-wrapper');
+            wrapper.innerHTML = "";
+            const displaySesi = (selectedSesi === 'ALL') ? ["SESI 1", "SESI 2", "SESI 3"] : [selectedSesi];
+
+            displaySesi.forEach(sesiContainer => {
+                const sesiColor = SESI_COLOR_MAP[sesiContainer] || SESI_COLOR_MAP.DEFAULT;
+                let grouped = {};
+
+                globalData.flowRaw.forEach(item => {
+                    if (item.arrivalSesi === sesiContainer) {
+                        let timeStr = cleanTime(item.time);
+                        let parts = timeStr.split(':');
+                        let h = parseInt(parts[0]) || 0;
+                        let m = parseInt(parts[1]) || 0;
+                        let totalSec = (h * 3600) + (m * 60);
+                        let roundedSec = Math.floor(totalSec / selectedInterval) * selectedInterval;
+                        let label = `${Math.floor(roundedSec / 3600).toString().padStart(2, '0')}:${Math.floor((roundedSec % 3600) / 60).toString().padStart(2, '0')}`;
+
+                        if (!grouped[label]) grouped[label] = { total: 0, s1: 0, s2: 0, s3: 0, hasIntruder: false };
+
+                        const count = parseInt(item.count) || 0;
+                        grouped[label].total += count;
+                        let asal = String(item.sesi || "").toUpperCase();
+                        if (asal.includes("SESI 1")) grouped[label].s1 += count;
+                        else if (asal.includes("SESI 2")) grouped[label].s2 += count;
+                        else if (asal.includes("SESI 3")) grouped[label].s3 += count;
+                        if (item.isIntruder) grouped[label].hasIntruder = true;
+                    }
+                });
+
+                let totalSesiPax = 0;
+                let totalSesiTamu = 0;
+                globalData.flowRaw.forEach(item => {
+                    if (item.arrivalSesi === sesiContainer) {
+                        totalSesiPax += (parseInt(item.count) || 0);
+                        totalSesiTamu += 1;
+                    }
+                });
+
+                let columnHtml = `<div class="flow-column" style="border-top: 6px solid ${sesiColor}">
+                <div class="column-header" style="color: ${sesiColor}; display: flex; justify-content: space-between; align-items: center;">
+                    <span>${sesiContainer}</span>
+                    <span style="font-size: 9px; font-weight: 800; background: ${sesiColor}; color: white; padding: 3px 8px; border-radius: 20px; letter-spacing: 0; text-transform: none;">
+                        ${totalSesiTamu} Tamu (${totalSesiPax} Pax)
+                    </span>
+                </div>
+                <div class="time-grid">`;
+
+                const sortedLabels = Object.keys(grouped).sort();
+                if (sortedLabels.length === 0) columnHtml += `<p class='col-span-full text-[9px] text-gray-300 italic text-center py-10'>Belum ada kedatangan</p>`;
+
+                sortedLabels.forEach(l => {
+                    const data = grouped[l];
+                    let cardClass = data.hasIntruder ? "has-foreign" : "";
+                    if (data.total > 25) cardClass += " is-crowded";
+
+                    columnHtml += `<div class="time-card ${cardClass}">
+                    <div class="text-[8px] font-black text-gray-400 tracking-tighter">${l}</div>
+                    <div class="text-2xl font-black" style="color: #111">${data.total}</div>
+                    <div class="sub-detail-grid">
+                        <div class="sub-item"><span class="sub-label">S1</span><span class="sub-value val-s1">${data.s1}</span></div>
+                        <div class="sub-item"><span class="sub-label">S2</span><span class="sub-value val-s2">${data.s2}</span></div>
+                        <div class="sub-item"><span class="sub-label">S3</span><span class="sub-value val-s3">${data.s3}</span></div>
+                    </div>
+                    <div class="session-indicator-wrapper">
+                        <div class="mini-pill ${data.s1 > 0 ? 'pill-s1' : ''}"></div>
+                        <div class="mini-pill ${data.s2 > 0 ? 'pill-s2' : ''}"></div>
+                        <div class="mini-pill ${data.s3 > 0 ? 'pill-s3' : ''}"></div>
+                    </div></div>`;
+                });
+                columnHtml += `</div></div>`;
+                wrapper.innerHTML += columnHtml;
+            });
+        }
+
+        function processMergedStats(labels, values) {
+            let map = {};
+            if (!labels || !values) return { l: [], v: [] };
+
+            labels.forEach((l, i) => {
+                let rawAddr = String(l || "").trim();
+                let finalKey = "TIDAK DIISI";
+
+                if (rawAddr !== "") {
+                    let parts = rawAddr.split(',').map(p => p.trim());
+                    if (parts.length >= 3) {
+                        finalKey = parts.slice(-3).join(', ').toUpperCase();
+                    } else {
+                        finalKey = rawAddr.toUpperCase();
+                    }
+                }
+                map[finalKey] = (map[finalKey] || 0) + (values[i] || 0);
+            });
+
+            let sortedKeys = Object.keys(map).sort((a, b) => map[b] - map[a]);
+            return { l: sortedKeys, v: sortedKeys.map(k => map[k]) };
+        }
+
+        function renderWithStabilo(containerId, labels, values, color) {
+            let html = "";
+            const container = document.getElementById(containerId);
+            if (!values || values.length === 0) {
+                container.innerHTML = "<p class='text-[9px] text-gray-400 p-8 italic text-center'>Menunggu Data...</p>";
+                return;
+            }
+            const total = values.reduce((a, b) => a + b, 0);
+            labels.forEach((l, i) => {
+                const ratio = total > 0 ? ((values[i] / total) * 100).toFixed(1) : 0;
+                html += `<div class="eval-card" style="border-left: 6px solid ${color}">
+                <div class="progress-bg" style="width: ${ratio}%; height: 100%; top:0; background: ${color}; opacity: 0.1"></div>
+                <div class="relative z-10 w-full flex justify-between items-center">
+                    <div class="flex flex-col"><div class="text-[10px] font-extrabold text-gray-700 uppercase truncate max-w-[200px]">${l}</div><div class="text-[9px] font-bold text-gray-400">${ratio}%</div></div>
+                    <div class="text-2xl font-black" style="color:${color}">${values[i]}</div>
+                </div></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function resizeWelcomeMirror() {
+            const iframe = document.getElementById('welcome-mirror-iframe');
+            const container = document.getElementById('welcome-mirror-container');
+            if (iframe && container) {
+                const scale = container.offsetWidth / 1280;
+                iframe.style.width = '1280px';
+                iframe.style.height = '720px';
+                iframe.style.transform = `scale(${scale})`;
+            }
+        }
+        window.addEventListener('resize', resizeWelcomeMirror);
+
+        // ── REALTIME ARRIVAL NOTIFICATIONS ──────────────────────────────
+        const SB_RT_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SB_RT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+        let arrivalRealtimeClient = null;
+        let arrivalRealtimeChannel = null;
+        let arrivalPollTimer = null;
+        let arrivalSsId = null;
+        let lastArrivalIds = new Set();
+
+        function formatArrivalTime(isoStr) {
+            if (!isoStr) return '';
+            try {
+                const d = new Date(isoStr);
+                return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
+            } catch(e) { return ''; }
+        }
+
+        function renderArrivalList(guests) {
+            const list = document.getElementById('arrival-list');
+            if (!list) return;
+            if (!guests || guests.length === 0) {
+                list.innerHTML = '<p class="text-[9px] text-gray-300 italic px-2 py-3 text-center">Belum ada tamu hadir...</p>';
+                return;
+            }
+            list.innerHTML = guests.map((g, i) => {
+                const nama = (g.nama || '-').toUpperCase();
+                const kat  = (g.kategori || g.kategori || '-').toUpperCase();
+                const pihak = (g.pihak || '-').toUpperCase();
+                const jam   = formatArrivalTime(g.created_at);
+                return `<div class="arrival-card" style="animation-delay:${i * 0.07}s">
+                    <div class="arrival-card-rank">${i + 1}</div>
+                    <div class="arrival-card-info">
+                        <div class="arrival-card-name">${nama}</div>
+                        <div class="arrival-card-meta">${kat} &bull; ${pihak}</div>
+                    </div>
+                    <div class="arrival-card-time">${jam}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function fetchArrivalList() {
+            if (!arrivalSsId) return;
+            try {
+                const url = `${SB_RT_URL}/rest/v1/welcome_queue?ssid=eq.${arrivalSsId}&status=eq.DISPLAY&order=created_at.desc&limit=5&select=nama,kategori,pihak,created_at`;
+                const res = await fetch(url, {
+                    headers: { "apikey": SB_RT_KEY, "Authorization": "Bearer " + SB_RT_KEY }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                renderArrivalList(data);
+            } catch(e) { console.warn('Arrival fetch error:', e); }
+        }
+
+        function initArrivalRealtime(ssId) {
+            arrivalSsId = ssId;
+            const statusEl = document.getElementById('arrival-realtime-status');
+
+            // Initial fetch
+            fetchArrivalList();
+
+            // Supabase Realtime
+            try {
+                if (window.supabase) {
+                    arrivalRealtimeClient = window.supabase.createClient(SB_RT_URL, SB_RT_KEY);
+                    arrivalRealtimeChannel = arrivalRealtimeClient
+                        .channel('analytics_arrival_channel')
+                        .on('postgres_changes', {
+                            event: 'INSERT',
+                            schema: 'public',
+                            table: 'welcome_queue',
+                            filter: `ssid=eq.${ssId}`
+                        }, (payload) => {
+                            console.log('Arrival Realtime INSERT:', payload.new);
+                            fetchArrivalList(); // Re-fetch top 5
+                        })
+                        .subscribe((status) => {
+                            if (statusEl) {
+                                if (status === 'SUBSCRIBED') {
+                                    statusEl.textContent = 'Realtime ●';
+                                    statusEl.className = 'text-[7px] font-bold text-green-500 uppercase tracking-wider';
+                                    // Slow polling backup
+                                    if (arrivalPollTimer) clearInterval(arrivalPollTimer);
+                                    arrivalPollTimer = setInterval(fetchArrivalList, 30000);
+                                } else {
+                                    statusEl.textContent = 'Polling';
+                                    statusEl.className = 'text-[7px] font-bold text-yellow-500 uppercase tracking-wider';
+                                    if (arrivalPollTimer) clearInterval(arrivalPollTimer);
+                                    arrivalPollTimer = setInterval(fetchArrivalList, 5000);
+                                }
+                            }
+                        });
+                } else {
+                    throw new Error('Supabase lib not loaded');
+                }
+            } catch(e) {
+                console.warn('Arrival realtime fallback polling:', e);
+                if (statusEl) { statusEl.textContent = 'Polling'; statusEl.className = 'text-[7px] font-bold text-yellow-500 uppercase tracking-wider'; }
+                if (arrivalPollTimer) clearInterval(arrivalPollTimer);
+                arrivalPollTimer = setInterval(fetchArrivalList, 5000);
+            }
+        }
+
+        async function fetchData() {
+            try {
+                const sessionStr = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
+                if (!sessionStr) return;
+                const sessionData = JSON.parse(sessionStr);
+                const ssId = sessionData.ssId;
+
+                // Initialize welcome mirror iframe src (gunakan data-loaded flag, bukan .src check)
+                const mirrorIframe = document.getElementById('welcome-mirror-iframe');
+                if (mirrorIframe && !mirrorIframe.dataset.loaded) {
+                    mirrorIframe.dataset.loaded = '1';
+                    // Pass ssId + user agar subdomain_resolver.js di dalam iframe
+                    // menyimpan ke localStorage (shared same-origin) → welcome.html bisa baca ssId
+                    const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+                    const uname = sessionObj.username || sessionObj.subdomain || 'monitor';
+                    mirrorIframe.src = `welcome.html?mode=kiosk&ssId=${ssId}&user=${encodeURIComponent(uname)}`;
+                    mirrorIframe.onload = () => { resizeWelcomeMirror(); };
+                    setTimeout(resizeWelcomeMirror, 800);
+                }
+
+                // Inisialisasi Realtime Arrival (hanya sekali)
+                if (!arrivalSsId) {
+                    initArrivalRealtime(ssId);
+                }
+
+                const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + ssId + "&order=row.desc";
+                const response = await fetch(supabaseUrl, {
+                    headers: {
+                        "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
+                    }
+                });
+                const sbData = await response.json();
+                
+                // Hitung analytics di frontend
+                let totalReal = 0;
+                let totalRSVP = 0;
+                let categories = {};
+                let hosts = {};
+                let addresses = {};
+                let flowRaw = [];
+
+                let uniqueSessions = [...new Set((sbData || []).map(g => String(g.sesi || "").trim()))].filter(s => s !== "" && s !== "-");
+                uniqueSessions.sort();
+                
+                const s1Value = uniqueSessions[0] || "SESI 1";
+                const s2Value = uniqueSessions[1] || "SESI 2";
+                const s3Value = uniqueSessions[2] || "SESI 3";
+
+                function extractStartTime(sessionName) {
+                    const match = String(sessionName).match(/\d{1,2}[:.]\d{2}/);
+                    return match ? match[0].replace('.', ':') : "";
+                }
+
+                const s2StartStr = extractStartTime(s2Value) || "11:00";
+                const s3StartStr = extractStartTime(s3Value) || "13:00";
+
+                const s2Start = timeToMinutes(cleanTimeText(s2StartStr));
+                const s3Start = timeToMinutes(cleanTimeText(s3StartStr));
+
+                (sbData || []).forEach(item => {
+                    const valH = parseInt(item.rencana_hadir) || 0;
+                    const valN = parseInt(item.real_hadir) || 0;
+                    const isCheckedIn = String(item.status_hadir).trim();
+
+                    totalRSVP += valH;
+
+                    if (isCheckedIn === "1") {
+                        totalReal += valN;
+
+                        const catName = String(item.kategori || "UMUM").toUpperCase();
+                        const hostName = String(item.pihak_pengundang || "LAINNYA").toUpperCase();
+                        categories[catName] = (categories[catName] || 0) + valN;
+                        hosts[hostName] = (hosts[hostName] || 0) + valN;
+
+                        const rawAddr = String(item.alamat || "LUAR KOTA").toUpperCase();
+                        const simpleAddr = rawAddr.split(',')[0].split(' ').slice(0,2).join(' ');
+                        addresses[simpleAddr] = (addresses[simpleAddr] || 0) + valN;
+
+                        const formattedTime = cleanTimeText(item.jam_datang);
+                        const checkMin = timeToMinutes(formattedTime);
+
+                        let arrivalSesi = "SESI 3";
+                        if (checkMin < s2Start) {
+                            arrivalSesi = "SESI 1";
+                        } else if (checkMin >= s2Start && checkMin < s3Start) {
+                            arrivalSesi = "SESI 2";
+                        }
+
+                        let sesiAsalConverted = "TANPA SESI";
+                        const sesiRaw = String(item.sesi || "").trim();
+                        if (sesiRaw === s1Value) sesiAsalConverted = "SESI 1";
+                        else if (sesiRaw === s2Value) sesiAsalConverted = "SESI 2";
+                        else if (sesiRaw === s3Value) sesiAsalConverted = "SESI 3";
+
+                        const isIntruder = (sesiAsalConverted !== arrivalSesi && sesiAsalConverted !== "TANPA SESI");
+
+                        flowRaw.push({
+                            time: formattedTime,
+                            count: valN,
+                            sesi: sesiAsalConverted,
+                            arrivalSesi: arrivalSesi,
+                            isIntruder: isIntruder
+                        });
+                    }
+                });
+
+                globalData = {
+                    totalReal: totalReal,
+                    totalRSVP: totalRSVP,
+                    percentage: totalRSVP > 0 ? ((totalReal / totalRSVP) * 100).toFixed(1) : 0,
+                    catLabels: Object.keys(categories),
+                    catValues: Object.values(categories),
+                    hostLabels: Object.keys(hosts),
+                    hostValues: Object.values(hosts),
+                    addrLabels: Object.keys(addresses),
+                    addrValues: Object.values(addresses),
+                    flowRaw: flowRaw
+                };
+
+                document.getElementById('side-real').innerText = globalData.totalReal || 0;
+                document.getElementById('side-acc').innerText = (globalData.percentage || 0) + "%";
+
+                const cat = processMergedStats(globalData.catLabels, globalData.catValues);
+                const host = processMergedStats(globalData.hostLabels, globalData.hostValues);
+                const addr = processMergedStats(globalData.addrLabels, globalData.addrValues);
+
+                renderWithStabilo('list-cat', cat.l, cat.v, '#E07B7B');
+                renderWithStabilo('list-host', host.l, host.v, '#D4A5B8');
+                renderWithStabilo('list-addr', addr.l, addr.v, '#99B8A5');
+
+                const sesiContainer = document.getElementById('sesi-container');
+                const unik = ["SESI 1", "SESI 2", "SESI 3"];
+                let sesiHtml = `<div class="pill-button ${selectedSesi === 'ALL' ? 'active' : ''}" onclick="setSesi('ALL', this)">All Session</div>`;
+                unik.forEach(s => {
+                    sesiHtml += `<div class="pill-button ${selectedSesi === s ? 'active' : ''}" onclick="setSesi('${s}', this)">${s}</div>`;
+                });
+                sesiContainer.innerHTML = sesiHtml;
+                renderFlow();
+            } catch (e) { console.error("Sync Error:", e); }
+        }
+
+        window.toggleFS = function () {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        };
+
+        let idleTimer;
+        function showUI() {
+            const btn = document.getElementById('fs-btn');
+            document.body.classList.add('cursor-visible');
+            btn.classList.add('ui-visible');
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                document.body.classList.remove('cursor-visible');
+                btn.classList.remove('ui-visible');
+            }, 4000);
+        }
+
+        document.addEventListener('mousemove', showUI);
+        document.addEventListener('click', showUI);
+
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID', { hour12: false });
+        }, 1000);
+
+        initApp();
+        setInterval(fetchData, 15000);
+    </script>
+</body>
+
+</html>
