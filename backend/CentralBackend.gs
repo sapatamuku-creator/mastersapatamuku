@@ -311,12 +311,22 @@ function handleGetOwnerClients(data) {
       return createResponse({ status: "error", message: "Password admin tidak valid" });
     }
     const values = sheet.getDataRange().getValues();
+    const dValues = sheet.getDataRange().getDisplayValues();
     const clients = [];
     for (let i = 1; i < values.length; i++) {
       const row = values[i];
+      const dRow = dValues[i];
       if (!row[0]) continue;
+      
+      let pwd = row[2];
+      if (pwd instanceof Date) {
+        pwd = dRow[2].replace(/\s+/g, '').toLowerCase();
+      } else {
+        pwd = String(pwd || "");
+      }
+      
       clients.push({
-        username: row[0], ssid: row[1], password: row[2],
+        username: row[0], ssid: row[1], password: pwd,
         whatsapp: row[3], wedding_date: String(row[4] || ""),
         created_at: String(row[5] || ""), email: row[6],
         status: row[7], category: row[8], subdomain: row[9],
@@ -339,6 +349,7 @@ function handleUpdateOwnerClient(data) {
       return createResponse({ status: "error", message: "Password admin tidak valid" });
     }
     const values = sheet.getDataRange().getValues();
+    const dValues = sheet.getDataRange().getDisplayValues();
     let rowIndex = -1;
     const targetSub = String(data.originalUsername || "").toLowerCase();
     for (let i = 1; i < values.length; i++) {
@@ -348,8 +359,17 @@ function handleUpdateOwnerClient(data) {
 
     const c = data.clientData;
     const orig = values[rowIndex - 1];
+    const dOrig = dValues[rowIndex - 1];
+    
+    let origPwd = orig[2];
+    if (origPwd instanceof Date) {
+      origPwd = dOrig[2].replace(/\s+/g, '').toLowerCase();
+    } else {
+      origPwd = String(origPwd || "");
+    }
+
     const newRow = [
-      c.username || orig[0], c.ssid || orig[1], c.password || orig[2],
+      c.username || orig[0], c.ssid || orig[1], c.password || origPwd,
       c.whatsapp || orig[3], c.wedding_date || orig[4], orig[5],
       c.email || orig[6], c.status || orig[7], c.category || orig[8],
       c.subdomain || orig[9], c.client_name || orig[10],
@@ -638,6 +658,7 @@ function handleLogin(data) {
     const ss = SpreadsheetApp.openById(MASTER_SS_ID);
     const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
     const values = sheet.getDataRange().getValues();
+    const dValues = sheet.getDataRange().getDisplayValues();
 
     // Baca admin password dari K1 (kolom 11, index 10) — baris pertama header
     const adminPassword = String(sheet.getRange(1, 11).getValue() || "").trim();
@@ -654,7 +675,13 @@ function handleLogin(data) {
       if (colA !== targetUser && colJ !== targetUser) continue;
 
       // Cocok username — tentukan role berdasarkan password
-      const clientPassword = String(values[i][2] || "");
+      let clientPassword = values[i][2];
+      if (clientPassword instanceof Date) {
+        clientPassword = dValues[i][2].replace(/\s+/g, '').toLowerCase();
+      } else {
+        clientPassword = String(clientPassword || "");
+      }
+      
       let role = null;
 
       if (adminPassword && inputPass === adminPassword) {
@@ -1004,6 +1031,7 @@ function syncAllClientsToSupabase() {
     }
     
     const values = sheet.getDataRange().getValues();
+    const dValues = sheet.getDataRange().getDisplayValues();
     logs.push("Total baris data (termasuk header): " + values.length);
 
     // 1. Sinkronisasi Password Admin
@@ -1028,10 +1056,17 @@ function syncAllClientsToSupabase() {
         }
       }
 
+      let pwd = row[2];
+      if (pwd instanceof Date) {
+        pwd = dValues[i][2].replace(/\s+/g, '').toLowerCase();
+      } else {
+        pwd = String(pwd || "").trim();
+      }
+
       const clientData = {
         username: username,
         ssid: String(row[1] || "").trim(),
-        password: String(row[2] || "").trim(),
+        password: pwd,
         whatsapp: String(row[3] || "").trim(),
         wedding_date: String(row[4] || "").trim(),
         created_at: createdAtVal,
