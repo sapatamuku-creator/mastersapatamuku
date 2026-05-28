@@ -398,123 +398,51 @@
         async function syncMetadata() {
             if (!ssId) return;
             try {
-                // 1. Baca metadata_client dari Supabase
-                const metaRes = await fetch(
-                    `${SB_URL}/rest/v1/metadata_client?ssid=eq.${ssId}&limit=1`,
-                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
-                );
-                
-                let coupleName = "Memuat...";
-                let weddingDate = "Menunggu Sinkronisasi";
-                
-                if (metaRes.ok) {
-                    const metaRows = await metaRes.json();
-                    if (metaRows && metaRows.length > 0) {
-                        const meta = metaRows[0];
-                        coupleName = meta.nama_pengantin || "SapaTamu.Ku";
-                        weddingDate = meta.hari_tanggal || "-";
-                    }
-                }
+                const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`;
+                const response = await fetch(fetchUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (data.status === "error" || data.error) throw new Error(data.message || data.error);
 
-                document.getElementById('couple-name').innerHTML = coupleName.replace(" & ", " &amp; ");
-                document.getElementById('wedding-date').innerText = weddingDate;
-
-                // 2. Baca config_invitation dari Supabase
-                const cfgRes = await fetch(
-                    `${SB_URL}/rest/v1/config_invitation?ssid=eq.${ssId}&select=data&limit=1`,
-                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
-                );
-                
-                let slideshowLoaded = false;
-                if (cfgRes.ok) {
-                    const cfgRows = await cfgRes.json();
-                    if (cfgRows && cfgRows.length > 0) {
-                        const cfg = cfgRows[0].data || {};
-                        const ev1 = cfg.ev1 || {};
-                        
-                        // Slideshow dari gallery config
-                        const gallery = (cfg.gallery || []).filter(u => u && u.trim() !== "");
-                        if (gallery.length > 0) {
-                            initSlideshow(gallery);
-                            slideshowLoaded = true;
-                        } else if (ev1.photo) {
-                            initSlideshow([ev1.photo]);
-                            slideshowLoaded = true;
-                        }
-
-                        // Update Rundown
-                        const now = new Date();
-                        const nowVal = (now.getHours() * 100) + now.getMinutes();
-                        const events = [];
-                        if (ev1.name) events.push({ displayTime: ev1.time || "", eventName: ev1.name, syncTime: ev1.time || "00:00" });
-                        const ev2 = cfg.ev2 || {};
-                        if (ev2.name) events.push({ displayTime: ev2.time || "", eventName: ev2.name, syncTime: ev2.time || "00:00" });
-
-                        let rundownHtml = "";
-                        events.forEach((item, i, arr) => {
-                            const startVal = convertToTimeValue(item.syncTime);
-                            const nextItem = arr[i + 1];
-                            const active = nextItem
-                                ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime))
-                                : (nowVal >= startVal);
-                            rundownHtml += `
-                            <div class="rundown-item ${active ? 'active-event' : ''}">
-                                <div class="event-time">${item.displayTime}</div>
-                                <div class="event-name">${item.eventName}</div>
-                            </div>`;
-                        });
-                        document.getElementById('rundown-list').innerHTML = rundownHtml;
-                    }
-                }
-
-                if (!slideshowLoaded) {
+                // Update konten statis (couple name, tanggal, dsb)
+                document.getElementById('couple-name').innerHTML = (data.weddingName || "SapaTamu.Ku").replace(" & ", " &amp; ");
+                document.getElementById('wedding-date').innerText = data.weddingDate;
+                if (data.teksSambutan1) document.getElementById('welcome-teks-1').innerText = data.teksSambutan1;
+                if (data.teksSambutan2) document.getElementById('welcome-teks-2').innerText = data.teksSambutan2;
+                if (data.urlFoto) {
+                    const photoUrls = data.urlFoto.split(",").map(u => u.trim()).filter(u => u !== "");
+                    initSlideshow(photoUrls);
+                } else {
                     initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
                 }
+
+                // Update Rundown
+                const now = new Date();
+                const nowVal = (now.getHours() * 100) + now.getMinutes();
+                let rundownHtml = "";
+                (data.rundown || []).forEach((item, i, arr) => {
+                    const startVal = convertToTimeValue(item.syncTime);
+                    const nextItem = arr[i + 1];
+                    const active = nextItem
+                        ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime))
+                        : (nowVal >= startVal);
+                    rundownHtml += `
+                    <div class="rundown-item ${active ? 'active-event' : ''}">
+                        <div class="event-time">${item.displayTime}</div>
+                        <div class="event-name">${item.eventName}</div>
+                    </div>`;
+                });
+                document.getElementById('rundown-list').innerHTML = rundownHtml;
 
                 metadataLoaded = true;
             } catch (e) {
                 console.warn("Metadata sync error:", e);
-                // Fallback ke GAS jika Supabase gagal
-                try {
-                    const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`;
-                    const response = await fetch(fetchUrl);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.status !== "error") {
-                            document.getElementById('couple-name').innerHTML = (data.weddingName || "SapaTamu.Ku").replace(" & ", " &amp; ");
-                            document.getElementById('wedding-date').innerText = data.weddingDate;
-                            if (data.urlFoto) {
-                                const photoUrls = data.urlFoto.split(",").map(u => u.trim()).filter(u => u !== "");
-                                initSlideshow(photoUrls);
-                            } else {
-                                initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
-                            }
-                            // Update Rundown
-                            const now = new Date();
-                            const nowVal = (now.getHours() * 100) + now.getMinutes();
-                            let rundownHtml = "";
-                            (data.rundown || []).forEach((item, i, arr) => {
-                                const startVal = convertToTimeValue(item.syncTime);
-                                const nextItem = arr[i + 1];
-                                const active = nextItem
-                                    ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime))
-                                    : (nowVal >= startVal);
-                                rundownHtml += `
-                                <div class="rundown-item ${active ? 'active-event' : ''}">
-                                    <div class="event-time">${item.displayTime}</div>
-                                    <div class="event-name">${item.eventName}</div>
-                                </div>`;
-                            });
-                            document.getElementById('rundown-list').innerHTML = rundownHtml;
-                            metadataLoaded = true;
-                        }
-                    }
-                } catch(err) {
-                    if (!metadataLoaded) {
-                        document.getElementById('couple-name').innerText = "Memuat...";
-                    }
+                if (!metadataLoaded) {
+                    // Tampilkan pesan fallback hanya jika belum pernah load sama sekali
+                    document.getElementById('couple-name').innerText = "Memuat...";
                 }
             }
+            // Jadwalkan refresh metadata berikutnya dalam 5 menit
             clearTimeout(metadataTimer);
             metadataTimer = setTimeout(syncMetadata, 5 * 60 * 1000);
         }
