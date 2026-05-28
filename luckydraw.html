@@ -116,13 +116,12 @@
         .nav-link.sign-out { color: #E07B7B !important; }
         .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
     </style>
-    <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body id="app-body" onload="initLucky()">
     <nav class="sapatamu-navbar">
         <div class="nav-outer-wrapper">
             <div class="nav-fade nav-fade-left" id="fade-left"></div>
-            <div class="nav-arrow nav-arrow-left">â€¹</div>
+            <div class="nav-arrow nav-arrow-left">‹</div>
             
             <div class="nav-scroll-container" id="nav-scroll">
                 <div class="nav-group">
@@ -149,7 +148,7 @@
                 <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
             </div>
 
-            <div class="nav-arrow nav-arrow-right">â€º</div>
+            <div class="nav-arrow nav-arrow-right">›</div>
             <div class="nav-fade nav-fade-right" id="fade-right"></div>
         </div>
     </nav>
@@ -162,7 +161,7 @@
 <!-- CUSTOM NOTIFICATION MODAL -->
 <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
     <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
-        <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">âœ¨</div>
+        <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
         <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Pesan</h2>
         <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
         <button onclick="closeSapaModal()" class="btn-primary" style="padding: 15px; border-radius: 15px; font-size: 11px; margin-top: 0; background: var(--text-main);">MENGERTI</button>
@@ -222,7 +221,7 @@
         </div>
         <div id="scan-result-card" style="display:none; padding: 15px; border-radius: 15px;">
             <div style="display:flex; align-items:center; gap:12px;">
-                <div style="font-size:24px;">â–¡</div>
+                <div style="font-size:24px;">□</div>
                 <div style="flex:1;">
                     <div id="res-name" style="font-weight:900; font-size:14px; color:#1b4332;">NAMA</div>
                     <div id="res-code" style="font-size:10px; font-weight:700; color:#52b788;">KODE</div>
@@ -292,7 +291,7 @@
     }
 
     // --- CUSTOM NOTIFICATION SYSTEM ---
-    window.showSapaModal = function(title, msg, icon = "âœ¨") {
+    window.showSapaModal = function(title, msg, icon = "✨") {
         document.getElementById('notify-title').innerText = title;
         document.getElementById('notify-msg').innerText = msg;
         document.getElementById('notify-icon').innerText = icon;
@@ -346,39 +345,19 @@
 
         if(showLoader) document.getElementById('loading').style.display = 'flex';
         try {
-            const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + session.ssId + "&order=row.desc";
-            const response = await fetch(supabaseUrl, {
-                headers: {
-                    "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
-                    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
-                }
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    action: "get_master_data",
+                    ssId: session.ssId 
+                })
             });
-            const sbData = await response.json();
-            
-            // Map data snake_case Supabase ke format camelCase frontend
-            masterData = (sbData || []).map(item => ({
-                row: item.row,
-                nama: item.nama,
-                whatsapp: item.whatsapp,
-                kategori: item.kategori,
-                kode: item.kode,
-                barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
-                rencanaHadir: item.rencana_hadir,
-                statusHadir: String(item.status_hadir),
-                jamDatang: item.jam_datang,
-                souvenir: item.souvenir,
-                pihakPengundang: item.pihak_pengundang,
-                alamat: item.alamat,
-                realHadir: item.real_hadir,
-                statusWA: item.status_wa,
-                statusHadiah: item.status_hadiah,
-                statusUndian: item.status_undian || "-",
-                tandaKasih: item.tanda_kasih,
-                sesi: item.sesi
-            }));
-            
-            updatePoolStats();
-            renderWinnerHistory(); 
+            const data = await response.json();
+            if(data && data.guestList) {
+                masterData = data.guestList;
+                updatePoolStats();
+                renderWinnerHistory(); 
+            }
         } catch (e) { 
             console.error("Sinkron gagal:", e); 
         } finally { 
@@ -387,12 +366,14 @@
     }
 
     function updatePoolStats() {
-        // Hanya tamu yang SUDAH HADIR (status_hadir = "1") yang masuk pool
-        const hadir = masterData.filter(g => String(g.statusHadir).trim() === "1");
+        const hadir = masterData.filter(g => {
+            const val = String(g.statusHadir || g.jamDatang || "").trim();
+            return val === "1" || (val !== "-" && val !== "");
+        }); 
         
         const valid = hadir.filter(g => {
-            const undian = String(g.statusUndian || "").toUpperCase();
-            return !undian.includes("WINNER");
+            const hadiah = String(g.statusHadiah || "").trim();
+            return hadiah === "-" || hadiah === "";
         }); 
         
         document.getElementById('stat-total-hadir').innerText = hadir.length;
@@ -403,15 +384,15 @@
         const container = document.getElementById('winner-history-list');
         container.innerHTML = "";
         const winners = masterData.filter(g => {
-            const undian = String(g.statusUndian || "").toUpperCase();
-            return undian.includes("WINNER");
+            const hadiah = String(g.statusHadiah || "").trim();
+            return hadiah !== "-" && hadiah !== "";
         });
         
         winners.forEach(g => {
             const html = `<div class="winner-item">
                 <div class="winner-info">
                     <div class="winner-main">${g.nama}</div>
-                    <div class="winner-sub">${g.kode} â€¢ Status: ${g.statusUndian}</div>
+                    <div class="winner-sub">${g.kode} • Hadiah: ${g.statusHadiah}</div>
                 </div>
                 <span class="badge-done">LUCKY WINNER</span>
             </div>`;
@@ -423,17 +404,13 @@
     window.runLuckyDraw = function() {
         if(isSpinning) return;
         
-        // Filter HANYA tamu yang status_hadir === "1" (konfirmasi hadir) dan belum menang
         const validCandidates = masterData.filter(g => {
-            const isHadir = String(g.statusHadir).trim() === "1";
-            const isNoGift = !String(g.statusUndian || "").toUpperCase().includes("WINNER");
+            const isHadir = String(g.statusHadir || g.jamDatang || "").trim() !== "-" && String(g.statusHadir || g.jamDatang || "").trim() !== "";
+            const isNoGift = String(g.statusHadiah || "").trim() === "-" || String(g.statusHadiah || "").trim() === "";
             return isHadir && isNoGift;
         });
         
-        if(validCandidates.length === 0) {
-            showSapaModal("Perhatian", "Tidak ada kandidat valid! Pastikan tamu sudah check-in (Status Hadir = 1) dan belum menang.", "âš ï¸");
-            return;
-        }
+        if(validCandidates.length === 0) return alert("Tidak ada kandidat valid! Pastikan tamu sudah check-in dan belum menang.");
         
         isSpinning = true;
         const codeDiv = document.getElementById('display-code');
@@ -478,8 +455,8 @@
             document.getElementById('res-name').innerText = guest.nama;
             document.getElementById('res-code').innerText = guest.kode;
             
-            const isWinner = String(guest.statusUndian || "").toUpperCase().includes("WINNER");
-            document.getElementById('res-status-label').innerText = "Status: " + (isWinner ? "SUDAH TERKLAIM (" + guest.statusUndian + ")" : "Belum Konfirmasi");
+            const isWinner = String(guest.statusHadiah || "").trim() !== "-" && String(guest.statusHadiah || "").trim() !== "";
+            document.getElementById('res-status-label').innerText = "Status: " + (isWinner ? "SUDAH TERKLAIM (" + guest.statusHadiah + ")" : "Belum Konfirmasi");
             
             const btn = document.getElementById('confirm-btn');
             btn.disabled = isWinner;
@@ -489,7 +466,7 @@
             document.getElementById('scan-result-card').style.display = 'block';
             document.getElementById('scan-result-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else { 
-            showSapaModal("Kode Tidak Valid", "Maaf, kode yang Anda masukkan tidak ditemukan di database.", "âŒ"); 
+            showSapaModal("Kode Tidak Valid", "Maaf, kode yang Anda masukkan tidak ditemukan di database.", "❌"); 
         }
     };
 
@@ -512,16 +489,16 @@
             const result = await response.json();
             
             if(result.status === "success") {
-                showSapaModal("Selamat!", "Pemenang resmi dicatat di Spreadsheet. Semoga beruntung!", "ðŸŽ‰");
+                showSapaModal("Selamat!", "Pemenang resmi dicatat di Spreadsheet. Semoga beruntung!", "🎉");
                 document.getElementById('scan-result-card').style.display = 'none';
                 document.getElementById('manual-code').value = "";
                 await refreshData(true);
             } else {
-                showSapaModal("Gagal", result.message || "Gagal mencatat pemenang.", "âŒ");
+                showSapaModal("Gagal", result.message || "Gagal mencatat pemenang.", "❌");
                 document.getElementById('loading').style.display = 'none';
             }
         } catch (e) {
-            showSapaModal("Kesalahan", "Terjadi gangguan koneksi ke server SapaTamu.", "âš ï¸");
+            showSapaModal("Kesalahan", "Terjadi gangguan koneksi ke server SapaTamu.", "⚠️");
             document.getElementById('loading').style.display = 'none';
         }
     };

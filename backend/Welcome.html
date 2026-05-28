@@ -6,6 +6,7 @@
     <title>SapaTamu.ku - Welcome Sign V7.2 (Multi-Client Support)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <script src="subdomain_resolver.js?v=3.3"></script>
     <style>
         :root { 
             --gold: #D4AF37; 
@@ -61,9 +62,9 @@
         /* WELCOME PANEL */
         #welcome-panel { 
             position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            overflow: hidden; background: #000;
+            overflow: hidden; background: #050505;
         }
-        #welcome-panel::before { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.65); z-index: 5; }
+        #welcome-panel::before { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.5); z-index: 5; }
         #slideshow-container { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
 
         .slide { position: absolute; inset: 0; width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0; transition: opacity 2.5s ease; }
@@ -124,12 +125,12 @@
     <div id="welcome-panel">
         <div id="slideshow-container"></div>
         <div class="content-wrapper">
-            <span class="main-label block uppercase text-white/70">Selamat Datang di Pernikahan</span>
+            <span id="welcome-teks-1" class="main-label block uppercase text-white/70">Selamat Datang di Pernikahan</span>
             <h1 id="couple-name" class="couple-title">Memuat...</h1>
             <div id="wedding-date" class="wedding-date uppercase text-white/80"></div>
             
             <div id="guest-box" class="mt-12 opacity-0">
-                <span class="guest-label block uppercase">Yth. Bapak/Ibu/Sdr/i</span>
+                <span id="welcome-teks-2" class="guest-label block uppercase">Yth. Bapak/Ibu/Sdr/i</span>
                 <h1 id="guest-name" class="guest-name">...</h1>
                 <div class="guest-info font-medium text-[#F3F4F6] tracking-wide">
                     <span id="g-cat" class="text-[#D4AF37] font-bold"></span> &nbsp;&bull;&nbsp; 
@@ -144,37 +145,28 @@
 </div>
 
 <script>function getSSID() {
-        const urlParams = new URLSearchParams(window.location.search);
-        let id = urlParams.get('ssId');
+        const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+        let id = window.CURRENT_SS_ID || (session ? session.ssId : null);
+        
         if (id) {
-            sessionStorage.setItem('active_ssId', id);
+            const params = new URLSearchParams(window.location.search);
+            let qs = '?ssId=' + id;
+            if (params.has('mode')) qs += '&mode=' + params.get('mode');
+
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + qs;
+            window.history.replaceState({path:newUrl}, '', newUrl);
             return id;
         }
-        const savedId = sessionStorage.getItem('active_ssId') || (localStorage.getItem('sapatamu_db') ? JSON.parse(localStorage.getItem('sapatamu_db')).ssId : null);
-        if (savedId) {
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?ssId=' + savedId;
-            window.history.replaceState({path:newUrl}, '', newUrl);
-            return savedId;
-        }
-        return "1l4NNvzl-9GpVqoVWlIha9POQLKGzSA8ByF1dTLp6SYc";
+        return null;
     }
 
-    const ssId = getSSID();
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec"; 
+    let ssId = null;
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 
     
     function updateInternalLinks() {
-        if (!ssId) return;
-        const links = document.querySelectorAll('a');
-        links.forEach(link => {
-            const href = link.getAttribute('href');
-            if (href && !href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto')) {
-                const separator = href.includes('?') ? '&' : '?';
-                if (!href.includes('ssId=')) {
-                    link.setAttribute('href', href + separator + 'ssId=' + ssId);
-                }
-            }
-        });
+        // ssId injection disabled for security (subdomain resolver will handle it)
+        return;
     }
 
     let currentGuestName = ""; 
@@ -206,17 +198,40 @@
         if (!input) return 0;
         let str = String(input);
         const parts = str.match(/(\d{2}):(\d{2})/);
-        return parts ? (parseInt(parts[1]) * 100) + parseInt(parts[2]) : 0;
+        return parts ? (parseInt(parts[1], 10) * 100) + parseInt(parts[2], 10) : 0;
     }
 
     async function syncData() {
-        try {
-            const response = await fetch(`${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData`);
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
+        if (!window.SAPATAMU_RESOLVED) {
+            setTimeout(syncData, 100);
+            return;
+        }
+        
+        ssId = getSSID();
+        if (!ssId) {
+            console.error("SSID NOT FOUND");
+            return;
+        }
 
-            document.getElementById('couple-name').innerText = data.weddingName;
+        try {
+            const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${new Date().getTime()}`;
+            console.log("Fetching WS Data:", fetchUrl);
+            
+            const response = await fetch(fetchUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            console.log("WS Data Received:", data);
+            
+            if (data.status === "error" || data.error) {
+                throw new Error(data.message || data.error);
+            }
+
+            document.getElementById('couple-name').innerHTML = (data.weddingName || "SapaTamu.Ku").replace(" & ", " &amp; ");
             document.getElementById('wedding-date').innerText = data.weddingDate; 
+            
+            if (data.teksSambutan1) document.getElementById('welcome-teks-1').innerText = data.teksSambutan1;
+            if (data.teksSambutan2) document.getElementById('welcome-teks-2').innerText = data.teksSambutan2;
 
             const guest = data.latestGuest;
             if (guest.nama && guest.nama !== currentGuestName) {
@@ -232,6 +247,15 @@
             }
 
             document.getElementById('marquee-log').innerText = data.log ? data.log.toUpperCase() : "MENUNGGU TAMU...";
+
+            // Update Slideshow
+            if (data.urlFoto) {
+                const photoUrls = data.urlFoto.split(",").map(u => u.trim()).filter(u => u !== "");
+                initSlideshow(photoUrls);
+            } else {
+                // Default fallback image if no photo is configured
+                initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
+            }
 
             const now = new Date();
             const nowVal = (now.getHours() * 100) + now.getMinutes();
@@ -251,30 +275,57 @@
             clearTimeout(syncTimer);
             syncTimer = setTimeout(syncData, data.displayDuration || 12000);
         } catch (e) { 
-            console.error("Sync Error:", e);
+            console.error("Sync Error Details:", e);
+            document.getElementById('couple-name').innerText = "ERROR KONEKSI";
+            document.getElementById('marquee-log').innerText = "Koneksi Bermasalah: " + (e.message || "Unknown Error");
             clearTimeout(syncTimer);
             syncTimer = setTimeout(syncData, 5000);
         }
     }
 
-    const driveLinks = ['1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz', '1eKbny1NdR_7sfjqvglG5aQJ_X4zFFB37', '15waCQUlbpYEfMDmp3oPpS-9ZMxJxfqPp', '1vlJ_pl56qxth-WpenNJ2BUTTTBhdtGlQ'];
+    let currentPhotos = [];
     let slideIdx = 0;
+    let slideInterval;
 
-    function initSlideshow() {
+    function initSlideshow(urls) {
+        // Auto-fix Google Drive links to direct thumbnail links for reliability
+        urls = urls.map(url => {
+            const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+            const match = url.match(driveRegex);
+            if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file"))) {
+                return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1920`;
+            }
+            return url;
+        });
+
+        // Only re-init if the photo list actually changed
+        const newStr = urls.join(",");
+        if (newStr === currentPhotos.join(",")) return;
+        currentPhotos = urls;
+
+        console.log("Slideshow initialized with:", urls);
+
         const container = document.getElementById('slideshow-container');
-        driveLinks.forEach((id, i) => {
+        container.innerHTML = "";
+        clearInterval(slideInterval);
+
+        urls.forEach((url, i) => {
             const div = document.createElement('div');
             div.className = `slide ${i === 0 ? 'active' : ''}`;
-            div.style.backgroundImage = `url('https://drive.google.com/thumbnail?id=${id}&sz=w1920')`;
+            div.style.backgroundImage = `url('${url}')`;
             container.appendChild(div);
         });
-        setInterval(() => {
-            const slides = document.querySelectorAll('.slide');
-            if(slides.length < 2) return;
-            slides[slideIdx].classList.remove('active');
-            slideIdx = (slideIdx + 1) % slides.length;
-            slides[slideIdx].classList.add('active');
-        }, 11000);
+
+        if (urls.length > 1) {
+            slideIdx = 0;
+            slideInterval = setInterval(() => {
+                const slides = document.querySelectorAll('.slide');
+                if(slides.length < 2) return;
+                slides[slideIdx].classList.remove('active');
+                slideIdx = (slideIdx + 1) % slides.length;
+                slides[slideIdx].classList.add('active');
+            }, 11000);
+        }
     }
 
     window.toggleFS = function() {
@@ -283,7 +334,12 @@
     };
 
     window.addEventListener('DOMContentLoaded', () => {
-        initSlideshow();
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('mode') === 'kiosk') {
+            document.getElementById('timeline-panel').style.display = 'none';
+            document.querySelector('.master-container').style.gridTemplateColumns = '1fr';
+        }
+
         handleUIVisibility();
         syncData();
         updateInternalLinks();

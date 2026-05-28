@@ -1,5 +1,5 @@
 /**
- * auth_guard.js â€” SapaTamu RBAC Guard
+ * auth_guard.js — SapaTamu RBAC Guard
  * =====================================
  * Diinclude di setiap halaman yang dilindungi.
  * Otomatis menerapkan akses berdasarkan role session.
@@ -12,27 +12,11 @@
  */
 
 (function () {
-    window.togglePasswordVisibility = window.togglePasswordVisibility || function(inputId, buttonEl) {
-        const input = document.getElementById(inputId);
-        if (!input) return;
-        const isPassword = input.type === 'password';
-        input.type = isPassword ? 'text' : 'password';
-        if (isPassword) {
-            buttonEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px; display: inline;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>`;
-            buttonEl.setAttribute('aria-label', 'Sembunyikan password');
-        } else {
-            buttonEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px; display: inline;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>`;
-            buttonEl.setAttribute('aria-label', 'Tampilkan password');
-        }
-    };
-
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
-    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
     const SESSION_KEY = 'sapatamu_session';
     const LOCAL_DB = 'sapatamu_db';
 
-    // â”€â”€â”€ Baca session & role â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Baca session & role ───────────────────────────────────────────────
     function getSession() {
         try {
             return JSON.parse(sessionStorage.getItem(SESSION_KEY)) ||
@@ -46,7 +30,7 @@
         return getSession().role || undefined;
     }
 
-    // â”€â”€â”€ Upgrade role di session (Switch to Admin) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Upgrade role di session (Switch to Admin) ─────────────────────────
     function upgradeRoleToUsher() {
         const s = getSession();
         s.role = 'usher';
@@ -55,7 +39,7 @@
         localStorage.setItem(LOCAL_DB, JSON.stringify(s));
     }
 
-    // â”€â”€â”€ Disable seluruh konten (view-only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Disable seluruh konten (view-only) ───────────────────────────────
     // NAV SELALU BEBAS: elemen di dalam #nav-scroll / .nav-scroll-container
     // tidak pernah di-disable agar user tetap bisa pindah halaman
     function isInsideNav(el) {
@@ -129,13 +113,13 @@
         }
     }
 
-    // â”€â”€â”€ MODE A: Halaman Lapangan (kiosk/checkin/onsite/worker) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── MODE A: Halaman Lapangan (kiosk/checkin/onsite/worker) ──────────
     // CLIENT: tampilkan overlay warning + Switch to Admin
     // USHER : langsung full access
     function applyFieldGuard() {
         const role = getRole();
         // Hanya terapkan guard jika role EKSPLISIT 'client'
-        // Usher â†’ full access | Tidak ada role (sesi lama) â†’ full access (backward compat)
+        // Usher → full access | Tidak ada role (sesi lama) → full access (backward compat)
         if (role !== 'client') return;
         // Cegah double-inject jika initApp() dipanggil ulang saat retry SAPATAMU_RESOLVED
         if (document.getElementById('sapa-guard-overlay')) return;
@@ -157,7 +141,7 @@
                 pointer-events: none;   /* overlay sendiri tidak blokir klik */
             }
             #sapa-guard-overlay.dismissed #sapa-guard-box { display: none; }
-            /* TIDAK ada ::after â€” nav dan halaman bisa di-scroll/klik sesuai hak */
+            /* TIDAK ada ::after — nav dan halaman bisa di-scroll/klik sesuai hak */
             #sapa-guard-box {
                 background: #fff;
                 width: 90%; max-width: 380px;
@@ -224,12 +208,12 @@
         overlay.id = 'sapa-guard-overlay';
         overlay.innerHTML = `
             <div id="sapa-guard-box">
-                <div style="font-size:48px">âš ï¸</div>
+                <div style="font-size:48px">⚠️</div>
                 <h3>Akses Terbatas</h3>
                 <p>Halaman ini hanya dapat dioperasikan oleh <strong>Admin/Usher Sapatamu</strong> yang bertugas.<br><br>Anda dapat melihat halaman ini, namun tidak dapat berinteraksi.</p>
                 <div class="sapa-guard-btn-row">
                     <button class="sapa-guard-btn secondary" onclick="SapaGuard.dismissOverlay()">Mengerti</button>
-                    <button class="sapa-guard-btn primary" onclick="SapaGuard.showAdminModal()">ðŸ”‘ Masuk Admin</button>
+                    <button class="sapa-guard-btn primary" onclick="SapaGuard.showAdminModal()">🔑 Masuk Admin</button>
                 </div>
             </div>
         `;
@@ -240,18 +224,11 @@
         modal.id = 'sapa-admin-modal';
         modal.innerHTML = `
             <div id="sapa-admin-modal-box">
-                <div style="font-size:36px; margin-bottom:10px">ðŸ”‘</div>
+                <div style="font-size:36px; margin-bottom:10px">🔑</div>
                 <h3>Masuk sebagai Admin</h3>
                 <p>Masukkan password Admin Sapatamu untuk mengaktifkan halaman ini.</p>
-                <div style="position: relative; width: 100%; margin-bottom: 16px;">
-                    <input type="password" id="sapa-admin-pass-input" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢" 
-                        onkeydown="if(event.key==='Enter') SapaGuard.verifyAdmin()" style="margin-bottom: 0; padding-right: 48px;">
-                    <button type="button" onclick="togglePasswordVisibility('sapa-admin-pass-input', this)" class="sapa-guard-exempt" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; cursor: pointer; color: #8C7560; display: flex; align-items: center; justify-content: center; outline: none;" aria-label="Tampilkan password">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px; display: inline;">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                        </svg>
-                    </button>
-                </div>
+                <input type="password" id="sapa-admin-pass-input" placeholder="••••••" 
+                    onkeydown="if(event.key==='Enter') SapaGuard.verifyAdmin()">
                 <div id="sapa-admin-err"></div>
                 <div class="sapa-guard-btn-row">
                     <button class="sapa-guard-btn secondary" onclick="SapaGuard.hideAdminModal()">Batal</button>
@@ -265,13 +242,13 @@
         applyViewOnlyContent();
     }
 
-    // â”€â”€â”€ MODE B: Halaman Sensitif (formulir/wa_blast/config/angpao) â”€â”€â”€â”€â”€â”€â”€
+    // ─── MODE B: Halaman Sensitif (formulir/wa_blast/config/angpao) ───────
     // USHER : tampilkan banner VIEW ONLY + disable input/button
     // CLIENT: full access, tidak ada guard
     function applySensitiveGuard() {
         const role = getRole();
         // Hanya terapkan view-only jika role EKSPLISIT 'usher'
-        // Client â†’ full access | Tidak ada role (sesi lama) â†’ full access (backward compat)
+        // Client → full access | Tidak ada role (sesi lama) → full access (backward compat)
         if (role !== 'usher') return;
         // Cegah double-inject jika initApp() dipanggil ulang
         if (document.getElementById('sapa-guard-banner')) return;
@@ -300,8 +277,8 @@
         const banner = document.createElement('div');
         banner.id = 'sapa-guard-banner';
         banner.innerHTML = `
-            ðŸ”’ Mode Lihat Saja
-            <span>â€” Halaman ini tidak dapat diedit oleh Usher/Admin Lapangan</span>
+            🔒 Mode Lihat Saja
+            <span>— Halaman ini tidak dapat diedit oleh Usher/Admin Lapangan</span>
         `;
         document.body.prepend(banner);
 
@@ -309,7 +286,7 @@
         applyViewOnlyContent();
     }
 
-    // â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Public API ────────────────────────────────────────────────────────
     window.SapaGuard = {
         apply: function (mode) {
             window.SAPAGUARD_MODE = mode;
@@ -353,71 +330,32 @@
             errEl.innerText = '';
 
             try {
-                // â”€â”€â”€ JALUR UTAMA: SUPABASE REST API â”€â”€â”€
-                const sbUrl = `${SB_URL}/rest/v1/clients?username=eq.admin_global&select=password`;
-                const sbRes = await fetch(sbUrl, {
-                    method: "GET",
-                    headers: {
-                        "apikey": SB_KEY,
-                        "Authorization": `Bearer ${SB_KEY}`
-                    }
+                const res = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'verifyAdminPassword', password: pass })
                 });
+                const data = await res.json();
 
-                if (!sbRes.ok) {
-                    throw new Error("Supabase request failed, falling back to Google Sheets.");
-                }
-
-                const data = await sbRes.json();
-                const adminGlobal = data[0];
-
-                if (!adminGlobal || pass !== adminGlobal.password) {
-                    // Coba fallback ke GAS untuk berjaga-jaga jika ada keterlambatan sync data
-                    throw new Error("Incorrect local password check");
-                }
-
-                // Sukses verifikasi admin via Supabase!
-                upgradeRoleToUsher();
-                const overlay = document.getElementById('sapa-guard-overlay');
-                const modal = document.getElementById('sapa-admin-modal');
-                if (overlay) overlay.remove();
-                if (modal) modal.remove();
-                document.querySelectorAll('button, input, textarea, select').forEach(el => {
-                    el.disabled = false;
-                    el.style.cursor = '';
-                });
-
-            } catch (err) {
-                console.warn("Jalur utama Supabase gagal, beralih ke cadangan GAS Spreadsheet: ", err);
-
-                // â”€â”€â”€ JALUR CADANGAN: GOOGLE SPREADSHEET (GAS) â”€â”€â”€
-                try {
-                    const res = await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({ action: 'verifyAdminPassword', password: pass })
+                if (data.status === 'success') {
+                    // Upgrade session ke usher
+                    upgradeRoleToUsher();
+                    // Hapus overlay & modal
+                    const overlay = document.getElementById('sapa-guard-overlay');
+                    const modal = document.getElementById('sapa-admin-modal');
+                    if (overlay) overlay.remove();
+                    if (modal) modal.remove();
+                    // Re-enable semua elemen
+                    document.querySelectorAll('button, input, textarea, select').forEach(el => {
+                        el.disabled = false;
+                        el.style.cursor = '';
                     });
-                    const data = await res.json();
-
-                    if (data.status === 'success') {
-                        // Upgrade session ke usher
-                        upgradeRoleToUsher();
-                        // Hapus overlay & modal
-                        const overlay = document.getElementById('sapa-guard-overlay');
-                        const modal = document.getElementById('sapa-admin-modal');
-                        if (overlay) overlay.remove();
-                        if (modal) modal.remove();
-                        // Re-enable semua elemen
-                        document.querySelectorAll('button, input, textarea, select').forEach(el => {
-                            el.disabled = false;
-                            el.style.cursor = '';
-                        });
-                    } else {
-                        errEl.innerText = 'âŒ ' + (data.message || 'Password salah');
-                        document.getElementById('sapa-admin-pass-input').value = '';
-                        document.getElementById('sapa-admin-pass-input').focus();
-                    }
-                } catch (e) {
-                    errEl.innerText = 'âš ï¸ Gagal menghubungi server.';
+                } else {
+                    errEl.innerText = '❌ ' + (data.message || 'Password salah');
+                    document.getElementById('sapa-admin-pass-input').value = '';
+                    document.getElementById('sapa-admin-pass-input').focus();
                 }
+            } catch (e) {
+                errEl.innerText = '⚠️ Gagal menghubungi server.';
             }
             btn.disabled = false;
             btn.innerText = 'Konfirmasi';

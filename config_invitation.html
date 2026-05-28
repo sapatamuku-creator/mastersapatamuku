@@ -51,7 +51,6 @@
         .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
-    <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
 
@@ -84,29 +83,14 @@
         </div>
     </nav>
 
-    <!-- CUSTOM NOTIFICATION MODAL -->
-    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
-        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid #F0E6DE; animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
-            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
-            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: #4A3F35; margin-bottom: 15px;">Pesan</h2>
-            <p id="notify-msg" style="font-size: 15px; color: #8C7560; line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
-            <button onclick="closeSapaModal()" style="width: 100%; padding: 15px; border-radius: 15px; border: none; font-size: 11px; font-weight: 900; letter-spacing: 2px; cursor: pointer; color: white; background: #4A3F35; box-shadow: 0 8px 20px rgba(74, 63, 53, 0.3);">MENGERTI</button>
-        </div>
-    </div>
-    <style>
-        @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    </style>
-
     <div class="main-wrapper">
         <!-- SIDEBAR: SETTINGS -->
         <div class="settings-panel">
             <div class="pb-32">
                 <div class="section-title">Invitation Theme & Music</div>
-                <div class="grid grid-cols-1 gap-3 mb-6">
-                    <button onclick="window.location.href='katalog_undangan.html' + window.location.search" class="theme-btn p-4 border-2 border-primary rounded-2xl bg-primary/5 text-xs font-black text-primary flex items-center justify-center gap-2">
-                        <span>🖼️ JELAJAHI KATALOG TEMA</span>
-                    </button>
-                    <p id="active-theme-label" class="text-[10px] text-center font-bold text-neutral-400 uppercase tracking-widest mt-1">Tema Aktif: <span class="text-primary">Loading...</span></p>
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <button id="theme_classic" onclick="selectTheme('classic')" class="theme-btn p-4 border-2 border-primary rounded-2xl bg-primary/5 text-xs font-black text-primary">Classic Alice</button>
+                    <button id="theme_modern" onclick="selectTheme('modern')" class="theme-btn p-4 border-2 border-transparent bg-neutral-100 rounded-2xl text-xs font-bold text-neutral-400">Modern Glass</button>
                 </div>
                 <div class="form-group">
                     <label>Background Musik</label>
@@ -140,17 +124,16 @@
                 <div class="section-title">Hero / Cover Section</div>
                 <div class="form-group">
                     <label>Cover Background Image</label>
-                    <p class="text-[9px] text-neutral-400 mb-1">☁️ Upload ke Cloudinary (CDN cepat) <span class="text-neutral-300">atau paste URL Google Drive manual</span></p>
                     <div class="flex gap-2">
-                        <input type="text" id="inv_cover_bg" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
-                        <button onclick="triggerCloudinaryPick('inv_cover_bg')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                        <input type="text" id="inv_cover_bg" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('inv_cover_bg')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Hero Image</label>
                     <div class="flex gap-2">
-                        <input type="text" id="inv_hero_img" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
-                        <button onclick="triggerCloudinaryPick('inv_hero_img')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                        <input type="text" id="inv_hero_img" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('inv_hero_img')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -178,8 +161,8 @@
                 <div class="form-group">
                     <label>Groom Photo</label>
                     <div class="flex gap-2">
-                        <input type="text" id="groom_photo" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
-                        <button onclick="triggerCloudinaryPick('groom_photo')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                        <input type="text" id="groom_photo" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('groom_photo')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -206,8 +189,8 @@
                 <div class="form-group">
                     <label>Bride Photo</label>
                     <div class="flex gap-2">
-                        <input type="text" id="bride_photo" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
-                        <button onclick="triggerCloudinaryPick('bride_photo')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                        <input type="text" id="bride_photo" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('bride_photo')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -270,8 +253,8 @@
                 <div class="form-group">
                     <label>Event Photo</label>
                     <div class="flex gap-2">
-                        <input type="text" id="ev1_photo" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
-                        <button onclick="triggerCloudinaryPick('ev1_photo')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                        <input type="text" id="ev1_photo" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('ev1_photo')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
                     </div>
                 </div>
 
@@ -315,8 +298,8 @@
                 <div class="form-group">
                     <label>Event Photo</label>
                     <div class="flex gap-2">
-                        <input type="text" id="ev2_photo" class="stk-input" placeholder="https://... (Cloudinary atau Google Drive)" oninput="updatePreview()">
-                        <button onclick="triggerCloudinaryPick('ev2_photo')" title="Upload ke Cloudinary" class="p-4 bg-violet-100 text-violet-700 rounded-xl hover:bg-violet-200 transition-all font-bold text-xs">☁️</button>
+                        <input type="text" id="ev2_photo" class="stk-input" placeholder="https://..." oninput="updatePreview()">
+                        <button onclick="pickFile('ev2_photo')" class="p-4 bg-neutral-100 rounded-xl hover:bg-neutral-200 transition-all">📸</button>
                     </div>
                 </div>
 
@@ -396,7 +379,7 @@
         <!-- MAIN AREA: LIVE PREVIEW -->
         <div class="preview-panel">
             <div class="preview-frame-container">
-                <iframe id="preview-iframe" src="invitation.html" class="preview-frame"></iframe>
+                <iframe id="preview-iframe" src="undangan.html" class="preview-frame"></iframe>
             </div>
             
             <!-- Mobile Badge -->
@@ -416,17 +399,6 @@
     <script>
         let currentTheme = "classic";
         let targetInputId = ""; // Untuk menampung input mana yang sedang diupload
-
-        window.showSapaModal = function(title, msg, icon = "✨") {
-            document.getElementById('notify-title').innerText = title;
-            document.getElementById('notify-msg').innerText = msg;
-            document.getElementById('notify-icon').innerText = icon;
-            document.getElementById('sapa-notify-modal').style.display = 'flex';
-        };
-
-        window.closeSapaModal = function() {
-            document.getElementById('sapa-notify-modal').style.display = 'none';
-        };
 
         function pickFile(inputId) {
             targetInputId = inputId;
@@ -489,7 +461,7 @@
         }
         function handleFileChange(event) {
             if (window.SapaGuard && window.SapaGuard.isRestricted()) {
-                showSapaModal("Perhatian", "🔒 Mode Lihat Saja Aktif! Anda tidak dapat mengupload file.", "⚠️");
+                alert("🔒 Mode Lihat Saja Aktif! Anda tidak dapat mengupload file.");
                 return;
             }
             const file = event.target.files[0];
@@ -524,11 +496,11 @@
                         input.value = result.url;
                         updatePreview();
                     } else {
-                        showSapaModal("Gagal", "Upload gagal: " + result.message, "❌");
+                        alert("Upload gagal: " + result.message);
                         input.value = originalVal;
                     }
                 } catch (err) {
-                    showSapaModal("Gagal", "Error koneksi upload.", "❌");
+                    alert("Error koneksi upload.");
                     input.value = originalVal;
                 } finally {
                     input.disabled = false;
@@ -578,10 +550,14 @@
 
         function selectTheme(theme) {
             currentTheme = theme;
-            document.getElementById('active-theme-label').innerHTML = `Tema Aktif: <span class="text-primary">${theme}</span>`;
-            const iframe = document.getElementById('preview-iframe');
-            iframe.src = `invitation.html?theme_id=${theme}`;
-            setTimeout(updatePreview, 1500);
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('border-primary', 'bg-primary/5', 'text-primary');
+                btn.classList.add('border-transparent', 'bg-neutral-100', 'text-neutral-400');
+            });
+            const selected = document.getElementById('theme_' + theme);
+            selected.classList.remove('border-transparent', 'bg-neutral-100', 'text-neutral-400');
+            selected.classList.add('border-primary', 'bg-primary/5', 'text-primary');
+            updatePreview();
         }
 
         function syncNavbar() {
@@ -673,20 +649,6 @@
                     
                     if (s.theme) selectTheme(s.theme);
                     
-                    // Cek apakah ada redirect dari Katalog (membawa theme_id baru)
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const newThemeId = urlParams.get('theme_id');
-                    if (newThemeId && newThemeId !== s.theme) {
-                        selectTheme(newThemeId);
-                        // Hapus parameter theme_id dari URL agar tidak loop save
-                        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?ssId=' + ssId;
-                        window.history.replaceState({path:newUrl}, '', newUrl);
-                        
-                        // Auto-save konfigurasi untuk menempelkan tema baru ke Supabase
-                        console.log("Auto-saving new theme from catalog:", newThemeId);
-                        setTimeout(saveInvitationConfig, 1500);
-                    }
-
                     // Initial Preview update
                     setTimeout(updatePreview, 1000);
                 }
@@ -768,74 +730,9 @@
             }
         }
 
-        // ── SUPABASE & CLOUDINARY CONFIG ──────────────────────────────
-        const SB_URL  = "https://llrapesaaoliyjrrrsjh.supabase.co";
-        const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
-        const SB_HDRS = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" };
-
-        // Cloudinary Upload Preset (unsigned) — ganti dengan milik Anda
-        // Buat di: cloudinary.com > Settings > Upload Presets > Add preset (mode: Unsigned)
-        const CLD_CLOUD  = "dvygmpmir";         // ✅ Cloud Name Anda
-        const CLD_PRESET = "sapatamu_inv";     // ← nama preset Unsigned yang akan dibuat
-
-        /**
-         * uploadToCloudinary — Upload file gambar ke Cloudinary langsung dari browser.
-         * Mengembalikan URL CDN Cloudinary yang cepat di seluruh dunia.
-         * Jika gagal, user bisa tetap paste URL Google Drive secara manual.
-         */
-        async function uploadToCloudinary(file, targetInputId) {
-            const input = document.getElementById(targetInputId);
-            const oldVal = input.value;
-            input.value = "⏳ Mengupload ke Cloudinary...";
-            input.disabled = true;
-
-            try {
-                const formData = new FormData();
-                formData.append("file", file);
-                formData.append("upload_preset", CLD_PRESET);
-                formData.append("folder", "undangan");
-
-                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`, {
-                    method: "POST",
-                    body: formData
-                });
-                const result = await res.json();
-
-                if (result.secure_url) {
-                    input.value = result.secure_url;
-                    input.style.borderColor = "#4ade80";
-                    setTimeout(() => input.style.borderColor = "", 2000);
-                    updatePreview();
-                    return result.secure_url;
-                } else {
-                    throw new Error(result.error?.message || "Upload gagal");
-                }
-            } catch (e) {
-                showSapaModal("Gagal", "Upload Cloudinary gagal: " + e.message + "\n\nSilakan paste URL Google Drive secara manual.", "❌");
-                input.value = oldVal;
-            } finally {
-                input.disabled = false;
-            }
-        }
-
-        /**
-         * triggerCloudinaryPick — Buka file picker untuk field gambar tertentu.
-         * Cloudinary adalah jalur utama. Jika file picker dibatalkan, input tetap bisa diisi manual.
-         */
-        window.triggerCloudinaryPick = function(inputId) {
-            const picker = document.createElement("input");
-            picker.type = "file";
-            picker.accept = "image/*";
-            picker.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file) uploadToCloudinary(file, inputId);
-            };
-            picker.click();
-        };
-
         async function saveInvitationConfig() {
             if (window.SapaGuard && window.SapaGuard.isRestricted()) {
-                showSapaModal("Perhatian", "🔒 Mode Lihat Saja Aktif! Anda tidak dapat menyimpan konfigurasi.", "⚠️");
+                alert("🔒 Mode Lihat Saja Aktif! Anda tidak dapat menyimpan konfigurasi.");
                 return;
             }
             const ssId = window.CURRENT_SS_ID;
@@ -903,41 +800,30 @@
                     document.getElementById('gal_1').value, document.getElementById('gal_2').value,
                     document.getElementById('gal_3').value, document.getElementById('gal_4').value,
                     document.getElementById('gal_5').value, document.getElementById('gal_6').value
-                ],
-                theme: currentTheme
+                ]
+            };
+
+            const payload = {
+                action: "updateClientData",
+                ssId: ssId,
+                eventData: {
+                    nama: invData.groom.name + " & " + invData.bride.name,
+                    invitationData: invData,
+                    theme: currentTheme
+                }
             };
 
             try {
-                // ── STEP 1: Simpan ke Google Sheet via GAS (sumber kebenaran) ──
-                const payload = {
-                    action: "updateClientData",
-                    ssId: ssId,
-                    eventData: {
-                        nama: invData.groom.name + " & " + invData.bride.name,
-                        invitationData: invData,
-                        theme: currentTheme
-                    }
-                };
                 const res = await fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
                 const result = await res.json();
-                if (result.status !== "success") throw new Error(result.message || "GAS save gagal");
-
-                // ── STEP 2: Mirror ke Supabase langsung dari browser (non-blocking) ──
-                // Ini yang membuat undangan.html bisa load < 200ms tanpa GAS cold start.
-                fetch(`${SB_URL}/rest/v1/config_invitation?on_conflict=ssid`, {
-                    method: "POST",
-                    headers: SB_HDRS,
-                    body: JSON.stringify({ ssid: ssId, data: invData, updated_at: new Date().toISOString() })
-                }).then(r => {
-                    if (!r.ok) console.warn("Mirror Supabase non-fatal:", r.status);
-                    else console.log("✅ Config mirrored to Supabase");
-                }).catch(e => console.warn("Mirror Supabase skip:", e.message));
-
-                btn.innerText = "✅ TERSIMPAN!";
-                setTimeout(() => { btn.innerText = "SIMPAN KONFIGURASI UNDANGAN"; btn.disabled = false; }, 2000);
-
+                if (result.status === "success") {
+                    alert("Konfigurasi Undangan Berhasil Disimpan!");
+                } else {
+                    alert("Gagal menyimpan: " + result.message);
+                }
             } catch (e) {
-                showSapaModal("Error", "Error: " + e.message, "❌");
+                alert("Error koneksi server.");
+            } finally {
                 btn.innerText = "SIMPAN KONFIGURASI UNDANGAN";
                 btn.disabled = false;
             }
@@ -945,7 +831,7 @@
 
         function convertMusicUrl() {
             if (window.SapaGuard && window.SapaGuard.isRestricted()) {
-                showSapaModal("Perhatian", "🔒 Mode Lihat Saja Aktif! Anda tidak dapat mengubah musik.", "⚠️");
+                alert("🔒 Mode Lihat Saja Aktif! Anda tidak dapat mengubah musik.");
                 return;
             }
             const input = document.getElementById('inv_music');
@@ -994,17 +880,17 @@
 
         function handleMusicFileSelect(file) {
             if (window.SapaGuard && window.SapaGuard.isRestricted()) {
-                showSapaModal("Perhatian", "🔒 Mode Lihat Saja Aktif! Anda tidak dapat mengupload musik.", "⚠️");
+                alert("🔒 Mode Lihat Saja Aktif! Anda tidak dapat mengupload musik.");
                 return;
             }
             if (!file) return;
             const maxMB = 20;
             if (file.size > maxMB * 1024 * 1024) {
-                showSapaModal("Perhatian", `File terlalu besar! Maks. ${maxMB}MB. File Anda: ${(file.size/1024/1024).toFixed(1)}MB`, "⚠️");
+                alert(`File terlalu besar! Maks. ${maxMB}MB. File Anda: ${(file.size/1024/1024).toFixed(1)}MB`);
                 return;
             }
             if (!file.type.includes('audio') && !file.name.endsWith('.mp3')) {
-                showSapaModal("Perhatian", "Hanya file MP3 yang diperbolehkan!", "⚠️");
+                alert('Hanya file MP3 yang diperbolehkan!');
                 return;
             }
             // Show loading state

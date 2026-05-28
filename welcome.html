@@ -380,69 +380,95 @@
         }
 
         // ================================================================
-        // SUPABASE DIRECT CONFIG â€” untuk deteksi tamu terbaru secara cepat
+        // SUPABASE DIRECT CONFIG �— untuk deteksi tamu terbaru secara cepat
         // ================================================================
         const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
 
         // Metadata (couple name, rundown, dll) hanya perlu diambil sekali
-        // dan diperbarui setiap 5 menit â€” tidak perlu setiap polling.
+        // dan diperbarui setiap 5 menit �— tidak perlu setiap polling.
         let metadataLoaded = false;
         let metadataTimer = null;
 
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // syncMetadata() â€” Ambil dari GAS (lambat, tapi jarang berubah)
+        // �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
+        // syncMetadata() �— Ambil dari GAS (lambat, tapi jarang berubah)
         //   Dipanggil sekali saat load, lalu setiap 5 menit.
         //   Mengisi: couple name, tanggal, rundown, slideshow, teks sambutan.
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
         async function syncMetadata() {
             if (!ssId) return;
             try {
-                const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`;
-                const response = await fetch(fetchUrl);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                if (data.status === "error" || data.error) throw new Error(data.message || data.error);
-
-                // Update konten statis (couple name, tanggal, dsb)
-                document.getElementById('couple-name').innerHTML = (data.weddingName || "SapaTamu.Ku").replace(" & ", " &amp; ");
-                document.getElementById('wedding-date').innerText = data.weddingDate;
-                if (data.teksSambutan1) document.getElementById('welcome-teks-1').innerText = data.teksSambutan1;
-                if (data.teksSambutan2) document.getElementById('welcome-teks-2').innerText = data.teksSambutan2;
-                if (data.urlFoto) {
-                    const photoUrls = data.urlFoto.split(",").map(u => u.trim()).filter(u => u !== "");
-                    initSlideshow(photoUrls);
-                } else {
-                    initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
+                // 1. Baca metadata_client
+                const metaRes = await fetch(
+                    ${SB_URL}/rest/v1/metadata_client?ssid=eq.&limit=1,
+                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                );
+                
+                let coupleName = "Memuat...";
+                let weddingDate = "Menunggu Sinkronisasi";
+                
+                if (metaRes.ok) {
+                    const metaRows = await metaRes.json();
+                    if (metaRows && metaRows.length > 0) {
+                        const meta = metaRows[0];
+                        coupleName = meta.nama_pengantin || "SapaTamu.Ku";
+                        weddingDate = meta.hari_tanggal || "-";
+                    }
                 }
 
-                // Update Rundown
-                const now = new Date();
-                const nowVal = (now.getHours() * 100) + now.getMinutes();
-                let rundownHtml = "";
-                (data.rundown || []).forEach((item, i, arr) => {
-                    const startVal = convertToTimeValue(item.syncTime);
-                    const nextItem = arr[i + 1];
-                    const active = nextItem
-                        ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime))
-                        : (nowVal >= startVal);
-                    rundownHtml += `
-                    <div class="rundown-item ${active ? 'active-event' : ''}">
-                        <div class="event-time">${item.displayTime}</div>
-                        <div class="event-name">${item.eventName}</div>
-                    </div>`;
-                });
-                document.getElementById('rundown-list').innerHTML = rundownHtml;
+                document.getElementById('couple-name').innerHTML = coupleName.replace(" & ", " &amp; ");
+                document.getElementById('wedding-date').innerText = weddingDate;
+
+                // 2. Baca config_invitation untuk slideshow & rundown
+                const res = await fetch(
+                    ${SB_URL}/rest/v1/config_invitation?ssid=eq.&select=data&limit=1,
+                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                );
+                
+                if (res.ok) {
+                    const rows = await res.json();
+                    if (rows && rows.length > 0) {
+                        const cfg = rows[0].data || {};
+                        const ev1 = cfg.ev1 || {};
+                        
+                        // Slideshow dari gallery config
+                        const gallery = (cfg.gallery || []).filter(u => u && u.trim() !== "");
+                        if (gallery.length > 0) {
+                            initSlideshow(gallery);
+                        } else if (ev1.photo) {
+                            initSlideshow([ev1.photo]);
+                        } else {
+                            initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
+                        }
+
+                        // Rundown dari events (ev1, ev2)
+                        const now = new Date();
+                        const nowVal = (now.getHours() * 100) + now.getMinutes();
+                        const events = [];
+                        if (ev1.name) events.push({ displayTime: ev1.time || "", eventName: ev1.name, syncTime: ev1.time || "00:00" });
+                        const ev2 = cfg.ev2 || {};
+                        if (ev2.name) events.push({ displayTime: ev2.time || "", eventName: ev2.name, syncTime: ev2.time || "00:00" });
+
+                        let rundownHtml = "";
+                        events.forEach((item, i, arr) => {
+                            const startVal = convertToTimeValue(item.syncTime);
+                            const nextItem = arr[i + 1];
+                            const active = nextItem
+                                ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime))
+                                : (nowVal >= startVal);
+                            rundownHtml += <div class="rundown-item "><div class="event-time"></div><div class="event-name"></div></div>;
+                        });
+                        document.getElementById('rundown-list').innerHTML = rundownHtml;
+                    }
+                }
 
                 metadataLoaded = true;
             } catch (e) {
-                console.warn("Metadata sync error:", e);
+                console.warn("Metadata sync error (Supabase):", e);
                 if (!metadataLoaded) {
-                    // Tampilkan pesan fallback hanya jika belum pernah load sama sekali
                     document.getElementById('couple-name').innerText = "Memuat...";
                 }
             }
-            // Jadwalkan refresh metadata berikutnya dalam 5 menit
             clearTimeout(metadataTimer);
             metadataTimer = setTimeout(syncMetadata, 5 * 60 * 1000);
         }
@@ -465,20 +491,20 @@
             console.log(`Backup Polling Tamu: Aktif (${intervalMs / 1000}s)`);
         }
 
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // syncGuestDisplay() â€” Ambil tamu terbaru LANGSUNG dari Supabase
-        //   Ini yang sebelumnya dilakukan oleh GAS setiap 5â€“8 detik.
-        //   Sekarang langsung dari Supabase â†’ latency < 300ms.
+        // �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
+        // syncGuestDisplay() �— Ambil tamu terbaru LANGSUNG dari Supabase
+        //   Ini yang sebelumnya dilakukan oleh GAS setiap 5�8 detik.
+        //   Sekarang langsung dari Supabase �  latency < 300ms.
         //   Filter: tamu yang sudah check-in (jam_datang != '-' & != null)
         //   diurutkan berdasarkan jam_datang terbaru.
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // syncGuestDisplay() â€” Ambil tamu terbaru dari welcome_queue
+        // �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
+        // �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
+        // syncGuestDisplay() �— Ambil tamu terbaru dari welcome_queue
         //   welcome_queue diisi langsung saat tamu check-in dari
         //   checkin.html / kiosk.html / onsite.html.
-        //   Lebih cepat karena: INSERT langsung â†’ Realtime EVENT â†’ tampil.
+        //   Lebih cepat karena: INSERT langsung �  Realtime EVENT �  tampil.
         //   Polling 10 detik hanya sebagai backup.
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
         async function syncGuestDisplay() {
             if (!ssId) return;
             try {
@@ -589,7 +615,7 @@
                         .subscribe((status) => {
                             console.log(`Status Realtime welcome_queue: ${status}`);
                             if (status === 'SUBSCRIBED') {
-                                startGuestPolling(30000); // Polling lambat â€” 30 detik, realtime yg utama
+                                startGuestPolling(30000); // Polling lambat �— 30 detik, realtime yg utama
                             } else {
                                 startGuestPolling(5000);  // Cepatkan polling jika realtime offline
                             }
@@ -604,13 +630,13 @@
             }
         }
 
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // syncData() â€” Entry point utama (dipanggil saat halaman load)
+        // �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
+        // syncData() �— Entry point utama (dipanggil saat halaman load)
         //   Menggantikan fungsi syncData() yang lama.
         //   Sekarang memisahkan dua tugas:
-        //   1. Metadata (GAS, lambat tapi jarang) â†’ syncMetadata()
-        //   2. Tamu terbaru (Supabase, cepat) â†’ syncGuestDisplay()
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        //   1. Metadata (GAS, lambat tapi jarang) �  syncMetadata()
+        //   2. Tamu terbaru (Supabase, cepat) �  syncGuestDisplay()
+        // �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
         async function syncData() {
             if (!window.SAPATAMU_RESOLVED) {
                 setTimeout(syncData, 100);
@@ -621,7 +647,7 @@
                 console.error("SSID NOT FOUND");
                 return;
             }
-            // Jalankan keduanya bersamaan â€” tidak saling menunggu
+            // Jalankan keduanya bersamaan �— tidak saling menunggu
             syncMetadata();    // GAS: lambat, jarang diulang
             syncGuestDisplay(); // Ambil data awal secara langsung
             initSupabaseRealtimeTamu(); // Supabase: cepat, realtime + backup polling
@@ -629,9 +655,9 @@
             initSupabaseRealtimeWishes(); // Dengarkan ucapan baru
         }
 
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
         // JALUR 2: WISHES (UCAPAN) UNTUK MARQUEE
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
         async function syncWishesDisplay() {
             if (!ssId) return;
             try {
@@ -646,7 +672,7 @@
                     const wishesText = wishes.map(w => {
                         const cleanUcapan = (w.ucapan || '').replace(/(\r\n|\n|\r)/gm, " ");
                         return `${w.nama || 'Tamu'}: ${cleanUcapan}`;
-                    }).join("  â€¢  ");
+                    }).join("  ⬢  ");
                     document.getElementById('marquee-log').innerText = wishesText;
                 } else {
                     document.getElementById('marquee-log').innerText = "BELUM ADA UCAPAN";
@@ -682,7 +708,7 @@
                                     const currentMarquee = document.getElementById('marquee-log').innerText;
                                     const cleanUcapan = record.ucapan.replace(/(\r\n|\n|\r)/gm, " ");
                                     const newWish = `${record.nama || 'Tamu'}: ${cleanUcapan}`;
-                                    document.getElementById('marquee-log').innerText = newWish + "  â€¢  " + currentMarquee;
+                                    document.getElementById('marquee-log').innerText = newWish + "  ⬢  " + currentMarquee;
                                 }
                             }
                         )

@@ -761,9 +761,51 @@ function handleUpdateClientData(data) {
       invSheet.getRange("B1").setValue(JSON.stringify(data.eventData.invitationData));
     }
     
+    // Sync Metadata ke Supabase secara otomatis
+    syncMetadataClientToSupabase(data.ssId, targetSS);
+    
     return createResponse({ status: "success", message: "Data berhasil diperbarui" });
   } catch (err) {
     return createResponse({ status: "error", message: "Update gagal." });
+  }
+}
+
+function syncMetadataClientToSupabase(ssId, targetSS) {
+  try {
+    const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/metadata_client?on_conflict=ssid";
+    const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTE3NTY4NSwiZXhwIjoyMDk0NzUxNjg1fQ.Bf0mQybvXLfou-zQVxeLq1Cba3H4DprOhXaj02n9njg";
+    
+    const bValues = targetSS.getRange("B1:B6").getValues();
+    const sValues = targetSS.getRange("E1:G1").getValues();
+    
+    const payload = {
+      ssid: ssId,
+      nama_pengantin: String(bValues[0][0] || ""),
+      hari_tanggal: String(bValues[1][0] || ""),
+      lokasi_acara: String(bValues[2][0] || ""),
+      waktu_acara: String(bValues[3][0] || ""),
+      link_invitation: String(bValues[4][0] || ""),
+      format_pesan_wa: String(bValues[5][0] || ""),
+      sesi_1: String(sValues[0][0] || ""),
+      sesi_2: String(sValues[0][1] || ""),
+      sesi_3: String(sValues[0][2] || ""),
+      updated_at: new Date().toISOString()
+    };
+    
+    const options = {
+      method: "post",
+      contentType: "application/json",
+      headers: {
+        "apikey": apiKey,
+        "Authorization": "Bearer " + apiKey,
+        "Prefer": "resolution=merge-duplicates"
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+    UrlFetchApp.fetch(sbUrl, options);
+  } catch(e) {
+    console.error("syncMetadataClientToSupabase error: " + e.toString());
   }
 }
 

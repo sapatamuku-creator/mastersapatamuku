@@ -8,12 +8,6 @@
     <!-- Seamless Auto-Redirect for Logged-In Users -->
     <script>
         (function() {
-            if (new URLSearchParams(window.location.search).get('signout') === 'true') {
-                localStorage.clear();
-                sessionStorage.clear();
-                window.history.replaceState({}, '', window.location.pathname);
-                return;
-            }
             const SESSION_KEY = 'sapatamu_session';
             const LOCAL_DB = 'sapatamu_db';
             const session = sessionStorage.getItem(SESSION_KEY);
@@ -929,33 +923,11 @@
             .hero {
                 grid-template-columns: 1fr;
                 text-align: center;
-                gap: 40px;
-                padding-top: 100px;
-            }
-            .hero-text h1 {
-                font-size: 28px;
-                line-height: 1.25;
-                margin-bottom: 15px;
-            }
-            .hero-text p {
-                font-size: 14px;
-                line-height: 1.6;
-                margin-bottom: 25px;
+                gap: 50px;
+                padding-top: 120px;
             }
             .hero-cta {
                 justify-content: center;
-                gap: 12px;
-            }
-            .btn-primary, .btn-secondary {
-                padding: 12px 24px;
-                font-size: 12px;
-            }
-            .hero-visual {
-                padding: 0 10px;
-            }
-            .visual-card {
-                padding: 20px;
-                border-radius: 20px;
             }
             .services-grid {
                 grid-template-columns: 1fr;
@@ -968,21 +940,10 @@
                 top: 0;
             }
             .navbar {
-                padding: 12px 4%;
-            }
-            .logo {
-                font-size: 19px;
+                padding: 20px 5%;
             }
             .nav-links {
                 display: none;
-            }
-            .nav-mobile-actions {
-                display: flex !important;
-                gap: 8px !important;
-            }
-            .nav-mobile-actions .btn-navbar-login {
-                padding: 5px 12px !important;
-                font-size: 10px !important;
             }
         }
 
@@ -1333,15 +1294,12 @@
             }
         }
     </style>
-    <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
 
     <!-- Nav Bar -->
     <nav class="navbar">
         <a href="#" class="logo">Sapa<span>Tamu</span>.ku</a>
-        
-        <!-- Desktop Nav Links -->
         <div class="nav-links">
             <a href="#simulator" class="nav-link">Simulasi Fitur</a>
             <a href="#services" class="nav-link">Layanan</a>
@@ -1352,31 +1310,7 @@
                 <a href="login.html#register" class="btn-navbar-register">Daftar</a>
             </div>
         </div>
-
-        <!-- Mobile Quick Login & Menu Button -->
-        <div class="nav-mobile-actions" style="display: none; align-items: center; gap: 10px;">
-            <a href="login.html" class="btn-navbar-login" style="padding: 6px 14px; font-size: 11px; border-radius: 50px;">Masuk</a>
-            <button id="mobile-nav-toggle" style="background: none; border: none; cursor: pointer; color: var(--text-main); display: flex; align-items: center; justify-content: center; padding: 5px;" aria-label="Toggle Menu">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="3" y1="12" x2="21" y2="12"></line>
-                    <line x1="3" y1="6" x2="21" y2="6"></line>
-                    <line x1="3" y1="18" x2="21" y2="18"></line>
-                </svg>
-            </button>
-        </div>
     </nav>
-
-    <!-- Mobile Drawer Menu -->
-    <div id="mobile-drawer" style="position: fixed; top: 56px; left: 0; width: 100%; background: var(--bg); border-bottom: 1px solid var(--border); box-shadow: 0 15px 30px rgba(74, 63, 53, 0.08); z-index: 999; display: none; flex-direction: column; padding: 25px; gap: 15px; transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1); transform: translateY(-10px); opacity: 0;">
-        <a href="#simulator" class="nav-link" style="font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 10px;" onclick="closeMobileDrawer()">Simulasi Fitur</a>
-        <a href="#services" class="nav-link" style="font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 10px;" onclick="closeMobileDrawer()">Layanan</a>
-        <a href="#pricing" class="nav-link" style="font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 10px;" onclick="closeMobileDrawer()">Harga & Paket</a>
-        <a href="#custom" class="nav-link" style="font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 10px;" onclick="closeMobileDrawer()">Hubungi Kami</a>
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 5px;">
-            <a href="login.html" class="btn-navbar-login" style="text-align: center; width: 100%; padding: 12px 24px;">Masuk</a>
-            <a href="login.html#register" class="btn-navbar-register" style="text-align: center; width: 100%; padding: 12px 24px;">Daftar</a>
-        </div>
-    </div>
 
     <!-- Hero Section -->
     <header class="hero">
@@ -2307,56 +2241,6 @@
 
         // Staggered Scroll Reveal & Simulator Auto-Cycle Hook
         document.addEventListener('DOMContentLoaded', () => {
-            // Mobile Drawer Toggle
-            const toggleBtn = document.getElementById('mobile-nav-toggle');
-            const drawer = document.getElementById('mobile-drawer');
-
-            if (toggleBtn && drawer) {
-                toggleBtn.addEventListener('click', () => {
-                    const isOpen = drawer.style.display === 'flex';
-                    if (isOpen) {
-                        closeMobileDrawer();
-                    } else {
-                        openMobileDrawer();
-                    }
-                });
-            }
-
-            window.openMobileDrawer = function() {
-                if (!drawer) return;
-                drawer.style.display = 'flex';
-                setTimeout(() => {
-                    drawer.style.transform = 'translateY(0)';
-                    drawer.style.opacity = '1';
-                }, 10);
-                if (toggleBtn) {
-                    toggleBtn.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    `;
-                }
-            };
-
-            window.closeMobileDrawer = function() {
-                if (!drawer) return;
-                drawer.style.transform = 'translateY(-10px)';
-                drawer.style.opacity = '0';
-                setTimeout(() => {
-                    drawer.style.display = 'none';
-                }, 300);
-                if (toggleBtn) {
-                    toggleBtn.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
-                    `;
-                }
-            };
-
             // Start Auto-Cycling
             startSimAutoCycle();
 
