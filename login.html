@@ -30,9 +30,14 @@
             min-height: 100vh; padding: 20px; box-sizing: border-box;
         }
         .sapatamu-card { 
-            background: var(--white); width: 100%; max-width: 400px; 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(20px); 
+            width: 100%; max-width: 400px; 
             padding: 40px; border-radius: 20px; 
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); 
+            box-shadow: 0 10px 40px rgba(224, 123, 123, 0.1); 
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+            z-index: 10;
         }
         .sapatamu-header { text-align: center; margin-bottom: 32px; }
         .sapatamu-header h2 { margin: 0; font-size: 28px; color: var(--text-main); font-weight: 800; }
@@ -85,9 +90,77 @@
             from { transform: scale(0.8); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
+
+        /* -------------------------------------
+           ANIMASI BACKGROUND FLOATING HEARTS
+        ---------------------------------------- */
+        .dynamic-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+            background: linear-gradient(135deg, #FFF9F5 0%, #FDF2F2 100%);
+            margin: 0; padding: 0;
+        }
+
+        .dynamic-bg li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 30px;
+            height: 30px;
+            background: transparent;
+            animation: floatDiagonal 20s linear infinite;
+            bottom: -150px;
+        }
+
+        .dynamic-bg li::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E07B7B' opacity='0.2'%3E%3Cpath d='M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            animation: pulseHeart 4s ease-in-out infinite alternate;
+        }
+
+        .dynamic-bg li:nth-child(1) { left: -10%; width: 40px; height: 40px; animation-delay: 0s; animation-duration: 25s; }
+        .dynamic-bg li:nth-child(2) { left: 5%; width: 20px; height: 20px; animation-delay: 2s; animation-duration: 17s; }
+        .dynamic-bg li:nth-child(3) { left: 15%; width: 60px; height: 60px; animation-delay: 4s; animation-duration: 22s; }
+        .dynamic-bg li:nth-child(4) { left: 25%; width: 35px; height: 35px; animation-delay: 0s; animation-duration: 18s; }
+        .dynamic-bg li:nth-child(5) { left: 40%; width: 25px; height: 25px; animation-delay: 6s; animation-duration: 20s; }
+        .dynamic-bg li:nth-child(6) { left: 55%; width: 50px; height: 50px; animation-delay: 3s; animation-duration: 24s; }
+        .dynamic-bg li:nth-child(7) { left: -20%; width: 30px; height: 30px; animation-delay: 8s; animation-duration: 19s; }
+        .dynamic-bg li:nth-child(8) { left: -5%; width: 45px; height: 45px; animation-delay: 10s; animation-duration: 28s; }
+        .dynamic-bg li:nth-child(9) { left: 45%; width: 20px; height: 20px; animation-delay: 1s; animation-duration: 15s; }
+        .dynamic-bg li:nth-child(10){ left: 10%; width: 55px; height: 55px; animation-delay: 7s; animation-duration: 26s; }
+
+        @keyframes floatDiagonal {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(40vw, -120vh) rotate(260deg); opacity: 0; }
+        }
+
+        @keyframes pulseHeart {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
+        }
     </style>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
+
+    <!-- Animasi Background -->
+    <ul class="dynamic-bg">
+        <li></li><li></li><li></li><li></li><li></li>
+        <li></li><li></li><li></li><li></li><li></li>
+    </ul>
 
     <!-- CUSTOM NOTIFICATION MODAL -->
     <div id="sapa-notify-modal">
@@ -111,122 +184,29 @@
         </div>
         <div class="form-group">
             <label>Password</label>
-            <input type="password" id="log_pass" class="sapatamu-input" placeholder="••••••••">
+            <div class="relative w-full">
+                <input type="password" id="log_pass" class="sapatamu-input" style="padding-right: 48px;" placeholder="••••••••">
+                <button type="button" onclick="togglePasswordVisibility('log_pass', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Tampilkan password">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                </button>
+            </div>
         </div>
         <button onclick="prosesLogin()" id="btn_login" class="sapatamu-btn">
             <span id="text_login">Masuk Sekarang</span>
             <span class="loader" id="load_login"></span>
         </button>
         <div class="footer-link">
-            <div>Belum punya akun? <span class="clickable" onclick="toggleForm('registerForm')">Daftar</span></div>
+            <div>Belum punya akun? <a href="daftar.html" class="clickable">Daftar</a></div>
             <div style="font-size: 12px; margin-top: 10px;">
                 <span class="clickable" onclick="toggleForm('forgotForm')">Lupa Password?</span> | 
                 <span class="clickable" onclick="toggleForm('changePassForm')">Ganti Password</span>
             </div>
             <!-- FORCE RESET -->
             <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #F0E6DE;">
-                <span class="clickable" onclick="forceResetSesi()" style="color: #E07B7B; font-weight: 800; font-size: 10px; letter-spacing: 1px;">⚠️ TERJEBAK LOOP? RESET SESI</span>
+                <span class="clickable" onclick="forceResetSesi()" style="color: #E07B7B; font-weight: 800; font-size: 10px; letter-spacing: 1px;">âš ï¸ TERJEBAK LOOP? RESET SESI</span>
             </div>
-        </div>
-    </div>
-
-    <div class="sapatamu-card" id="registerForm" style="display:none;">
-        <div class="sapatamu-header">
-            <h2>Daftar Akun</h2>
-            <p>Data otomatis akan masuk ke Spreadsheet Anda</p>
-        </div>
-        
-        <div class="form-group">
-            <label>Kategori Acara</label>
-            <select id="reg_category" class="sapatamu-input" onchange="updateCategoryTheme()" style="background-color: #fff; cursor: pointer; border: 2px solid #E0D5C9;">
-                <option value="wedding">💍 Wedding (Pernikahan)</option>
-                <option value="birthday">🎂 Birthday (Ulang Tahun)</option>
-                <option value="anniversary">✨ Anniversary (Hari Jadi)</option>
-                <option value="corporate">🏢 Corporate (Formal / Meeting)</option>
-                <option value="gathering">🤝 Gathering (Reuni / Komunitas)</option>
-            </select>
-        </div>
-
-        <div class="form-group" id="group_single_name">
-            <label id="lbl_client_name">Nama Klien / Wedding</label>
-            <input type="text" id="reg_user" class="sapatamu-input" placeholder="Gildan & Mita" oninput="autoSuggestSubdomain(this.value)">
-        </div>
-
-        <!-- DOUBLE NAME FOR WEDDING -->
-        <div id="group_double_name" style="display: none;">
-            <div class="form-group">
-                <label>Nama Mempelai Pria & Wanita</label>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <input type="text" id="reg_pria" class="sapatamu-input" placeholder="Nama Pria" oninput="syncWeddingNames()">
-                    <span style="font-weight: 800; color: var(--primary);">&</span>
-                    <input type="text" id="reg_wanita" class="sapatamu-input" placeholder="Nama Wanita" oninput="syncWeddingNames()">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Subdomain / Username 
-                <span id="sub-status" style="margin-left: 10px; font-size: 12px; font-weight: 800;"></span>
-            </label>
-            <div style="display: flex; gap: 8px; align-items: center;">
-                <div style="position: relative; flex: 1;">
-                    <input type="text" id="reg_subdomain" class="sapatamu-input" placeholder="gildanmita" readonly style="padding-right: 100px; background: #f8fafc; cursor: not-allowed;">
-                    <span style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-weight: 800; font-size: 11px; color: var(--text-muted); pointer-events: none;">.sapatamu.id</span>
-                </div>
-                <button onclick="validateSubdomain()" id="btn_cek_sub" class="gen-btn" style="background: #6366f1; color: white;">
-                    <span id="text_cek_sub">Cek</span>
-                    <span class="loader" id="load_cek_sub"></span>
-                </button>
-            </div>
-            <p style="font-size: 10px; color: var(--text-muted); margin-top: 5px; font-weight: 600;">* Subdomain dibuat otomatis berdasarkan Nama di atas.</p>
-        </div>
-
-        <div class="form-group">
-            <label>ID Spreadsheet (Otomatis)</label>
-            <input type="text" id="reg_ssid" class="sapatamu-input readonly-input" placeholder="Akan terisi otomatis..." readonly>
-        </div>
-
-        <div class="inject-box">
-            <p class="inject-title">Detail Acara (Inject ke Master)</p>
-            <div class="form-group"><input type="text" id="ev_date_text" class="sapatamu-input" placeholder="Senin, 25 Mei 2026"></div>
-            <div class="form-group"><input type="text" id="ev_loc" class="sapatamu-input" placeholder="Lokasi Lengkap Acara"></div>
-            <div class="form-group"><input type="text" id="ev_time" class="sapatamu-input" placeholder="Akad: 08.00 / Resepsi: 12.30"></div>
-            <div class="form-group"><input type="text" id="ev_link" class="sapatamu-input" placeholder="Link Undangan Digital"></div>
-            <div style="display: flex; gap: 5px;">
-                <input type="text" id="ev_s1" class="sapatamu-input small-font" placeholder="08.00 WIB">
-                <input type="text" id="ev_s2" class="sapatamu-input small-font" placeholder="11.00 WIB">
-                <input type="text" id="ev_s3" class="sapatamu-input small-font" placeholder="13.00 WIB">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>WhatsApp (628...)</label>
-            <input type="text" id="reg_wa" class="sapatamu-input" placeholder="6285111567829">
-        </div>
-
-        <div class="form-group">
-            <label>Email (Pemulihan)</label>
-            <input type="email" id="reg_email" class="sapatamu-input" placeholder="wedding@gmail.com">
-        </div>
-
-        <div class="form-group">
-            <label>Password Baru</label>
-            <input type="password" id="reg_pass" class="sapatamu-input" placeholder="••••••••">
-        </div>
-
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--bg);">
-            <button onclick="generateSheet()" id="btn_gen_sheet" class="sapatamu-btn" style="background: #fbbf24; margin-bottom: 12px; color: #4A3F35;">
-                <span id="text_gen_sheet">1. Siapkan Database (Buat Sheet)</span>
-                <span class="loader" id="load_gen_sheet"></span>
-            </button>
-
-            <button onclick="prosesDaftar()" id="btn_reg" class="sapatamu-btn success-btn" disabled>
-                <span id="text_reg">2. Buat Akun & Konfirmasi WA</span>
-                <span class="loader" id="load_reg"></span>
-            </button>
-        </div>
-        <div class="footer-link">
-            Sudah punya akun? <span class="clickable" onclick="toggleForm('loginForm')">Login</span>
         </div>
     </div>
 
@@ -263,11 +243,25 @@
         </div>
         <div class="form-group">
             <label>Password Saat Ini</label>
-            <input type="password" id="chg_curr_pass" class="sapatamu-input" placeholder="••••••••">
+            <div class="relative w-full">
+                <input type="password" id="chg_curr_pass" class="sapatamu-input" style="padding-right: 48px;" placeholder="••••••••">
+                <button type="button" onclick="togglePasswordVisibility('chg_curr_pass', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Tampilkan password">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                </button>
+            </div>
         </div>
         <div class="form-group">
             <label>Password Baru</label>
-            <input type="password" id="chg_new_pass" class="sapatamu-input" oninput="checkStrength(this.value)" placeholder="••••••••">
+            <div class="relative w-full">
+                <input type="password" id="chg_new_pass" class="sapatamu-input" style="padding-right: 48px;" oninput="checkStrength(this.value)" placeholder="••••••••">
+                <button type="button" onclick="togglePasswordVisibility('chg_new_pass', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Tampilkan password">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                </button>
+            </div>
             <div id="strength-meter" class="meter-bg">
                 <div id="strength-bar" class="meter-bar"></div>
             </div>
@@ -275,7 +269,14 @@
         </div>
         <div class="form-group">
             <label>Konfirmasi Password Baru</label>
-            <input type="password" id="chg_conf_pass" class="sapatamu-input" placeholder="••••••••">
+            <div class="relative w-full">
+                <input type="password" id="chg_conf_pass" class="sapatamu-input" style="padding-right: 48px;" placeholder="••••••••">
+                <button type="button" onclick="togglePasswordVisibility('chg_conf_pass', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Tampilkan password">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                </button>
+            </div>
         </div>
         <button onclick="prosesGantiPassword()" id="btn_chg" class="sapatamu-btn primary-btn">
             <span id="text_chg">Perbarui Password</span>
@@ -305,7 +306,23 @@
     </style>
 
 <script>
+    window.togglePasswordVisibility = function(inputId, buttonEl) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        if (isPassword) {
+            buttonEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>`;
+            buttonEl.setAttribute('aria-label', 'Sembunyikan password');
+        } else {
+            buttonEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>`;
+            buttonEl.setAttribute('aria-label', 'Tampilkan password');
+        }
+    };
+
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
  
 
     // --- CUSTOM NOTIFICATION SYSTEM ---
@@ -346,8 +363,8 @@
     window.forceResetSesi = function() {
         localStorage.clear();
         sessionStorage.clear();
-        alert("Sesi berhasil direset. Silakan login kembali.");
-        location.reload();
+        showSapaModal("Berhasil", "Sesi berhasil direset. Silakan login kembali.", "âœ…");
+        setTimeout(() => location.reload(), 2000);
     }
 
     async function initLogin() {
@@ -387,56 +404,24 @@
     // Run theme update on load to ensure correct fields are shown
     document.addEventListener('DOMContentLoaded', () => {
         initLogin();
-        updateCategoryTheme();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (window.location.hash === '#register' || urlParams.get('form') === 'register') {
+            window.location.href = 'daftar.html';
+        }
     });
+
     window.toggleForm = function(id) {
-        const forms = ['loginForm', 'registerForm', 'forgotForm', 'changePassForm'];
+        if (id === 'registerForm') {
+            window.location.href = 'daftar.html';
+            return;
+        }
+        const forms = ['loginForm', 'forgotForm', 'changePassForm'];
         forms.forEach(f => {
             const el = document.getElementById(f);
             if(el) el.style.display = (f === id) ? 'block' : 'none';
         });
     };
-
-    window.updateCategoryTheme = function() {
-        const cat = document.getElementById('reg_category').value;
-        const lbl = document.getElementById('lbl_client_name');
-        const input = document.getElementById('reg_user');
-        const emailInput = document.getElementById('reg_email');
-        
-        const groupSingle = document.getElementById('group_single_name');
-        const groupDouble = document.getElementById('group_double_name');
-
-        if (cat === 'wedding') {
-            groupSingle.style.display = 'none';
-            groupDouble.style.display = 'block';
-        } else {
-            groupSingle.style.display = 'block';
-            groupDouble.style.display = 'none';
-        }
-
-        const themes = {
-            wedding: { label: "Nama Klien / Wedding", placeholder: "Gildan & Mita", email: "wedding@gmail.com" },
-            birthday: { label: "Nama Klien / Birthday", placeholder: "Clara's 17th Birthday", email: "birthday@gmail.com" },
-            anniversary: { label: "Nama Klien / Perusahaan", placeholder: "Anniversary 10th SapaTamu", email: "anniversary@gmail.com" },
-            corporate: { label: "Nama Perusahaan / Acara", placeholder: "Annual Meeting 2026", email: "corporate@gmail.com" },
-            gathering: { label: "Nama Komunitas / Acara", placeholder: "Reuni Akbar 2026", email: "gathering@gmail.com" }
-        };
-        
-        const theme = themes[cat] || themes.wedding;
-        lbl.innerText = theme.label;
-        input.placeholder = theme.placeholder;
-        emailInput.placeholder = theme.email;
-    };
-
-    window.syncWeddingNames = function() {
-        const pria = document.getElementById('reg_pria').value.trim();
-        const wanita = document.getElementById('reg_wanita').value.trim();
-        if (pria || wanita) {
-            const combined = (pria + " " + wanita).trim();
-            autoSuggestSubdomain(combined);
-        }
-    };
-
     function setLoading(btnId, isLoad) {
         const btn = document.getElementById(btnId);
         const text = document.getElementById(btnId.replace('btn', 'text'));
@@ -449,27 +434,38 @@
     window.prosesLogin = async function() {
         const user = document.getElementById('log_user').value.trim();
         const pass = document.getElementById('log_pass').value;
-        if (!user || !pass) return showSapaModal("Lengkapi Data", "Silakan masukkan Username / Subdomain dan Password Anda.", "⚠️");
+        if (!user || !pass) return showSapaModal("Lengkapi Data", "Silakan masukkan Username / Subdomain dan Password Anda.", "âš ï¸");
 
         setLoading('btn_login', true);
+
+        // Normalisasi username/subdomain untuk pencarian
+        const normalizedUser = user.toLowerCase().replace(/[\s&]/g, '');
+
         try {
+            // â”€â”€â”€ JALUR UTAMA: GAS BACKEND (Aman - Password tidak melewati browser) â”€â”€â”€
             const response = await fetch(SCRIPT_URL, {
                 method: "POST",
                 mode: "cors",
                 redirect: "follow",
-                body: JSON.stringify({ action: "login", username: user, password: pass })
+                body: JSON.stringify({ action: "login", username: normalizedUser, password: pass })
             });
             const res = await response.json();
+
             if (res.status === "success") {
-                // Gunakan subdomain sebagai kunci akses utama
-                // Normalisasi subdomain: hapus spasi DAN "&" agar tidak jadi "clara&aulia.sapatamu.id"
                 const sub = (res.data.subdomain || res.data.username).toLowerCase().replace(/[\s&]/g, '');
                 
+                // Cek status aktif
+                if (res.data.status && res.data.status.toLowerCase() !== 'active') {
+                    showSapaModal("Akun Dinonaktifkan", "Akun ini telah dinonaktifkan oleh Admin. Silakan hubungi pusat.", "âš ï¸");
+                    setLoading('btn_login', false);
+                    return;
+                }
+
                 const userData = { 
                     ssId: res.data.ssId, 
                     username: res.data.username, 
                     subdomain: sub,
-                    role: res.data.role || 'client'   // ← BARU: simpan role
+                    role: res.data.role || 'client'
                 };
                 localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
                 sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
@@ -477,174 +473,16 @@
                 const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
                 const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
                 
-                // Redirect ke subdomain yang tepat
                 const targetUrl = `https://${sub}.sapatamu.id/${targetPage}?ssId=${res.data.ssId}&user=${encodeURIComponent(res.data.username)}&category=${res.data.category || 'wedding'}&role=${userData.role}`;
                 window.location.replace(targetUrl);
             } else {
-                showSapaModal("Login Gagal", res.message, "❌");
+                showSapaModal("Login Gagal", res.message || "Username atau password salah.", "âŒ");
                 setLoading('btn_login', false);
             }
         } catch (e) {
-            showSapaModal("Koneksi Bermasalah", "Tidak dapat terhubung ke server SapaTamu.", "⚠️");
+            showSapaModal("Koneksi Bermasalah", "Tidak dapat terhubung ke server SapaTamu. Pastikan koneksi internet Anda stabil.", "âš ï¸");
             setLoading('btn_login', false);
         }
-    };
-
-    let subTimeout;
-    window.autoSuggestSubdomain = function(val) {
-        if (!val) return;
-        const slug = val.toLowerCase().replace(/[^a-z0-9]/g, '');
-        document.getElementById('reg_subdomain').value = slug;
-        // Tidak lagi memanggil validateSubdomain otomatis
-        const statusEl = document.getElementById('sub-status');
-        statusEl.innerText = ""; // Reset status saat ada perubahan input
-    };
-
-    window.validateSubdomain = async function() {
-        const val = document.getElementById('reg_subdomain').value.trim();
-        const statusEl = document.getElementById('sub-status');
-        const regBtn = document.getElementById('btn_reg');
-        
-        if (!val || val.length < 3) {
-            return showSapaModal("Input Terlalu Pendek", "Subdomain minimal 3 karakter.", "⚠️");
-        }
-
-        setLoading('btn_cek_sub', true);
-        statusEl.innerText = "⌛ Mengecek...";
-        statusEl.style.color = "var(--gold)";
-
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST",
-                body: JSON.stringify({ action: "checkSubdomain", subdomain: val })
-            });
-            const res = await response.json();
-            
-            if (res.status === "available") {
-                statusEl.innerText = "✅ BISA DIGUNAKAN";
-                statusEl.style.color = "var(--success)";
-                if (document.getElementById('reg_ssid').value) regBtn.disabled = false;
-            } else {
-                statusEl.innerText = "❌ SUDAH DIGUNAKAN";
-                statusEl.style.color = "#E07B7B";
-                regBtn.disabled = true;
-                const msg = res.message || "Subdomain '" + val + "' sudah dimiliki klien lain.";
-                showSapaModal("Tidak Tersedia", msg, "❌");
-            }
-        } catch (e) {
-            statusEl.innerText = "⚠️ Gangguan Koneksi";
-        }
-        setLoading('btn_cek_sub', false);
-    };
-
-    window.generateSheet = async function() {
-        const cat = document.getElementById('reg_category').value;
-        let user;
-        let currentBtnId;
-
-        if (cat === 'wedding') {
-            const pria = document.getElementById('reg_pria').value.trim();
-            const wanita = document.getElementById('reg_wanita').value.trim();
-            if (!pria || !wanita) return showSapaModal("Lengkapi Nama", "Nama Pria & Wanita diperlukan.", "⚠️");
-            user = pria + " & " + wanita;
-            currentBtnId = 'btn_gen_sheet_dual';
-        } else {
-            user = document.getElementById('reg_user').value.trim();
-            if (!user) return showSapaModal("Isi Nama Klien", "Nama klien diperlukan untuk membuat Google Sheets baru.", "⚠️");
-            currentBtnId = 'btn_gen_sheet';
-        }
-
-        setLoading('btn_gen_sheet', true);
-        try {
-            const payload = { 
-                action: "copyMaster", 
-                clientName: user,
-                category: document.getElementById('reg_category').value,
-                eventData: {
-                    nama: user,
-                    tgl: document.getElementById('ev_date_text').value,
-                    lokasi: document.getElementById('ev_loc').value,
-                    waktu: document.getElementById('ev_time').value,
-                    link: document.getElementById('ev_link').value,
-                    s1: document.getElementById('ev_s1').value,
-                    s2: document.getElementById('ev_s2').value,
-                    s3: document.getElementById('ev_s3').value
-                }
-            };
-            const response = await fetch(SCRIPT_URL, { 
-                method: "POST", 
-                mode: "cors",
-                redirect: "follow",
-                body: JSON.stringify(payload) 
-            });
-            const res = await response.json();
-            if (res.status === "success") {
-                const fileId = res.data.fileId || res.data.id;
-                console.log("File ID diterima:", fileId);
-                
-                const inputSsid = document.getElementById('reg_ssid');
-                if (inputSsid) {
-                    inputSsid.value = fileId;
-                    inputSsid.classList.add('success-highlight');
-                }
-
-                // Kunci input nama agar tidak diubah setelah sheet dibuat
-                document.getElementById('reg_user').readOnly = true; 
-                if (document.getElementById('reg_pria')) document.getElementById('reg_pria').readOnly = true;
-                if (document.getElementById('reg_wanita')) document.getElementById('reg_wanita').readOnly = true;
-                
-                document.getElementById('btn_gen_sheet').disabled = true;
-                document.getElementById('text_gen_sheet').innerText = "✅ Database Siap";
-                
-                // Aktifkan tombol daftar jika subdomain juga sudah dicek/aman
-                const subStatus = document.getElementById('sub-status').innerText;
-                if (subStatus.includes("✅")) {
-                    document.getElementById('btn_reg').disabled = false;
-                }
-                
-                showSapaModal("Berhasil!", "Spreadsheet baru Anda telah dibuat. Silakan lanjut ke langkah terakhir.", "📊");
-            } else {
-                showSapaModal("Gagal", (res.message || "Gagal membuat spreadsheet."), "❌");
-            }
-        } catch (e) { 
-            showSapaModal("Error", "Gagal generate sheet: " + e.toString(), "⚠️"); 
-        }
-        setLoading('btn_gen_sheet', false);
-    };
-
-    window.prosesDaftar = async function() {
-        const data = {
-            action: "register",
-            clientName: document.getElementById('reg_user').value,
-            subdomain: document.getElementById('reg_subdomain').value.toLowerCase().replace(/[^a-z0-9]/g, ''),
-            ssId: document.getElementById('reg_ssid').value,
-            category: document.getElementById('reg_category').value,
-            password: document.getElementById('reg_pass').value,
-            whatsapp: document.getElementById('reg_wa').value,
-            email: document.getElementById('reg_email').value,
-            weddingDate: document.getElementById('ev_date_text').value
-        };
-
-        setLoading('btn_reg', true);
-        try {
-            const response = await fetch(SCRIPT_URL, { 
-                method: "POST", 
-                mode: "cors",
-                redirect: "follow",
-                body: JSON.stringify(data) 
-            });
-            const res = await response.json();
-            if (res.status === "success") {
-                const pesan = `*Konfirmasi Pendaftaran*%0A*User:* ${data.username}%0A*Pass:* ${data.password}`;
-                window.open(`https://wa.me/6285111567829?text=${pesan}`, '_blank');
-                location.reload();
-            } else {
-                showSapaModal("Gagal Daftar", res.message, "❌");
-            }
-        } catch (e) { 
-            showSapaModal("Gagal Daftar", "Masalah koneksi: " + e.toString(), "⚠️"); 
-        }
-        setLoading('btn_reg', false);
     };
 
     window.prosesLupaPassword = async function() {
@@ -657,10 +495,10 @@
                 body: JSON.stringify({ action: "forgotPassword", username: user, contact: contact })
             });
             const res = await response.json();
-            showSapaModal("Hasil", res.message, (res.status === "success" ? "✅" : "❌"));
+            showSapaModal("Hasil", res.message, (res.status === "success" ? "âœ…" : "âŒ"));
             if(res.status === "success") toggleForm('loginForm');
         } catch (e) { 
-            showSapaModal("Error", "Masalah koneksi ke server.", "⚠️"); 
+            showSapaModal("Error", "Masalah koneksi ke server.", "âš ï¸"); 
         }
         setLoading('btn_forgot', false);
     };
@@ -672,15 +510,15 @@
             currentPass: document.getElementById('chg_curr_pass').value,
             newPass: document.getElementById('chg_new_pass').value
         };
-        if(data.newPass !== document.getElementById('chg_conf_pass').value) return showSapaModal("Password Tidak Cocok", "Konfirmasi password baru tidak sesuai.", "⚠️");
+        if(data.newPass !== document.getElementById('chg_conf_pass').value) return showSapaModal("Password Tidak Cocok", "Konfirmasi password baru tidak sesuai.", "âš ï¸");
         
         setLoading('btn_chg', true);
         try {
             const response = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(data) });
             const res = await response.json();
-            showSapaModal("Hasil", res.message, (res.status === "success" ? "✅" : "❌"));
+            showSapaModal("Hasil", res.message, (res.status === "success" ? "âœ…" : "âŒ"));
             if(res.status === "success") location.reload();
-        } catch (e) { showSapaModal("Error", "Gagal menghubungi server.", "⚠️"); }
+        } catch (e) { showSapaModal("Error", "Gagal menghubungi server.", "âš ï¸"); }
         setLoading('btn_chg', false);
     };
 

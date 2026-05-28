@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu.ku - Pro Analytics Node</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
         rel="stylesheet">
     <script src="subdomain_resolver.js?v=3.3"></script>
@@ -43,12 +44,71 @@
         }
 
         #sidebar-panel {
-            background: var(--sidebar-bg);
-            padding: 4vh 2vw;
+            position: relative;
+            background: linear-gradient(135deg, #FFF9F5 0%, #FDF2F2 100%);
+            padding: clamp(12px, 2.5vh, 32px) clamp(10px, 1.5vw, 24px);
             border-right: 1px solid #eee;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
+            overflow: hidden; /* hearts clip */
+        }
+
+        /* ANIMASI BACKGROUND FLOATING HEARTS KHUSUS SIDEBAR */
+        .dynamic-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            margin: 0; padding: 0;
+        }
+
+        .dynamic-bg li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 25px;
+            height: 25px;
+            background: transparent;
+            animation: floatDiagonal 18s linear infinite;
+            bottom: -150px;
+        }
+
+        .dynamic-bg li::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E07B7B' opacity='0.25'%3E%3Cpath d='M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            animation: pulseHeart 4s ease-in-out infinite alternate;
+        }
+
+        .dynamic-bg li:nth-child(1) { left: -10%; width: 35px; height: 35px; animation-delay: 0s; animation-duration: 22s; }
+        .dynamic-bg li:nth-child(2) { left: 10%; width: 18px; height: 18px; animation-delay: 2s; animation-duration: 15s; }
+        .dynamic-bg li:nth-child(3) { left: 25%; width: 45px; height: 45px; animation-delay: 4s; animation-duration: 20s; }
+        .dynamic-bg li:nth-child(4) { left: 40%; width: 28px; height: 28px; animation-delay: 0s; animation-duration: 16s; }
+        .dynamic-bg li:nth-child(5) { left: 55%; width: 20px; height: 20px; animation-delay: 6s; animation-duration: 18s; }
+        .dynamic-bg li:nth-child(6) { left: 70%; width: 38px; height: 38px; animation-delay: 3s; animation-duration: 21s; }
+        .dynamic-bg li:nth-child(7) { left: -5%; width: 25px; height: 25px; animation-delay: 8s; animation-duration: 17s; }
+        .dynamic-bg li:nth-child(8) { left: 15%; width: 32px; height: 32px; animation-delay: 10s; animation-duration: 25s; }
+        .dynamic-bg li:nth-child(9) { left: 50%; width: 18px; height: 18px; animation-delay: 1s; animation-duration: 13s; }
+        .dynamic-bg li:nth-child(10){ left: 30%; width: 40px; height: 40px; animation-delay: 7s; animation-duration: 23s; }
+
+        @keyframes floatDiagonal {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(15vw, -120vh) rotate(260deg); opacity: 0; }
+        }
+
+        @keyframes pulseHeart {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
         }
 
         #content-panel {
@@ -60,9 +120,177 @@
         }
 
         .dashboard-grid {
+            position: relative;
+            z-index: 1;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
+        }
+
+        /* ANIMASI BACKGROUND FLOATING HEARTS UNTUK MAIN AREA */
+        .dynamic-bg-main {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            margin: 0; padding: 0;
+        }
+
+        .dynamic-bg-main li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 25px;
+            height: 25px;
+            background: transparent;
+            animation: floatDiagonalMain 22s linear infinite;
+            bottom: -150px;
+        }
+
+        .dynamic-bg-main li::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E07B7B' opacity='0.12'%3E%3Cpath d='M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            animation: pulseHeart 4s ease-in-out infinite alternate;
+        }
+
+        .dynamic-bg-main li:nth-child(1) { left: 5%; width: 45px; height: 45px; animation-delay: 0s; animation-duration: 25s; }
+        .dynamic-bg-main li:nth-child(2) { left: 20%; width: 22px; height: 22px; animation-delay: 3s; animation-duration: 18s; }
+        .dynamic-bg-main li:nth-child(3) { left: 35%; width: 55px; height: 55px; animation-delay: 6s; animation-duration: 28s; }
+        .dynamic-bg-main li:nth-child(4) { left: 50%; width: 32px; height: 32px; animation-delay: 1s; animation-duration: 20s; }
+        .dynamic-bg-main li:nth-child(5) { left: 65%; width: 25px; height: 25px; animation-delay: 8s; animation-duration: 22s; }
+        .dynamic-bg-main li:nth-child(6) { left: 80%; width: 42px; height: 42px; animation-delay: 4s; animation-duration: 26s; }
+        .dynamic-bg-main li:nth-child(7) { left: 15%; width: 30px; height: 30px; animation-delay: 10s; animation-duration: 21s; }
+        .dynamic-bg-main li:nth-child(8) { left: 45%; width: 38px; height: 38px; animation-delay: 12s; animation-duration: 29s; }
+        .dynamic-bg-main li:nth-child(9) { left: 75%; width: 22px; height: 22px; animation-delay: 2s; animation-duration: 16s; }
+        .dynamic-bg-main li:nth-child(10){ left: 90%; width: 48px; height: 48px; animation-delay: 9s; animation-duration: 27s; }
+
+        @keyframes floatDiagonalMain {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(30vw, -120vh) rotate(260deg); opacity: 0; }
+        }
+
+        /* Welcome Mirror Style */
+        .mirror-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1.5px solid rgba(240, 230, 222, 0.7);
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.05);
+        }
+
+        .mirror-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1280px;
+            height: 720px;
+            border: none;
+            pointer-events: none;
+            transform-origin: 0 0;
+        }
+
+        /* â”€â”€ ARRIVAL NOTIFICATION CARDS â”€â”€ */
+        .arrival-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .arrival-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.85);
+            border: 1px solid rgba(224,123,123,0.25);
+            border-left: 3px solid #E07B7B;
+            border-radius: 14px;
+            padding: 8px 12px;
+            animation: arrivalSlideIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+            transition: all 0.3s ease;
+        }
+
+        .arrival-card:nth-child(1) { border-left-color: #E07B7B; }
+        .arrival-card:nth-child(2) { border-left-color: #C8962E; }
+        .arrival-card:nth-child(3) { border-left-color: #987BB2; }
+        .arrival-card:nth-child(4) { border-left-color: #99B8A5; }
+        .arrival-card:nth-child(5) { border-left-color: #D4A5B8; }
+
+        .arrival-card-rank {
+            font-size: 9px;
+            font-weight: 900;
+            color: #E07B7B;
+            opacity: 0.5;
+            min-width: 14px;
+            text-align: center;
+        }
+
+        .arrival-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .arrival-card-name {
+            font-size: 10px;
+            font-weight: 800;
+            color: #4A3F35;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .arrival-card-meta {
+            font-size: 8.5px;
+            font-weight: 600;
+            color: #8C7560;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 1px;
+        }
+
+        .arrival-card-time {
+            font-size: 8px;
+            font-weight: 700;
+            color: #C8962E;
+            white-space: nowrap;
+            opacity: 0.8;
+        }
+
+        @keyframes arrivalSlideIn {
+            from { opacity: 0; transform: translateX(-12px) scale(0.96); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+
+        .arrival-realtime-dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #E07B7B;
+            animation: arrival-pulse 1.5s ease-in-out infinite;
+            margin-right: 4px;
+        }
+
+        @keyframes arrival-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.4; transform: scale(0.7); }
         }
 
         .full-width {
@@ -196,15 +424,15 @@
         }
 
         .val-s1 {
-            color: #3b82f6;
+            color: #E07B7B;
         }
 
         .val-s2 {
-            color: #f59e0b;
+            color: #C8962E;
         }
 
         .val-s3 {
-            color: #8b5cf6;
+            color: #987BB2;
         }
 
         .session-indicator-wrapper {
@@ -223,15 +451,15 @@
         }
 
         .pill-s1 {
-            background: #3b82f6 !important;
+            background: #E07B7B !important;
         }
 
         .pill-s2 {
-            background: #f59e0b !important;
+            background: #C8962E !important;
         }
 
         .pill-s3 {
-            background: #8b5cf6 !important;
+            background: #987BB2 !important;
         }
 
         @keyframes pulse-red {
@@ -262,8 +490,8 @@
 
         /* Stat Cards */
         .eval-card {
-            background: #fff;
-            border: 1px solid #f8f8f8;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(240, 230, 222, 0.6);
             padding: 15px 20px;
             border-radius: 12px;
             margin-bottom: 4px;
@@ -301,23 +529,39 @@
         }
 
         .pill-button {
-            padding: 8px 16px;
+            padding: clamp(5px, 0.6vh, 8px) clamp(10px, 1vw, 16px);
             border-radius: 50px;
             background: #eee;
             color: #666;
-            font-size: 10px;
+            font-size: clamp(8px, 0.85vw, 10px);
             font-weight: 800;
             cursor: pointer;
-            transition: 0.3s;
+            transition: background 0.25s, color 0.25s, border-color 0.25s;
             white-space: nowrap;
-            border: 1px solid transparent;
+            border: 1.5px solid transparent;
+            outline: none;
+            user-select: none;
         }
 
         .pill-button.active {
-            background: var(--accent);
+            background: var(--primary);
             color: white;
-            transform: scale(1.05);
+            border-color: var(--primary);
         }
+
+        /* Hide scrollbar tapi tetap bisa scroll */
+        #sidebar-inner::-webkit-scrollbar { display: none; }
+
+        /* Compact arrival cards utk layar kecil */
+        .arrival-card {
+            padding: clamp(5px, 0.7vh, 8px) clamp(8px, 0.8vw, 12px);
+            gap: clamp(6px, 0.6vw, 10px);
+            border-radius: clamp(10px, 1vw, 14px);
+        }
+        .arrival-card-name  { font-size: clamp(8px, 0.75vw, 10px); }
+        .arrival-card-meta  { font-size: clamp(7px, 0.65vw, 8.5px); }
+        .arrival-card-time  { font-size: clamp(7px, 0.6vw, 8px); }
+        .arrival-list       { gap: clamp(3px, 0.4vh, 6px); }
 
         #fs-btn {
             position: fixed;
@@ -359,6 +603,7 @@
             border-radius: 10px;
         }
     </style>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 
 <body class="cursor-visible" onload="initApp()">
@@ -370,7 +615,7 @@
     <nav class="sapatamu-navbar">
         <div class="nav-outer-wrapper">
             <div class="nav-fade nav-fade-left" id="fade-left"></div>
-            <div class="nav-arrow nav-arrow-left">‹</div>
+            <div class="nav-arrow nav-arrow-left">â€¹</div>
             
             <div class="nav-scroll-container" id="nav-scroll">
                 <div class="nav-group">
@@ -397,59 +642,85 @@
                 <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
             </div>
 
-            <div class="nav-arrow nav-arrow-right">›</div>
+            <div class="nav-arrow nav-arrow-right">â€º</div>
             <div class="nav-fade nav-fade-right" id="fade-right"></div>
         </div>
     </nav>
 
     <div class="master-container" style="top: 70px;">
         <div id="sidebar-panel">
-            <div class="mb-8">
-                <h1 class="text-2xl font-black tracking-tighter uppercase">Analytics<span
-                        class="text-[#D4AF37]">.Node</span></h1>
-                <p id="clock" class="text-gray-400 font-bold tracking-[3px] text-[10px] mt-2">00:00:00</p>
+            <!-- Animasi Background Hearts -->
+            <ul class="dynamic-bg">
+                <li></li><li></li><li></li><li></li><li></li>
+                <li></li><li></li><li></li><li></li><li></li>
+            </ul>
+
+            <div id="sidebar-inner" style="position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; width: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -ms-overflow-style: none;">
+            <div class="mb-6">
+                <h1 class="font-black tracking-tighter uppercase" style="font-size: clamp(16px, 1.8vw, 24px);">Analytics<span class="text-[#D4AF37]">.Node</span></h1>
+                <p id="clock" class="text-gray-400 font-bold tracking-[3px] mt-1" style="font-size: clamp(7px, 0.7vw, 10px);">00:00:00</p>
             </div>
 
-            <div class="mb-10">
-                <span class="text-[9px] font-black uppercase text-gray-400 block mb-4 tracking-widest">Visual
-                    Control</span>
-                <div id="view-mode-container" class="flex flex-col gap-2">
+            <div class="mb-4">
+                <span class="font-black uppercase text-gray-400 block mb-2 tracking-widest" style="font-size: clamp(7px, 0.7vw, 9px);">Visual Control</span>
+                <div id="view-mode-container" class="flex flex-col gap-1.5">
                     <div class="pill-button active text-center" onclick="setViewMode('ALL', this)">Full Overview</div>
                     <div class="pill-button text-center" onclick="setViewMode('FLOW', this)">Live Flow Monitor</div>
                     <div class="pill-button text-center" onclick="setViewMode('GUEST', this)">Guest Profiling</div>
                 </div>
             </div>
 
-            <div class="space-y-4">
-                <div
-                    class="bg-white p-7 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md">
-                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Kedatangan
-                    </div>
-                    <div id="side-real" class="text-6xl font-black text-gray-800 tracking-tighter">0</div>
-                    <div class="flex items-center gap-2 mt-3">
-                        <span class="relative flex h-2 w-2"><span
-                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span
-                                class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
-                        <span class="text-[9px] font-bold text-green-600 uppercase tracking-tighter">Live Sync
-                            Connected</span>
+            <div class="space-y-3 shrink-0">
+                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm" style="padding: clamp(12px, 1.5vh, 28px) clamp(12px, 1.2vw, 28px);">
+                    <div class="font-bold text-gray-400 uppercase tracking-widest mb-1" style="font-size: clamp(7px, 0.65vw, 10px);">Total Kedatangan Pax</div>
+                    <div id="side-real" class="font-black text-gray-800 tracking-tighter" style="font-size: clamp(36px, 4vh, 64px); line-height:1;">0</div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
+                        <span class="font-bold text-green-600 uppercase tracking-tighter" style="font-size: clamp(7px, 0.65vw, 9px);">Live Sync Connected</span>
                     </div>
                 </div>
 
-                <div class="bg-white p-7 rounded-[32px] border border-gray-100 shadow-sm">
-                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Akurasi RSVP</div>
-                    <div id="side-acc" class="text-6xl font-black text-blue-600 tracking-tighter">0%</div>
-                    <div class="text-[9px] font-bold text-gray-300 mt-2 uppercase tracking-widest">Database Match Rate
-                    </div>
+                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm" style="padding: clamp(12px, 1.5vh, 28px) clamp(12px, 1.2vw, 28px);">
+                    <div class="font-bold text-gray-400 uppercase tracking-widest mb-1" style="font-size: clamp(7px, 0.65vw, 10px);">Akurasi RSVP</div>
+                    <div id="side-acc" class="font-black text-[#C8962E] tracking-tighter" style="font-size: clamp(36px, 4vh, 64px); line-height:1;">0%</div>
+                    <div class="font-bold text-gray-300 mt-1 uppercase tracking-widest" style="font-size: clamp(7px, 0.65vw, 9px);">Database Match Rate</div>
+                </div>
+            </div>
+
+            <!-- Panel 5 Tamu Terakhir Realtime -->
+            <div class="mt-6 pt-4 border-t border-gray-100/50">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[9px] font-black uppercase text-gray-400 tracking-widest">
+                        <span class="arrival-realtime-dot"></span>Tamu Baru Hadir
+                    </span>
+                    <span id="arrival-realtime-status" class="text-[7px] font-bold text-green-500 uppercase tracking-wider">Connecting...</span>
+                </div>
+                <div id="arrival-list" class="arrival-list">
+                    <p class="text-[9px] text-gray-300 italic px-2 py-3 text-center">Menunggu data tamu...</p>
+                </div>
+            </div>
+
+            <!-- Welcome Mirror Widget -->
+            <div id="welcome-mirror-box" class="mt-4 pt-4 border-t border-gray-100/50">
+                <span class="text-[9px] font-black uppercase text-gray-400 block mb-2 tracking-widest">Welcome Screen Mirror</span>
+                <div id="welcome-mirror-container" class="mirror-container">
+                    <iframe id="welcome-mirror-iframe" src="" class="mirror-iframe"></iframe>
                 </div>
             </div>
 
             <div
-                class="mt-auto pt-8 text-[10px] font-black text-gray-300 tracking-[5px] uppercase text-center border-t border-gray-50 opacity-50">
+                class="mt-auto pt-4 text-[10px] font-black text-gray-300 tracking-[5px] uppercase text-center opacity-50">
                 SapaTamu.ku
+            </div>
             </div>
         </div>
 
         <div id="content-panel">
+            <!-- Animasi Background Hearts untuk Main Area -->
+            <ul class="dynamic-bg-main">
+                <li></li><li></li><li></li><li></li><li></li>
+                <li></li><li></li><li></li><li></li><li></li>
+            </ul>
             <div class="dashboard-grid">
                 <div id="box-flow" class="section-box full-width">
                     <div class="section-title"><span>Flow Monitoring Per Sesi</span></div>
@@ -538,7 +809,7 @@
         }
 
         const SESI_COLOR_MAP = {
-            "SESI 1": "#3b82f6", "SESI 2": "#f59e0b", "SESI 3": "#8b5cf6", "DEFAULT": "#666"
+            "SESI 1": "#E07B7B", "SESI 2": "#C8962E", "SESI 3": "#987BB2", "DEFAULT": "#666"
         };
 
         let globalData = null;
@@ -592,6 +863,37 @@
             return m ? m[0].padStart(5, '0') : "00:00";
         }
 
+        // Helper: normalisasi format waktu dari Supabase (bisa berupa "HH:MM:SS", "HH.MM", atau ISO UTC)
+        function cleanTimeText(val) {
+            if (!val || val === "-" || val === "") return "00:00";
+            let s = String(val).trim();
+            // Jika format ISO (misal 2026-05-25T07:16:56.785Z), konversi ke GMT+7 (Asia/Jakarta)
+            if (s.includes('T')) {
+                try {
+                    let d = new Date(s);
+                    if (!isNaN(d.getTime())) {
+                        let localTime = d.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false });
+                        let parts = localTime.split('.');
+                        if (parts.length < 3) parts = localTime.split(':');
+                        if (parts.length >= 2) {
+                            return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+                        }
+                    }
+                } catch(e) {}
+            }
+            s = s.replace(/\./g, ':');
+            let m = s.match(/(\d{1,2}):(\d{2})/);
+            if (m) return m[1].padStart(2, '0') + ':' + m[2];
+            return "00:00";
+        }
+
+        // Helper: konversi string waktu "HH:MM" ke total menit
+        function timeToMinutes(timeStr) {
+            if (!timeStr || timeStr === "00:00") return 0;
+            const parts = timeStr.split(':');
+            return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
+        }
+
         function renderFlow() {
             if (!globalData || !globalData.flowRaw) return;
             const wrapper = document.getElementById('flow-wrapper');
@@ -624,8 +926,22 @@
                     }
                 });
 
+                let totalSesiPax = 0;
+                let totalSesiTamu = 0;
+                globalData.flowRaw.forEach(item => {
+                    if (item.arrivalSesi === sesiContainer) {
+                        totalSesiPax += (parseInt(item.count) || 0);
+                        totalSesiTamu += 1;
+                    }
+                });
+
                 let columnHtml = `<div class="flow-column" style="border-top: 6px solid ${sesiColor}">
-                <div class="column-header" style="color: ${sesiColor}">${sesiContainer}</div>
+                <div class="column-header" style="color: ${sesiColor}; display: flex; justify-content: space-between; align-items: center;">
+                    <span>${sesiContainer}</span>
+                    <span style="font-size: 9px; font-weight: 800; background: ${sesiColor}; color: white; padding: 3px 8px; border-radius: 20px; letter-spacing: 0; text-transform: none;">
+                        ${totalSesiTamu} Tamu (${totalSesiPax} Pax)
+                    </span>
+                </div>
                 <div class="time-grid">`;
 
                 const sortedLabels = Object.keys(grouped).sort();
@@ -698,6 +1014,120 @@
             container.innerHTML = html;
         }
 
+        function resizeWelcomeMirror() {
+            const iframe = document.getElementById('welcome-mirror-iframe');
+            const container = document.getElementById('welcome-mirror-container');
+            if (iframe && container) {
+                const scale = container.offsetWidth / 1280;
+                iframe.style.width = '1280px';
+                iframe.style.height = '720px';
+                iframe.style.transform = `scale(${scale})`;
+            }
+        }
+        window.addEventListener('resize', resizeWelcomeMirror);
+
+        // â”€â”€ REALTIME ARRIVAL NOTIFICATIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        const SB_RT_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SB_RT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+        let arrivalRealtimeClient = null;
+        let arrivalRealtimeChannel = null;
+        let arrivalPollTimer = null;
+        let arrivalSsId = null;
+        let lastArrivalIds = new Set();
+
+        function formatArrivalTime(isoStr) {
+            if (!isoStr) return '';
+            try {
+                const d = new Date(isoStr);
+                return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
+            } catch(e) { return ''; }
+        }
+
+        function renderArrivalList(guests) {
+            const list = document.getElementById('arrival-list');
+            if (!list) return;
+            if (!guests || guests.length === 0) {
+                list.innerHTML = '<p class="text-[9px] text-gray-300 italic px-2 py-3 text-center">Belum ada tamu hadir...</p>';
+                return;
+            }
+            list.innerHTML = guests.map((g, i) => {
+                const nama = (g.nama || '-').toUpperCase();
+                const kat  = (g.kategori || g.kategori || '-').toUpperCase();
+                const pihak = (g.pihak || '-').toUpperCase();
+                const jam   = formatArrivalTime(g.created_at);
+                return `<div class="arrival-card" style="animation-delay:${i * 0.07}s">
+                    <div class="arrival-card-rank">${i + 1}</div>
+                    <div class="arrival-card-info">
+                        <div class="arrival-card-name">${nama}</div>
+                        <div class="arrival-card-meta">${kat} &bull; ${pihak}</div>
+                    </div>
+                    <div class="arrival-card-time">${jam}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function fetchArrivalList() {
+            if (!arrivalSsId) return;
+            try {
+                const url = `${SB_RT_URL}/rest/v1/welcome_queue?ssid=eq.${arrivalSsId}&status=eq.DISPLAY&order=created_at.desc&limit=5&select=nama,kategori,pihak,created_at`;
+                const res = await fetch(url, {
+                    headers: { "apikey": SB_RT_KEY, "Authorization": "Bearer " + SB_RT_KEY }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                renderArrivalList(data);
+            } catch(e) { console.warn('Arrival fetch error:', e); }
+        }
+
+        function initArrivalRealtime(ssId) {
+            arrivalSsId = ssId;
+            const statusEl = document.getElementById('arrival-realtime-status');
+
+            // Initial fetch
+            fetchArrivalList();
+
+            // Supabase Realtime
+            try {
+                if (window.supabase) {
+                    arrivalRealtimeClient = window.supabase.createClient(SB_RT_URL, SB_RT_KEY);
+                    arrivalRealtimeChannel = arrivalRealtimeClient
+                        .channel('analytics_arrival_channel')
+                        .on('postgres_changes', {
+                            event: 'INSERT',
+                            schema: 'public',
+                            table: 'welcome_queue',
+                            filter: `ssid=eq.${ssId}`
+                        }, (payload) => {
+                            console.log('Arrival Realtime INSERT:', payload.new);
+                            fetchArrivalList(); // Re-fetch top 5
+                        })
+                        .subscribe((status) => {
+                            if (statusEl) {
+                                if (status === 'SUBSCRIBED') {
+                                    statusEl.textContent = 'Realtime ●';
+                                    statusEl.className = 'text-[7px] font-bold text-green-500 uppercase tracking-wider';
+                                    // Slow polling backup
+                                    if (arrivalPollTimer) clearInterval(arrivalPollTimer);
+                                    arrivalPollTimer = setInterval(fetchArrivalList, 30000);
+                                } else {
+                                    statusEl.textContent = 'Polling';
+                                    statusEl.className = 'text-[7px] font-bold text-yellow-500 uppercase tracking-wider';
+                                    if (arrivalPollTimer) clearInterval(arrivalPollTimer);
+                                    arrivalPollTimer = setInterval(fetchArrivalList, 5000);
+                                }
+                            }
+                        });
+                } else {
+                    throw new Error('Supabase lib not loaded');
+                }
+            } catch(e) {
+                console.warn('Arrival realtime fallback polling:', e);
+                if (statusEl) { statusEl.textContent = 'Polling'; statusEl.className = 'text-[7px] font-bold text-yellow-500 uppercase tracking-wider'; }
+                if (arrivalPollTimer) clearInterval(arrivalPollTimer);
+                arrivalPollTimer = setInterval(fetchArrivalList, 5000);
+            }
+        }
+
         async function fetchData() {
             try {
                 const sessionStr = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
@@ -705,20 +1135,129 @@
                 const sessionData = JSON.parse(sessionStr);
                 const ssId = sessionData.ssId;
 
-                const response = await fetch(`${SCRIPT_URL}?action=getAnalytics&ssId=${ssId}`);
-                const d = await response.json();
-                globalData = d;
+                // Initialize welcome mirror iframe src (gunakan data-loaded flag, bukan .src check)
+                const mirrorIframe = document.getElementById('welcome-mirror-iframe');
+                if (mirrorIframe && !mirrorIframe.dataset.loaded) {
+                    mirrorIframe.dataset.loaded = '1';
+                    // Pass ssId + user agar subdomain_resolver.js di dalam iframe
+                    // menyimpan ke localStorage (shared same-origin) → welcome.html bisa baca ssId
+                    const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+                    const uname = sessionObj.username || sessionObj.subdomain || 'monitor';
+                    mirrorIframe.src = `welcome.html?mode=kiosk&ssId=${ssId}&user=${encodeURIComponent(uname)}`;
+                    mirrorIframe.onload = () => { resizeWelcomeMirror(); };
+                    setTimeout(resizeWelcomeMirror, 800);
+                }
 
-                document.getElementById('side-real').innerText = d.totalReal || 0;
-                document.getElementById('side-acc').innerText = (d.percentage || 0) + "%";
+                // Inisialisasi Realtime Arrival (hanya sekali)
+                if (!arrivalSsId) {
+                    initArrivalRealtime(ssId);
+                }
 
-                const cat = processMergedStats(d.catLabels, d.catValues);
-                const host = processMergedStats(d.hostLabels, d.hostValues);
-                const addr = processMergedStats(d.addrLabels, d.addrValues);
+                const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + ssId + "&order=row.desc";
+                const response = await fetch(supabaseUrl, {
+                    headers: {
+                        "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+                        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII"
+                    }
+                });
+                const sbData = await response.json();
+                
+                // Hitung analytics di frontend
+                let totalReal = 0;
+                let totalRSVP = 0;
+                let categories = {};
+                let hosts = {};
+                let addresses = {};
+                let flowRaw = [];
 
-                renderWithStabilo('list-cat', cat.l, cat.v, '#3b82f6');
-                renderWithStabilo('list-host', host.l, host.v, '#a855f7');
-                renderWithStabilo('list-addr', addr.l, addr.v, '#10b981');
+                let uniqueSessions = [...new Set((sbData || []).map(g => String(g.sesi || "").trim()))].filter(s => s !== "" && s !== "-");
+                uniqueSessions.sort();
+                
+                const s1Value = uniqueSessions[0] || "SESI 1";
+                const s2Value = uniqueSessions[1] || "SESI 2";
+                const s3Value = uniqueSessions[2] || "SESI 3";
+
+                function extractStartTime(sessionName) {
+                    const match = String(sessionName).match(/\d{1,2}[:.]\d{2}/);
+                    return match ? match[0].replace('.', ':') : "";
+                }
+
+                const s2StartStr = extractStartTime(s2Value) || "11:00";
+                const s3StartStr = extractStartTime(s3Value) || "13:00";
+
+                const s2Start = timeToMinutes(cleanTimeText(s2StartStr));
+                const s3Start = timeToMinutes(cleanTimeText(s3StartStr));
+
+                (sbData || []).forEach(item => {
+                    const valH = parseInt(item.rencana_hadir) || 0;
+                    const valN = parseInt(item.real_hadir) || 0;
+                    const isCheckedIn = String(item.status_hadir).trim();
+
+                    totalRSVP += valH;
+
+                    if (isCheckedIn === "1") {
+                        totalReal += valN;
+
+                        const catName = String(item.kategori || "UMUM").toUpperCase();
+                        const hostName = String(item.pihak_pengundang || "LAINNYA").toUpperCase();
+                        categories[catName] = (categories[catName] || 0) + valN;
+                        hosts[hostName] = (hosts[hostName] || 0) + valN;
+
+                        const rawAddr = String(item.alamat || "LUAR KOTA").toUpperCase();
+                        const simpleAddr = rawAddr.split(',')[0].split(' ').slice(0,2).join(' ');
+                        addresses[simpleAddr] = (addresses[simpleAddr] || 0) + valN;
+
+                        const formattedTime = cleanTimeText(item.jam_datang);
+                        const checkMin = timeToMinutes(formattedTime);
+
+                        let arrivalSesi = "SESI 3";
+                        if (checkMin < s2Start) {
+                            arrivalSesi = "SESI 1";
+                        } else if (checkMin >= s2Start && checkMin < s3Start) {
+                            arrivalSesi = "SESI 2";
+                        }
+
+                        let sesiAsalConverted = "TANPA SESI";
+                        const sesiRaw = String(item.sesi || "").trim();
+                        if (sesiRaw === s1Value) sesiAsalConverted = "SESI 1";
+                        else if (sesiRaw === s2Value) sesiAsalConverted = "SESI 2";
+                        else if (sesiRaw === s3Value) sesiAsalConverted = "SESI 3";
+
+                        const isIntruder = (sesiAsalConverted !== arrivalSesi && sesiAsalConverted !== "TANPA SESI");
+
+                        flowRaw.push({
+                            time: formattedTime,
+                            count: valN,
+                            sesi: sesiAsalConverted,
+                            arrivalSesi: arrivalSesi,
+                            isIntruder: isIntruder
+                        });
+                    }
+                });
+
+                globalData = {
+                    totalReal: totalReal,
+                    totalRSVP: totalRSVP,
+                    percentage: totalRSVP > 0 ? ((totalReal / totalRSVP) * 100).toFixed(1) : 0,
+                    catLabels: Object.keys(categories),
+                    catValues: Object.values(categories),
+                    hostLabels: Object.keys(hosts),
+                    hostValues: Object.values(hosts),
+                    addrLabels: Object.keys(addresses),
+                    addrValues: Object.values(addresses),
+                    flowRaw: flowRaw
+                };
+
+                document.getElementById('side-real').innerText = globalData.totalReal || 0;
+                document.getElementById('side-acc').innerText = (globalData.percentage || 0) + "%";
+
+                const cat = processMergedStats(globalData.catLabels, globalData.catValues);
+                const host = processMergedStats(globalData.hostLabels, globalData.hostValues);
+                const addr = processMergedStats(globalData.addrLabels, globalData.addrValues);
+
+                renderWithStabilo('list-cat', cat.l, cat.v, '#E07B7B');
+                renderWithStabilo('list-host', host.l, host.v, '#D4A5B8');
+                renderWithStabilo('list-addr', addr.l, addr.v, '#99B8A5');
 
                 const sesiContainer = document.getElementById('sesi-container');
                 const unik = ["SESI 1", "SESI 2", "SESI 3"];

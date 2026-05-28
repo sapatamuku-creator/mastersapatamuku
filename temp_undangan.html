@@ -320,9 +320,33 @@
             color: var(--gold);
         }
     </style>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 
 <body class="bg-pattern">
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid #F0E6DE; animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
+            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: #4A3F35; margin-bottom: 15px;">Pesan</h2>
+            <p id="notify-msg" style="font-size: 15px; color: #8C7560; line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
+            <button onclick="closeSapaModal()" style="width: 100%; padding: 15px; border-radius: 15px; border: none; font-size: 11px; font-weight: 900; letter-spacing: 2px; cursor: pointer; color: white; background: #4A3F35; box-shadow: 0 8px 20px rgba(74, 63, 53, 0.3);">MENGERTI</button>
+        </div>
+    </div>
+    <style>
+        @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+    <script>
+        window.showSapaModal = function(title, msg, icon = "✨") {
+            document.getElementById('notify-title').innerText = title;
+            document.getElementById('notify-msg').innerText = msg;
+            document.getElementById('notify-icon').innerText = icon;
+            document.getElementById('sapa-notify-modal').style.display = 'flex';
+        };
+        window.closeSapaModal = function() {
+            document.getElementById('sapa-notify-modal').style.display = 'none';
+        };
+    </script>
 
     <div id="copy-toast" class="copy-toast">Berhasil disalin ke Clipboard!</div>
 
@@ -806,7 +830,7 @@
             if (!name || !text) return;
 
             const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
-            if (!ssId) { alert("Sesi undangan tidak valid."); return; }
+            if (!ssId) { showSapaModal("Perhatian", "Sesi undangan tidak valid.", "⚠️"); return; }
 
             const btn = document.getElementById('btn-wish');
             btn.disabled = true;
