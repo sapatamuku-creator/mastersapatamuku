@@ -713,60 +713,81 @@
         document.getElementById('sapa-notify-modal').style.display = 'flex';
     };
 
-    // --- PACKAGE-BASED ACCESS CONTROL ---
-    const PACKAGE_RULES = {
-        // Halaman yang membutuhkan minimal paket Guestbook
-        guestbook: ['formulir_tamu.html','checkin.html','onsite.html','angpao.html','wa_blast.html','analytics.html','luckydraw.html'],
-        // Halaman yang membutuhkan minimal paket Collaboration
-        collaboration: ['worker.html'],
-        // Halaman yang tersedia untuk semua paket (termasuk E-Invitation)
-        all: ['undangan.html','config_invitation.html','katalog_undangan.html','upgrade.html','dashboard.html'],
-        // Halaman field (Silver+ dapat akses kiosk & welcome)
-        silver: ['kiosk.html','welcome.html']
+    // --- PACKAGE-BASED ACCESS CONTROL (TIER HIERARCHY) ---
+    // Tier: 0=unknown, 1=E-Inv Standard, 2=E-Inv Premium, 3=Bronze, 4=Silver, 5=Gold, 6=Collab(Exclusive/Deluxe)
+    const PACKAGE_TIER_MAP = {
+        'standard':                 1, 'e-invitation standard':     1, 'e-inv standard':           1,
+        'premium':                  2, 'e-invitation premium':      2, 'e-inv premium':            2,
+        'bronze':                   3, 'bronze guestbook':          3,
+        'silver':                   4, 'silver guestbook':          4,
+        'gold':                     5, 'gold guestbook':            5,
+        'exclusive':                6, 'exclusive collaboration':   6,
+        'deluxe':                   6, 'deluxe collaboration':      6,
+        'collaboration':            6, 'b2b':                       6
     };
 
-    function getClientPackage() {
+    // Minimum tier required per page
+    const PAGE_MIN_TIER = {
+        'undangan.html':            1,
+        'config_invitation.html':   1,
+        'katalog_undangan.html':    1,
+        'upgrade.html':             1,
+        'dashboard.html':           1,
+        'wa_blast.html':            2,   // E-Inv Premium+
+        'formulir_tamu.html':       2,   // E-Inv Premium+
+        'checkin.html':             3,   // Bronze+
+        'onsite.html':              3,
+        'angpao.html':              3,
+        'kiosk.html':               3,
+        'welcome.html':             4,   // Silver+
+        'config.html':              4,
+        'luckydraw.html':           4,
+        'worker.html':              4,
+        'analytics.html':           5,   // Gold+
+    };
+
+    function getClientTier() {
         try {
             const sess = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
-            return (sess.package || '').toLowerCase();
-        } catch(e) { return ''; }
+            const pkg = (sess.package || '').toLowerCase().trim();
+            if (!pkg) return 0; // No package info → no gating
+            // Try exact match first, then partial match
+            if (PACKAGE_TIER_MAP[pkg] !== undefined) return PACKAGE_TIER_MAP[pkg];
+            for (const key of Object.keys(PACKAGE_TIER_MAP)) {
+                if (pkg.includes(key) || key.includes(pkg)) return PACKAGE_TIER_MAP[key];
+            }
+            return 0;
+        } catch(e) { return 0; }
     }
 
     function canAccessPage(page) {
-        const pkg = getClientPackage();
+        const tier = getClientTier();
+        if (tier === 0) return true; // No package info → allow (backward compat)
         const pageBase = page.split('?')[0];
-        // Kalau tidak ada package info di session → izinkan (backward compat)
-        if (!pkg) return true;
-        // Semua paket bisa akses halaman universal
-        if (PACKAGE_RULES.all.includes(pageBase)) return true;
-        // Collaboration check
-        if (PACKAGE_RULES.collaboration.includes(pageBase)) {
-            return pkg.includes('collaboration') || pkg.includes('b2b');
-        }
-        // Silver+ untuk kiosk & welcome
-        if (PACKAGE_RULES.silver.includes(pageBase)) {
-            return pkg.includes('silver') || pkg.includes('gold') || pkg.includes('collaboration') || pkg.includes('b2b');
-        }
-        // Guestbook-level pages
-        if (PACKAGE_RULES.guestbook.includes(pageBase)) {
-            return pkg.includes('guestbook') || pkg.includes('collaboration') || pkg.includes('b2b');
-        }
-        // Default: izinkan (termasuk config.html dll)
-        return true;
+        const minTier = PAGE_MIN_TIER[pageBase];
+        if (minTier === undefined) return true; // Page not in map → allow
+        return tier >= minTier;
+    }
+
+    function getPageTierName(minTier) {
+        const names = {1:'E-Invitation Standard', 2:'E-Invitation Premium', 3:'Bronze Guestbook', 4:'Silver Guestbook', 5:'Gold Guestbook', 6:'Collaboration'};
+        return names[minTier] || 'paket yang lebih tinggi';
     }
 
     function applyPackageDimming() {
-        const pkg = getClientPackage();
-        if (!pkg) return; // Tidak ada info paket → tidak di-dim
+        const tier = getClientTier();
+        if (tier === 0) return;
         document.querySelectorAll('.nav-item[onclick]').forEach(item => {
             const onclickVal = item.getAttribute('onclick') || '';
             const match = onclickVal.match(/nav\('([^']+)'\)/);
             if (match) {
-                const targetPage = match[1];
-                if (!canAccessPage(targetPage)) {
+                const targetPage = match[1].split('?')[0];
+                const minTier = PAGE_MIN_TIER[targetPage];
+                if (minTier !== undefined && tier < minTier) {
                     item.style.opacity = '0.4';
                     item.style.filter = 'grayscale(1)';
-                    item.title = 'Tidak tersedia untuk paket Anda. Upgrade untuk membuka akses.';
+                    item.style.cursor = 'not-allowed';
+                    item.title = `Membutuhkan paket ${getPageTierName(minTier)} atau lebih tinggi.`;
                 }
             }
         });
@@ -778,7 +799,9 @@
             return;
         }
         if (!canAccessPage(target)) {
-            showSapaModal("Akses Terbatas", "Halaman ini membutuhkan paket yang lebih tinggi.\n\nUpgrade paket Anda melalui menu 'Upgrade Paket' untuk membuka akses ke fitur ini.", "🔒");
+            const pageBase = target.split('?')[0];
+            const minTier = PAGE_MIN_TIER[pageBase] || 0;
+            showSapaModal("Akses Terbatas 🔒", `Halaman ini membutuhkan paket ${getPageTierName(minTier)} atau lebih tinggi.\n\nGunakan menu "Upgrade Paket" untuk meningkatkan layanan Anda.`, "🔒");
             return;
         }
         window.location.href = target;

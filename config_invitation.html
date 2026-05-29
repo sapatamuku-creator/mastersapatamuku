@@ -355,31 +355,12 @@
                     </select>
                     <input type="text" id="gallery_header" class="stk-input" placeholder="Header (Our Gallery)" oninput="updatePreview()">
                 </div>
-                <div class="grid grid-cols-2 gap-3 mb-10">
-                    <div class="flex gap-1">
-                        <input type="text" id="gal_1" class="stk-input text-[10px] p-2" placeholder="URL Photo 1">
-                        <button onclick="pickFile('gal_1')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <input type="text" id="gal_2" class="stk-input text-[10px] p-2" placeholder="URL Photo 2">
-                        <button onclick="pickFile('gal_2')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <input type="text" id="gal_3" class="stk-input text-[10px] p-2" placeholder="URL Photo 3">
-                        <button onclick="pickFile('gal_3')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <input type="text" id="gal_4" class="stk-input text-[10px] p-2" placeholder="URL Photo 4">
-                        <button onclick="pickFile('gal_4')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <input type="text" id="gal_5" class="stk-input text-[10px] p-2" placeholder="URL Photo 5">
-                        <button onclick="pickFile('gal_5')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <input type="text" id="gal_6" class="stk-input text-[10px] p-2" placeholder="URL Photo 6">
-                        <button onclick="pickFile('gal_6')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
-                    </div>
+                <div class="grid grid-cols-2 gap-3 mb-2" id="gallery-container">
+                    <!-- Dynamic Gallery Fields -->
+                </div>
+                <div class="mb-10 text-center">
+                    <button id="btn-add-gallery" onclick="addGallerySlot()" class="px-4 py-2 bg-violet-100 text-violet-700 font-bold text-[10px] rounded-xl hover:bg-violet-200 transition-all">➕ TAMBAH FOTO GALERI</button>
+                    <p id="gallery-limit-text" class="text-[9px] text-neutral-400 mt-2 hidden">Batas maksimum foto untuk paket Standard adalah 6. <a href="upgrade.html" class="text-primary font-bold">Upgrade ke Premium</a> untuk upload unlimited.</p>
                 </div>
 
                 <div class="section-title">Wishes & Prayers</div>
@@ -416,6 +397,55 @@
     <script>
         let currentTheme = "classic";
         let targetInputId = ""; // Untuk menampung input mana yang sedang diupload
+        let galleryCount = 0;
+
+        const PACKAGE_TIER_MAP = {
+            'standard': 1, 'e-invitation standard': 1, 'e-inv standard': 1,
+            'premium': 2,  'e-invitation premium': 2,  'e-inv premium': 2,
+            'bronze': 3,   'bronze guestbook': 3,
+            'silver': 4,   'silver guestbook': 4,
+            'gold': 5,     'gold guestbook': 5,
+            'exclusive': 6, 'exclusive collaboration': 6,
+            'deluxe': 6,   'deluxe collaboration': 6,
+            'collaboration': 6, 'b2b': 6
+        };
+
+        function getClientTier() {
+            try {
+                const sess = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
+                const pkg = (sess.package || '').toLowerCase().trim();
+                if (!pkg) return 0;
+                if (PACKAGE_TIER_MAP[pkg] !== undefined) return PACKAGE_TIER_MAP[pkg];
+                for (const key of Object.keys(PACKAGE_TIER_MAP)) {
+                    if (pkg.includes(key) || key.includes(pkg)) return PACKAGE_TIER_MAP[key];
+                }
+                return 0;
+            } catch(e) { return 0; }
+        }
+
+        function addGallerySlot(val = "") {
+            const tier = getClientTier();
+            if (tier === 1 && galleryCount >= 6) {
+                document.getElementById('btn-add-gallery').classList.add('hidden');
+                document.getElementById('gallery-limit-text').classList.remove('hidden');
+                return;
+            }
+            
+            galleryCount++;
+            const container = document.getElementById('gallery-container');
+            const div = document.createElement('div');
+            div.className = "flex gap-1";
+            div.innerHTML = `
+                <input type="text" id="gal_${galleryCount}" class="stk-input text-[10px] p-2" placeholder="URL Photo ${galleryCount}" value="${val}" oninput="updatePreview()">
+                <button onclick="pickFile('gal_${galleryCount}')" class="p-2 bg-neutral-100 rounded-lg">📸</button>
+            `;
+            container.appendChild(div);
+            
+            if (tier === 1 && galleryCount >= 6) {
+                document.getElementById('btn-add-gallery').classList.add('hidden');
+                document.getElementById('gallery-limit-text').classList.remove('hidden');
+            }
+        }
 
         window.showSapaModal = function(title, msg, icon = "✨") {
             document.getElementById('notify-title').innerText = title;
@@ -666,9 +696,15 @@
                     document.getElementById('show_gallery').value = inv.show_gallery !== undefined ? inv.show_gallery : "true";
                     document.getElementById('gallery_header').value = inv.gallery_header || "";
                     document.getElementById('show_wishes').value = inv.show_wishes !== undefined ? inv.show_wishes : "true";
-                    document.getElementById('wishes_header').value = inv.wishes_header || "";                    const gal = inv.gallery || [];
-                    for(let i=1; i<=6; i++) {
-                        document.getElementById('gal_'+i).value = gal[i-1] || "";
+                    document.getElementById('wishes_header').value = inv.wishes_header || "";
+                    
+                    const gal = inv.gallery || [];
+                    document.getElementById('gallery-container').innerHTML = '';
+                    galleryCount = 0;
+                    if (gal.length > 0) {
+                        gal.forEach(url => addGallerySlot(url));
+                    } else {
+                        for(let i=0; i<6; i++) addGallerySlot("");
                     }
                     
                     if (s.theme) selectTheme(s.theme);
@@ -751,11 +787,10 @@
                     { bank: document.getElementById('gift3_bank').value, acc: document.getElementById('gift3_acc').value, owner: document.getElementById('gift3_owner').value }
                 ],
                 greeting: document.getElementById('inv_greeting').value,
-                gallery: [
-                    document.getElementById('gal_1').value, document.getElementById('gal_2').value,
-                    document.getElementById('gal_3').value, document.getElementById('gal_4').value,
-                    document.getElementById('gal_5').value, document.getElementById('gal_6').value
-                ]
+                gallery: Array.from({length: galleryCount}, (_, i) => {
+                    const el = document.getElementById(`gal_${i+1}`);
+                    return el ? el.value : "";
+                }).filter(v => v)
             };
 
             try {
