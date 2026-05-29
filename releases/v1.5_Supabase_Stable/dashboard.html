@@ -697,18 +697,24 @@
         });
     };
 
-    window.showConfirm = function(title, msg, icon = "🚀") {
+    window.showConfirm = function(title, msg, icon = "🚀", okText = "LANJUTKAN", cancelText = "BATAL") {
         return new Promise(resolve => {
             document.getElementById('st-modal-icon').innerText = icon;
             document.getElementById('st-modal-title').innerText = title;
             document.getElementById('st-modal-msg').innerText = msg;
-            document.getElementById('modal-cancel-btn').style.display = 'block';
-            document.getElementById('modal-ok-btn').innerText = "LANJUTKAN";
-            document.getElementById('modal-ok-btn').onclick = () => {
+            
+            const cancelBtn = document.getElementById('modal-cancel-btn');
+            cancelBtn.style.display = 'block';
+            cancelBtn.innerText = cancelText;
+            
+            const okBtn = document.getElementById('modal-ok-btn');
+            okBtn.innerText = okText;
+            
+            okBtn.onclick = () => {
                 document.getElementById('st-modal').style.display = 'none';
                 resolve(true);
             };
-            document.getElementById('modal-cancel-btn').onclick = () => {
+            cancelBtn.onclick = () => {
                 document.getElementById('st-modal').style.display = 'none';
                 resolve(false);
             };
@@ -830,13 +836,22 @@
         });
     }
 
-    function nav(target) {
+    async function nav(target) {
         if (!window.CURRENT_SS_ID && target !== 'undangan.html') {
-            showSapaModal("Sesi Berakhir", "Silakan Login terlebih dahulu untuk mengakses menu ini.");
+            document.getElementById('sapa-notify-modal').style.display = 'flex';
             return;
         }
         if (!canAccessPage(target)) {
-            showSapaModal("Akses Terbatas 🔒", `Untuk mengakses fitur ini silahkan untuk upgrade paket terlebih dahulu.`, "🔒");
+            const goUpgrade = await showConfirm(
+                "Akses Terbatas 🔒", 
+                "Untuk mengakses fitur ini silahkan untuk upgrade paket terlebih dahulu.", 
+                "🔒", 
+                "UPGRADE SEKARANG", 
+                "TUTUP"
+            );
+            if (goUpgrade) {
+                window.location.href = "upgrade.html";
+            }
             return;
         }
         window.location.href = target;
