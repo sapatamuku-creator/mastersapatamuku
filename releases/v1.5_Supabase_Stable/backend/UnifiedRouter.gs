@@ -64,6 +64,7 @@ function doPost(e) {
       case 'registerAndActivate':
       case 'getOwnerClients':
       case 'updateOwnerClient':
+      case 'deleteOwnerClient':
       case 'syncFromSupabase':
       case 'upgradePackage':
       case 'checkSlot':

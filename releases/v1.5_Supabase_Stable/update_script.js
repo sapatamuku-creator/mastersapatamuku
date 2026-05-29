@@ -253,7 +253,7 @@ if (!cb.includes('function handleSyncFromSupabase')) {
 
 let ur = fs.readFileSync('backend/UnifiedRouter.gs', 'utf8');
 if (!ur.includes("case 'syncFromSupabase':")) {
-  ur = ur.replace(/case 'updateOwnerClient':/g, "case 'updateOwnerClient':\n      case 'syncFromSupabase':");
+  ur = ur.replace(/case 'updateOwnerClient':/g, "case 'updateOwnerClient':\n      case 'deleteOwnerClient':\n      case 'syncFromSupabase':");
   fs.writeFileSync('backend/UnifiedRouter.gs', ur);
 }
 cb = fs.readFileSync('backend/CentralBackend.gs', 'utf8');
