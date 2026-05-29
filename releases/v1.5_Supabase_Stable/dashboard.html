@@ -576,6 +576,32 @@
     </style>
 
 <script>
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+
+    async function syncClientData(username) {
+        try {
+            const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?username=eq.${username}&limit=1`, {
+                headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+            });
+            const rows = await response.json();
+            if (rows && rows.length > 0) {
+                const pkg = rows[0].package;
+                if (pkg) {
+                    let localData = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
+                    localData.package = pkg;
+                    localStorage.setItem('sapatamu_db', JSON.stringify(localData));
+                    sessionStorage.setItem('sapatamu_session', JSON.stringify(localData));
+                    
+                    const pkgEl = document.getElementById('display_active_package');
+                    if(pkgEl) pkgEl.innerText = pkg;
+                    
+                    applyPackageDimming();
+                }
+            }
+        } catch (e) { console.warn("Silent sync failed", e); }
+    }
+
     function syncNavbar() {
         const ssId = window.CURRENT_SS_ID || "";
         const links = document.querySelectorAll('.nav-link');
@@ -637,6 +663,9 @@
             initHub();
             initNavScroll();
             applyPackageDimming();
+            
+            // Sync live package data
+            syncClientData(name);
         } else {
             setTimeout(checkResolved, 100);
         }
