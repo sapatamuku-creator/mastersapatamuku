@@ -486,7 +486,8 @@
                     ssId: sbData.ssId, 
                     username: sbData.username, 
                     subdomain: sub,
-                    role: sbData.role || 'client'
+                    role: sbData.role || 'client',
+                    package: sbData.package || ''
                 };
                 localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
                 sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
@@ -522,7 +523,8 @@
                     ssId: res.data.ssId, 
                     username: res.data.username, 
                     subdomain: sub,
-                    role: res.data.role || 'client'
+                    role: res.data.role || 'client',
+                    package: res.data.package || ''
                 };
                 localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
                 sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
@@ -549,13 +551,18 @@
         try {
             const response = await fetch(SCRIPT_URL, {
                 method: "POST",
-                body: JSON.stringify({ action: "forgotPassword", username: user, contact: contact })
+                body: JSON.stringify({ 
+                    action: "forgotPassword", 
+                    username: user, 
+                    contact: contact,
+                    baseUrl: window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))
+                })
             });
             const res = await response.json();
             showSapaModal("Hasil", res.message, (res.status === "success" ? "✅" : "❌"));
             if(res.status === "success") toggleForm('loginForm');
         } catch (e) { 
-            showSapaModal("Error", "Masalah koneksi ke server.", "⚠️"); 
+            showSapaModal("Error", "Masalah koneksi ke server.", "⚠️ "); 
         }
         setLoading('btn_forgot', false);
     };

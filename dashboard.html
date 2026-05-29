@@ -634,6 +634,7 @@
 
             initHub();
             initNavScroll();
+            applyPackageDimming();
         } else {
             setTimeout(checkResolved, 100);
         }
@@ -712,9 +713,72 @@
         document.getElementById('sapa-notify-modal').style.display = 'flex';
     };
 
+    // --- PACKAGE-BASED ACCESS CONTROL ---
+    const PACKAGE_RULES = {
+        // Halaman yang membutuhkan minimal paket Guestbook
+        guestbook: ['formulir_tamu.html','checkin.html','onsite.html','angpao.html','wa_blast.html','analytics.html','luckydraw.html'],
+        // Halaman yang membutuhkan minimal paket Collaboration
+        collaboration: ['worker.html'],
+        // Halaman yang tersedia untuk semua paket (termasuk E-Invitation)
+        all: ['undangan.html','config_invitation.html','katalog_undangan.html','upgrade.html','dashboard.html'],
+        // Halaman field (Silver+ dapat akses kiosk & welcome)
+        silver: ['kiosk.html','welcome.html']
+    };
+
+    function getClientPackage() {
+        try {
+            const sess = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
+            return (sess.package || '').toLowerCase();
+        } catch(e) { return ''; }
+    }
+
+    function canAccessPage(page) {
+        const pkg = getClientPackage();
+        const pageBase = page.split('?')[0];
+        // Kalau tidak ada package info di session → izinkan (backward compat)
+        if (!pkg) return true;
+        // Semua paket bisa akses halaman universal
+        if (PACKAGE_RULES.all.includes(pageBase)) return true;
+        // Collaboration check
+        if (PACKAGE_RULES.collaboration.includes(pageBase)) {
+            return pkg.includes('collaboration') || pkg.includes('b2b');
+        }
+        // Silver+ untuk kiosk & welcome
+        if (PACKAGE_RULES.silver.includes(pageBase)) {
+            return pkg.includes('silver') || pkg.includes('gold') || pkg.includes('collaboration') || pkg.includes('b2b');
+        }
+        // Guestbook-level pages
+        if (PACKAGE_RULES.guestbook.includes(pageBase)) {
+            return pkg.includes('guestbook') || pkg.includes('collaboration') || pkg.includes('b2b');
+        }
+        // Default: izinkan (termasuk config.html dll)
+        return true;
+    }
+
+    function applyPackageDimming() {
+        const pkg = getClientPackage();
+        if (!pkg) return; // Tidak ada info paket → tidak di-dim
+        document.querySelectorAll('.nav-item[onclick]').forEach(item => {
+            const onclickVal = item.getAttribute('onclick') || '';
+            const match = onclickVal.match(/nav\('([^']+)'\)/);
+            if (match) {
+                const targetPage = match[1];
+                if (!canAccessPage(targetPage)) {
+                    item.style.opacity = '0.4';
+                    item.style.filter = 'grayscale(1)';
+                    item.title = 'Tidak tersedia untuk paket Anda. Upgrade untuk membuka akses.';
+                }
+            }
+        });
+    }
+
     function nav(target) {
         if (!window.CURRENT_SS_ID && target !== 'undangan.html') {
             showSapaModal("Sesi Berakhir", "Silakan Login terlebih dahulu untuk mengakses menu ini.");
+            return;
+        }
+        if (!canAccessPage(target)) {
+            showSapaModal("Akses Terbatas", "Halaman ini membutuhkan paket yang lebih tinggi.\n\nUpgrade paket Anda melalui menu 'Upgrade Paket' untuk membuka akses ke fitur ini.", "🔒");
             return;
         }
         window.location.href = target;

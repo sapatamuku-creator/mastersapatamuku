@@ -305,6 +305,22 @@
         
         document.getElementById('slot-checker-date').innerText = displayWeddingDate !== "Belum Ditentukan" ? displayWeddingDate : "-";
 
+        // RBAC Guard: usher tidak boleh melakukan pembayaran upgrade
+        try {
+            const sess = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+            if (sess.role === 'usher') {
+                const btn = document.getElementById('btn_upgrade_pay');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.title = 'Hanya pemilik akun (client) yang dapat melakukan upgrade.';
+                }
+                const widget = document.getElementById('slot-checker-widget');
+                if (widget) {
+                    widget.insertAdjacentHTML('beforeend', '<div style="margin-top:8px; font-size:10px; font-weight:700; color:#E07B7B;">🔒 Fitur upgrade hanya tersedia untuk pemilik akun.</div>');
+                }
+            }
+        } catch(e) {}
+
         // Cek ketersediaan untuk paket terpilih (default: Silver Guestbook)
         triggerSlotCheck();
     }
