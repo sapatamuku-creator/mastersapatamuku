@@ -372,6 +372,7 @@
 <div class="main-wrapper">
     <header>
         <h1 class="brand-title" id="display_wedding_name">SapaTamu.Ku</h1>
+        <div id="display_active_package" style="text-align:center; font-size:11px; font-weight:700; color:var(--primary); background:rgba(224,123,123,0.1); padding:4px 14px; border-radius:20px; display:inline-block; margin: 5px auto 15px; text-transform:uppercase; letter-spacing:1px; border: 1px solid rgba(224,123,123,0.2);">PAKET BELUM DIPILIH</div>
         <div class="tagline-box">
             <p class="tagline-main" id="display_category_label">All in One Digital Guestbook Management</p>
             <p class="tagline-sub lang-html" id="dynamic-tagline" 
@@ -623,6 +624,7 @@
             const name = parsed.username || "Client";
             
             document.getElementById('display_wedding_name').innerText = name;
+            document.getElementById('display_active_package').innerText = parsed.package || "PAKET BELUM DIPILIH";
             const labels = {
                 wedding: "Wedding Guestbook Management",
                 birthday: "Birthday Event Management",
@@ -784,10 +786,16 @@
                 const targetPage = match[1].split('?')[0];
                 const minTier = PAGE_MIN_TIER[targetPage];
                 if (minTier !== undefined && tier < minTier) {
-                    item.style.opacity = '0.4';
+                    item.style.opacity = '0.5';
                     item.style.filter = 'grayscale(1)';
-                    item.style.cursor = 'not-allowed';
-                    item.title = `Membutuhkan paket ${getPageTierName(minTier)} atau lebih tinggi.`;
+                    item.style.cursor = 'pointer';
+                    item.title = `Untuk mengakses fitur ini silahkan untuk upgrade paket terlebih dahulu.`;
+                    
+                    const glassBox = item.querySelector('.glass-box');
+                    if (glassBox) {
+                        glassBox.style.position = 'relative';
+                        glassBox.innerHTML += '<div style="position:absolute; inset:0; background:rgba(255,255,255,0.7); border-radius:inherit; display:flex; justify-content:center; align-items:center; z-index:10;"><span style="font-size:24px;">🔒</span></div>';
+                    }
                 }
             }
         });
@@ -799,9 +807,7 @@
             return;
         }
         if (!canAccessPage(target)) {
-            const pageBase = target.split('?')[0];
-            const minTier = PAGE_MIN_TIER[pageBase] || 0;
-            showSapaModal("Akses Terbatas 🔒", `Halaman ini membutuhkan paket ${getPageTierName(minTier)} atau lebih tinggi.\n\nGunakan menu "Upgrade Paket" untuk meningkatkan layanan Anda.`, "🔒");
+            showSapaModal("Akses Terbatas 🔒", `Untuk mengakses fitur ini silahkan untuk upgrade paket terlebih dahulu.`, "🔒");
             return;
         }
         window.location.href = target;
