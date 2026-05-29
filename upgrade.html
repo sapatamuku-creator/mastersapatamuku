@@ -283,13 +283,27 @@
         }
     }
 
+    function formatIndonesianDate(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d)) return dateStr;
+        const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+        const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+        return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
     function renderProfile() {
+        let displayWeddingDate = currentUserData.wedding_date || "Belum Ditentukan";
+        if (displayWeddingDate && typeof displayWeddingDate === 'string' && displayWeddingDate.includes("GMT")) {
+            displayWeddingDate = formatIndonesianDate(displayWeddingDate);
+        }
+
         document.getElementById('info-nama').innerText = currentUserData.client_name || currentUserData.username;
         document.getElementById('info-subdomain').innerText = currentUserData.subdomain;
-        document.getElementById('info-tanggal').innerText = currentUserData.wedding_date || "Belum Ditentukan";
+        document.getElementById('info-tanggal').innerText = displayWeddingDate;
         document.getElementById('info-paket').innerText = currentUserData.package || "Belum ada paket";
         
-        document.getElementById('slot-checker-date').innerText = currentUserData.wedding_date || "-";
+        document.getElementById('slot-checker-date').innerText = displayWeddingDate !== "Belum Ditentukan" ? displayWeddingDate : "-";
 
         // Cek ketersediaan untuk paket terpilih (default: Silver Guestbook)
         triggerSlotCheck();
