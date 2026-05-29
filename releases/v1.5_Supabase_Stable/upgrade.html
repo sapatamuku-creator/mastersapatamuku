@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -376,7 +376,13 @@
             }
         } catch(e) {}
 
-        triggerSlotCheck();
+        // Auto select 1 tier above current
+        let targetCat = 'einv';
+        if (currentPackageTier === 1 || currentPackageTier === 2) targetCat = 'guestbook';
+        else if (currentPackageTier === 3 || currentPackageTier === 4) targetCat = 'guestbook';
+        else if (currentPackageTier >= 5) targetCat = 'allin';
+        
+        filterPricingCategory(targetCat, true);
     }
 
     function applyUpgradeDimming() {
@@ -423,25 +429,32 @@
         const group = document.querySelector('.pricing-group.' + cat);
         if (group) { group.classList.remove('hidden'); group.classList.add('block'); }
 
-        // Default selection per category
-        const defaults = {
-            einv: ['E-Invitation Standard', 500000],
-            guestbook: ['Silver Guestbook', 3500000],
-            allin: ['Exclusive Collaboration', 7500000]
-        };
-        if (defaults[cat]) selectPricing(...defaults[cat]);
+        let defaultPkg = null;
+        if (cat === 'einv') {
+            defaultPkg = currentPackageTier >= 1 ? ['E-Invitation Premium', 1200000] : ['E-Invitation Standard', 500000];
+        } else if (cat === 'guestbook') {
+            if (currentPackageTier <= 2) defaultPkg = ['Bronze Guestbook', 2500000];
+            else if (currentPackageTier === 3) defaultPkg = ['Silver Guestbook', 3500000];
+            else defaultPkg = ['Gold Guestbook', 4500000];
+        } else if (cat === 'allin') {
+            defaultPkg = currentPackageTier <= 5 ? ['Exclusive Collaboration', 7500000] : ['Deluxe Collaboration', 10500000];
+        }
+
+        if (defaultPkg) selectPricing(defaultPkg[0], defaultPkg[1], arguments[1]);
         triggerSlotCheck();
     };
 
-    window.selectPricing = function(name, price) {
+    window.selectPricing = function(name, price, isAuto = false) {
         const tier = getPackageTier(name);
         // Cegah downgrade
         if (tier <= currentPackageTier) {
-            showSapaModal("Tidak Dapat Dipilih",
-                tier === currentPackageTier
-                    ? `Paket "${name}" adalah paket Anda saat ini.`
-                    : `Anda tidak dapat downgrade ke paket "${name}". Silakan pilih paket yang lebih tinggi.`,
-                "⚠️");
+            if (!isAuto) {
+                showSapaModal("Tidak Dapat Dipilih",
+                    tier === currentPackageTier
+                        ? `Paket "${name}" adalah paket Anda saat ini.`
+                        : `Anda tidak dapat downgrade ke paket "${name}". Silakan pilih paket yang lebih tinggi.`,
+                    "⚠️");
+            }
             return;
         }
 
