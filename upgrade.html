@@ -276,7 +276,7 @@
         'silver': 4,   'silver guestbook': 4,
         'gold': 5,     'gold guestbook': 5,
         'exclusive': 6, 'exclusive collaboration': 6,
-        'deluxe': 6,   'deluxe collaboration': 6,
+        'deluxe': 7,   'deluxe collaboration': 7,
         'collaboration': 6, 'b2b': 6
     };
 
@@ -446,6 +446,9 @@
 
     window.selectPricing = function(name, price, isAuto = false) {
         const tier = getPackageTier(name);
+        const btnPay = document.getElementById('btn_upgrade_pay');
+        const textEl = document.getElementById('text_upgrade_pay');
+
         // Cegah downgrade
         if (tier <= currentPackageTier) {
             if (!isAuto) {
@@ -454,9 +457,16 @@
                         ? `Paket "${name}" adalah paket Anda saat ini.`
                         : `Anda tidak dapat downgrade ke paket "${name}". Silakan pilih paket yang lebih tinggi.`,
                     "⚠️");
+            } else {
+                // Auto select gagal karena sudah top tier di kategori ini
+                document.getElementById('final_package_name').value = '';
+                if (btnPay) btnPay.disabled = true;
+                if (textEl) textEl.innerText = 'Paket Maksimal';
             }
             return;
         }
+
+        if (btnPay) btnPay.disabled = false;
 
         document.querySelectorAll('.pricing-card').forEach(c => c.classList.remove('selected'));
         document.querySelectorAll('.pricing-card').forEach(card => {
