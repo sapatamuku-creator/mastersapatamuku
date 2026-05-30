@@ -103,6 +103,33 @@
             box-shadow: var(--shadow-md);
             min-height: 500px;
         }
+
+        /* MODAL AVATAR */
+        .avatar-modal-overlay {
+            position: fixed; inset: 0; background: rgba(74, 63, 53, 0.5); backdrop-filter: blur(5px);
+            display: none; align-items: center; justify-content: center; z-index: 100000;
+        }
+        .avatar-modal {
+            background: #fff; width: 90%; max-width: 500px; border-radius: 24px; padding: 30px;
+            box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); animation: pop 0.3s ease; position: relative;
+        }
+        @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .avatar-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px;
+            max-height: 300px; overflow-y: auto;
+        }
+        .avatar-item {
+            aspect-ratio: 1; border-radius: 12px; cursor: pointer; border: 2px solid transparent;
+            overflow: hidden; transition: 0.2s; position: relative;
+        }
+        .avatar-item img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-item:hover { transform: scale(1.05); }
+        .avatar-item.selected { border-color: var(--primary); box-shadow: 0 4px 12px rgba(224, 123, 123, 0.3); }
+        .avatar-item.selected::after {
+            content: "✓"; position: absolute; top: 5px; right: 5px; background: var(--primary);
+            color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px;
+            display: flex; align-items: center; justify-content: center;
+        }
         .tab-content { display: none; animation: fadeIn 0.4s ease; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -148,7 +175,15 @@
 <div class="profile-wrapper">
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="user-avatar-lg" id="sidebar-avatar">S</div>
+        <div style="position:relative; width:fit-content; margin: 0 auto;">
+            <div class="user-avatar-lg" id="sidebar-avatar-container" style="position:relative; overflow:hidden;">
+                <span id="sidebar-avatar">S</span>
+                <img id="sidebar-avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover;">
+            </div>
+            <div onclick="openAvatarModal()" style="position:absolute; bottom:15px; right:-5px; background:white; width:28px; height:28px; border-radius:50%; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center; cursor:pointer; border:1px solid #eee;">
+                <img src="https://img.icons8.com/ios-filled/50/E07B7B/camera.png" style="width:14px;">
+            </div>
+        </div>
         <div class="user-name" id="sidebar-name">SapaTamu Client</div>
         <div style="text-align: center;"><div class="user-tier" id="sidebar-tier">PAKET BELUM DIPILIH</div></div>
 
@@ -265,6 +300,26 @@
     </main>
 </div>
 
+<!-- Avatar Modal -->
+<div id="avatarModal" class="avatar-modal-overlay">
+    <div class="avatar-modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="font-family:'Lora',serif; font-size:18px; font-weight:700; color:var(--text-main);">Pilih Foto Profil</h3>
+            <span onclick="closeAvatarModal()" style="cursor:pointer; font-size:20px; color:#aaa;">&times;</span>
+        </div>
+        <p style="font-size:12px; color:var(--text-muted); margin-top:5px;">Pilih salah satu foto yang pernah Anda unggah di konfigurasi Layar Sapa.</p>
+        
+        <div id="avatar-grid" class="avatar-grid">
+            <div style="grid-column: span 3; text-align:center; padding: 20px; font-size:12px; color:#aaa;">Memuat foto...</div>
+        </div>
+        
+        <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn-action btn-outline" onclick="closeAvatarModal()">Batal</button>
+            <button class="btn-action btn-primary" onclick="saveAvatarSelection()" id="btn-save-avatar" disabled>Simpan Foto</button>
+        </div>
+    </div>
+</div>
+
 <script>
     function switchTab(tabId, el) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -310,12 +365,116 @@
 
     function renderProfileData(uname, pkg) {
         document.getElementById('sidebar-name').innerText = uname;
-        document.getElementById('sidebar-avatar').innerText = uname.charAt(0).toUpperCase();
         document.getElementById('sidebar-tier').innerText = pkg || "PAKET BELUM DIPILIH";
+        
+        const avatarLetter = document.getElementById('sidebar-avatar');
+        const avatarImg = document.getElementById('sidebar-avatar-img');
+        
+        const savedAvatar = localStorage.getItem('sapatamu_avatar');
+        if (savedAvatar) {
+            avatarLetter.style.display = 'none';
+            avatarImg.src = savedAvatar;
+            avatarImg.style.display = 'block';
+        } else {
+            avatarLetter.innerText = uname.charAt(0).toUpperCase();
+            avatarLetter.style.display = 'flex';
+            avatarImg.style.display = 'none';
+        }
         
         document.getElementById('inp-username').value = uname;
         const sub = uname.toLowerCase().replace(/\s+/g, '');
         document.getElementById('inp-subdomain').value = "https://" + sub + ".sapatamu.id";
+        
+        // Auto-fetch settings silently in background to populate avatar if none chosen
+        setTimeout(fetchSettingsSilently, 1000);
+    }
+    
+    // --- AVATAR LOGIC ---
+    let welcomePhotos = [];
+    let selectedAvatarUrl = null;
+
+    async function fetchSettingsSilently() {
+        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db')||'{}').ssId);
+        if (!ssId) return;
+        try {
+            const url = (window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec") + "?action=getSettings&ssId=" + ssId;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.status === "success" && data.data && data.data.urlFoto) {
+                welcomePhotos = data.data.urlFoto.split(",").filter(u => u.trim());
+                
+                // If user doesn't have an avatar yet, auto-set to the first picture
+                if (!localStorage.getItem('sapatamu_avatar') && welcomePhotos.length > 0) {
+                    let previewUrl = welcomePhotos[0].trim();
+                    const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+                    const match = previewUrl.match(driveRegex);
+                    if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file"))) {
+                        previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
+                    }
+                    localStorage.setItem('sapatamu_avatar', previewUrl);
+                    renderProfileData(document.getElementById('sidebar-name').innerText, document.getElementById('sidebar-tier').innerText);
+                }
+            }
+        } catch (e) {}
+    }
+
+    async function openAvatarModal() {
+        document.getElementById('avatarModal').style.display = 'flex';
+        const grid = document.getElementById('avatar-grid');
+        
+        if (welcomePhotos.length === 0) {
+            grid.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; font-size:12px; color:#aaa;">Memuat foto... atau Anda belum mengunggah foto di Layar Sapa.</div>';
+            const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db')||'{}').ssId);
+            if(ssId) {
+                const url = (window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec") + "?action=getSettings&ssId=" + ssId;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.status === "success" && data.data && data.data.urlFoto) {
+                    welcomePhotos = data.data.urlFoto.split(",").filter(u => u.trim());
+                }
+            }
+        }
+        
+        if (welcomePhotos.length === 0) {
+            grid.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; font-size:12px; color:#aaa;">Belum ada foto. Silakan unggah di menu Konfigurasi Layar Sapa terlebih dahulu.</div>';
+            return;
+        }
+        
+        grid.innerHTML = welcomePhotos.map((url, idx) => {
+            let previewUrl = url.trim();
+            const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+            const match = previewUrl.match(driveRegex);
+            if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file"))) {
+                previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
+            }
+            
+            const isSelected = localStorage.getItem('sapatamu_avatar') === previewUrl ? 'selected' : '';
+            return `<div class="avatar-item ${isSelected}" onclick="selectAvatarItem(this, '${previewUrl}')">
+                        <img src="${previewUrl}" onerror="this.style.display='none'">
+                    </div>`;
+        }).join('');
+    }
+
+    function selectAvatarItem(el, url) {
+        document.querySelectorAll('.avatar-item').forEach(i => i.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedAvatarUrl = url;
+        document.getElementById('btn-save-avatar').disabled = false;
+    }
+
+    function saveAvatarSelection() {
+        if (selectedAvatarUrl) {
+            localStorage.setItem('sapatamu_avatar', selectedAvatarUrl);
+            renderProfileData(document.getElementById('sidebar-name').innerText, document.getElementById('sidebar-tier').innerText);
+        }
+        closeAvatarModal();
+    }
+
+    function closeAvatarModal() {
+        document.getElementById('avatarModal').style.display = 'none';
+        selectedAvatarUrl = null;
+        document.getElementById('btn-save-avatar').disabled = true;
     }
 
     function copyLink() {

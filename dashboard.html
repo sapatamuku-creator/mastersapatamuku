@@ -341,6 +341,7 @@
 <!-- Floating Profile Avatar (Pusat Akun) -->
 <div class="profile-avatar-btn" onclick="window.location.href='profile.html'" title="Pusat Akun">
     <span id="header-avatar-letter">S</span>
+    <img id="header-avatar-img" src="" style="display:none; width:100%; height:100%; border-radius:50%; object-fit:cover;">
 </div>
 
 <!-- Toggle Language -->
@@ -578,6 +579,36 @@
         } catch (e) { console.warn("Silent sync failed", e); }
     }
 
+    async function fetchAvatarSilently() {
+        if (!window.CURRENT_SS_ID) return;
+        try {
+            const url = (window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec") + "?action=getSettings&ssId=" + window.CURRENT_SS_ID;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.status === "success" && data.data && data.data.urlFoto) {
+                const photos = data.data.urlFoto.split(",").filter(u => u.trim());
+                if (photos.length > 0) {
+                    let previewUrl = photos[0].trim();
+                    const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+                    const match = previewUrl.match(driveRegex);
+                    if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file"))) {
+                        previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
+                    }
+                    localStorage.setItem('sapatamu_avatar', previewUrl);
+                    
+                    const avatarLetter = document.getElementById('header-avatar-letter');
+                    const avatarImg = document.getElementById('header-avatar-img');
+                    if (avatarLetter) avatarLetter.style.display = 'none';
+                    if (avatarImg) {
+                        avatarImg.src = previewUrl;
+                        avatarImg.style.display = 'block';
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
     function syncNavbar() {
         const ssId = window.CURRENT_SS_ID || "";
         const links = document.querySelectorAll('.nav-link');
@@ -627,9 +658,27 @@
             
             document.getElementById('display_wedding_name').innerText = name;
             
-            // Set Avatar Letter
-            const avatarEl = document.getElementById('header-avatar-letter');
-            if (avatarEl) avatarEl.innerText = name.charAt(0).toUpperCase();
+            // Set Avatar Letter or Image
+            const avatarLetter = document.getElementById('header-avatar-letter');
+            const avatarImg = document.getElementById('header-avatar-img');
+            
+            const savedAvatar = localStorage.getItem('sapatamu_avatar');
+            if (savedAvatar) {
+                if (avatarLetter) avatarLetter.style.display = 'none';
+                if (avatarImg) {
+                    avatarImg.src = savedAvatar;
+                    avatarImg.style.display = 'block';
+                }
+            } else {
+                if (avatarLetter) {
+                    avatarLetter.innerText = name.charAt(0).toUpperCase();
+                    avatarLetter.style.display = 'block';
+                }
+                if (avatarImg) avatarImg.style.display = 'none';
+                
+                // Fetch default avatar from Welcome Sign silently
+                setTimeout(fetchAvatarSilently, 1000);
+            }
 
             document.getElementById('display_active_package').innerText = parsed.package || "PAKET BELUM DIPILIH";
             const labels = {
