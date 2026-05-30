@@ -431,7 +431,7 @@ function handleDeleteOwnerClient(data) {
 
 function deleteClientFromSupabaseWithResult(username) {
   const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/clients?username=eq." + encodeURIComponent(username);
-  const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTE3NTY4NSwiZXhwIjoyMDk0NzUxNjg1fQ.Bf0mQybvXLfou-zQVxeLq1Cba3H4DprOhXaj02n9njg";
+  const apiKey = "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE";
   
   const options = {
     method: "delete",
