@@ -952,9 +952,95 @@
         });
     };
 
+    // Data Deskripsi Fitur (Bilingual)
+    const featureDescriptions = {
+        'formulir_tamu.html': {
+            ind: 'Kelola data tamu, atur sesi kehadiran, dan bagikan tautan E-Invitation secara instan.',
+            eng: 'Manage guest data, assign attendance sessions, and share E-Invitation links instantly.'
+        },
+        'checkin.html': {
+            ind: 'Pindai QR Code tamu dengan cepat menggunakan kamera HP atau tablet usher.',
+            eng: 'Quickly scan guest QR Codes using your smartphone or usher tablet camera.'
+        },
+        'onsite.html': {
+            ind: 'Tambahkan tamu baru secara manual di lokasi acara jika mereka belum terdaftar.',
+            eng: 'Manually register walk-in guests at the venue if they are not on the list.'
+        },
+        'angpao.html': {
+            ind: 'Catat hadiah atau angpao fisik dari tamu secara digital agar aman dan terdata rapi.',
+            eng: 'Digitally record physical gifts or angpao from guests securely and neatly.'
+        },
+        'wa_blast.html': {
+            ind: 'Kirim pengingat atau undangan massal ke seluruh tamu melalui WhatsApp secara otomatis.',
+            eng: 'Send bulk reminders or invitations to all guests via WhatsApp automatically.'
+        },
+        'luckydraw.html': {
+            ind: 'Undi hadiah doorprize secara acak dan transparan berdasarkan daftar tamu yang hadir.',
+            eng: 'Randomly and transparently draw doorprizes based on the checked-in guest list.'
+        },
+        'analytics.html': {
+            ind: 'Pantau grafik kehadiran, arus kedatangan, dan statistik acara Anda secara real-time.',
+            eng: 'Monitor attendance charts, arrival flow, and your event statistics in real-time.'
+        },
+        'kiosk.html': {
+            ind: 'Ubah tablet menjadi Kios Mandiri agar tamu bisa memindai QR mereka sendiri.',
+            eng: 'Turn a tablet into a Self-Service Kiosk for guests to scan their own QR Codes.'
+        },
+        'welcome.html': {
+            ind: 'Tampilkan nama tamu yang baru hadir di layar besar, disambut dengan hangat dan berkesan.',
+            eng: 'Automatically display newly arrived guest names on a large screen with a warm impression.'
+        },
+        'worker.html': {
+            ind: 'Hubungkan printer bluetooth untuk mencetak label nama tamu saat check-in beserta label amplop/angpao kado.',
+            eng: 'Connect a bluetooth printer to print guest name and angpao labels upon check-in.'
+        }
+    };
+
+    const defaultDescription = {
+        ind: 'Menghadirkan pengalaman cerdas lewat kolaborasi bersama <b>Knowhere Studio</b>. Temukan galeri foto Anda secara instan menggunakan teknologi AI Face Finder berbasis QR Code.',
+        eng: 'An exclusive <b>AI Experience</b> powered by <b>Knowhere Studio</b>. Discover your moments instantly with our smart QR Face Finder.'
+    };
+
+    function initDynamicTagline() {
+        const taglineElement = document.getElementById('dynamic-tagline');
+        const navItems = document.querySelectorAll('.nav-item[onclick]');
+        
+        taglineElement.style.transition = 'opacity 0.3s ease-in-out';
+        
+        const updateText = (indText, engText) => {
+            taglineElement.style.opacity = 0;
+            
+            setTimeout(() => {
+                taglineElement.setAttribute('data-ind', indText);
+                taglineElement.setAttribute('data-eng', engText);
+                
+                const currentLang = localStorage.getItem('sapatamu_lang') || 'ind';
+                taglineElement.innerHTML = currentLang === 'ind' ? indText : engText;
+                
+                taglineElement.style.opacity = 1;
+            }, 300);
+        };
+
+        navItems.forEach(item => {
+            const onclickVal = item.getAttribute('onclick') || '';
+            const match = onclickVal.match(/nav\('([^']+)'\)/);
+            
+            if (match) {
+                const page = match[1].split('?')[0]; 
+                const desc = featureDescriptions[page];
+                
+                if (desc) {
+                    item.addEventListener('mouseenter', () => updateText(desc.ind, desc.eng));
+                    item.addEventListener('mouseleave', () => updateText(defaultDescription.ind, defaultDescription.eng));
+                }
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         const savedLang = localStorage.getItem('sapatamu_lang') || 'ind'; // Default IND
         setLang(savedLang);
+        initDynamicTagline();
     });
 </script>
 
