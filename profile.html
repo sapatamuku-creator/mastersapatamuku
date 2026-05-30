@@ -274,24 +274,48 @@
         el.classList.add('active');
     }
 
-    function initProfile() {
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
+    async function initProfile() {
         const localData = localStorage.getItem('sapatamu_db');
         if (localData) {
             const parsed = JSON.parse(localData);
             const uname = parsed.username || "Client";
-            const pkg = parsed.package || "PAKET BELUM DIPILIH";
             
-            document.getElementById('sidebar-name').innerText = uname;
-            document.getElementById('sidebar-avatar').innerText = uname.charAt(0).toUpperCase();
-            document.getElementById('sidebar-tier').innerText = pkg;
-            
-            document.getElementById('inp-username').value = uname;
-            
-            const sub = uname.toLowerCase().replace(/\s+/g, '');
-            document.getElementById('inp-subdomain').value = "https://" + sub + ".sapatamu.id";
+            // Set initial state
+            renderProfileData(uname, parsed.package);
+
+            // Fetch live data from Supabase to sync package
+            try {
+                const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?username=eq.${uname}&limit=1`, {
+                    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                });
+                const rows = await response.json();
+                if (rows && rows.length > 0) {
+                    const livePkg = rows[0].package;
+                    if (livePkg) {
+                        parsed.package = livePkg;
+                        localStorage.setItem('sapatamu_db', JSON.stringify(parsed));
+                        renderProfileData(uname, livePkg);
+                    }
+                }
+            } catch (e) {
+                console.warn("Live fetch failed", e);
+            }
         } else {
             window.location.href = "login.html";
         }
+    }
+
+    function renderProfileData(uname, pkg) {
+        document.getElementById('sidebar-name').innerText = uname;
+        document.getElementById('sidebar-avatar').innerText = uname.charAt(0).toUpperCase();
+        document.getElementById('sidebar-tier').innerText = pkg || "PAKET BELUM DIPILIH";
+        
+        document.getElementById('inp-username').value = uname;
+        const sub = uname.toLowerCase().replace(/\s+/g, '');
+        document.getElementById('inp-subdomain').value = "https://" + sub + ".sapatamu.id";
     }
 
     function copyLink() {
