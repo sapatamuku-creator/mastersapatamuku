@@ -443,7 +443,7 @@
                     <h4>Konfigurasi Layar Sapa</h4>
                     <p>Ubah foto background, teks sambutan, dan layout Welcome Screen.</p>
                 </div>
-                <button class="btn-action btn-primary" onclick="window.location.href='config.html'">Konfigurasi Layar</button>
+                <button class="btn-action btn-primary" onclick="checkLayarAccess()">Konfigurasi Layar</button>
             </div>
         </div>
 
@@ -665,6 +665,28 @@
     function goToEditMetadata() {
         const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db')||'{}').ssId);
         window.location.href = `formulir_tamu.html?ssId=${ssId}&action=edit_metadata`;
+    }
+
+    function checkLayarAccess() {
+        const sess = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
+        const pkg = (sess.package || '').toLowerCase().trim();
+        
+        let tier = 0;
+        const PACKAGE_TIER_MAP = {
+            'standard': 1, 'premium': 2,
+            'bronze': 3, 'silver': 4, 'gold': 5,
+            'exclusive': 6, 'deluxe': 7
+        };
+        for (const key of Object.keys(PACKAGE_TIER_MAP)) {
+            if (pkg.includes(key)) { tier = PACKAGE_TIER_MAP[key]; break; }
+        }
+        
+        if (tier === 0 || tier >= 4) {
+            window.location.href = 'config.html';
+        } else {
+            alert('Akses Terbatas 🔒\nUntuk mengakses Layar Sapa, silakan upgrade ke Guestbook Paket Silver atau lebih tinggi.');
+            window.location.href = 'upgrade.html';
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
