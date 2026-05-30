@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Akun - SapaTamu.Ku</title>
+    <script src="subdomain_resolver.js?v=3.3"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --primary: #E07B7B; 
+            --bg: #FFF9F5;      
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --gold: #C8962E;
+            --border: #F0E6DE;
+            --shadow-sm: 0 4px 12px rgba(140, 117, 96, 0.05);
+            --shadow-md: 0 10px 30px rgba(140, 117, 96, 0.08);
+        }
+        * { line-height: normal !important; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* NAVBAR (Copied from Dashboard) */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
+        .nav-outer-wrapper { position: relative; max-width: 95%; display: flex; align-items: center; background: rgba(255, 253, 251, 0.85); backdrop-filter: blur(15px); border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08); border: 1px solid var(--border); overflow: hidden; }
+        .nav-scroll-container { display: flex; align-items: center; gap: 5px; padding: 6px 15px; overflow-x: auto; white-space: nowrap; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .nav-scroll-container::-webkit-scrollbar { display: none; }
+        .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: 0.3s; display: flex; align-items: center; white-space: nowrap; }
+        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+        .nav-link.active { background: var(--primary); color: white !important; }
+
+        /* PROFILE LAYOUT */
+        .profile-wrapper {
+            max-width: 1000px;
+            margin: 100px auto 50px;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 30px;
+        }
+        @media (max-width: 768px) {
+            .profile-wrapper { grid-template-columns: 1fr; }
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 30px 20px;
+            box-shadow: var(--shadow-md);
+            height: fit-content;
+        }
+        .user-avatar-lg {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #d96262);
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 15px;
+            font-family: 'Lora', serif;
+            box-shadow: 0 10px 20px rgba(224, 123, 123, 0.2);
+        }
+        .user-name { text-align: center; font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 5px; }
+        .user-tier { text-align: center; font-size: 11px; font-weight: 700; color: var(--primary); background: rgba(224, 123, 123, 0.1); padding: 4px 12px; border-radius: 20px; display: inline-block; margin: 0 auto 30px; }
+
+        .menu-list { display: flex; flex-direction: column; gap: 8px; }
+        .menu-item {
+            padding: 15px 20px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .menu-item img { width: 20px; opacity: 0.6; transition: 0.3s; }
+        .menu-item:hover { background: rgba(224, 123, 123, 0.05); color: var(--primary); }
+        .menu-item:hover img { opacity: 1; filter: sepia(1) hue-rotate(315deg) saturate(3); }
+        .menu-item.active { background: var(--primary); color: white; box-shadow: 0 8px 15px rgba(224, 123, 123, 0.2); }
+        .menu-item.active img { opacity: 1; filter: brightness(0) invert(1); }
+
+        /* CONTENT AREA */
+        .content-area {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: var(--shadow-md);
+            min-height: 500px;
+        }
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .section-title { font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 5px; }
+        .section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 30px; }
+
+        /* FORMS & CARDS */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .form-input { width: 100%; padding: 15px 20px; border-radius: 12px; border: 1.5px solid var(--border); background: #fafafa; font-size: 14px; color: var(--text-main); transition: 0.3s; }
+        .form-input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(224, 123, 123, 0.1); }
+        
+        .action-card {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 25px; border-radius: 20px; border: 1.5px solid var(--border);
+            margin-bottom: 15px; transition: 0.3s; background: #fff;
+        }
+        .action-card:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: var(--shadow-sm); }
+        .action-info h4 { font-size: 15px; font-weight: 700; margin-bottom: 5px; color: var(--text-main); }
+        .action-info p { font-size: 12px; color: var(--text-muted); }
+        
+        .btn-action { padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.3s; border: none; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #d96262; box-shadow: 0 5px 15px rgba(224, 123, 123, 0.3); }
+        .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="sapatamu-navbar">
+    <div class="nav-outer-wrapper">
+        <div class="nav-scroll-container">
+            <div class="nav-group">
+                <a href="dashboard.html" class="nav-link" id="nav-dashboard">← Kembali ke Dashboard</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="profile-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="user-avatar-lg" id="sidebar-avatar">S</div>
+        <div class="user-name" id="sidebar-name">SapaTamu Client</div>
+        <div style="text-align: center;"><div class="user-tier" id="sidebar-tier">PAKET BELUM DIPILIH</div></div>
+
+        <div class="menu-list">
+            <div class="menu-item active" onclick="switchTab('account', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/user.png"/> Data Akun
+            </div>
+            <div class="menu-item" onclick="switchTab('security', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/lock.png"/> Keamanan
+            </div>
+            <div class="menu-item" onclick="switchTab('package', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/rocket.png"/> Layanan & Paket
+            </div>
+            <div class="menu-item" onclick="switchTab('invitation', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/edit.png"/> Undangan Digital
+            </div>
+            <div class="menu-item" onclick="switchTab('display', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/settings.png"/> Layar Acara
+            </div>
+        </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="content-area">
+        
+        <!-- Tab: Account -->
+        <div id="tab-account" class="tab-content active">
+            <h2 class="section-title">Informasi Akun</h2>
+            <p class="section-desc">Lihat dan kelola informasi dasar profil acara Anda.</p>
+            
+            <div class="form-group">
+                <label class="form-label">Nama Acara / Username</label>
+                <input type="text" class="form-input" id="inp-username" readonly value="Loading...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Subdomain Publik (Link Utama)</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" class="form-input" id="inp-subdomain" readonly value="...">
+                    <button class="btn-action btn-outline" onclick="copyLink()">Salin Link</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Security -->
+        <div id="tab-security" class="tab-content">
+            <h2 class="section-title">Keamanan & Sandi</h2>
+            <p class="section-desc">Pusat keamanan untuk melindungi akun Anda.</p>
+            
+            <div class="action-card">
+                <div class="action-info">
+                    <h4>Ubah Password Akun</h4>
+                    <p>Ganti kata sandi untuk login ke SapaTamu.Ku</p>
+                </div>
+                <button class="btn-action btn-outline" onclick="window.location.href='reset.html'">Ubah Password</button>
+            </div>
+            <div class="action-card" style="border-color: #fca5a5;">
+                <div class="action-info">
+                    <h4 style="color: #ef4444;">Keluar Aplikasi (Sign Out)</h4>
+                    <p>Akhiri sesi Anda pada perangkat ini.</p>
+                </div>
+                <button class="btn-action" style="background:#ef4444; color:#fff;" onclick="window.location.href='logout.html'">Sign Out</button>
+            </div>
+        </div>
+
+        <!-- Tab: Package -->
+        <div id="tab-package" class="tab-content">
+            <h2 class="section-title">Layanan & Paket</h2>
+            <p class="section-desc">Tingkatkan layanan acara Anda ke level premium.</p>
+            
+            <div class="action-card" style="background: linear-gradient(135deg, #4A3F35, #2c251f); color: white; border: none;">
+                <div class="action-info">
+                    <h4 style="color:white;">Upgrade Paket SapaTamu</h4>
+                    <p style="color:#ccc;">Buka fitur analitik, welcome sign, dan kiosk mandiri.</p>
+                </div>
+                <button class="btn-action" style="background:#fff; color:#4A3F35;" onclick="window.location.href='upgrade.html'">Lihat Paket</button>
+            </div>
+        </div>
+
+        <!-- Tab: Invitation -->
+        <div id="tab-invitation" class="tab-content">
+            <h2 class="section-title">Undangan Digital</h2>
+            <p class="section-desc">Kustomisasi tema dan detail undangan E-Invitation Anda.</p>
+
+            <div class="action-card">
+                <div class="action-info">
+                    <h4>Editor Undangan</h4>
+                    <p>Ubah teks, foto, cerita, dan jadwal acara pada undangan Anda.</p>
+                </div>
+                <button class="btn-action btn-primary" onclick="window.location.href='config_invitation.html'">Edit Undangan</button>
+            </div>
+            <div class="action-card">
+                <div class="action-info">
+                    <h4>Katalog Tema</h4>
+                    <p>Eksplorasi dan ganti desain/tema undangan digital Anda.</p>
+                </div>
+                <button class="btn-action btn-outline" onclick="window.location.href='katalog_undangan.html'">Pilih Tema</button>
+            </div>
+        </div>
+
+        <!-- Tab: Display -->
+        <div id="tab-display" class="tab-content">
+            <h2 class="section-title">Layar Acara</h2>
+            <p class="section-desc">Atur tampilan Layar Sapa (Welcome Sign) yang muncul di lokasi acara.</p>
+
+            <div class="action-card">
+                <div class="action-info">
+                    <h4>Konfigurasi Layar Sapa</h4>
+                    <p>Ubah foto background, teks sambutan, dan layout Welcome Screen.</p>
+                </div>
+                <button class="btn-action btn-primary" onclick="window.location.href='config.html'">Konfigurasi Layar</button>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+    function switchTab(tabId, el) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+        
+        document.getElementById('tab-' + tabId).classList.add('active');
+        el.classList.add('active');
+    }
+
+    function initProfile() {
+        const localData = localStorage.getItem('sapatamu_db');
+        if (localData) {
+            const parsed = JSON.parse(localData);
+            const uname = parsed.username || "Client";
+            const pkg = parsed.package || "PAKET BELUM DIPILIH";
+            
+            document.getElementById('sidebar-name').innerText = uname;
+            document.getElementById('sidebar-avatar').innerText = uname.charAt(0).toUpperCase();
+            document.getElementById('sidebar-tier').innerText = pkg;
+            
+            document.getElementById('inp-username').value = uname;
+            
+            const sub = uname.toLowerCase().replace(/\s+/g, '');
+            document.getElementById('inp-subdomain').value = "https://" + sub + ".sapatamu.id";
+        } else {
+            window.location.href = "login.html";
+        }
+    }
+
+    function copyLink() {
+        const link = document.getElementById('inp-subdomain').value;
+        navigator.clipboard.writeText(link);
+        alert("Link tersalin!");
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Wait for resolver if needed, or just init directly since data is in localStorage
+        initProfile();
+    });
+</script>
+
+</body>
+</html>
