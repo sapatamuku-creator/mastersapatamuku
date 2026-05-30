@@ -66,7 +66,29 @@
             font-weight: 500 !important;
             color: var(--text-muted) !important;
             line-height: 1.7 !important;
-            min-height: 50px;
+            min-height: 55px;
+            position: relative;
+            overflow: hidden;
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+        }
+        .tagline-slide {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            transform: translateY(100%);
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            text-align: center;
+        }
+        .tagline-slide.active {
+            transform: translateY(-50%);
+            opacity: 1;
+        }
+        .tagline-slide.exit {
+            transform: translateY(-200%);
+            opacity: 0;
         }
         .tagline-highlight {
             color: var(--gold) !important;
@@ -442,11 +464,9 @@
         <div id="display_active_package" style="text-align:center; font-size:11px; font-weight:700; color:var(--primary); background:rgba(224,123,123,0.1); padding:4px 14px; border-radius:20px; display:inline-block; margin: 5px auto 15px; text-transform:uppercase; letter-spacing:1px; border: 1px solid rgba(224,123,123,0.2);">PAKET BELUM DIPILIH</div>
         <div class="tagline-box">
             <p class="tagline-main" id="display_category_label">All in One Digital Guestbook Management</p>
-            <p class="tagline-sub lang-html" id="dynamic-tagline" 
-                data-eng="An exclusive <b>AI Experience</b> powered by <b>Knowhere Studio</b>. Discover your moments instantly with our smart QR Face Finder."
-                data-ind="Menghadirkan pengalaman cerdas lewat kolaborasi bersama <b>Knowhere Studio</b>. Temukan galeri foto Anda secara instan menggunakan teknologi AI Face Finder berbasis QR Code.">
-                Menghadirkan pengalaman cerdas lewat kolaborasi bersama <b>Knowhere Studio</b>. Temukan galeri foto Anda secara instan menggunakan teknologi AI Face Finder berbasis QR Code.
-            </p>
+            <div class="tagline-sub" id="dynamic-tagline">
+                <!-- JS will inject .tagline-slide elements here -->
+            </div>
         </div>
     </header>
 
@@ -1005,22 +1025,37 @@
     function initDynamicTagline() {
         const taglineElement = document.getElementById('dynamic-tagline');
         const navItems = document.querySelectorAll('.nav-item[onclick]');
-        
-        taglineElement.style.transition = 'opacity 0.3s ease-in-out';
-        
         const updateText = (indText, engText) => {
-            taglineElement.style.opacity = 0;
+            const currentLang = localStorage.getItem('sapatamu_lang') || 'ind';
             
-            setTimeout(() => {
-                taglineElement.setAttribute('data-ind', indText);
-                taglineElement.setAttribute('data-eng', engText);
-                
-                const currentLang = localStorage.getItem('sapatamu_lang') || 'ind';
-                taglineElement.innerHTML = currentLang === 'ind' ? indText : engText;
-                
-                taglineElement.style.opacity = 1;
-            }, 300);
+            // Tandai slide lama sebagai keluar
+            const oldSlides = taglineElement.querySelectorAll('.tagline-slide');
+            oldSlides.forEach(slide => {
+                slide.classList.remove('active');
+                slide.classList.add('exit');
+                setTimeout(() => {
+                    if (slide.parentNode) slide.remove();
+                }, 600); // Sinkron dengan durasi CSS transition
+            });
+
+            // Buat slide baru
+            const newSlide = document.createElement('div');
+            newSlide.className = 'tagline-slide lang-html';
+            newSlide.setAttribute('data-ind', indText);
+            newSlide.setAttribute('data-eng', engText);
+            newSlide.innerHTML = currentLang === 'ind' ? indText : engText;
+
+            taglineElement.appendChild(newSlide);
+
+            // Trigger reflow agar animasi CSS jalan
+            void newSlide.offsetWidth;
+
+            // Masuk
+            newSlide.classList.add('active');
         };
+
+        // Render awal default
+        updateText(defaultDescription.ind, defaultDescription.eng);
 
         // Siapkan array untuk auto-loop
         const loopItems = [defaultDescription];
