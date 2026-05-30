@@ -1022,6 +1022,10 @@
             }, 300);
         };
 
+        // Siapkan array untuk auto-loop
+        const loopItems = [defaultDescription];
+        const hoverMap = new Map();
+
         navItems.forEach(item => {
             const onclickVal = item.getAttribute('onclick') || '';
             const match = onclickVal.match(/nav\('([^']+)'\)/);
@@ -1031,11 +1035,46 @@
                 const desc = featureDescriptions[page];
                 
                 if (desc) {
-                    item.addEventListener('mouseenter', () => updateText(desc.ind, desc.eng));
-                    item.addEventListener('mouseleave', () => updateText(defaultDescription.ind, defaultDescription.eng));
+                    loopItems.push(desc);
+                    hoverMap.set(item, desc);
                 }
             }
         });
+
+        let loopInterval;
+        let currentIndex = 0;
+
+        const startLoop = () => {
+            if (loopInterval) clearInterval(loopInterval);
+            loopInterval = setInterval(() => {
+                currentIndex = (currentIndex + 1) % loopItems.length;
+                const nextDesc = loopItems[currentIndex];
+                updateText(nextDesc.ind, nextDesc.eng);
+            }, 2500); // 2.5 detik untuk transisi nyaman
+        };
+
+        const stopLoop = () => {
+            if (loopInterval) clearInterval(loopInterval);
+        };
+
+        // Event listener hover pada menu
+        navItems.forEach(item => {
+            const desc = hoverMap.get(item);
+            if (desc) {
+                item.addEventListener('mouseenter', () => {
+                    stopLoop();
+                    updateText(desc.ind, desc.eng);
+                });
+                item.addEventListener('mouseleave', () => {
+                    currentIndex = 0;
+                    updateText(defaultDescription.ind, defaultDescription.eng);
+                    startLoop();
+                });
+            }
+        });
+
+        // Mulai rotasi otomatis saat pertama dimuat
+        startLoop();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
