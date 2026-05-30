@@ -285,15 +285,61 @@
             <h2 class="section-title">Informasi Akun</h2>
             <p class="section-desc">Lihat dan kelola informasi dasar profil acara Anda.</p>
             
-            <div class="form-group">
-                <label class="form-label">Nama Acara / Username</label>
-                <input type="text" class="form-input" id="inp-username" readonly value="Loading...">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="form-group">
+                    <label class="form-label">Nama Acara / Username</label>
+                    <input type="text" class="form-input" id="inp-username" readonly value="Loading...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subdomain Publik (Link Utama)</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" class="form-input" id="inp-subdomain" readonly value="...">
+                        <button class="btn-action btn-outline" onclick="copyLink()">Salin</button>
+                    </div>
+                </div>
             </div>
+
+            <!-- METADATA SUPABASE -->
+            <h3 class="section-title" style="font-size:18px; margin-top:15px; border-top:1px solid var(--border); padding-top:20px;">Metadata Acara</h3>
+            
             <div class="form-group">
-                <label class="form-label">Subdomain Publik (Link Utama)</label>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" class="form-input" id="inp-subdomain" readonly value="...">
-                    <button class="btn-action btn-outline" onclick="copyLink()">Salin Link</button>
+                <label class="form-label">Nama Pengantin / Acara</label>
+                <input type="text" class="form-input" id="meta-nama-pengantin" readonly value="Memuat...">
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="form-group">
+                    <label class="form-label">Hari & Tanggal</label>
+                    <input type="text" class="form-input" id="meta-hari-tanggal" readonly value="Memuat...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Waktu Acara (Default)</label>
+                    <input type="text" class="form-input" id="meta-waktu-acara" readonly value="Memuat...">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Lokasi Acara</label>
+                <input type="text" class="form-input" id="meta-lokasi-acara" readonly value="Memuat...">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Link Navigasi / Undangan</label>
+                <input type="text" class="form-input" id="meta-link-undangan" readonly value="Memuat...">
+            </div>
+            
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+                <div class="form-group">
+                    <label class="form-label">Sesi 1</label>
+                    <input type="text" class="form-input" id="meta-sesi-1" readonly value="Memuat...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sesi 2</label>
+                    <input type="text" class="form-input" id="meta-sesi-2" readonly value="Memuat...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sesi 3</label>
+                    <input type="text" class="form-input" id="meta-sesi-3" readonly value="Memuat...">
                 </div>
             </div>
         </div>
@@ -428,6 +474,34 @@
                 }
             } catch (e) {
                 console.warn("Live fetch failed", e);
+            }
+
+            // Fetch metadata_client
+            if (window.CURRENT_SS_ID) {
+                try {
+                    const resMeta = await fetch(`${SB_URL}/rest/v1/metadata_client?on_uuid=eq.${window.CURRENT_SS_ID}&limit=1`, {
+                        headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                    });
+                    const metaRows = await resMeta.json();
+                    if (metaRows && metaRows.length > 0) {
+                        const m = metaRows[0];
+                        document.getElementById('meta-nama-pengantin').value = m.nama_pengantin || "-";
+                        document.getElementById('meta-hari-tanggal').value = m.hari_tanggal || "-";
+                        document.getElementById('meta-waktu-acara').value = m.waktu_acara || "-";
+                        document.getElementById('meta-lokasi-acara').value = m.lokasi_acara || "-";
+                        document.getElementById('meta-link-undangan').value = m.link_undangan || "-";
+                        document.getElementById('meta-sesi-1').value = m.sesi_1 && m.sesi_1 !== 'EMPTY' ? m.sesi_1 : "-";
+                        document.getElementById('meta-sesi-2').value = m.sesi_2 && m.sesi_2 !== 'EMPTY' ? m.sesi_2 : "-";
+                        document.getElementById('meta-sesi-3').value = m.sesi_3 && m.sesi_3 !== 'EMPTY' ? m.sesi_3 : "-";
+                    } else {
+                        document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Data tidak ditemukan");
+                    }
+                } catch (e) {
+                    console.warn("Metadata fetch failed", e);
+                    document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Gagal memuat data");
+                }
+            } else {
+                document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Sesi tidak valid");
             }
         } else {
             window.location.href = "login.html";
