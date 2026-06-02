@@ -1,5 +1,5 @@
 /**
- * printer_widget.js �— SapaTamu Bluetooth Printer Widget v1.0
+ * printer_widget.js --- SapaTamu Bluetooth Printer Widget v1.0
  * Inject tombol printer + modal ke panel jalur di kiosk, checkin, onsite.
  * Panggil: PrinterWidget.init({ sourceId: 'CHECKIN', jalurSelectorId: 'jalur-selector', jalurKey: 'checkin_jalur_id' })
  */
@@ -22,7 +22,7 @@
   let TAB_ID = "REGISTRASI";
   let currentPollingInterval = 1500;
 
-  // �—��—� CSS �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
+  // ------ CSS ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   const CSS = `
     #pw-btn {
       display:inline-flex; align-items:center; gap:5px;
@@ -82,7 +82,7 @@
     .pw-queue-badge { background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); color:#10B981; font-size:8px; font-weight:700; padding:2px 8px; border-radius:6px; text-transform:uppercase; }
   `;
 
-  // �—��—� HTML �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
+  // ------ HTML ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   const HTML = `
     <div id="pw-overlay">
       <div id="pw-modal">
@@ -91,7 +91,7 @@
             <h2>Printer Worker</h2>
             <div class="pw-sub">Bluetooth Print Engine v3.5</div>
           </div>
-          <button class="pw-close" onclick="PrinterWidget.close()">�S"</button>
+          <button class="pw-close" onclick="PrinterWidget.close()">&times;</button>
         </div>
         <div class="pw-row">
           <div style="display:flex;gap:20px">
@@ -292,7 +292,7 @@
     }
   }
 
-  // �—��—� PUBLIC API �—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—��—�
+  // ------ PUBLIC API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
   window.PrinterWidget = {
     init({ sourceId = 'CHECKIN', jalurSelectorId = 'jalur-selector', jalurKey = 'jalur_id', injectAfterEl = null } = {}) {
       // Inject CSS
@@ -341,7 +341,7 @@
             if (pwJ) pwJ.value = JALUR_ID;
           });
         }
-        // Sync pw-jalur �  parent jalur selector
+        // Sync pw-jalur    parent jalur selector
         const pwJ = document.getElementById('pw-jalur');
         if (pwJ) {
           if (savedJalur) pwJ.value = savedJalur;

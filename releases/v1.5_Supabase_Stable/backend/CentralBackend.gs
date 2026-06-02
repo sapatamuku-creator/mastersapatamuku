@@ -5,24 +5,23 @@
  */
 
 var SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-var SUPABASE_KEY = (function() {
-  const hardcoded = "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE";
-  if (hardcoded && hardcoded !== "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE" && hardcoded !== "YOUR_SUPABASE_ANON_KEY") {
-    return hardcoded;
-  }
-  try {
-    const propKey = PropertiesService.getScriptProperties().getProperty("SUPABASE_KEY");
-    if (propKey) return propKey;
-  } catch (e) {
-    console.error("Gagal membaca Script Properties: " + e.toString());
-  }
-  return hardcoded;
-})();
+var SUPABASE_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
 
 function supabaseFetch(url, options) {
   options = options || {};
   options.headers = options.headers || {};
   options.headers["User-Agent"] = "SapaTamu-Backend/1.0";
+  
+  // Ambil secret key dari Script Properties untuk validasi RLS (bypassing Kong browser block)
+  try {
+    const secretKey = PropertiesService.getScriptProperties().getProperty("SUPABASE_KEY");
+    if (secretKey) {
+      options.headers["x-sapatamu-secret"] = secretKey;
+    }
+  } catch (e) {
+    console.error("Gagal membaca Script Properties SUPABASE_KEY: " + e.toString());
+  }
+  
   return UrlFetchApp.fetch(url, options);
 }
 
