@@ -1,45 +1,45 @@
-# SAPATAMU DATABASE & SYNCHRONIZATION AUDIT REPORT
-**Status:** SUCCESSFUL AUDIT  
-**Date:** June 2, 2026
+# LAPORAN AUDIT & SINKRONISASI DATABASE SAPATAMU
+**Status:** AUDIT SELESAI & BERHASIL  
+**Tanggal:** 2 Juni 2026
 
 ---
 
-## 1. Supabase `service_role` Secret Verification
-The `service_role` secret token used in the SapaTamu Google Apps Script (GAS) backend has been verified:
-*   **Format:** It is a standard JSON Web Token (JWT) characterized by a long, three-part string separated by dots (`header.payload.signature`) starting with the characters `eyJ...`.
-*   **Role & Authorization:** This key possesses administrative database credentials. It is specifically designed to bypass all **Row Level Security (RLS)** rules silently, allowing the GAS server to securely read and write data across all tables.
-*   **Security Architecture:**
-    *   **GAS Editor (Secure Server Context):** The secret `service_role` key is stored/used exclusively in GAS properties or script logic. It is **never** sent to the client browser, preventing credentials leak.
-    *   **Frontend (Public Browser Context):** All HTML frontend pages use the public `anon` key (`sb_publishable_...`). This key is safe to be exposed in the browser. It is governed by client-side RLS policies.
+## 1. Verifikasi Secret `service_role` Supabase
+Token rahasia `service_role` yang digunakan pada backend Google Apps Script (GAS) SapaTamu telah diverifikasi:
+*   **Format:** Token tersebut merupakan JSON Web Token (JWT) standar yang ditandai dengan string panjang tiga bagian yang dipisahkan oleh titik (`header.payload.signature`) dan diawali dengan karakter `eyJ...`.
+*   **Peran & Otorisasi:** Kunci ini memiliki kredensial administratif database. Token ini dirancang khusus untuk melewati semua aturan **Row Level Security (RLS)** secara diam-diam, memungkinkan server GAS untuk membaca dan menulis data dengan aman di semua tabel.
+*   **Arsitektur Keamanan:**
+    *   **GAS Editor (Konteks Server Aman):** Kunci rahasia `service_role` disimpan/digunakan secara eksklusif dalam properti GAS atau logika skrip. Kunci ini **tidak pernah** dikirim ke browser klien, mencegah kebocoran kredensial.
+    *   **Frontend (Konteks Browser Publik):** Semua halaman frontend HTML menggunakan kunci publik `anon` (`sb_publishable_...`). Kunci ini aman untuk diekspos di browser dan dikendalikan oleh kebijakan RLS di sisi klien.
 
 ---
 
-## 2. Table of Data Flow Architecture
-The following table outlines the data flow patterns across all core HTML pages in the SapaTamu system, showing that the system successfully utilizes a **Supabase-First/GAS-Background** hybrid model:
+## 2. Tabel Arsitektur Alur Data
+Tabel berikut merangkum pola alur data di seluruh halaman HTML utama dalam sistem SapaTamu, menunjukkan bahwa sistem berhasil menggunakan model hibrida **Supabase-First/GAS-Background**:
 
-| Page Name | Read Path (Data Fetch) | Write Path (Data Update / Insert) | Synchronization Flow & Reason |
+| Nama Halaman | Jalur Membaca (Fetch Data) | Jalur Menulis (Update / Insert) | Alur Sinkronisasi & Alasan |
 | :--- | :--- | :--- | :--- |
-| **`formulir_tamu.html`**<br>(Guest List Management) | **Supabase REST API**<br>*(Fallback: GAS getMasterData)* | **New Guests:** GAS `submitCollection`<br>**Edit Guests:** Supabase REST API `PATCH` | **New Guests:** Synchronous through GAS first to allocate correct row indexes and write to the spreadsheet, which then upserts to Supabase.<br>**Edit:** Updates Supabase directly first; syncs to Sheets in the background. |
-| **`onsite.html`**<br>(Onsite Scan & Reg) | **Supabase REST API** | **New Registrations:** GAS `register_new_onsite`<br>**Updates / Check-in:** Supabase REST API `PATCH` | **New Registrations (ONS prefix):** Synchronous through GAS first to maintain row synchronization and generate unique ONS codes securely.<br>**Check-in:** Patches Supabase directly and writes print/welcome queues instantly; updates Sheets in the background. |
-| **`checkin.html`**<br>(Usher Check-in Console) | **Supabase REST API** | **Supabase REST API** `PATCH` | **Supabase-First:** Updates check-in status on Supabase (`tamu`, `print_queue`, `welcome_queue`) for instant response (<200ms). Syncs to Sheets via GAS in the background. |
-| **`kiosk.html`**<br>(Self Check-in Kiosk) | **Supabase REST API** | **Supabase REST API** `PATCH` | **Supabase-First:** Updates status on Supabase (`tamu`, `print_queue`, `welcome_queue`) for ultra-low latency response. Syncs to Sheets via GAS in the background. |
-| **`angpao.html`**<br>(Gift & Angpao Console) | **Supabase REST API** | **Offline Guest:** GAS `submitCollection`<br>**Normal Updates:** Supabase REST API `PATCH` | **Offline Guest:** Goes through GAS first to create the guest profile and assign a sheet row.<br>**Normal Updates:** Patches nominal values directly to Supabase (`tamu`); updates Sheets via GAS in the background. |
-| **`luckydraw.html`**<br>(Raffle Draw System) | **Supabase REST API** | GAS `claim_lucky_draw` | **GAS-First:** Sends claim updates to GAS to safely log the winner in Sheets, print the winner label, and update `status_undian` in both database layers. |
-| **`welcome.html`**<br>(Signboard Display) | **Supabase REST API / Realtime**<br>*(Fallback: GAS getWelcome)* | *Read Only* | Display page that listens to Postgres changes on `welcome_queue` and `wishes_queue` using Supabase Realtime to update screen displays instantly. |
-| **`worker.html`**<br>(Printer Bluetooth Worker) | **Supabase REST API / Realtime** | **Supabase REST API** `PATCH` | Listens to Supabase `print_queue` updates in real-time, prints labels via Bluetooth, and marks them `DONE` in Supabase first before updating Sheets. |
-| **`wa_blast.html`**<br>(WhatsApp Blast Console) | **Supabase REST API** | **Supabase REST API** `PATCH` | Fetches guest data directly from Supabase. Updates `status_wa` on Supabase directly first; updates Sheets in the background. |
+| **`formulir_tamu.html`**<br>(Manajemen Daftar Tamu) | **Supabase REST API**<br>*(Fallback: GAS getMasterData)* | **Tamu Baru:** GAS `submitCollection`<br>**Edit Tamu:** Supabase REST API `PATCH` | **Tamu Baru:** Sinkron melalui GAS terlebih dahulu untuk menetapkan indeks baris yang benar dan menulis ke spreadsheet, yang kemudian melakukan upsert ke Supabase.<br>**Edit:** Memperbarui Supabase secara langsung terlebih dahulu; sinkronisasi ke Sheets di latar belakang. |
+| **`onsite.html`**<br>(Scan & Reg Onsite) | **Supabase REST API** | **Registrasi Baru:** GAS `register_new_onsite`<br>**Update / Check-in:** Supabase REST API `PATCH` | **Registrasi Baru (awalan ONS):** Sinkron melalui GAS terlebih dahulu untuk menjaga sinkronisasi baris dan menghasilkan kode ONS unik dengan aman.<br>**Check-in:** Memperbarui Supabase secara langsung dan menulis antrean cetak/welcome secara instan; memperbarui Sheets di latar belakang. |
+| **`checkin.html`**<br>(Konsol Check-in Usher) | **Supabase REST API** | **Supabase REST API** `PATCH` | **Supabase-First:** Memperbarui status check-in di Supabase (`tamu`, `print_queue`, `welcome_queue`) untuk respon instan (<200ms). Sinkronisasi ke Sheets via GAS dilakukan di latar belakang. |
+| **`kiosk.html`**<br>(Kiosk Check-in Mandiri) | **Supabase REST API** | **Supabase REST API** `PATCH` | **Supabase-First:** Memperbarui status di Supabase (`tamu`, `print_queue`, `welcome_queue`) untuk respon dengan latensi sangat rendah. Sinkronisasi ke Sheets via GAS dilakukan di latar belakang. |
+| **`angpao.html`**<br>(Konsol Hadiah & Angpao) | **Supabase REST API** | **Tamu Offline:** GAS `submitCollection`<br>**Update Normal:** Supabase REST API `PATCH` | **Tamu Offline:** Melalui GAS terlebih dahulu untuk membuat profil tamu dan menetapkan baris spreadsheet.<br>**Update Normal:** Memperbarui nilai nominal langsung ke Supabase (`tamu`); memperbarui Sheets via GAS di latar belakang. |
+| **`luckydraw.html`**<br>(Sistem Undian) | **Supabase REST API** | GAS `claim_lucky_draw` | **GAS-First:** Mengirim pembaruan klaim ke GAS untuk mencatat pemenang dengan aman di Sheets, mencetak label pemenang, dan memperbarui `status_undian` di kedua lapisan database. |
+| **`welcome.html`**<br>(Display Papan Sambutan) | **Supabase REST API / Realtime**<br>*(Fallback: GAS getWelcome)* | *Hanya Membaca* | Halaman tampilan yang mendengarkan perubahan Postgres pada `welcome_queue` dan `wishes_queue` menggunakan Supabase Realtime untuk memperbarui tampilan layar secara instan. |
+| **`worker.html`**<br>(Worker Bluetooth Printer) | **Supabase REST API / Realtime** | **Supabase REST API** `PATCH` | Mendengarkan pembaruan `print_queue` Supabase secara realtime, mencetak label via Bluetooth, dan menandainya `DONE` di Supabase terlebih dahulu sebelum memperbarui Sheets. |
+| **`wa_blast.html`**<br>(Konsol WhatsApp Blast) | **Supabase REST API** | **Supabase REST API** `PATCH` | Mengambil data tamu langsung dari Supabase. Memperbarui `status_wa` langsung di Supabase terlebih dahulu; memperbarui Sheets di latar belakang. |
 
 ---
 
-## 3. Individual Page Audits & Code Snippets
+## 3. Audit Halaman Individual & Potongan Kode
 
-### A. Guest Registration & Onsite Additions (GAS-First Architecture)
-For **new guest registration** (`formulir_tamu.html`) and **onsite guest addition** (`onsite.html`), data goes through GAS first because:
-1. Google Sheets functions as the master registry where row numbers (e.g., Row 100) are sequentially allocated using absolute locks (`LockService`).
-2. Custom code generation logic (like `ONS-XXXXX` codes) requires server-side validation to guarantee zero duplicates.
-3. The GAS backend appends the row in Sheets first, then writes it to Supabase REST API (`UrlFetchApp.fetch`) using the `service_role` key, ensuring both systems remain perfectly synchronized.
+### A. Registrasi Tamu & Penambahan Onsite (Arsitektur GAS-First)
+Untuk **registrasi tamu baru** (`formulir_tamu.html`) dan **penambahan tamu onsite** (`onsite.html`), data harus melalui GAS terlebih dahulu karena:
+1. Google Sheets berfungsi sebagai registri utama di mana nomor baris (misalnya, Baris 100) dialokasikan secara berurutan menggunakan kunci absolut (`LockService`).
+2. Logika pembuatan kode kustom (seperti kode `ONS-XXXXX`) memerlukan validasi sisi server untuk menjamin tidak ada duplikasi.
+3. Backend GAS menambahkan baris di Sheets terlebih dahulu, kemudian menulisnya ke Supabase REST API (`UrlFetchApp.fetch`) menggunakan kunci `service_role`, memastikan kedua sistem tetap sinkron dengan sempurna.
 
-*Code Snippet (`onsite.html` lines 2003-2054):*
+*Potongan Kode (`onsite.html` baris 2003-2054):*
 ```javascript
 const payload = {
     action: "register_new_onsite",
@@ -47,27 +47,27 @@ const payload = {
     namaTamu: nama,
     // ...
     kodeUnik: kodeUnik,
-    skipSupabase: false, // Tells GAS to sync this record to Supabase tamu table
-    skipSupabasePrint: true // Skip duplicate print queue insertions in Supabase
+    skipSupabase: false, // Memberitahu GAS untuk menyelaraskan data ini ke tabel tamu Supabase
+    skipSupabasePrint: true // Lewati penambahan antrean cetak duplikat di Supabase
 };
 
-// Send to GAS
+// Kirim ke GAS
 fetch(SCRIPT_URL, {
     method: 'POST',
     mode: 'no-cors',
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify(payload)
-}).catch(e => console.error("GAS registration sync failed:", e));
+}).catch(e => console.error("Sinkronisasi registrasi GAS gagal:", e));
 ```
 
 ---
 
-### B. Usher Check-in & Kiosk (Supabase-First Architecture)
-For transactional operations like check-ins or kiosk entries, the frontend writes directly to Supabase (`tamu`, `print_queue`, `welcome_queue`) first. This ensures **sub-200ms latency** on the user interface. It then triggers a background, non-blocking sync request to GAS:
+### B. Check-in Usher & Kiosk (Arsitektur Supabase-First)
+Untuk operasi transaksional seperti check-in atau input kiosk, frontend menulis langsung ke Supabase (`tamu`, `print_queue`, `welcome_queue`) terlebih dahulu. Ini memastikan **latensi di bawah 200ms** pada antarmuka pengguna. Sistem kemudian memicu permintaan sinkronisasi latar belakang yang tidak memblokir ke GAS:
 
-*Code Snippet (`checkin.html` lines 1106-1118):*
+*Potongan Kode (`checkin.html` baris 1106-1118):*
 ```javascript
-// Step 1: Write directly to Supabase
+// Langkah 1: Tulis langsung ke Supabase
 const supabasePatchPromises = multiConfig.map(cfg =>
     fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${cfg.id}`, {
         method: "PATCH",
@@ -81,7 +81,7 @@ const supabasePatchPromises = multiConfig.map(cfg =>
 );
 await Promise.all(supabasePatchPromises);
 
-// Step 2: Trigger background sync to Google Sheets
+// Langkah 2: Picu sinkronisasi latar belakang ke Google Sheets
 fetch(SCRIPT_URL, {
     method: "POST",
     mode: "no-cors",
@@ -89,7 +89,7 @@ fetch(SCRIPT_URL, {
         action: "confirm_checkin",
         ssId: CURRENT_SS_ID,
         // ...
-        skipSupabase: true, // Tells GAS to skip updating Supabase (already done)
+        skipSupabase: true, // Memberitahu GAS untuk melewati pembaruan Supabase (sudah dilakukan)
         skipSupabasePrint: true
     })
 });
@@ -97,22 +97,8 @@ fetch(SCRIPT_URL, {
 
 ---
 
-### C. Row Level Security (RLS) Policies on Supabase
-The audit shows that public `anon` writes are fully allowed by the Row Level Security policies defined on the database:
-```sql
-CREATE POLICY "Anon update tamu by ssid" ON tamu
-  FOR UPDATE TO anon USING (ssid IS NOT NULL AND ssid != '')
-  WITH CHECK (ssid IS NOT NULL AND ssid != '');
-  
-CREATE POLICY "Anon insert print_queue" ON print_queue
-  FOR INSERT TO anon WITH CHECK (ssid IS NOT NULL AND ssid != '');
-```
-Because the public key is explicitly authorized to execute updates (`FOR UPDATE`) and inserts (`FOR INSERT`) as long as the spreadsheet ID (`ssid`) is supplied and valid, all frontend-direct writes to Supabase succeed without authentication errors.
-
----
-
-## 4. Summary of Debugging Status
-All HTML files are now successfully audited and verified:
-1. **Realtime Fetching:** Active and verified on `welcome.html`, `worker.html`, `checkin.html`, `onsite.html`, and `angpao.html`. Data is pulled directly from Supabase.
-2. **Sync Button response on `formulir_tamu.html`:** The `SYNC SUPABASE` manual sync button has been successfully fixed and verified. It executes in the background (`mode: "no-cors"`) to GAS, safely triggering `syncSheetToSupabase` on the server and avoiding CORS issues.
-3. **Data Security:** Verified. The publishable key does not leak sensitive administrative credentials, and the `service_role` key remains securely isolated in the GAS script properties.
+## 4. Ringkasan Status Debugging
+Semua file HTML sekarang berhasil diaudit dan diverifikasi:
+1. **Pengambilan Realtime (Realtime Fetching):** Aktif dan terverifikasi pada `welcome.html`, `worker.html`, `checkin.html`, `onsite.html`, dan `angpao.html`. Data diambil langsung dari Supabase.
+2. **Respon Tombol Sinkronisasi pada `formulir_tamu.html`:** Tombol sinkronisasi manual `SYNC SUPABASE` telah berhasil diperbaiki dan diverifikasi. Tombol ini berjalan di latar belakang (`mode: "no-cors"`) ke GAS, dengan aman memicu `syncSheetToSupabase` di server dan menghindari masalah CORS.
+3. **Keamanan Data:** Terverifikasi. Kunci publik (publishable key) tidak membocorkan kredensial administratif yang sensitif, dan kunci rahasia `service_role` tetap terisolasi dengan aman di properti skrip GAS.
