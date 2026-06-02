@@ -43,7 +43,19 @@ const ADMIN_EMAIL = "sapatamuku@gmail.com";
 const FONNTE_TOKEN = "fRx1Canf4GYroBZZNfo7";
 
 // CONFIG MIDTRANS PAYMENT GATEWAY
-const MIDTRANS_SERVER_KEY = "PASTE_KEY_SANDBOX_DISINI"; // Sandbox Server Key
+const MIDTRANS_SERVER_KEY = (function() {
+  const hardcoded = "PASTE_KEY_SANDBOX_DISINI";
+  if (hardcoded && hardcoded !== "PASTE_KEY_SANDBOX_DISINI" && hardcoded !== "PASTE_KEY_LIVE_DISINI") {
+    return hardcoded;
+  }
+  try {
+    const propKey = PropertiesService.getScriptProperties().getProperty("MIDTRANS_SERVER_KEY");
+    if (propKey) return propKey;
+  } catch (e) {
+    console.error("Gagal membaca Script Properties MIDTRANS_SERVER_KEY: " + e.toString());
+  }
+  return hardcoded;
+})();
 const MIDTRANS_IS_PRODUCTION = true; // Set ke true jika live production
 
 function handleCentralPost(request) {
