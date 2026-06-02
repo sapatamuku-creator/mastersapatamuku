@@ -683,7 +683,10 @@
             <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
             <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Pesan</h2>
             <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
-            <button onclick="closeSapaModal()" class="btn-save" style="padding: 18px; border-radius: 18px; font-size: 11px;">MENGERTI</button>
+            <div id="notify-actions" style="display: flex; gap: 10px; justify-content: center;">
+                <button id="notify-cancel-btn" style="display:none; flex:1; background: #FFF9F5; border: 1.5px solid #F0E6DE; color: #8C7560; padding: 18px; border-radius: 18px; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.3s;">BATAL</button>
+                <button id="notify-ok-btn" onclick="closeSapaModal()" class="btn-save" style="flex:1; padding: 18px; border-radius: 18px; font-size: 11px; transition: 0.3s;">MENGERTI</button>
+            </div>
         </div>
     </div>
 
@@ -711,7 +714,32 @@
             document.getElementById('notify-title').innerText = title;
             document.getElementById('notify-msg').innerText = msg;
             document.getElementById('notify-icon').innerText = icon;
+            document.getElementById('notify-cancel-btn').style.display = 'none';
+            const okBtn = document.getElementById('notify-ok-btn');
+            okBtn.innerText = "MENGERTI";
+            okBtn.onclick = window.closeSapaModal;
             document.getElementById('sapa-notify-modal').style.display = 'flex';
+        };
+
+        window.showConfirm = function(title, msg, icon = "🔄") {
+            return new Promise(resolve => {
+                document.getElementById('notify-title').innerText = title;
+                document.getElementById('notify-msg').innerText = msg;
+                document.getElementById('notify-icon').innerText = icon;
+                document.getElementById('notify-cancel-btn').style.display = 'block';
+                const okBtn = document.getElementById('notify-ok-btn');
+                okBtn.innerText = "LANJUTKAN";
+                
+                okBtn.onclick = () => {
+                    window.closeSapaModal();
+                    resolve(true);
+                };
+                document.getElementById('notify-cancel-btn').onclick = () => {
+                    window.closeSapaModal();
+                    resolve(false);
+                };
+                document.getElementById('sapa-notify-modal').style.display = 'flex';
+            });
         };
 
         window.closeSapaModal = function() {
@@ -1786,7 +1814,7 @@
         if (!CURRENT_SS_ID) {
             return showSapaModal("Gagal", "Session tidak ditemukan. Silakan login ulang.", "⚠️");
         }
-        const confirmed = confirm("Sync semua data tamu dari Spreadsheet ke Supabase?\n\nProses ini akan mengupload ulang semua data ke database Supabase.\nMungkin memerlukan beberapa menit tergantung jumlah tamu.");
+        const confirmed = await showConfirm("Sync ke Supabase?", "Proses ini akan mengupload ulang semua data dari Spreadsheet ke database Supabase.\n\nMungkin memerlukan beberapa menit tergantung jumlah tamu.");
         if (!confirmed) return;
 
         toggleProcessing(true, "SYNCING KE SUPABASE...");
