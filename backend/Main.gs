@@ -1450,8 +1450,8 @@ function updateRsvp(ssId, guestId, pax) {
 }
 
 // --- SUPABASE INTEGRATION SCRIPT ---
-const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-const SUPABASE_KEY = (function() {
+var SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+var SUPABASE_KEY = (function() {
   const hardcoded = "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE";
   if (hardcoded && hardcoded !== "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE" && hardcoded !== "YOUR_SUPABASE_ANON_KEY") {
     return hardcoded;

@@ -4,8 +4,8 @@
  * Migrated to New Drive Environment
  */
 
-const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-const SUPABASE_KEY = (function() {
+var SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+var SUPABASE_KEY = (function() {
   const hardcoded = "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE";
   if (hardcoded && hardcoded !== "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE" && hardcoded !== "YOUR_SUPABASE_ANON_KEY") {
     return hardcoded;
@@ -43,7 +43,7 @@ const ADMIN_EMAIL = "sapatamuku@gmail.com";
 const FONNTE_TOKEN = "fRx1Canf4GYroBZZNfo7";
 
 // CONFIG MIDTRANS PAYMENT GATEWAY
-const MIDTRANS_SERVER_KEY = (function() {
+var MIDTRANS_SERVER_KEY = (function() {
   const hardcoded = "PASTE_KEY_SANDBOX_DISINI";
   if (hardcoded && hardcoded !== "PASTE_KEY_SANDBOX_DISINI" && hardcoded !== "PASTE_KEY_LIVE_DISINI") {
     return hardcoded;
