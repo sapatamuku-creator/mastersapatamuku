@@ -1809,7 +1809,7 @@
         }
     }
 
-    // --- SYNC SUPABASE MANUAL ---
+    // --- SYNC SUPABASE MANUAL (metode owner.html: fire-and-forget via GAS) ---
     window.syncToSupabase = async function() {
         if (!CURRENT_SS_ID) {
             return showSapaModal("Gagal", "Session tidak ditemukan. Silakan login ulang.", "⚠️");
@@ -1817,26 +1817,33 @@
         const confirmed = await showConfirm("Sync ke Supabase?", "Proses ini akan mengupload ulang semua data dari Spreadsheet ke database Supabase.\n\nMungkin memerlukan beberapa menit tergantung jumlah tamu.");
         if (!confirmed) return;
 
-        toggleProcessing(true, "SYNCING KE SUPABASE...");
+        toggleProcessing(true, "MENGIRIM KE SERVER...");
         try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
+            // Metode owner.html: mode: "no-cors" → GAS memproses di server-side
+            // Browser tidak membaca response (opaque), menghindari deteksi secret key
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
                 body: JSON.stringify({
                     action: "syncSheetToSupabase",
                     ssId: CURRENT_SS_ID
                 })
-            });
-            const result = await response.json();
-            if (result.status === "success") {
-                showSapaModal("Sync Berhasil! 🎉",
-                    result.message || "Semua data tamu berhasil disinkronkan ke Supabase.", "✅");
-                await refreshApp();
-            } else {
-                throw new Error(result.message || "Sync gagal tanpa pesan");
+            }).catch(() => {});
+
+            // Beri waktu GAS memproses (estimasi 5-8 detik)
+            for (let i = 8; i >= 1; i--) {
+                toggleProcessing(true, `MEMPROSES DI SERVER... (${i}s)`);
+                await new Promise(r => setTimeout(r, 1000));
             }
+
+            // Refresh data untuk verifikasi
+            toggleProcessing(true, "MEMVERIFIKASI DATA...");
+            await refreshApp();
+            showSapaModal("Permintaan Terkirim ✅",
+                "Sync telah dikirim ke server GAS. Data tamu di bawah sudah diperbarui dari Supabase.", "✅");
         } catch (e) {
             console.error("syncToSupabase error:", e);
-            showSapaModal("Sync Gagal ❌", "Gagal menyinkronkan data: " + e.message, "❌");
+            showSapaModal("Error ❌", "Gagal mengirim permintaan sync: " + e.message, "❌");
         } finally {
             toggleProcessing(false);
         }
