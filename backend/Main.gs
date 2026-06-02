@@ -255,7 +255,7 @@ function deleteGuest(ssId, kodeUnik) {
         // HAPUS DI SUPABASE SECARA OTOMATIS
         try {
           if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
-            UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kodeUnik, {
+            supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kodeUnik, {
               method: "delete",
               headers: {
                 "apikey": SUPABASE_KEY,
@@ -317,7 +317,7 @@ function updateTandaKasih(ssId, kode, nominal, statusHadiah) {
             status_hadiah: cleanedGiftStatus
           };
           
-          UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kode, {
+          supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kode, {
             method: "patch",
             headers: {
               "apikey": SUPABASE_KEY,
@@ -382,7 +382,7 @@ function confirmCheckIn(ssId, kodeUnik, realHadir, catatan, stationId, customUui
               souvenir: updatedRowData[10] === 1 || updatedRowData[10] === "ya" || updatedRowData[10] === "1" ? "ya" : "tidak"
             };
             
-            UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kodeUnik, {
+            supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kodeUnik, {
               method: "patch",
               headers: {
                 "apikey": SUPABASE_KEY,
@@ -601,7 +601,7 @@ function addToQueue(ssId, guest, category, info, stationId, customUuid, skipSupa
         station_id: stationId || "ALL"
       };
 
-      UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/print_queue", {
+      supabaseFetch(SUPABASE_URL + "/rest/v1/print_queue", {
         method: "post",
         headers: {
           "apikey": SUPABASE_KEY,
@@ -682,7 +682,7 @@ function markAsPrinted(ssId, ids) {
   try {
     if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
       ids.forEach(id => {
-        UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/print_queue?id=eq." + id, {
+        supabaseFetch(SUPABASE_URL + "/rest/v1/print_queue?id=eq." + id, {
           method: "patch",
           headers: {
             "apikey": SUPABASE_KEY,
@@ -766,7 +766,7 @@ function registerNewOnsite(data) {
             event_date: eventDate
           };
 
-          UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?on_conflict=ssid,kode", {
+          supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?on_conflict=ssid,kode", {
             method: "post",
             headers: {
               "apikey": SUPABASE_KEY,
@@ -802,7 +802,7 @@ function claimLuckyDraw(ssId, kode) {
       // SINKRONISASI KE SUPABASE SECARA OTOMATIS
       try {
         if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
-          UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kode, {
+          supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kode, {
             method: "patch",
             headers: {
               "apikey": SUPABASE_KEY,
@@ -908,7 +908,7 @@ function submitGuestCollection(formData) {
         event_date: eventDate
       };
       
-      UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?on_conflict=ssid,kode", {
+      supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?on_conflict=ssid,kode", {
         method: "post",
         headers: {
           "apikey": SUPABASE_KEY,
@@ -1382,7 +1382,7 @@ function addWish(ssId, name, text) {
           nama: name,
           ucapan: text
         };
-        UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/wishes_queue", {
+        supabaseFetch(SUPABASE_URL + "/rest/v1/wishes_queue", {
           method: "post",
           headers: {
             "apikey": SUPABASE_KEY,
@@ -1465,6 +1465,13 @@ const SUPABASE_KEY = (function() {
   return hardcoded;
 })();
 
+function supabaseFetch(url, options) {
+  options = options || {};
+  options.headers = options.headers || {};
+  options.headers["User-Agent"] = "SapaTamu-Backend/1.0";
+  return UrlFetchApp.fetch(url, options);
+}
+
 /**
  * Mirror konfigurasi undangan (invitationData JSON) ke tabel Supabase.
  * Dipanggil dari frontend setelah save ke Google Sheet berhasil.
@@ -1494,7 +1501,7 @@ function mirrorInvConfigToSupabase(ssId, invitationData) {
       updated_at: new Date().toISOString()
     });
 
-    const response = UrlFetchApp.fetch(url, {
+    const response = supabaseFetch(url, {
       method: "post",
       headers: {
         "apikey": SUPABASE_KEY,
@@ -1623,7 +1630,7 @@ function syncSheetToSupabase(ssId) {
       muteHttpExceptions: true
     };
 
-    const response = UrlFetchApp.fetch(url, options);
+    const response = supabaseFetch(url, options);
     const responseCode = response.getResponseCode();
     const responseText = response.getContentText();
 
@@ -1692,7 +1699,7 @@ function syncWishesToSupabase(ssId) {
       muteHttpExceptions: true
     };
 
-    const response = UrlFetchApp.fetch(url, options);
+    const response = supabaseFetch(url, options);
     const responseCode = response.getResponseCode();
     const responseText = response.getContentText();
 
@@ -1822,7 +1829,7 @@ function editGuest(payload) {
           alamat: payload.alamat,
           sesi: payload.sesi || "-"
         };
-        UrlFetchApp.fetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + payload.ssId + "&kode=eq." + payload.kode, {
+        supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + payload.ssId + "&kode=eq." + payload.kode, {
           method: "patch",
           headers: {
             "apikey": SUPABASE_KEY,

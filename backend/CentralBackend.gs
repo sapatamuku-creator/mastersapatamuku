@@ -4,6 +4,28 @@
  * Migrated to New Drive Environment
  */
 
+const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+const SUPABASE_KEY = (function() {
+  const hardcoded = "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE";
+  if (hardcoded && hardcoded !== "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE" && hardcoded !== "YOUR_SUPABASE_ANON_KEY") {
+    return hardcoded;
+  }
+  try {
+    const propKey = PropertiesService.getScriptProperties().getProperty("SUPABASE_KEY");
+    if (propKey) return propKey;
+  } catch (e) {
+    console.error("Gagal membaca Script Properties: " + e.toString());
+  }
+  return hardcoded;
+})();
+
+function supabaseFetch(url, options) {
+  options = options || {};
+  options.headers = options.headers || {};
+  options.headers["User-Agent"] = "SapaTamu-Backend/1.0";
+  return UrlFetchApp.fetch(url, options);
+}
+
 const MASTER_SS_ID = "1R99hDczYr4_OW7l41_DDrYuQRwZx30rhhaRHbJfRq1I"; 
 const FOLDER_KLIEN_ID = "1vKXjrfkPLHctEHc_RqK8hSDizpBjph4P"; 
 const MASTER_SHEET_NAME = "Sheet1";
@@ -491,19 +513,18 @@ function handleDeleteOwnerClient(data) {
 }
 
 function deleteClientFromSupabaseWithResult(username) {
-  const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/clients?username=eq." + encodeURIComponent(username);
-  const apiKey = "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE";
+  const sbUrl = SUPABASE_URL + "/rest/v1/clients?username=eq." + encodeURIComponent(username);
   
   const options = {
     method: "delete",
     headers: {
-      "apikey": apiKey,
-      "Authorization": "Bearer " + apiKey
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + SUPABASE_KEY
     },
     muteHttpExceptions: true
   };
   
-  const response = UrlFetchApp.fetch(sbUrl, options);
+  const response = supabaseFetch(sbUrl, options);
   return response.getContentText();
 }
 
@@ -937,8 +958,7 @@ function handleUpdateClientData(data) {
 
 function syncMetadataClientToSupabase(ssId, targetSS) {
   try {
-    const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/metadata_client?on_conflict=ssid";
-    const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTE3NTY4NSwiZXhwIjoyMDk0NzUxNjg1fQ.Bf0mQybvXLfou-zQVxeLq1Cba3H4DprOhXaj02n9njg";
+    const sbUrl = SUPABASE_URL + "/rest/v1/metadata_client?on_conflict=ssid";
     
     const bValues = targetSS.getRange("B1:C6").getValues();
     const sValues = targetSS.getRange("E1:G1").getValues();
@@ -962,14 +982,14 @@ function syncMetadataClientToSupabase(ssId, targetSS) {
       method: "post",
       contentType: "application/json",
       headers: {
-        "apikey": apiKey,
-        "Authorization": "Bearer " + apiKey,
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
         "Prefer": "resolution=merge-duplicates"
       },
       payload: JSON.stringify(payload),
       muteHttpExceptions: true
     };
-    UrlFetchApp.fetch(sbUrl, options);
+    supabaseFetch(sbUrl, options);
   } catch(e) {
     console.error("syncMetadataClientToSupabase error: " + e.toString());
   }
@@ -1091,8 +1111,7 @@ function syncClientToSupabase(rowData) {
 }
 
 function syncClientToSupabaseWithResult(rowData) {
-  const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/clients";
-  const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTE3NTY4NSwiZXhwIjoyMDk0NzUxNjg1fQ.Bf0mQybvXLfou-zQVxeLq1Cba3H4DprOhXaj02n9njg";
+  const sbUrl = SUPABASE_URL + "/rest/v1/clients";
   
   const payload = {
     username: rowData.username,
@@ -1112,8 +1131,8 @@ function syncClientToSupabaseWithResult(rowData) {
   const options = {
     method: "post",
     headers: {
-      "apikey": apiKey,
-      "Authorization": "Bearer " + apiKey,
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + SUPABASE_KEY,
       "Content-Type": "application/json",
       "Prefer": "resolution=merge-duplicates" // Upsert
     },
@@ -1121,7 +1140,7 @@ function syncClientToSupabaseWithResult(rowData) {
     muteHttpExceptions: true
   };
 
-  const res = UrlFetchApp.fetch(sbUrl, options);
+  const res = supabaseFetch(sbUrl, options);
   return "Status: " + res.getResponseCode() + ", Response: " + res.getContentText();
 }
 
