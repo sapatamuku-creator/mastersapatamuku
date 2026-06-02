@@ -1513,8 +1513,8 @@ function mirrorInvConfigToSupabase(ssId, invitationData) {
  */
 function syncSheetToSupabase(ssId) {
   try {
-    if (SUPABASE_URL === "YOUR_SUPABASE_PROJECT_URL" || SUPABASE_KEY === "YOUR_SUPABASE_ANON_KEY") {
-      return { status: "error", message: "API Supabase belum diatur di backend. Harap masukkan URL dan Anon Key Anda di Main.gs." };
+    if (SUPABASE_URL === "YOUR_SUPABASE_PROJECT_URL" || SUPABASE_KEY === "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE") {
+      return { status: "error", message: "API Supabase belum diatur di backend. Harap masukkan URL dan Service Role Key Anda di Main.gs." };
     }
 
     const ss = getSS(ssId);
