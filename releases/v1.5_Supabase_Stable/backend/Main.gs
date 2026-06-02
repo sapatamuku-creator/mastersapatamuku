@@ -1451,7 +1451,19 @@ function updateRsvp(ssId, guestId, pax) {
 
 // --- SUPABASE INTEGRATION SCRIPT ---
 const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-const SUPABASE_KEY = "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE";
+const SUPABASE_KEY = (function() {
+  const hardcoded = "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE";
+  if (hardcoded && hardcoded !== "PASTE_NEW_SUPABASE_SERVICE_ROLE_KEY_HERE" && hardcoded !== "YOUR_SUPABASE_ANON_KEY") {
+    return hardcoded;
+  }
+  try {
+    const propKey = PropertiesService.getScriptProperties().getProperty("SUPABASE_KEY");
+    if (propKey) return propKey;
+  } catch (e) {
+    console.error("Gagal membaca Script Properties: " + e.toString());
+  }
+  return hardcoded;
+})();
 
 /**
  * Mirror konfigurasi undangan (invitationData JSON) ke tabel Supabase.
