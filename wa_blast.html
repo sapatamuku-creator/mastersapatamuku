@@ -1186,19 +1186,29 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                         const encodedName = encodeURIComponent(guestName).replace(/,/g, '%2C');
 
                         // ===== DETEKSI LINK DINAMIS (SapaTamu vs Vendor Lain) =====
+                        // GAS mengirim B5 mentah — semua manipulasi URL ditangani di sini
                         let inviteLink = "";
                         if (inviteBase) {
                             const isSapaTamu = inviteBase.includes("sapatamu.id") || inviteBase.includes("sapatamu.ku") || inviteBase.includes("localhost");
 
                             if (isSapaTamu) {
-                                // A. Format Asli SapaTamu (Menggunakan id & u)
-                                inviteLink = `${inviteBase}${inviteBase.includes('?') ? '&' : '?'}v=3&id=${t.kode}&u=${encodedName}`;
+                                // A. Vendor SapaTamu — pastikan ?v=3 ada, lalu append &id= (kode unik) & &u= (nama tamu)
+                                // ?v=3 menandai versi undangan digital SapaTamu yang terintegrasi barcode
+                                let baseWithVersion = inviteBase;
+                                if (!inviteBase.includes("v=3")) {
+                                    baseWithVersion = inviteBase.includes("?") ? `${inviteBase}&v=3` : `${inviteBase}?v=3`;
+                                }
+                                inviteLink = `${baseWithVersion}&id=${t.kode}&u=${encodedName}`;
                             } else {
-                                // B. Format Vendor Lain (Menggunakan parameter kustom yang ada di B5, misal ?to= atau &to=)
+                                // B. Vendor Lain (custom) — klien sudah menyertakan parameter fetch di B5
+                                // Contoh B5: "https://inv.leafitation.com/alisha-juan/?to="
+                                // Frontend hanya menambahkan nama tamu di belakang '='
+                                // Kode unik tamu dikirim TERPISAH via LINK_QR (QR Code di bawah pesan)
                                 if (inviteBase.endsWith("=")) {
+                                    // Klien sudah benar memasukan ?to= atau ?for= atau ?name= dll.
                                     inviteLink = `${inviteBase}${encodedName}`;
                                 } else {
-                                    // Cadangan jika klien lupa mengetikkan '=' di akhir link B5
+                                    // Cadangan: klien lupa tanda '=' di akhir — paksa pakai ?to=
                                     inviteLink = `${inviteBase}${inviteBase.includes('?') ? '&' : '?'}to=${encodedName}`;
                                 }
                             }

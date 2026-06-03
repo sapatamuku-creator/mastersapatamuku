@@ -21,13 +21,9 @@ function handleWAFormGet(e) {
   const lokasiAcara = sheet1.getRange("B3").getValue();
   const waktuAcara = sheet1.getRange("B4").getValue() || "-";
   
-  let rawLink = sheet1.getRange("B5").getValue().toString().trim();
-  rawLink = rawLink.replace(/^https?:\/\//i, ""); 
-  let linkInvitation = "https://" + rawLink;
-  // Hanya tambahkan v=3 jika bukan format link cantik (/u)
-  if (!rawLink.includes("/u")) {
-    linkInvitation = linkInvitation.includes("?") ? `${linkInvitation}&v=3` : `${linkInvitation}?v=3`;
-  }
+  // Kirim linkInvitation MENTAH dari B5 — semua manipulasi URL dilakukan di sisi frontend
+  // setelah deteksi apakah vendor SapaTamu.id atau vendor lain (custom)
+  const linkInvitation = sheet1.getRange("B5").getValue().toString().trim();
 
   const deviceData = settings.getRange("A3:D8").getValues();
   const categoryMap = deviceData

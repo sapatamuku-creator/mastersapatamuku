@@ -1178,8 +1178,31 @@
         const weddingName = document.getElementById('view-wedding-name').innerText;
         const schedule = document.getElementById('view-schedule').innerText.replace(/\n/g, ' ');
         const location = document.getElementById('view-location').innerText;
-        const baseUrl = document.getElementById('view-link').innerText;
-        const personalLink = `${baseUrl}?id=${encodeURIComponent(code)}&u=${encodeURIComponent(name)}`;
+        const baseUrl = document.getElementById('view-link').innerText.trim();
+
+        // ===== DETEKSI VENDOR UNDANGAN (SapaTamu vs Vendor Lain) =====
+        // Logika ini selaras dengan wa_blast.html — GAS mengirim B5 mentah
+        let personalLink = "";
+        if (baseUrl) {
+            const isSapaTamu = baseUrl.includes("sapatamu.id") || baseUrl.includes("sapatamu.ku") || baseUrl.includes("localhost");
+            if (isSapaTamu) {
+                // A. Vendor SapaTamu — pastikan ?v=3 ada, lalu append &id= (kode unik) & &u= (nama tamu)
+                let baseWithVersion = baseUrl;
+                if (!baseUrl.includes("v=3")) {
+                    baseWithVersion = baseUrl.includes("?") ? `${baseUrl}&v=3` : `${baseUrl}?v=3`;
+                }
+                personalLink = `${baseWithVersion}&id=${encodeURIComponent(code)}&u=${encodeURIComponent(name)}`;
+            } else {
+                // B. Vendor Lain (custom) — klien sudah memasukan parameter fetch di link (misal ?to=)
+                // Hanya tempel nama tamu; kode unik dikirim TERPISAH via QR Code di bawah pesan
+                if (baseUrl.endsWith("=")) {
+                    personalLink = `${baseUrl}${encodeURIComponent(name)}`;
+                } else {
+                    // Fallback: klien lupa '=' di akhir link
+                    personalLink = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}to=${encodeURIComponent(name)}`;
+                }
+            }
+        }
         const qrCodeLink = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(code)}&size=400x400`;
         
         let cleanPhone = String(phone).replace(/\D/g, ''); 
