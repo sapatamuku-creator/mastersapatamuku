@@ -841,6 +841,9 @@
                 
                 window.WA_TEMPLATE_DEFAULT = meta.format_pesan_wa || "";
                 window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
+                // Simpan terpisah agar {HARI_TANGGAL} dan {WAKTU_ACARA} tidak merangkap
+                window.WA_HARI_TANGGAL = meta.hari_tanggal || "";
+                window.WA_WAKTU_ACARA = meta.waktu_acara || "";
 
                 document.getElementById('view-wedding-name').innerText = meta.nama_pengantin || "Event Guestbook";
                 document.getElementById('view-schedule').innerHTML = (meta.hari_tanggal || "") + "<br>" + (meta.waktu_acara || "");
@@ -901,6 +904,9 @@
                 
                 if(result.eventMeta) {
                     window.WA_TEMPLATE_DEFAULT = result.eventMeta.template || "";
+                    // Simpan terpisah agar {HARI_TANGGAL} dan {WAKTU_ACARA} tidak merangkap
+                    window.WA_HARI_TANGGAL = result.eventMeta.tanggal || "";
+                    window.WA_WAKTU_ACARA = result.eventMeta.waktu || "";
                     
                     document.getElementById('view-wedding-name').innerText = result.eventMeta.pengantin || "Event Guestbook";
                     document.getElementById('view-schedule').innerHTML = (result.eventMeta.tanggal || "") + "<br>" + (result.eventMeta.waktu || "");
@@ -1176,7 +1182,9 @@
         
         const sesi = guest.sesi || "-";
         const weddingName = document.getElementById('view-wedding-name').innerText;
-        const schedule = document.getElementById('view-schedule').innerText.replace(/\n/g, ' ');
+        // Gunakan variable terpisah — BUKAN innerText gabungan view-schedule
+        const hariTanggal = window.WA_HARI_TANGGAL || document.getElementById('view-schedule').innerText.split('\n')[0] || "-";
+        const waktuAcara = window.WA_WAKTU_ACARA || document.getElementById('view-schedule').innerText.split('\n')[1] || "-";
         const location = document.getElementById('view-location').innerText;
         const baseUrl = document.getElementById('view-link').innerText.trim();
 
@@ -1216,8 +1224,8 @@
                 .replace(/{NAMA_TAMU_KAPITAL}/g, name.toUpperCase())
                 .replace(/{SESI_TAMU}/g, sesi)
                 .replace(/{NAMA_PENGANTIN}/g, weddingName)
-                .replace(/{HARI_TANGGAL}/g, schedule) // karena kita sudah gabung tanggal & waktu, atau biarkan schedule
-                .replace(/{WAKTU_ACARA}/g, schedule)
+                .replace(/{HARI_TANGGAL}/g, hariTanggal)  // B2 — Hari & Tanggal saja
+                .replace(/{WAKTU_ACARA}/g, waktuAcara)    // B4 — Waktu Acara saja
                 .replace(/{LOKASI_ACARA}/g, location)
                 .replace(/{LINK_UNDANGAN}/g, personalLink)
                 .replace(/{LINK_QR}/g, qrCodeLink);
@@ -1225,8 +1233,9 @@
             msg = `Kepada Yth. Bapak/Ibu/Saudara/i\n*${name.toUpperCase()}*\n\n` +
                   `Tanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami. *Tepat pada pukul [${sesi}]*\n\n` +
                   `*${weddingName}*\n` +
-                  `□ ${schedule}\n` +
-                  `□ ${location}\n\n` +
+                  `▫️ Hari/Tgl: ${hariTanggal}\n` +
+                  `▫️ Waktu: ${waktuAcara}\n` +
+                  `▫️ Lokasi: ${location}\n\n` +
                   `Informasi lengkap dapat diakses melalui tautan berikut:\n${personalLink}\n\n` +
                   `Mohon simpan QR Code ini untuk akses masuk:\n${qrCodeLink}\n\n` +
                   `Terima kasih.`;
