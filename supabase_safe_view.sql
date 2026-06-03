@@ -5,8 +5,11 @@
 -- Jalankan di: Supabase Dashboard > SQL Editor
 -- ============================================================
 
--- Buat atau timpa view yang aman
-CREATE OR REPLACE VIEW client_public_profile AS
+-- DROP dulu karena CREATE OR REPLACE tidak bisa mengubah urutan kolom view yang sudah ada
+-- (Postgres error 42P16 jika kolom baru disisipkan di tengah)
+DROP VIEW IF EXISTS client_public_profile;
+
+CREATE VIEW client_public_profile AS
 SELECT
     username,
     ssid,           -- Diperlukan oleh subdomain_resolver untuk resolve SSID via Supabase (lebih cepat dari GAS)
