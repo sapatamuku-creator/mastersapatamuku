@@ -213,8 +213,10 @@
         .loading-overlay { 
             position: fixed; 
             inset: 0; 
-            background: rgba(255,255,255,0.7); 
-            backdrop-filter: blur(4px);
+            /* Transparan — layout halaman tetap terlihat saat loading */
+            background: rgba(255, 249, 245, 0.45); 
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
             z-index: 1000000; 
             display: none; 
             flex-direction: column;
@@ -223,7 +225,8 @@
             font-weight: 900; 
             color: var(--gold); 
             letter-spacing: 2px;
-            pointer-events: all; /* Kunci semua klik */
+            pointer-events: all; /* Tetap kunci klik saat loading */
+            transition: opacity 0.2s ease;
         }
         
         .spinner {
@@ -699,6 +702,12 @@
 
     <script>(function() {
         const SCRIPT_URL = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+        const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SB_HEADERS = {
+            "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
+            "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
+            "Content-Type": "application/json"
+        };
 
         function syncNavbar() {
             const ssId = window.CURRENT_SS_ID || "";
@@ -823,48 +832,12 @@
     }
 
     async function refreshApp() {
-        toggleProcessing(true, "SYNCING DATA...");
+        toggleProcessing(true, "MEMUAT DATA...");
         try {
-            // Coba fetch dari Supabase (Cepat)
-            const [metaRes, tamuRes] = await Promise.all([
-                fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=*`, { headers: SB_HEADERS }),
-                fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&order=row.desc`, { headers: SB_HEADERS })
-            ]);
-
-            if (!metaRes.ok || !tamuRes.ok) throw new Error("Supabase fetch failed");
-
-            const metaData = await metaRes.json();
+            // ===== STEP 1: Fetch TAMU dulu (data utama) — adopsi pola wa_blast.html =====
+            const tamuRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&order=row.desc`, { headers: SB_HEADERS });
+            if (!tamuRes.ok) throw new Error("Supabase tamu fetch failed");
             const tamuData = await tamuRes.json();
-
-            if (metaData && metaData.length > 0) {
-                const meta = metaData[0];
-                
-                window.WA_TEMPLATE_DEFAULT = meta.format_pesan_wa || "";
-                window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
-                // Simpan terpisah agar {HARI_TANGGAL} dan {WAKTU_ACARA} tidak merangkap
-                window.WA_HARI_TANGGAL = meta.hari_tanggal || "";
-                window.WA_WAKTU_ACARA = meta.waktu_acara || "";
-
-                document.getElementById('view-wedding-name').innerText = meta.nama_pengantin || "Event Guestbook";
-                document.getElementById('view-schedule').innerHTML = (meta.hari_tanggal || "") + "<br>" + (meta.waktu_acara || "");
-                document.getElementById('view-location').innerText = meta.lokasi_acara || "";
-                document.getElementById('view-link').innerText = meta.link_invitation || "";
-                
-                document.getElementById('edit_ev_nama').value = meta.nama_pengantin || "";
-                document.getElementById('edit_ev_date').value = meta.hari_tanggal || "";
-                document.getElementById('edit_ev_loc').value = meta.lokasi_acara || "";
-                document.getElementById('edit_ev_time').value = meta.waktu_acara || "";
-                document.getElementById('edit_ev_link').value = meta.link_invitation || "";
-
-                const sesiOptions = [meta.sesi_1, meta.sesi_2, meta.sesi_3].filter(s => s);
-                if(sesiOptions.length > 0) {
-                    const sesiSelect = document.getElementById('in-sesi-undangan');
-                    sesiSelect.innerHTML = sesiOptions.map((val, index) => {
-                        if(index < 3) document.getElementById(`edit_ev_s${index+1}`).value = val;
-                        return `<option value="${val}">Sesi ${index + 1} (${val})</option>`;
-                    }).join('');
-                }
-            }
 
             MASTER_LIST = tamuData.map(t => ({
                 id: t.kode, row: t.row, kode: t.kode, nama: t.nama, whatsapp: t.whatsapp,
@@ -872,23 +845,61 @@
                 alamat: t.alamat, rencanaHadir: t.rencana_hadir, sesi: t.sesi, statusWA: t.status_wa,
                 statusHadir: t.status_hadir, jamDatang: t.jam_datang, realHadir: t.real_hadir, syncStatus: "done"
             }));
-            
+
+            // Render list tamu langsung — UI sudah bisa dilihat
             render(MASTER_LIST);
-        } catch(sbErr) { 
-            console.warn("Supabase fetch failed, falling back to GAS:", sbErr);
-            
-            // FALLBACK KE GAS JIKA SUPABASE ERROR
+            toggleProcessing(false); // ← Spinner hilang SEKARANG, tidak tunggu metadata
+
+            // ===== STEP 2: Fetch METADATA di background (tidak blokir UI) =====
+            fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=*`, { headers: SB_HEADERS })
+                .then(r => r.ok ? r.json() : Promise.reject("meta fetch failed"))
+                .then(metaData => {
+                    if (!metaData || metaData.length === 0) return;
+                    const meta = metaData[0];
+
+                    window.WA_TEMPLATE_DEFAULT = meta.format_pesan_wa || "";
+                    window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
+                    window.WA_HARI_TANGGAL = meta.hari_tanggal || "";
+                    window.WA_WAKTU_ACARA = meta.waktu_acara || "";
+
+                    document.getElementById('view-wedding-name').innerText = meta.nama_pengantin || "Event Guestbook";
+                    document.getElementById('view-schedule').innerHTML = (meta.hari_tanggal || "") + "<br>" + (meta.waktu_acara || "");
+                    document.getElementById('view-location').innerText = meta.lokasi_acara || "";
+                    document.getElementById('view-link').innerText = meta.link_invitation || "";
+
+                    document.getElementById('edit_ev_nama').value = meta.nama_pengantin || "";
+                    document.getElementById('edit_ev_date').value = meta.hari_tanggal || "";
+                    document.getElementById('edit_ev_loc').value = meta.lokasi_acara || "";
+                    document.getElementById('edit_ev_time').value = meta.waktu_acara || "";
+                    document.getElementById('edit_ev_link').value = meta.link_invitation || "";
+
+                    const sesiOptions = [meta.sesi_1, meta.sesi_2, meta.sesi_3].filter(s => s);
+                    if (sesiOptions.length > 0) {
+                        const sesiSelect = document.getElementById('in-sesi-undangan');
+                        sesiSelect.innerHTML = sesiOptions.map((val, index) => {
+                            if (index < 3) document.getElementById(`edit_ev_s${index+1}`).value = val;
+                            return `<option value="${val}">Sesi ${index + 1} (${val})</option>`;
+                        }).join('');
+                    }
+                })
+                .catch(err => console.warn("Background metadata fetch failed:", err));
+
+        } catch(sbErr) {
+            console.warn("Supabase tamu fetch failed, falling back to GAS:", sbErr);
+            toggleProcessing(false); // Pastikan spinner hilang sebelum GAS (GAS lambat)
+
+            // ===== FALLBACK: GAS (blocking — hanya jika Supabase benar-benar gagal) =====
             try {
+                toggleProcessing(true, "MEMUAT DATA...");
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: "getMasterData", ssId: CURRENT_SS_ID })
                 });
                 const result = await response.json();
-                
                 if (result.status === "error") throw new Error(result.message);
 
                 MASTER_LIST = result.guestList || [];
-                
+
                 if (result.dropdownOptions && result.dropdownOptions.length > 0) {
                     const select = document.getElementById('in-l7-pengundang');
                     if (select) {
@@ -901,28 +912,27 @@
                         });
                     }
                 }
-                
-                if(result.eventMeta) {
+
+                if (result.eventMeta) {
                     window.WA_TEMPLATE_DEFAULT = result.eventMeta.template || "";
-                    // Simpan terpisah agar {HARI_TANGGAL} dan {WAKTU_ACARA} tidak merangkap
                     window.WA_HARI_TANGGAL = result.eventMeta.tanggal || "";
                     window.WA_WAKTU_ACARA = result.eventMeta.waktu || "";
-                    
+
                     document.getElementById('view-wedding-name').innerText = result.eventMeta.pengantin || "Event Guestbook";
                     document.getElementById('view-schedule').innerHTML = (result.eventMeta.tanggal || "") + "<br>" + (result.eventMeta.waktu || "");
                     document.getElementById('view-location').innerText = result.eventMeta.lokasi || "";
                     document.getElementById('view-link').innerText = result.eventMeta.link || "";
-                    
+
                     document.getElementById('edit_ev_nama').value = result.eventMeta.pengantin || "";
                     document.getElementById('edit_ev_date').value = result.eventMeta.tanggal || "";
                     document.getElementById('edit_ev_loc').value = result.eventMeta.lokasi || "";
                     document.getElementById('edit_ev_time').value = result.eventMeta.waktu || "";
                     document.getElementById('edit_ev_link').value = result.eventMeta.link || "";
 
-                    if(result.eventMeta.sesiOptions && result.eventMeta.sesiOptions.length > 0) {
+                    if (result.eventMeta.sesiOptions && result.eventMeta.sesiOptions.length > 0) {
                         const sesiSelect = document.getElementById('in-sesi-undangan');
                         sesiSelect.innerHTML = result.eventMeta.sesiOptions.map((val, index) => {
-                            if(index < 3) document.getElementById(`edit_ev_s${index+1}`).value = val;
+                            if (index < 3) document.getElementById(`edit_ev_s${index+1}`).value = val;
                             return `<option value="${val}">Sesi ${index + 1} (${val})</option>`;
                         }).join('');
                     }
@@ -931,9 +941,9 @@
             } catch(gasErr) {
                 console.error("GAS fallback also failed:", gasErr);
                 showSapaModal("Connection Error", "Gagal menghubungi server (Supabase & GAS offline). Pastikan Anda memiliki koneksi internet.", "⚠️");
+            } finally {
+                toggleProcessing(false);
             }
-        } finally {
-            toggleProcessing(false);
         }
     }
 
