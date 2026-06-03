@@ -62,26 +62,68 @@ async function resolveSapatamuSubdomain() {
             } catch(e) {}
         }
         
-        // Fetch ke server jika masih kosong
+        // Fetch SSID jika masih kosong setelah cek localStorage
         if (!window.CURRENT_SS_ID && parts.length >= 3 && parts[0] !== 'www') {
             const sub = parts[0].toLowerCase();
+
+            // ===== STEP 1: Supabase view (PRIMARY — cepat ~200ms, tanpa cold start) =====
+            let resolvedFromSupabase = false;
             try {
-                const response = await fetch(`${window.SCRIPT_URL}?action=resolveSubdomain&subdomain=${sub}`);
-                const res = await response.json();
-                if (res.status === "success") {
-                    window.CURRENT_SS_ID = res.ssId;
-                    window.CURRENT_CATEGORY = res.category || "wedding";
-                    // Preserve role yang sudah ada di localStorage (jangan overwrite)
+                const sbRes = await fetch(
+                    `https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/client_public_profile?subdomain=eq.${sub}&select=ssid,client_name,category`,
+                    {
+                        headers: {
+                            "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
+                            "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u"
+                        }
+                    }
+                );
+                const sbData = await sbRes.json();
+                if (Array.isArray(sbData) && sbData.length > 0 && sbData[0].ssid) {
+                    window.CURRENT_SS_ID = sbData[0].ssid;
+                    window.CURRENT_CATEGORY = sbData[0].category || "wedding";
                     const _existRole = (function(){
                         try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
                     })();
-                    const _resolvedData = { ssId: res.ssId, username: res.clientName, category: window.CURRENT_CATEGORY };
+                    const _resolvedData = { ssId: sbData[0].ssid, username: sbData[0].client_name || sub, category: window.CURRENT_CATEGORY };
                     if (_existRole) _resolvedData.role = _existRole;
                     localStorage.setItem('sapatamu_db', JSON.stringify(_resolvedData));
-                    console.log("Subdomain Resolved dari Server:", sub);
+                    resolvedFromSupabase = true;
+                    console.log("Subdomain Resolved via Supabase:", sub);
+
+                    // ===== STEP 2: GAS verification (BACKGROUND — fire-and-forget, tidak blokir UI) =====
+                    fetch(`${window.SCRIPT_URL}?action=resolveSubdomain&subdomain=${sub}`)
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.status === "success" && res.ssId && res.ssId !== sbData[0].ssid) {
+                                console.warn("[Resolver] SSID mismatch Supabase vs GAS — Supabase:", sbData[0].ssid, "GAS:", res.ssId);
+                            }
+                        })
+                        .catch(() => {}); // silent — tidak pengaruh ke UI
                 }
             } catch (e) {
-                console.error("Gagal resolve dari server:", e);
+                console.warn("Supabase resolve gagal, mencoba GAS fallback:", e);
+            }
+
+            // ===== STEP 3: GAS fallback (hanya jika Supabase gagal) =====
+            if (!resolvedFromSupabase) {
+                try {
+                    const response = await fetch(`${window.SCRIPT_URL}?action=resolveSubdomain&subdomain=${sub}`);
+                    const res = await response.json();
+                    if (res.status === "success") {
+                        window.CURRENT_SS_ID = res.ssId;
+                        window.CURRENT_CATEGORY = res.category || "wedding";
+                        const _existRole = (function(){
+                            try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
+                        })();
+                        const _resolvedData = { ssId: res.ssId, username: res.clientName, category: window.CURRENT_CATEGORY };
+                        if (_existRole) _resolvedData.role = _existRole;
+                        localStorage.setItem('sapatamu_db', JSON.stringify(_resolvedData));
+                        console.log("Subdomain Resolved via GAS (fallback):", sub);
+                    }
+                } catch (e) {
+                    console.error("GAS fallback juga gagal:", e);
+                }
             }
         }
 

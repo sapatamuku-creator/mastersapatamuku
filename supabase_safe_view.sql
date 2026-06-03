@@ -9,6 +9,7 @@
 CREATE OR REPLACE VIEW client_public_profile AS
 SELECT
     username,
+    ssid,           -- Diperlukan oleh subdomain_resolver untuk resolve SSID via Supabase (lebih cepat dari GAS)
     whatsapp,
     wedding_date,
     email,
