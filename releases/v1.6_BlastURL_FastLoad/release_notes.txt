@@ -1,0 +1,41 @@
+========================================================
+  SAPATAMU.KU — RELEASE v1.6 "BlastURL + FastLoad"
+  Tanggal: 2026-06-03
+========================================================
+
+PERUBAHAN UTAMA:
+----------------
+
+1. [FIX] WA Blast URL Logic — Vendor Detection
+   - backend/WhatsAppFormulir.gs: GAS tidak lagi manipulasi URL,
+     linkInvitation dikirim mentah dari B5 ke frontend
+   - wa_blast.html: Frontend deteksi vendor (sapatamu.id vs custom)
+     SapaTamu: append ?v=3&id={kode}&u={nama}
+     Vendor lain: append nama tamu ke parameter existing (e.g. ?to=)
+   - formulir_tamu.html: Patch blast manual dengan logika yang sama
+
+2. [FIX] Placeholder {HARI_TANGGAL} vs {WAKTU_ACARA} merangkap
+   - formulir_tamu.html: Simpan window.WA_HARI_TANGGAL (B2) dan
+     window.WA_WAKTU_ACARA (B4) terpisah, bukan dari view-schedule gabungan
+
+3. [PERF] Subdomain Resolver: Supabase-First (dari 2-5s ke ~200ms)
+   - subdomain_resolver.js: Query Supabase view client_public_profile
+     sebagai primary resolver (tanpa cold start)
+   - GAS resolveSubdomain menjadi background verification + fallback saja
+   - supabase_safe_view.sql: Tambah kolom ssid ke view
+
+4. [DOCS] Rencana migrasi ke Opsi C (Supabase Edge Function)
+   - docs/MIGRATION_OPSI_C_EDGE_FUNCTION.md: Panduan lengkap step-by-step
+     untuk migrasi ke Edge Function di masa mendatang
+
+CATATAN SUPABASE:
+-----------------
+- Jalankan supabase_safe_view.sql di SQL Editor untuk update view
+  (DROP VIEW + CREATE VIEW — sudah fix dari error 42P16)
+- CRUD policies lama (x-sapatamu-secret) tidak berubah
+
+NEXT (v1.7):
+------------
+- Split loading formulir_tamu.html: tamu fetch dulu → render →
+  metadata fetch di background (adopsi pola wa_blast.html)
+- Transparent spinner overlay saat loading
