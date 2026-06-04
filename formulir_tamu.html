@@ -144,7 +144,7 @@
         
         #fs-toggle { position: fixed; bottom: 25px; right: 25px; z-index: 2147483645; background: #fff; color: var(--text-main); width: 50px; height: 50px; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(140, 117, 96, 0.15); }
 
-        #v3-draft-list-container { max-height: 75vh; overflow-y: auto; margin-top: 25px; padding-right: 5px; transition: all 0.3s ease; }
+        #v3-draft-list-container { max-height: 75vh; overflow-y: auto; margin-top: 15px; padding-right: 5px; transition: all 0.3s ease; }
         #v3-draft-list-container::-webkit-scrollbar { width: 4px; }
         #v3-draft-list-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
@@ -156,6 +156,56 @@
         @media (max-width: 640px) {
             #v3-draft-list { grid-template-columns: 1fr; }
         }
+
+        /* DUPLICATE FILTER BUTTON */
+        #btn-dup-filter {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 50px;
+            border: 1.5px solid rgba(217, 119, 6, 0.25);
+            background: rgba(254, 243, 199, 0.5);
+            color: #92400e;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        #btn-dup-filter:hover {
+            background: rgba(254, 243, 199, 0.9);
+            border-color: rgba(217, 119, 6, 0.5);
+            box-shadow: 0 3px 10px rgba(217, 119, 6, 0.15);
+        }
+        #btn-dup-filter.active {
+            background: #D97706;
+            border-color: #D97706;
+            color: #FFF;
+            box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35);
+        }
+        #btn-dup-filter .dup-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            flex-shrink: 0;
+        }
+        #dup-filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #dup-filter-info {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #D97706;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            white-space: nowrap;
+        }
+        #dup-filter-info.visible { opacity: 1; }
         .delete-guest-btn {
             position: absolute;
             top: 5px;
@@ -500,6 +550,13 @@
                     </div>
                     <input type="text" id="guest-search" oninput="filterGuestList()" placeholder="🔍 Cari Nama, WA, Kategori, atau Status..." 
                            style="width: 100%; padding: 18px 25px; border-radius: 18px; border: 1.5px solid var(--border); font-size: 14px; font-weight: 600; background: #FFF; outline: none; box-sizing: border-box; box-shadow: 0 10px 20px rgba(140, 117, 96, 0.03);">
+                    <div id="dup-filter-bar">
+                        <button id="btn-dup-filter" onclick="toggleDuplicateFilter()" title="Tampilkan hanya tamu yang namanya terduplikat (case-insensitive)">
+                            <span class="dup-dot"></span>
+                            <span id="btn-dup-label">TAMPILKAN DUPLIKAT NAMA</span>
+                        </button>
+                        <span id="dup-filter-info"></span>
+                    </div>
                     <div id="v3-draft-list-container">
                         <div id="v3-draft-list"></div>
                     </div>
@@ -1320,10 +1377,61 @@
         }).catch(err => console.warn("markSent background failed:", err));
     };
 
+    // ===== DUPLICATE NAME FILTER STATE =====
+    let isDupFilterActive = false;
+
+    // Build a set of normalized names that appear more than once (case-insensitive)
+    function getDuplicateNames(list) {
+        const nameCount = {};
+        list.forEach(g => {
+            const norm = (g.nama || '').trim().toLowerCase();
+            if (!norm) return;
+            nameCount[norm] = (nameCount[norm] || 0) + 1;
+        });
+        // Return set of names with count > 1
+        return new Set(Object.keys(nameCount).filter(n => nameCount[n] > 1));
+    }
+
+    window.toggleDuplicateFilter = function() {
+        isDupFilterActive = !isDupFilterActive;
+        const btn = document.getElementById('btn-dup-filter');
+        const label = document.getElementById('btn-dup-label');
+        const info = document.getElementById('dup-filter-info');
+
+        if (isDupFilterActive) {
+            btn.classList.add('active');
+            label.innerText = 'SEMBUNYIKAN DUPLIKAT';
+
+            // Count duplicates from full MASTER_LIST
+            const dupNames = getDuplicateNames(MASTER_LIST);
+            const dupCount = MASTER_LIST.filter(g => dupNames.has((g.nama || '').trim().toLowerCase())).length;
+            info.innerText = `${dupCount} data duplikat ditemukan`;
+            info.classList.add('visible');
+        } else {
+            btn.classList.remove('active');
+            label.innerText = 'TAMPILKAN DUPLIKAT NAMA';
+            info.classList.remove('visible');
+        }
+
+        // Re-apply current filter
+        filterGuestList();
+    };
+
     window.filterGuestList = function() {
         const query = document.getElementById('guest-search').value.trim().toLowerCase();
-        if (!query) { render(MASTER_LIST); return; }
-        const filtered = MASTER_LIST.filter(g => {
+
+        // Start from full list
+        let baseList = MASTER_LIST;
+
+        // Apply duplicate name filter first (if active)
+        if (isDupFilterActive) {
+            const dupNames = getDuplicateNames(MASTER_LIST);
+            baseList = MASTER_LIST.filter(g => dupNames.has((g.nama || '').trim().toLowerCase()));
+        }
+
+        if (!query) { render(baseList); return; }
+
+        const filtered = baseList.filter(g => {
             const statusWA = g.statusWA || '';
             const isSent    = statusWA.includes('\u2705') || statusWA.toUpperCase().includes('SENT');
             const isPending = !isSent && (statusWA.includes('\u26a0') || statusWA.toLowerCase().includes('duplikasi'));
