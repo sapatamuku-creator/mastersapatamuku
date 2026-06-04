@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -1298,8 +1298,20 @@
 
         // ===== OPTIMISTIC UPDATE: langsung hijau tanpa tunggu API =====
         // User sudah klik kirim → WA sudah terbuka → tandai SENT di-memory sekarang
-        guest.statusWA = '✅ SENT';
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const nowStr = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+        const formattedStatus = `✅ [${nowStr}]`;
+
+        guest.statusWA = formattedStatus;
         render(MASTER_LIST);
+
+        // Persist ke Supabase immediately (background PATCH)
+        fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${code}`, {
+            method: "PATCH",
+            headers: SB_HEADERS,
+            body: JSON.stringify({ status_wa: formattedStatus })
+        }).catch(err => console.warn("Supabase markSent failed:", err));
 
         // Persist ke spreadsheet di background (fire-and-forget)
         fetch(SCRIPT_URL, {

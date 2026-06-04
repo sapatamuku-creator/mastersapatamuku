@@ -931,7 +931,30 @@ function markAsSent(ssId, row) {
   if (!row) return { status: "error" };
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_DATA);
-  sheet.getRange(row, COL_STATUS_WA).setValue("✅ " + Utilities.formatDate(new Date(), "GMT+7", "dd/MM HH:mm"));
+  const statusStr = "✅ " + Utilities.formatDate(new Date(), "GMT+7", "dd/MM HH:mm");
+  sheet.getRange(row, COL_STATUS_WA).setValue(statusStr);
+  
+  // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+  try {
+    if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+      const kodeUnik = sheet.getRange(row, COL_KODE_UNIK).getValue();
+      if (kodeUnik) {
+        supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kodeUnik, {
+          method: "patch",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Content-Type": "application/json"
+          },
+          payload: JSON.stringify({ status_wa: statusStr }),
+          muteHttpExceptions: true
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Failed to sync markAsSent to Supabase: " + e.toString());
+  }
+
   return { status: "success" };
 }
 
