@@ -141,7 +141,8 @@ function handleRegister(data) {
         status: "Active",
         category: data.category || "wedding",
         subdomain: sub,
-        client_name: data.clientName
+        client_name: data.clientName,
+        package: data.package || ""   // ✅ FIX: kirim field package ke Supabase
       });
       syncAdminPasswordToSupabase();
     } catch (e) {

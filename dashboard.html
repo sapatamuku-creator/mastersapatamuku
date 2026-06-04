@@ -618,16 +618,25 @@
             const rows = await response.json();
             if (rows && rows.length > 0) {
                 const pkg = rows[0].package;
-                if (pkg) {
-                    let localData = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
+                const clientName = rows[0].client_name;
+
+                let localData = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
+                // ✅ FIX: Update package meskipun kosong (agar overwrite nilai lama yang salah)
+                if (pkg !== undefined) {
                     localData.package = pkg;
                     localStorage.setItem('sapatamu_db', JSON.stringify(localData));
                     sessionStorage.setItem('sapatamu_session', JSON.stringify(localData));
                     
                     const pkgEl = document.getElementById('display_active_package');
-                    if(pkgEl) pkgEl.innerText = pkg;
+                    if(pkgEl) pkgEl.innerText = pkg || "PAKET BELUM DIPILIH";
                     
                     applyPackageDimming();
+                }
+
+                // ✅ Update display name dari Supabase jika tersedia
+                if (clientName) {
+                    const nameEl = document.getElementById('display_wedding_name');
+                    if (nameEl) nameEl.innerText = clientName;
                 }
             }
         } catch (e) { console.warn("Silent sync failed", e); }
