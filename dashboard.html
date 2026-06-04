@@ -759,8 +759,12 @@
             initNavScroll();
             applyPackageDimming();
             
-            // ✅ Sync live package data pakai username (slug), bukan displayName
-            syncClientData(username);
+            // ✅ FIX: Ambil slug dari hostname URL (paling reliable, tidak bergantung localStorage lama)
+            // Contoh: merirosid.sapatamu.id → querySlug = "merirosid"
+            const _hostParts = window.location.hostname.split('.');
+            const _isSubdomain = _hostParts.length >= 3 && _hostParts[0] !== 'www' && _hostParts[0] !== 'sapatamu';
+            const _querySlug = _isSubdomain ? _hostParts[0].toLowerCase() : username;
+            syncClientData(_querySlug);
         } else {
             setTimeout(checkResolved, 100);
         }

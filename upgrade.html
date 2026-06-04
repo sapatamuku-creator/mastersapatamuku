@@ -311,11 +311,32 @@
                           JSON.parse(localStorage.getItem('sapatamu_db'));
         } catch (e) {}
 
-        if (!sessionData || !sessionData.username) {
+        if (!sessionData) {
             window.location.href = 'login.html';
             return;
         }
-        fetchClientData(sessionData.username);
+
+        // ✅ FIX: Ambil slug langsung dari hostname URL — sumber kebenaran paling reliable
+        // Contoh: merirosid.sapatamu.id → slug = "merirosid"
+        // Ini tidak bisa salah meski localStorage berisi nama lama yang kotor
+        const hostParts = window.location.hostname.split('.');
+        const isSubdomain = hostParts.length >= 3 && hostParts[0] !== 'www' && hostParts[0] !== 'sapatamu';
+        const slugFromHost = isSubdomain ? hostParts[0].toLowerCase() : null;
+
+        // Validasi username dari localStorage (slug valid = hanya a-z0-9)
+        const storedUsername = sessionData.username || '';
+        const isValidSlug = /^[a-z0-9]+$/.test(storedUsername);
+
+        // Prioritas: hostname slug > localStorage slug valid > reject
+        const usernameToQuery = slugFromHost || (isValidSlug ? storedUsername : null);
+
+        if (!usernameToQuery) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        console.log('[Upgrade] Query username:', usernameToQuery, '(dari', slugFromHost ? 'hostname' : 'localStorage', ')');
+        fetchClientData(usernameToQuery);
     };
 
     async function fetchClientData(username) {

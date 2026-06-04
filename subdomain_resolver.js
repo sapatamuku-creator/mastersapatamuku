@@ -54,10 +54,16 @@ async function resolveSapatamuSubdomain() {
         if (_localData) {
             try {
                 const _parsed = JSON.parse(_localData);
-                if (_parsed.ssId) {
+                // ✅ FIX: Validasi username - harus berupa slug valid (hanya huruf kecil & angka)
+                // Jika tidak valid (misal "Meri & Rosid"), paksa re-fetch dari Supabase
+                const isValidSlug = /^[a-z0-9]+$/.test(_parsed.username || '');
+                if (_parsed.ssId && isValidSlug) {
                     window.CURRENT_SS_ID = _parsed.ssId;
                     window.CURRENT_CATEGORY = _parsed.category || "wedding";
                     console.log("Sesi lokal ditemukan:", _parsed.username, "Kategori:", window.CURRENT_CATEGORY);
+                } else if (_parsed.ssId && !isValidSlug) {
+                    console.warn("[Resolver] Username tidak valid di localStorage:", _parsed.username, "→ Paksa re-resolve dari Supabase");
+                    // Biarkan ssId tidak diset → resolver akan re-fetch
                 }
             } catch(e) {}
         }
