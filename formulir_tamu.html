@@ -222,6 +222,15 @@
             letter-spacing: 0.3px;
             white-space: nowrap;
         }
+        .gas-spin-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #10B981; flex-shrink: 0;
+            animation: gasPulse 0.8s ease infinite;
+        }
+        @keyframes gasPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.6); }
+        }
         #btn-manage-dup:hover {
             background: rgba(254, 226, 226, 0.9);
             border-color: rgba(239, 68, 68, 0.5);
@@ -697,6 +706,8 @@
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="flex-shrink:0"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                             KELOLA DUPLIKAT
                         </button>
+                        <span id="gas-countdown-indicator" style="display:none; align-items:center; gap:5px; font-size:9.5px; font-weight:800; color:#059669; background:rgba(209,250,229,0.7); border:1.5px solid rgba(16,185,129,0.25); padding:5px 10px; border-radius:50px; white-space:nowrap;">
+                        </span>
                         <span id="dup-filter-info"></span>
                     </div>
                     <div id="v3-draft-list-container">
@@ -2429,66 +2440,110 @@
 
             if (toDeleteKodes.length === 0) return;
 
+            var total = toDeleteKodes.length;
+
             var confirmed = await showConfirm(
                 'Konfirmasi Hapus Massal',
-                'Anda akan menghapus ' + toDeleteKodes.length + ' tamu duplikat secara permanen dari Spreadsheet & Supabase. Tindakan ini tidak dapat dibatalkan.',
+                'Anda akan menghapus ' + total + ' tamu duplikat. Data akan langsung dihapus dari Supabase, dan Spreadsheet diperbarui di background.',
                 'DELETE'
             );
             if (!confirmed) return;
 
             closeManageDuplicatesModal();
-            toggleProcessing(true, 'MENGHAPUS ' + toDeleteKodes.length + ' TAMU...');
+            toggleProcessing(true, 'MENGHAPUS ' + total + ' TAMU DARI SUPABASE...');
 
-            var successCount = 0;
-            var failCount = 0;
+            // ===== STEP 1: Supabase — batch parallel (semua sekaligus, cepat) =====
+            var sbPromises = toDeleteKodes.map(function(kode) {
+                return fetch(SB_URL + '/rest/v1/tamu?ssid=eq.' + CURRENT_SS_ID + '&kode=eq.' + kode, {
+                    method: 'DELETE',
+                    headers: SB_HEADERS
+                }).then(function(res) {
+                    return { kode: kode, ok: res.ok || res.status === 204 };
+                }).catch(function() {
+                    return { kode: kode, ok: false };
+                });
+            });
 
-            for (var di = 0; di < toDeleteKodes.length; di++) {
-                var kode = toDeleteKodes[di];
-                try {
-                    var results = await Promise.allSettled([
-                        fetch(SB_URL + '/rest/v1/tamu?ssid=eq.' + CURRENT_SS_ID + '&kode=eq.' + kode, {
-                            method: 'DELETE', headers: SB_HEADERS
-                        }),
-                        fetch(SCRIPT_URL, {
-                            method: 'POST',
-                            body: JSON.stringify({ action: 'deleteGuest', ssId: CURRENT_SS_ID, kodeUnik: kode })
-                        })
-                    ]);
+            var sbResults = await Promise.all(sbPromises);
 
-                    var sbRes = results[0];
-                    var gasRes = results[1];
-
-                    var sbOk = sbRes.status === 'fulfilled' && (sbRes.value.ok || sbRes.value.status === 204);
-                    var gasOk = false;
-                    if (gasRes.status === 'fulfilled') {
-                        try { var j = await gasRes.value.json(); gasOk = j.success === true; }
-                        catch (e2) { gasOk = gasRes.value.ok; }
-                    }
-
-                    if (sbOk || gasOk) {
-                        var idx = MASTER_LIST.findIndex(function(g) { return g.kode === kode; });
-                        if (idx !== -1) MASTER_LIST.splice(idx, 1);
-                        successCount++;
-                    } else {
-                        failCount++;
-                    }
-                } catch (e) {
-                    console.error('Bulk delete error for kode', kode, e);
-                    failCount++;
+            // Remove successful ones from MASTER_LIST immediately
+            var deletedKodes = [];
+            sbResults.forEach(function(r) {
+                if (r.ok) {
+                    var idx = MASTER_LIST.findIndex(function(g) { return g.kode === r.kode; });
+                    if (idx !== -1) MASTER_LIST.splice(idx, 1);
+                    deletedKodes.push(r.kode);
                 }
-            }
+            });
 
             render(MASTER_LIST);
             toggleProcessing(false);
 
-            if (failCount === 0) {
-                showSapaModal('Selesai!', successCount + ' tamu duplikat berhasil dihapus.', 'OK');
+            // Show brief success — Supabase done
+            var sbFail = total - deletedKodes.length;
+            if (sbFail === 0) {
+                showSapaModal('Berhasil', total + ' tamu duplikat dihapus dari database. Spreadsheet diperbarui di background...', 'OK');
             } else {
-                showSapaModal('Sebagian Berhasil', successCount + ' berhasil, ' + failCount + ' gagal. Coba refresh.', 'WARN');
+                showSapaModal('Sebagian Berhasil', deletedKodes.length + ' berhasil dari Supabase, ' + sbFail + ' gagal.', 'WARN');
             }
+
+            // ===== STEP 2: GAS — background fire-and-forget dengan countdown indicator =====
+            if (deletedKodes.length === 0) return;
+
+            var gasRemaining = deletedKodes.length;
+            var gasTotal = deletedKodes.length;
+            showGasCountdown(gasRemaining, gasTotal);
+
+            // Run GAS deletions one-by-one in background (no await blocking UI)
+            (async function runGasBackground() {
+                for (var gi = 0; gi < deletedKodes.length; gi++) {
+                    var kode = deletedKodes[gi];
+                    try {
+                        await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            body: JSON.stringify({ action: 'deleteGuest', ssId: CURRENT_SS_ID, kodeUnik: kode })
+                        });
+                    } catch (e) {
+                        console.warn('GAS background delete failed for kode:', kode, e);
+                    }
+                    gasRemaining--;
+                    updateGasCountdown(gasRemaining, gasTotal);
+                }
+                // All done — show "Selesai" then hide
+                finishGasCountdown();
+            })();
         };
 
+        // ===== GAS COUNTDOWN INDICATOR HELPERS =====
+        var _gasCountdownTimer = null;
+
+        function showGasCountdown(remaining, total) {
+            var indicator = document.getElementById('gas-countdown-indicator');
+            if (!indicator) return;
+            indicator.style.display = 'inline-flex';
+            indicator.innerHTML = '<span class="gas-spin-dot"></span><span id="gas-cd-text">' + remaining + '/' + total + ' sync GS</span>';
+        }
+
+        function updateGasCountdown(remaining, total) {
+            var textEl = document.getElementById('gas-cd-text');
+            if (textEl) textEl.innerText = remaining + '/' + total + ' sync GS';
+        }
+
+        function finishGasCountdown() {
+            var textEl = document.getElementById('gas-cd-text');
+            var indicator = document.getElementById('gas-countdown-indicator');
+            if (textEl) textEl.innerText = 'Spreadsheet selesai';
+            var dot = indicator ? indicator.querySelector('.gas-spin-dot') : null;
+            if (dot) { dot.style.animation = 'none'; dot.style.background = '#10B981'; }
+            // Hide after 3 seconds
+            if (_gasCountdownTimer) clearTimeout(_gasCountdownTimer);
+            _gasCountdownTimer = setTimeout(function() {
+                if (indicator) indicator.style.display = 'none';
+            }, 3000);
+        }
+
         initApp();
+
 
         } else {
             setTimeout(startApp, 100);
