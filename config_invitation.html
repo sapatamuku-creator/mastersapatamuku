@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -44,7 +44,47 @@
 
         /* NAVBAR CLONE */
         .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; background: var(--bg); }
-        .nav-outer-wrapper { position: relative; max-width: 95%; display: flex; align-items: center; background: #FFFDFB; border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08); border: 1px solid var(--border); overflow: hidden; }
+        
+        /* Dynamic Island wrapper */
+        .nav-outer-wrapper {
+            position: relative;
+            display: flex; align-items: center;
+            background: rgba(255, 253, 251, 0.92);
+            backdrop-filter: blur(20px);
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.10);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            max-width: 240px;
+            transition: max-width 0.5s cubic-bezier(0.34, 1.3, 0.64, 1),
+                        box-shadow 0.4s ease,
+                        background 0.3s ease;
+            cursor: pointer;
+        }
+        .nav-outer-wrapper.di-expanded {
+            max-width: 98vw;
+            cursor: default;
+            box-shadow: 0 14px 40px rgba(74, 63, 53, 0.13);
+        }
+        .di-collapsed-label {
+            position: absolute; left: 0; right: 0;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 22px; font-size: 11px; font-weight: 800;
+            color: var(--text-main); white-space: nowrap;
+            opacity: 1; transition: opacity 0.25s ease;
+            pointer-events: none; z-index: 5;
+        }
+        .di-collapsed-label .di-dot {
+            width: 7px; height: 7px; background: var(--primary);
+            border-radius: 50%; flex-shrink: 0; animation: diPulse 2s infinite;
+        }
+        @keyframes diPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.7); }
+        }
+        .nav-outer-wrapper.di-expanded .di-collapsed-label { opacity: 0; pointer-events: none; }
+        .nav-outer-wrapper:not(.di-expanded) .nav-scroll-container { opacity: 0; pointer-events: none; }
+        .nav-outer-wrapper.di-expanded .nav-scroll-container { opacity: 1; pointer-events: auto; }
         .nav-scroll-container { display: flex; align-items: center; gap: 5px; padding: 6px 15px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
         .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: #8C7560; padding: 10px 18px; border-radius: 30px; transition: 0.3s; }
         .nav-link.active { background: var(--primary); color: white !important; }
@@ -56,7 +96,12 @@
 <body>
 
     <nav class="sapatamu-navbar">
-        <div class="nav-outer-wrapper">
+        <div class="nav-outer-wrapper di-expanded" id="nav-island">
+        <!-- Dynamic Island collapsed label -->
+        <div class="di-collapsed-label" id="di-label">
+            <span class="di-dot"></span>
+            <span id="di-label-text">Menu</span>
+        </div>
             <div class="nav-scroll-container" id="nav-scroll">
                 <div class="nav-group flex items-center">
                     <a href="dashboard.html" class="nav-link">Dashboard</a>
@@ -1173,6 +1218,28 @@
             }
             closeMapPicker();
         }
-    </script>
+    
+    function initDynamicIslandNav() {
+        const island = document.getElementById('nav-island');
+        const labelText = document.getElementById('di-label-text');
+        if (!island) return;
+        const activeLink = document.querySelector('.nav-link.active');
+        if (activeLink && labelText) labelText.textContent = activeLink.textContent.trim();
+        let collapseTimer = null;
+        function expandNav() { clearTimeout(collapseTimer); island.classList.add('di-expanded'); }
+        function scheduleCollapse(delay = 3000) {
+            clearTimeout(collapseTimer);
+            collapseTimer = setTimeout(() => island.classList.remove('di-expanded'), delay);
+        }
+        island.addEventListener('mouseenter', expandNav);
+        island.addEventListener('mouseleave', () => scheduleCollapse(3000));
+        island.addEventListener('click', (e) => {
+            if (!island.classList.contains('di-expanded')) {
+                e.preventDefault(); expandNav(); scheduleCollapse(4000);
+            }
+        });
+        scheduleCollapse(4000);
+    }
+</script>
 </body>
 </html>
