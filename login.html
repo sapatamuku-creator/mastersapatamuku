@@ -383,19 +383,21 @@
 
         if (session) {
             const data = JSON.parse(session);
-            if (data.username) {
+            const sub = (data.subdomain || data.username || "").toLowerCase().replace(/[\s&]/g, '');
+            if (sub) {
                 const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
                 const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
-                window.location.replace("https://" + data.username.toLowerCase().replace(/\s+/g, '') + ".sapatamu.id/" + targetPage);
+                window.location.replace("https://" + sub + ".sapatamu.id/" + targetPage);
                 return;
             }
         } else if (localData) {
             const data = JSON.parse(localData);
-            if (data.username) {
+            const sub = (data.subdomain || data.username || "").toLowerCase().replace(/[\s&]/g, '');
+            if (sub) {
                 sessionStorage.setItem(SESSION_KEY, localData);
                 const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
                 const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
-                window.location.replace("https://" + data.username.toLowerCase().replace(/\s+/g, '') + ".sapatamu.id/" + targetPage);
+                window.location.replace("https://" + sub + ".sapatamu.id/" + targetPage);
                 return;
             }
         }
