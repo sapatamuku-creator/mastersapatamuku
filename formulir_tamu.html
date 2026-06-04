@@ -1966,25 +1966,20 @@
         if (activeLink && labelText) labelText.textContent = activeLink.textContent.trim();
         let collapseTimer = null;
         function expandNav() { clearTimeout(collapseTimer); island.classList.add('di-expanded'); }
-    // Dynamic Island Nav - dipanggil saat DOM siap
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initDynamicIslandNav);
-    } else {
-        initDynamicIslandNav();
-    }
-        function scheduleCollapse(delay = 3000) {
+        function scheduleCollapse(delay) {
             clearTimeout(collapseTimer);
-            collapseTimer = setTimeout(() => island.classList.remove('di-expanded'), delay);
+            collapseTimer = setTimeout(function() { island.classList.remove('di-expanded'); }, delay || 3000);
         }
         island.addEventListener('mouseenter', expandNav);
-        island.addEventListener('mouseleave', () => scheduleCollapse(3000));
-        island.addEventListener('click', (e) => {
+        island.addEventListener('mouseleave', function() { scheduleCollapse(3000); });
+        island.addEventListener('click', function(e) {
             if (!island.classList.contains('di-expanded')) {
                 e.preventDefault(); expandNav(); scheduleCollapse(4000);
             }
         });
         scheduleCollapse(4000);
     }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDynamicIslandNav);
+    } else { initDynamicIslandNav(); }
 </script>
-</body>
-</html>
