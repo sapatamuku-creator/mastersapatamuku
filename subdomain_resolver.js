@@ -70,7 +70,7 @@ async function resolveSapatamuSubdomain() {
             let resolvedFromSupabase = false;
             try {
                 const sbRes = await fetch(
-                    `https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/client_public_profile?subdomain=eq.${sub}&select=ssid,client_name,category`,
+                    `https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/client_public_profile?subdomain=eq.${sub}&select=ssid,client_name,category,package`,
                     {
                         headers: {
                             "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
@@ -85,11 +85,13 @@ async function resolveSapatamuSubdomain() {
                     const _existRole = (function(){
                         try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
                     })();
-                    const _resolvedData = { ssId: sbData[0].ssid, username: sbData[0].client_name || sub, category: window.CURRENT_CATEGORY };
+                    // ✅ FIX: Gunakan subdomain slug (sub) sebagai username, bukan client_name
+                    // client_name = "Meri & Rosid" tidak bisa dipakai utk query ?username=eq.xxx
+                    const _resolvedData = { ssId: sbData[0].ssid, username: sub, client_name: sbData[0].client_name || sub, category: window.CURRENT_CATEGORY, package: sbData[0].package || '' };
                     if (_existRole) _resolvedData.role = _existRole;
                     localStorage.setItem('sapatamu_db', JSON.stringify(_resolvedData));
                     resolvedFromSupabase = true;
-                    console.log("Subdomain Resolved via Supabase:", sub);
+                    console.log("Subdomain Resolved via Supabase:", sub, "Paket:", sbData[0].package || '-');
 
                     // ===== STEP 2: GAS verification (BACKGROUND — fire-and-forget, tidak blokir UI) =====
                     fetch(`${window.SCRIPT_URL}?action=resolveSubdomain&subdomain=${sub}`)
@@ -116,7 +118,8 @@ async function resolveSapatamuSubdomain() {
                         const _existRole = (function(){
                             try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
                         })();
-                        const _resolvedData = { ssId: res.ssId, username: res.clientName, category: window.CURRENT_CATEGORY };
+                        // ✅ FIX: Gunakan subdomain slug (sub) sebagai username
+                        const _resolvedData = { ssId: res.ssId, username: sub, client_name: res.clientName || sub, category: window.CURRENT_CATEGORY, package: res.package || '' };
                         if (_existRole) _resolvedData.role = _existRole;
                         localStorage.setItem('sapatamu_db', JSON.stringify(_resolvedData));
                         console.log("Subdomain Resolved via GAS (fallback):", sub);

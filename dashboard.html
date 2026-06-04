@@ -717,9 +717,11 @@
             // 3. JALANKAN DASHBOARD
             const parsed = JSON.parse(localData);
             const cat = window.CURRENT_CATEGORY || "wedding";
-            const name = parsed.username || "Client";
+            // ✅ FIX: username = slug (merirosid), client_name = nama tampil (Meri & Rosid)
+            const username = parsed.username || "client";
+            const displayName = parsed.client_name || parsed.username || "Client";
             
-            document.getElementById('display_wedding_name').innerText = name;
+            document.getElementById('display_wedding_name').innerText = displayName;
             
             // Set Avatar Letter or Image
             const avatarLetter = document.getElementById('header-avatar-letter');
@@ -734,7 +736,7 @@
                 }
             } else {
                 if (avatarLetter) {
-                    avatarLetter.innerText = name.charAt(0).toUpperCase();
+                    avatarLetter.innerText = displayName.charAt(0).toUpperCase();
                     avatarLetter.style.display = 'block';
                 }
                 if (avatarImg) avatarImg.style.display = 'none';
@@ -757,8 +759,8 @@
             initNavScroll();
             applyPackageDimming();
             
-            // Sync live package data
-            syncClientData(name);
+            // ✅ Sync live package data pakai username (slug), bukan displayName
+            syncClientData(username);
         } else {
             setTimeout(checkResolved, 100);
         }
