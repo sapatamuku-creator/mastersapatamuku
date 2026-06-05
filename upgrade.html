@@ -598,6 +598,28 @@
         }
 
         setLoading('btn_upgrade_pay', true);
+        const isDemo = currentUserData.is_demo || currentUserData.username === 'akundemo';
+        if (isDemo) {
+            document.getElementById('text_upgrade_pay').innerText = "Simulasi Mengupgrade...";
+            try {
+                let sess = JSON.parse(sessionStorage.getItem('sapatamu_session')) || {};
+                sess.package = newPackage;
+                sessionStorage.setItem('sapatamu_session', JSON.stringify(sess));
+                
+                let db = JSON.parse(localStorage.getItem('sapatamu_db')) || {};
+                db.package = newPackage;
+                localStorage.setItem('sapatamu_db', JSON.stringify(db));
+            } catch (err) {
+                console.error("Gagal menyimpan simulasi paket ke storage", err);
+            }
+            
+            showSapaModal("Upgrade Berhasil! 🎉", `Selamat! Layanan Demo Anda telah di-upgrade ke ${newPackage} (Simulasi). Halaman akan dialihkan kembali ke Dashboard.`, "🎉");
+            setTimeout(() => {
+                window.location.href = "dashboard.html";
+            }, 3000);
+            return;
+        }
+
         try {
             const response = await fetch(SCRIPT_URL, {
                 method: "POST", mode: "cors",

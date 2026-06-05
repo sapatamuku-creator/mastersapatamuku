@@ -122,11 +122,19 @@ async function resolveSapatamuSubdomain() {
                     const _existRole = (function(){
                         try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
                     })();
+                    const _isDemoUser = sub === 'akundemo';
+                    const _existingDb = (function(){
+                        try { return JSON.parse(localStorage.getItem('sapatamu_db')); } catch(e){ return null; }
+                    })();
+                    const _pkgToSet = (_isDemoUser && _existingDb && _existingDb.package) ? _existingDb.package : (sbData[0].package || '');
+
                     // ✅ FIX: Gunakan subdomain slug (sub) sebagai username, bukan client_name
                     // client_name = "Meri & Rosid" tidak bisa dipakai utk query ?username=eq.xxx
-                    const _resolvedData = { ssId: sbData[0].ssid, username: sub, client_name: sbData[0].client_name || sub, category: window.CURRENT_CATEGORY, package: sbData[0].package || '' };
+                    const _resolvedData = { ssId: sbData[0].ssid, username: sub, client_name: sbData[0].client_name || sub, category: window.CURRENT_CATEGORY, package: _pkgToSet };
                     if (_existRole) _resolvedData.role = _existRole;
+                    if (_isDemoUser) _resolvedData.is_demo = true;
                     localStorage.setItem('sapatamu_db', JSON.stringify(_resolvedData));
+                    sessionStorage.setItem('sapatamu_session', JSON.stringify(_resolvedData));
                     resolvedFromSupabase = true;
                     console.log("Subdomain Resolved via Supabase:", sub, "Paket:", sbData[0].package || '-');
 
@@ -155,10 +163,18 @@ async function resolveSapatamuSubdomain() {
                         const _existRole = (function(){
                             try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
                         })();
+                        const _isDemoUser = sub === 'akundemo';
+                        const _existingDb = (function(){
+                            try { return JSON.parse(localStorage.getItem('sapatamu_db')); } catch(e){ return null; }
+                        })();
+                        const _pkgToSet = (_isDemoUser && _existingDb && _existingDb.package) ? _existingDb.package : (res.package || '');
+
                         // ✅ FIX: Gunakan subdomain slug (sub) sebagai username
-                        const _resolvedData = { ssId: res.ssId, username: sub, client_name: res.clientName || sub, category: window.CURRENT_CATEGORY, package: res.package || '' };
+                        const _resolvedData = { ssId: res.ssId, username: sub, client_name: res.clientName || sub, category: window.CURRENT_CATEGORY, package: _pkgToSet };
                         if (_existRole) _resolvedData.role = _existRole;
+                        if (_isDemoUser) _resolvedData.is_demo = true;
                         localStorage.setItem('sapatamu_db', JSON.stringify(_resolvedData));
+                        sessionStorage.setItem('sapatamu_session', JSON.stringify(_resolvedData));
                         console.log("Subdomain Resolved via GAS (fallback):", sub);
                     }
                 } catch (e) {
