@@ -34,6 +34,14 @@ async function resolveSapatamuSubdomain() {
         window.CURRENT_SS_ID = demoSession.ssId;
         window.CURRENT_CATEGORY = demoSession.category;
         window.SAPATAMU_RESOLVED = true;
+
+        if (_urlPkg) {
+            // Update package in the backend (Spreadsheet and Supabase) asynchronously
+            fetch(window.SCRIPT_URL, {
+                method: "POST", mode: "cors",
+                body: JSON.stringify({ action: "upgradePackage", username: "akundemo", newPackage: _urlPkg })
+            }).catch(e => console.error("Gagal update package demo di backend", e));
+        }
         
         // Bersihkan parameter demo & pkg dari URL tanpa reload
         const _newUrl = new URL(window.location.href);
@@ -123,14 +131,9 @@ async function resolveSapatamuSubdomain() {
                         try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
                     })();
                     const _isDemoUser = sub === 'akundemo';
-                    const _existingDb = (function(){
-                        try { return JSON.parse(localStorage.getItem('sapatamu_db')); } catch(e){ return null; }
-                    })();
-                    const _pkgToSet = (_isDemoUser && _existingDb && _existingDb.package) ? _existingDb.package : (sbData[0].package || '');
-
                     // ✅ FIX: Gunakan subdomain slug (sub) sebagai username, bukan client_name
                     // client_name = "Meri & Rosid" tidak bisa dipakai utk query ?username=eq.xxx
-                    const _resolvedData = { ssId: sbData[0].ssid, username: sub, client_name: sbData[0].client_name || sub, category: window.CURRENT_CATEGORY, package: _pkgToSet };
+                    const _resolvedData = { ssId: sbData[0].ssid, username: sub, client_name: sbData[0].client_name || sub, category: window.CURRENT_CATEGORY, package: sbData[0].package || '' };
                     if (_existRole) _resolvedData.role = _existRole;
                     if (_isDemoUser) _resolvedData.is_demo = true;
                     localStorage.setItem('sapatamu_db', JSON.stringify(_resolvedData));
@@ -164,13 +167,8 @@ async function resolveSapatamuSubdomain() {
                             try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
                         })();
                         const _isDemoUser = sub === 'akundemo';
-                        const _existingDb = (function(){
-                            try { return JSON.parse(localStorage.getItem('sapatamu_db')); } catch(e){ return null; }
-                        })();
-                        const _pkgToSet = (_isDemoUser && _existingDb && _existingDb.package) ? _existingDb.package : (res.package || '');
-
                         // ✅ FIX: Gunakan subdomain slug (sub) sebagai username
-                        const _resolvedData = { ssId: res.ssId, username: sub, client_name: res.clientName || sub, category: window.CURRENT_CATEGORY, package: _pkgToSet };
+                        const _resolvedData = { ssId: res.ssId, username: sub, client_name: res.clientName || sub, category: window.CURRENT_CATEGORY, package: res.package || '' };
                         if (_existRole) _resolvedData.role = _existRole;
                         if (_isDemoUser) _resolvedData.is_demo = true;
                         localStorage.setItem('sapatamu_db', JSON.stringify(_resolvedData));

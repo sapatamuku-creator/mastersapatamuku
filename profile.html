@@ -536,19 +536,16 @@
 
             // Fetch live data from Supabase to sync package
             try {
-                const isDemo = parsed.is_demo || uname === 'akundemo';
-                if (!isDemo) {
-                    const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?username=eq.${uname}&limit=1`, {
-                        headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
-                    });
-                    const rows = await response.json();
-                    if (rows && rows.length > 0) {
-                        const livePkg = rows[0].package;
-                        if (livePkg) {
-                            parsed.package = livePkg;
-                            localStorage.setItem('sapatamu_db', JSON.stringify(parsed));
-                            renderProfileData(uname, livePkg);
-                        }
+                const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?username=eq.${uname}&limit=1`, {
+                    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                });
+                const rows = await response.json();
+                if (rows && rows.length > 0) {
+                    const livePkg = rows[0].package;
+                    if (livePkg) {
+                        parsed.package = livePkg;
+                        localStorage.setItem('sapatamu_db', JSON.stringify(parsed));
+                        renderProfileData(uname, livePkg);
                     }
                 }
             } catch (e) {

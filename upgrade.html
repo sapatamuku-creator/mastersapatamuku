@@ -600,23 +600,8 @@
         setLoading('btn_upgrade_pay', true);
         const isDemo = currentUserData.is_demo || currentUserData.username === 'akundemo';
         if (isDemo) {
-            document.getElementById('text_upgrade_pay').innerText = "Simulasi Mengupgrade...";
-            try {
-                let sess = JSON.parse(sessionStorage.getItem('sapatamu_session')) || {};
-                sess.package = newPackage;
-                sessionStorage.setItem('sapatamu_session', JSON.stringify(sess));
-                
-                let db = JSON.parse(localStorage.getItem('sapatamu_db')) || {};
-                db.package = newPackage;
-                localStorage.setItem('sapatamu_db', JSON.stringify(db));
-            } catch (err) {
-                console.error("Gagal menyimpan simulasi paket ke storage", err);
-            }
-            
-            showSapaModal("Upgrade Berhasil! 🎉", `Selamat! Layanan Demo Anda telah di-upgrade ke ${newPackage} (Simulasi). Halaman akan dialihkan kembali ke Dashboard.`, "🎉");
-            setTimeout(() => {
-                window.location.href = "dashboard.html";
-            }, 3000);
+            // Langsung panggil aktivasi upgrade di backend (GAS & Supabase)
+            await prosesAktivasiUpgrade(newPackage);
             return;
         }
 
@@ -661,8 +646,14 @@
             });
             const resJson = await response.json();
             if (resJson.status === "success") {
-                showSapaModal("Upgrade Berhasil! 🎉", `Selamat! Layanan Anda telah di-upgrade ke ${newPackage}. Halaman akan dimuat ulang.`, "🎉");
-                setTimeout(() => window.location.reload(), 3000);
+                const isDemo = currentUserData.is_demo || currentUserData.username === 'akundemo';
+                if (isDemo) {
+                    showSapaModal("Upgrade Berhasil! 🎉", `Selamat! Layanan Demo Anda telah di-upgrade ke ${newPackage}. Halaman akan dialihkan kembali ke Dashboard.`, "🎉");
+                    setTimeout(() => window.location.href = "dashboard.html", 3000);
+                } else {
+                    showSapaModal("Upgrade Berhasil! 🎉", `Selamat! Layanan Anda telah di-upgrade ke ${newPackage}. Halaman akan dimuat ulang.`, "🎉");
+                    setTimeout(() => window.location.reload(), 3000);
+                }
             } else {
                 showSapaModal("Aktivasi Gagal", resJson.message, "❌");
                 setLoading('btn_upgrade_pay', false);
