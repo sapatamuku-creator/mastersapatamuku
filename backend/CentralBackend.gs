@@ -1528,10 +1528,10 @@ function cleanDemoData30Days() {
     messageLog.push("Gagal membersihkan Spreadsheet Demo: " + e.toString());
   }
 
-  // 2. Bersihkan Supabase Table `guests`
+  // 2. Bersihkan Supabase Table `tamu`
   try {
     const cutoffStr = cutoffTime.toISOString();
-    const url = `${SUPABASE_URL}/rest/v1/guests?username=eq.${DEMO_USERNAME}&created_at=lt.${cutoffStr}`;
+    const url = `${SUPABASE_URL}/rest/v1/tamu?ssid=eq.${DEMO_SSID}&created_at=lt.${cutoffStr}`;
     const options = {
       method: "delete",
       headers: {
