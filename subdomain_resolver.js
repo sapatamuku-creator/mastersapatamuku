@@ -12,8 +12,39 @@ async function resolveSapatamuSubdomain() {
     const parts = hostname.split('.');
     const isMainDomain = (hostname === "sapatamu.id" || hostname === "www.sapatamu.id");
     
-    // 1. TRANSFER DATA DARI URL
+    // 0. DETEKSI MODE DEMO DARI URL
     const _urlParams = new URLSearchParams(window.location.search);
+    const _urlDemo = _urlParams.get('demo') === 'true' || _urlParams.get('triggerDemo') === 'true';
+    const _urlPkg = _urlParams.get('pkg');
+    if (_urlDemo) {
+        console.log("Demo session detected in URL. Package:", _urlPkg);
+        const demoSession = {
+            ssId: "1URVle0-ptX2kyxR99E6HJruIkwuwcE5zES4k8BYnoJU",
+            username: "akundemo",
+            client_name: "Akun Demo SapaTamu",
+            category: "wedding",
+            package: _urlPkg || "Bronze Guestbook",
+            role: "client",
+            is_demo: true,
+            demo_started_at: new Date().toISOString()
+        };
+        localStorage.setItem('sapatamu_db', JSON.stringify(demoSession));
+        sessionStorage.setItem('sapatamu_session', JSON.stringify(demoSession));
+        
+        window.CURRENT_SS_ID = demoSession.ssId;
+        window.CURRENT_CATEGORY = demoSession.category;
+        window.SAPATAMU_RESOLVED = true;
+        
+        // Bersihkan parameter demo & pkg dari URL tanpa reload
+        const _newUrl = new URL(window.location.href);
+        _newUrl.searchParams.delete('demo');
+        _newUrl.searchParams.delete('pkg');
+        window.history.replaceState({}, '', _newUrl);
+        
+        return demoSession.ssId;
+    }
+    
+    // 1. TRANSFER DATA DARI URL
     const _urlSsid = _urlParams.get('ssId');
     const _urlUser = _urlParams.get('user');
     const _urlRole = _urlParams.get('role'); // RBAC: baca role dari URL

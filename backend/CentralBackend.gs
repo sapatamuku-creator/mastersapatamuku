@@ -84,6 +84,7 @@ function handleCentralPost(request) {
     case 'syncAllClients': return createResponse({ status: "success", message: syncAllClientsToSupabase() });
     case 'checkSlot': return handleCheckSlot(request);
     case 'getClientProfile': return handleGetClientProfile(request);
+    case 'cleanDemoData': return createResponse({ status: "success", message: cleanDemoData30Days() });
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
 }
@@ -1452,4 +1453,98 @@ function handleUpgradePackage(data) {
   } catch (err) {
     return createResponse({ status: "error", message: "Gagal memproses upgrade: " + err.toString() });
   }
+}
+
+/**
+ * Pembersihan otomatis data demo (30 hari)
+ * Dijalankan dengan trigger waktu (Time-driven trigger) harian
+ */
+function cleanDemoData30Days() {
+  const DEMO_SSID = "1URVle0-ptX2kyxR99E6HJruIkwuwcE5zES4k8BYnoJU";
+  const DEMO_USERNAME = "akundemo";
+  const retentionDays = 30;
+  const cutoffTime = new Date();
+  cutoffTime.setDate(cutoffTime.getDate() - retentionDays);
+  
+  console.log("Memulai pembersihan otomatis data demo. Batas tanggal: " + cutoffTime.toISOString());
+
+  let messageLog = [];
+
+  // 1. Bersihkan Spreadsheet Demo
+  try {
+    const ss = SpreadsheetApp.openById(DEMO_SSID);
+    const sheets = ss.getSheets();
+    
+    sheets.forEach(sheet => {
+      const sheetName = sheet.getName();
+      // Lewati sheet config/pengaturan jika ada, fokus ke daftar tamu
+      if (sheetName.toLowerCase().includes("config") || sheetName.toLowerCase().includes("setting")) {
+        return;
+      }
+      
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) return; // Kosong atau hanya header
+      
+      const values = sheet.getDataRange().getValues();
+      const headers = values[0];
+      
+      // Cari kolom tanggal pembuatan / created_at / timestamp
+      let dateColIdx = -1;
+      for (let j = 0; j < headers.length; j++) {
+        const hName = String(headers[j]).toLowerCase();
+        if (hName.includes("timestamp") || hName.includes("waktu") || hName.includes("created") || hName.includes("tanggal")) {
+          dateColIdx = j;
+          break;
+        }
+      }
+      
+      // Jika tidak ditemukan, default ke kolom pertama
+      if (dateColIdx === -1) {
+        dateColIdx = 0;
+      }
+      
+      let deleteCount = 0;
+      // Loop dari bawah ke atas agar index baris tidak rusak setelah didelete
+      for (let i = lastRow; i >= 2; i--) {
+        const cellValue = values[i - 1][dateColIdx];
+        let rowDate = null;
+        
+        if (cellValue instanceof Date) {
+          rowDate = cellValue;
+        } else if (cellValue) {
+          rowDate = new Date(cellValue);
+        }
+        
+        if (rowDate && !isNaN(rowDate.getTime())) {
+          if (rowDate < cutoffTime) {
+            sheet.deleteRow(i);
+            deleteCount++;
+          }
+        }
+      }
+      messageLog.push(`Sheet "${sheetName}": Dihapus ${deleteCount} baris data lama.`);
+    });
+  } catch (e) {
+    messageLog.push("Gagal membersihkan Spreadsheet Demo: " + e.toString());
+  }
+
+  // 2. Bersihkan Supabase Table `guests`
+  try {
+    const cutoffStr = cutoffTime.toISOString();
+    const url = `${SUPABASE_URL}/rest/v1/guests?username=eq.${DEMO_USERNAME}&created_at=lt.${cutoffStr}`;
+    const options = {
+      method: "delete",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      }
+    };
+    const response = supabaseFetch(url, options);
+    const code = response.getResponseCode();
+    messageLog.push(`Supabase cleanup response code: ${code}`);
+  } catch (e) {
+    messageLog.push("Gagal membersihkan database Supabase: " + e.toString());
+  }
+  
+  return messageLog.join(" | ");
 }
