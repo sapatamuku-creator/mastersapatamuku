@@ -12,6 +12,7 @@
         'gold': 5,     'gold guestbook': 5,
         'exclusive': 6, 'exclusive collaboration': 6,
         'deluxe': 7,   'deluxe collaboration': 7,
+        'platinum': 7, 'platinum collaboration': 7,
         'collaboration': 6, 'b2b': 6
     };
 
@@ -24,6 +25,7 @@
         'Gold Guestbook':        4500000,
         'Exclusive Collaboration': 7500000,
         'Deluxe Collaboration':  10500000,
+        'Platinum Collaboration':  10500000,
     };
 
     function getPackageTier(pkgName) {
@@ -172,7 +174,7 @@
             else if (currentPackageTier === 3) defaultPkg = ['Silver Guestbook', 3500000];
             else defaultPkg = ['Gold Guestbook', 4500000];
         } else if (cat === 'allin') {
-            defaultPkg = currentPackageTier <= 5 ? ['Exclusive Collaboration', 7500000] : ['Deluxe Collaboration', 10500000];
+            defaultPkg = currentPackageTier <= 5 ? ['Exclusive Collaboration', 7500000] : ['Platinum Collaboration', 10500000];
         }
 
         if (defaultPkg) selectPricing(defaultPkg[0], defaultPkg[1], arguments[1]);
