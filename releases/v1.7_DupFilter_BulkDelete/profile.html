@@ -571,7 +571,33 @@
                         document.getElementById('meta-sesi-2').value = m.sesi_2 && m.sesi_2 !== 'EMPTY' ? m.sesi_2 : "-";
                         document.getElementById('meta-sesi-3').value = m.sesi_3 && m.sesi_3 !== 'EMPTY' ? m.sesi_3 : "-";
                     } else {
-                        document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Data tidak ditemukan");
+                        // Fallback ke GAS getMasterData
+                        const gasUrl = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+                        try {
+                            const resGas = await fetch(gasUrl, {
+                                method: 'POST',
+                                body: JSON.stringify({ action: "getMasterData", ssId: ssId })
+                            });
+                            const result = await resGas.json();
+                            if (result && result.eventMeta) {
+                                const meta = result.eventMeta;
+                                document.getElementById('meta-nama-pengantin').value = meta.pengantin || "-";
+                                document.getElementById('meta-hari-tanggal').value = meta.tanggal || "-";
+                                document.getElementById('meta-waktu-acara').value = meta.waktu || "-";
+                                document.getElementById('meta-lokasi-acara').value = meta.lokasi || "-";
+                                document.getElementById('meta-link-undangan').value = meta.link || "-";
+                                
+                                const sOptions = meta.sesiOptions || [];
+                                document.getElementById('meta-sesi-1').value = sOptions[0] || "-";
+                                document.getElementById('meta-sesi-2').value = sOptions[1] || "-";
+                                document.getElementById('meta-sesi-3').value = sOptions[2] || "-";
+                            } else {
+                                document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Data tidak ditemukan");
+                            }
+                        } catch(gasErr) {
+                            console.warn("GAS fallback failed:", gasErr);
+                            document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Data tidak ditemukan");
+                        }
                     }
                 } catch (e) {
                     console.warn("Metadata fetch failed", e);
