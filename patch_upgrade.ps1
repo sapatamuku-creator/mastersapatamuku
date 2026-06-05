@@ -6,7 +6,7 @@ $newFunc = @"
         try {
             // Baca profil langsung dari Supabase View yang aman (tanpa password)
             const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-            const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+            const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
             const res = await fetch(
                 SB_URL + "/rest/v1/client_public_profile?subdomain=eq." + encodeURIComponent(username) + "&select=username,whatsapp,wedding_date,email,status,category,subdomain,client_name,package",
                 { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
