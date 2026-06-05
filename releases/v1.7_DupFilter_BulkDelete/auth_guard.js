@@ -25,9 +25,11 @@
     }
 
     function getRole() {
+        const s = getSession();
+        if (s.is_demo || s.username === 'akundemo') return undefined;
         // Kembalikan undefined jika tidak ada role (sesi lama sebelum RBAC)
         // Guard hanya aktif jika role EKSPLISIT: 'client' atau 'usher'
-        return getSession().role || undefined;
+        return s.role || undefined;
     }
 
     // ─── Upgrade role di session (Switch to Admin) ─────────────────────────
