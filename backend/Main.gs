@@ -1909,9 +1909,19 @@ function handleSpreadsheetEdit(e) {
     if (sheet.getName() !== SHEET_DATA) return;
     
     const row = range.getRow();
+    const col = range.getColumn();
+    
+    // Jika edit terjadi pada area Metadata (Baris 1 s/d 6, Kolom B s/d C ATAU E s/d G)
+    if (row <= 6) {
+      if ((col >= 2 && col <= 3) || (col >= 5 && col <= 7)) {
+        const ss = e.source;
+        syncMetadataClientToSupabase(ss.getId(), sheet);
+      }
+      return;
+    }
+    
     if (row < START_ROW) return;
     
-    const col = range.getColumn();
     // Monitor kolom penting: Nama (3), Whatsapp (4), Status Hadir (9), Souvenir (11), Pihak (12), Alamat (13), Real Hadir (14), Jenis Gift (15), WA Send API (16), Lucky Draw (17), Sesi (19)
     const monitoredCols = [3, 4, 5, 9, 11, 12, 13, 14, 15, 16, 17, 19];
     if (monitoredCols.indexOf(col) === -1) return;

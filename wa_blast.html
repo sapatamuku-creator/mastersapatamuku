@@ -1252,11 +1252,46 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${t.kode}&size=400x400`;
 
                         // ===== DYNAMIC TEMPLATE COMPILED WITH PLACEHOLDERS =====
-                        const defaultTemplate = `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\nTepat pada pukul *[{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫ï¸ {HARI_TANGGAL}\n▫ï¸ Waktu: {WAKTU_ACARA}\n▫ï¸ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap mengenai jadwal, lokasi, dan kartu akses digital dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara:\n{LINK_QR}\n\nMerupakan suatu kehormatan bagi kami apabila Anda berkenan hadir. Terima kasih.`;
+                        const defaultTemplate = `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Anda untuk menghadiri acara kami.\nTepat pada pukul *[{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap mengenai jadwal, lokasi, dan kartu akses digital dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara:\n{LINK_QR}\n\nMerupakan suatu kehormatan bagi kami apabila Anda berkenan hadir. Terima kasih.`;
 
-                        const template = (localData.customTemplate && localData.customTemplate.trim() !== "")
-                            ? localData.customTemplate
-                            : ((localData.defaultTemplate && localData.defaultTemplate.trim() !== "") ? localData.defaultTemplate : defaultTemplate);
+                        const fallbackJSONTemplates = {
+                            "vvip": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
+                            "vip": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
+                            "keluarga": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
+                            "umum": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`
+                        };
+
+                        let template = "";
+                        if (localData.customTemplate && localData.customTemplate.trim() !== "") {
+                            template = localData.customTemplate;
+                        } else {
+                            const rawDefault = localData.defaultTemplate || "";
+                            const cleanDefault = rawDefault.trim();
+                            if (cleanDefault.startsWith("{") && cleanDefault.endsWith("}")) {
+                                try {
+                                    const jsonTemplates = JSON.parse(cleanDefault);
+                                    const guestCat = (t.kategori || "Umum").trim().toLowerCase();
+                                    const matchedKey = Object.keys(jsonTemplates).find(key => key.toLowerCase() === guestCat);
+                                    if (matchedKey) {
+                                        template = jsonTemplates[matchedKey];
+                                    } else {
+                                        template = jsonTemplates["umum"] || jsonTemplates["Umum"] || Object.values(jsonTemplates)[0] || "";
+                                    }
+                                } catch(e) {
+                                    console.error("Gagal parse JSON B6:", e);
+                                    template = rawDefault;
+                                }
+                            } else if (cleanDefault.includes("JSON_FORMAT_DATA") || cleanDefault === "") {
+                                const guestCat = (t.kategori || "Umum").trim().toLowerCase();
+                                let targetKey = "umum";
+                                if (guestCat.includes("vvip")) targetKey = "vvip";
+                                else if (guestCat.includes("vip")) targetKey = "vip";
+                                else if (guestCat.includes("keluarga")) targetKey = "keluarga";
+                                template = fallbackJSONTemplates[targetKey] || fallbackJSONTemplates["umum"];
+                            } else {
+                                template = rawDefault;
+                            }
+                        }
 
                         const completeMessage = template
                             .replace(/{NAMA_TAMU}/g, guestName)

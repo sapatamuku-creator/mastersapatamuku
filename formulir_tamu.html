@@ -1592,7 +1592,44 @@
         let cleanPhone = String(phone).replace(/\D/g, ''); 
         if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
 
-        let templateString = window.WA_TEMPLATE_CUSTOM || window.WA_TEMPLATE_DEFAULT;
+        const fallbackJSONTemplates = {
+            "vvip": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
+            "vip": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
+            "keluarga": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
+            "umum": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`
+        };
+
+        let templateString = "";
+        if (window.WA_TEMPLATE_CUSTOM && window.WA_TEMPLATE_CUSTOM.trim() !== "") {
+            templateString = window.WA_TEMPLATE_CUSTOM;
+        } else {
+            const rawDefault = window.WA_TEMPLATE_DEFAULT || "";
+            const cleanDefault = rawDefault.trim();
+            if (cleanDefault.startsWith("{") && cleanDefault.endsWith("}")) {
+                try {
+                    const jsonTemplates = JSON.parse(cleanDefault);
+                    const guestCat = (guest.kategori || "Umum").trim().toLowerCase();
+                    const matchedKey = Object.keys(jsonTemplates).find(key => key.toLowerCase() === guestCat);
+                    if (matchedKey) {
+                        templateString = jsonTemplates[matchedKey];
+                    } else {
+                        templateString = jsonTemplates["umum"] || jsonTemplates["Umum"] || Object.values(jsonTemplates)[0] || "";
+                    }
+                } catch (e) {
+                    console.error("Gagal parsing JSON B6:", e);
+                    templateString = rawDefault;
+                }
+            } else if (cleanDefault.includes("JSON_FORMAT_DATA") || cleanDefault === "") {
+                const guestCat = (guest.kategori || "Umum").trim().toLowerCase();
+                let targetKey = "umum";
+                if (guestCat.includes("vvip")) targetKey = "vvip";
+                else if (guestCat.includes("vip")) targetKey = "vip";
+                else if (guestCat.includes("keluarga")) targetKey = "keluarga";
+                templateString = fallbackJSONTemplates[targetKey] || fallbackJSONTemplates["umum"];
+            } else {
+                templateString = rawDefault;
+            }
+        }
 
         let msg = "";
         if (templateString) {
