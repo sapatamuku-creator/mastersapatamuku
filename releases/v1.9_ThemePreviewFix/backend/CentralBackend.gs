@@ -82,6 +82,7 @@ function handleCentralPost(request) {
     case 'syncFromSupabase': return handleSyncFromSupabase(request);
     case 'upgradePackage': return handleUpgradePackage(request);
     case 'syncAllClients': return createResponse({ status: "success", message: syncAllClientsToSupabase() });
+    case 'syncAllInvitationConfigs': return createResponse({ status: "success", message: syncAllInvitationConfigsToSupabase() });
     case 'checkSlot': return handleCheckSlot(request);
     case 'getClientProfile': return handleGetClientProfile(request);
     case 'cleanDemoData': return createResponse({ status: "success", message: cleanDemoData30Days() });
@@ -1262,6 +1263,46 @@ function syncAllClientsToSupabase() {
     return "Logs:\n" + logs.join("\n");
   } catch (e) {
     return "Error Sync All Clients: " + e.toString() + "\nLogs:\n" + logs.join("\n");
+  }
+}
+
+function syncAllInvitationConfigsToSupabase() {
+  const logs = [];
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    if (!sheet) return "Error: Master sheet not found";
+    
+    const values = sheet.getDataRange().getValues();
+    logs.push("Memulai sinkronisasi konfigurasi undangan untuk " + (values.length - 1) + " klien...");
+    
+    for (let i = 1; i < values.length; i++) {
+      const username = String(values[i][0] || "").trim();
+      const ssid = String(values[i][1] || "").trim();
+      if (!username || !ssid) continue;
+      
+      try {
+        const clientSS = SpreadsheetApp.openById(ssid);
+        const invSheet = clientSS.getSheetByName("InvConfig");
+        if (invSheet) {
+          const raw = invSheet.getRange("B1").getValue();
+          if (raw) {
+            const data = JSON.parse(raw);
+            const res = mirrorInvConfigToSupabase(ssid, data);
+            logs.push(`- Klien [${username}]: Sync ` + (res.status || "failed"));
+          } else {
+            logs.push(`- Klien [${username}]: Sheet InvConfig kosong`);
+          }
+        } else {
+          logs.push(`- Klien [${username}]: Sheet InvConfig tidak ditemukan`);
+        }
+      } catch (err) {
+        logs.push(`- Klien [${username}]: Gagal dibuka/diproses. Detail: ` + err.toString());
+      }
+    }
+    return logs.join("\n");
+  } catch (e) {
+    return "Error: " + e.toString() + "\n" + logs.join("\n");
   }
 }
 

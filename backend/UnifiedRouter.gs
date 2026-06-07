@@ -18,6 +18,8 @@ function doGet(e) {
       return handleCentralPost(e.parameter);
     case 'logout':
       return handleLogout(e.parameter);
+    case 'syncAllInvitationConfigs':
+      return handleCentralPost({ action: 'syncAllInvitationConfigs' });
     case 'getMasterData':
     case 'getMasterDataAngpao':
     case 'getPrintQueue':
@@ -58,6 +60,7 @@ function doPost(e) {
       case 'verifyAdminPassword':   // RBAC Guard — cek password admin di K1
       case 'uploadFile':             // Upload asset ke Drive
       case 'syncAllClients':
+      case 'syncAllInvitationConfigs':
       case 'createMidtransTransaction':
       case 'sendOTP':
       case 'savePendingClient':
