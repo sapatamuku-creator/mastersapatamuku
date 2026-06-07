@@ -2014,42 +2014,19 @@ function syncRowToSupabase(ss, row, ssId) {
  * Jalankan fungsi ini sekali di Apps Script Editor untuk mengaktifkan Watcher Edit Otomatis.
  */
 function setupAutoSyncTrigger() {
-  let ssId = ""; // MASUKKAN ID SPREADSHEET ANDA DI SINI JIKA SCRIPT STANDALONE (Contoh: "1a2b3c4d...")
-  
   let ss = null;
-  if (ssId && ssId.trim() !== "") {
-    try {
-      ss = SpreadsheetApp.openById(ssId);
-    } catch(e) {
-      Logger.log("Gagal membuka spreadsheet dengan ID yang diberikan: " + e.toString());
-    }
-  }
-  
-  if (!ss) {
-    try {
-      ss = SpreadsheetApp.getActiveSpreadsheet();
-    } catch(e) {}
-  }
+  try {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  } catch(e) {}
 
   if (!ss) {
-    try {
-      const savedSsId = PropertiesService.getScriptProperties().getProperty("ACTIVE_SS_ID") 
-                     || PropertiesService.getScriptProperties().getProperty("SS_ID");
-      if (savedSsId) {
-        ss = SpreadsheetApp.openById(savedSsId);
-      }
-    } catch(e) {}
+    // Jika tidak mendeteksi spreadsheet aktif (misalnya dijalankan di master/standalone script),
+    // jangan melempar error agar tidak mengganggu eksekusi/deployment master script.
+    Logger.log("Peringatan: Tidak mendeteksi active spreadsheet (Master/Standalone Script). Trigger watcher tidak dipasang di sini. Pemasangan trigger hanya diperlukan pada spreadsheet client masing-masing.");
+    return;
   }
   
-  if (!ss) {
-    throw new Error(
-      "Gagal mendeteksi Spreadsheet. Jika ini adalah Script Standalone (tidak melekat pada sheet), " +
-      "buka file Main.gs, temukan fungsi setupAutoSyncTrigger(), " +
-      "dan isi variabel 'ssId' dengan ID spreadsheet Anda."
-    );
-  }
-  
-  // Gunakan ID spreadsheet untuk membuat trigger (lebih aman untuk standalone & container-bound)
+  // Gunakan ID spreadsheet secara dinamis
   const targetId = ss.getId();
   
   // Hapus trigger edit yang ada sebelumnya agar tidak ganda
