@@ -133,6 +133,29 @@
                 console.error("Supabase load failed", e);
             }
 
+            // 2. Fallback jika Supabase kosong / gagal: Ambil dari GAS (Google Sheet)
+            try {
+                console.log("[Fallback] Supabase kosong, mencoba mengambil dari GAS...");
+                const gasUrl = `${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`;
+                const gasRes = await fetch(gasUrl);
+                if (gasRes.ok) {
+                    const gasResult = await gasRes.json();
+                    if (gasResult && gasResult.status === "success" && gasResult.data && gasResult.data.invitationData) {
+                        const invData = gasResult.data.invitationData;
+                        const themeId = (urlParams.get('theme_id') || invData.theme || "standard_clean_minimalis_1").toLowerCase();
+                        
+                        const isLoaded = await fetchTemplateEngine(themeId);
+                        if (isLoaded) {
+                            window.applyLivePreview(invData);
+                            initializeScripts();
+                        }
+                        return;
+                    }
+                }
+            } catch (gasErr) {
+                console.error("GAS fallback load failed", gasErr);
+            }
+
             // Fallback jika kosong tetapi ada theme_id (mode live preview halaman config)
             const themeIdParam = urlParams.get('theme_id');
             if (themeIdParam) {

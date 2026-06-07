@@ -958,6 +958,12 @@ function handleUpdateClientData(data) {
     }
     if (data.eventData.invitationData) {
       invSheet.getRange("B1").setValue(JSON.stringify(data.eventData.invitationData));
+      // Auto-mirror config_invitation to Supabase via server-side GAS (bypasses browser RLS issues)
+      try {
+        mirrorInvConfigToSupabase(data.ssId, data.eventData.invitationData);
+      } catch(e) {
+        console.error("Mirror to Supabase on save failed: " + e.toString());
+      }
     }
     
     // Sync Metadata ke Supabase secara otomatis
