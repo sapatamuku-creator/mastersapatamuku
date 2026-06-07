@@ -51,10 +51,12 @@ function handleWAFormGet(e) {
     }));
   }
 
+  const defaultTemplate = sheet1.getRange("B6").getValue().toString().trim();
   const customTemplate = sheet1.getRange("C6").getValue().toString().trim();
 
   const result = { 
     masterToken, weddingTitle, hariTanggal, lokasiAcara, waktuAcara, linkInvitation, 
+    defaultTemplate,
     customTemplate, // Teks kata pengantar dinamis di kolom C6
     liveUsage: liveDeviceCount, categories: categoryMap, tamu: listTamu 
   };

@@ -695,6 +695,19 @@
                             <span id="pax-count" style="background: var(--primary); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 PAX</span>
                         </div>
                     </div>
+                    
+                    <!-- Mismatch Count Warning Banner -->
+                    <div id="mismatch-banner" style="display:none; margin-bottom:15px; background:#FEF2F2; border:1.5px solid #FCA5A5; padding:15px 20px; border-radius:18px; align-items:center; justify-content:space-between; gap:15px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:20px;">⚠️</span>
+                            <div style="text-align:left;">
+                                <div style="font-size:11px; font-weight:800; color:#991B1B; letter-spacing:0.5px;">SINKRONISASI DATA</div>
+                                <div style="font-size:10px; font-weight:600; color:#B91C1C; margin-top:2px;" id="mismatch-banner-text">Database Supabase (0) dan Spreadsheet (0) tidak sinkron.</div>
+                            </div>
+                        </div>
+                        <button onclick="syncToSupabase()" style="background:#EF4444; border:none; cursor:pointer; color:#FFF; padding:6px 15px; border-radius:50px; font-size:9.5px; font-weight:800; white-space:nowrap; transition:0.2s;" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter='none'">SINKRONKAN SEKARANG</button>
+                    </div>
+
                     <input type="text" id="guest-search" oninput="filterGuestList()" placeholder="🔍 Cari Nama, WA, Kategori, atau Status..." 
                            style="width: 100%; padding: 18px 25px; border-radius: 18px; border: 1.5px solid var(--border); font-size: 14px; font-weight: 600; background: #FFF; outline: none; box-sizing: border-box; box-shadow: 0 10px 20px rgba(140, 117, 96, 0.03);">
                     <div id="dup-filter-bar">
@@ -1089,6 +1102,33 @@
         }
     }
 
+    async function checkSpreadsheetCountMismatch() {
+        if (!CURRENT_SS_ID) return;
+        try {
+            const res = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getSpreadsheetGuestCount", ssId: CURRENT_SS_ID })
+            }).then(r => r.json());
+            
+            if (res.status === "success") {
+                const gasCount = parseInt(res.count) || 0;
+                const sbCount = MASTER_LIST.length;
+                const banner = document.getElementById('mismatch-banner');
+                const bannerText = document.getElementById('mismatch-banner-text');
+                if (gasCount !== sbCount) {
+                    if (banner && bannerText) {
+                        bannerText.innerText = `Database Supabase (${sbCount} tamu) dan Spreadsheet (${gasCount} tamu) tidak sinkron.`;
+                        banner.style.display = 'flex';
+                    }
+                } else {
+                    if (banner) banner.style.display = 'none';
+                }
+            }
+        } catch (err) {
+            console.warn("Failed to check spreadsheet count:", err);
+        }
+    }
+
     // --- CORE FUNCTIONS ---
     async function initApp() {
         SapaGuard.apply('sensitive'); // RBAC Guard
@@ -1181,6 +1221,30 @@
                 })
                 .catch(err => console.warn("Background metadata fetch failed:", err));
 
+            // ===== STEP 3: Check Spreadsheet Count in Background for Mismatch Warning =====
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getSpreadsheetGuestCount", ssId: CURRENT_SS_ID })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === "success") {
+                    const gasCount = parseInt(res.count) || 0;
+                    const sbCount = MASTER_LIST.length;
+                    const banner = document.getElementById('mismatch-banner');
+                    const bannerText = document.getElementById('mismatch-banner-text');
+                    if (gasCount !== sbCount) {
+                        if (banner && bannerText) {
+                            bannerText.innerText = `Database Supabase (${sbCount} tamu) dan Spreadsheet (${gasCount} tamu) tidak sinkron.`;
+                            banner.style.display = 'flex';
+                        }
+                    } else {
+                        if (banner) banner.style.display = 'none';
+                    }
+                }
+            })
+            .catch(err => console.warn("Failed to check spreadsheet count:", err));
+
         } catch(sbErr) {
             console.warn("Supabase tamu fetch failed, falling back to GAS:", sbErr);
             toggleProcessing(false); // Pastikan spinner hilang sebelum GAS (GAS lambat)
@@ -1211,7 +1275,8 @@
                 }
 
                 if (result.eventMeta) {
-                    window.WA_TEMPLATE_DEFAULT = result.eventMeta.template || "";
+                    window.WA_TEMPLATE_DEFAULT = result.eventMeta.defaultTemplate || "";
+                    window.WA_TEMPLATE_CUSTOM = result.eventMeta.template || ""; // template in eventMeta is C6
                     window.WA_HARI_TANGGAL = result.eventMeta.tanggal || "";
                     window.WA_WAKTU_ACARA = result.eventMeta.waktu || "";
 
@@ -1234,6 +1299,8 @@
                         }).join('');
                     }
                 }
+                const banner = document.getElementById('mismatch-banner');
+                if (banner) banner.style.display = 'none';
                 render(MASTER_LIST);
             } catch(gasErr) {
                 console.error("GAS fallback also failed:", gasErr);
@@ -1331,6 +1398,7 @@
                         }
                     }, 3000);
                 }
+                setTimeout(checkSpreadsheetCountMismatch, 2000);
             } else {
                 throw new Error(result.message);
             }
@@ -1463,6 +1531,7 @@
                     ...editData
                 })
             }).catch(err => console.warn("Background GS sync failed:", err));
+            setTimeout(checkSpreadsheetCountMismatch, 2000);
 
         } catch (e) {
             console.error("Failed to edit guest:", e);
@@ -1950,6 +2019,7 @@
             } else {
                 showSapaModal("Peringatan", "Data mungkin tidak sepenuhnya terhapus. Coba refresh.", "⚠️");
             }
+            setTimeout(checkSpreadsheetCountMismatch, 2000);
 
         } catch (e) {
             console.error("executeDelete error:", e);
@@ -2511,6 +2581,7 @@
                 }
                 // All done — show "Selesai" then hide
                 finishGasCountdown();
+                setTimeout(checkSpreadsheetCountMismatch, 1000);
             })();
         };
 

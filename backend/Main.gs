@@ -197,6 +197,10 @@ function handleMainPost(payload) {
         result = handleSelfiePost(payload);
         break;
       
+      case "getSpreadsheetGuestCount":
+        result = getSpreadsheetGuestCount(ssId);
+        break;
+
       case "getDropdownOptions":
         result = getDropdownOptions(ssId);
         break;
@@ -427,6 +431,7 @@ function getMasterDataV3(ssId) {
     lokasi: weddingLoc,
     waktu: weddingTime,
     link: weddingLink,
+    defaultTemplate: sheet.getRange("B6").getValue().toString().trim(),
     template: sheet.getRange("C6").getValue().toString().trim(), // Teks kata pengantar dinamis di kolom C6
     labelSesi: sesiMeta[0], 
     sesiOptions: [sesiMeta[1], sesiMeta[2], sesiMeta[3]]
@@ -1664,6 +1669,27 @@ function syncSheetToSupabase(ssId) {
 
   } catch (e) {
     return { status: "error", message: "Exception: " + e.toString() };
+  }
+}
+
+/**
+ * Mendapatkan jumlah baris tamu di spreadsheet secara cepat.
+ */
+function getSpreadsheetGuestCount(ssId) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    const lastRow = sheet.getLastRow();
+    
+    // Hitung tamu riil (baris yang memiliki Nama di kolom C)
+    let count = 0;
+    if (lastRow >= START_ROW) {
+      const names = sheet.getRange(START_ROW, 3, lastRow - (START_ROW - 1), 1).getValues();
+      count = names.filter(r => String(r[0]).trim() !== "").length;
+    }
+    return { status: "success", count: count };
+  } catch(e) {
+    return { status: "error", message: e.toString() };
   }
 }
 
