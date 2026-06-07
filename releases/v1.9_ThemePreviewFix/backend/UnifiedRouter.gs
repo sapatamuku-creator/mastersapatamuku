@@ -20,6 +20,10 @@ function doGet(e) {
       return handleLogout(e.parameter);
     case 'syncAllInvitationConfigs':
       return handleCentralPost({ action: 'syncAllInvitationConfigs' });
+    case 'runWishesWatcher':
+      return handleCentralPost({ action: 'runWishesWatcher' });
+    case 'setupWishesWatcher':
+      return handleCentralPost({ action: 'setupWishesWatcher' });
     case 'getMasterData':
     case 'getMasterDataAngpao':
     case 'getPrintQueue':
@@ -61,6 +65,8 @@ function doPost(e) {
       case 'uploadFile':             // Upload asset ke Drive
       case 'syncAllClients':
       case 'syncAllInvitationConfigs':
+      case 'runWishesWatcher':
+      case 'setupWishesWatcher':
       case 'createMidtransTransaction':
       case 'sendOTP':
       case 'savePendingClient':

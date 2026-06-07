@@ -83,6 +83,8 @@ function handleCentralPost(request) {
     case 'upgradePackage': return handleUpgradePackage(request);
     case 'syncAllClients': return createResponse({ status: "success", message: syncAllClientsToSupabase() });
     case 'syncAllInvitationConfigs': return createResponse({ status: "success", message: syncAllInvitationConfigsToSupabase() });
+    case 'runWishesWatcher': return createResponse({ status: "success", message: watchAndScrapeThirdPartyWishes() });
+    case 'setupWishesWatcher': return createResponse({ status: "success", message: setupWishesWatcherTrigger() });
     case 'checkSlot': return handleCheckSlot(request);
     case 'getClientProfile': return handleGetClientProfile(request);
     case 'cleanDemoData': return createResponse({ status: "success", message: cleanDemoData30Days() });
@@ -1303,6 +1305,154 @@ function syncAllInvitationConfigsToSupabase() {
     return logs.join("\n");
   } catch (e) {
     return "Error: " + e.toString() + "\n" + logs.join("\n");
+  }
+}
+
+function watchAndScrapeThirdPartyWishes() {
+  const logs = [];
+  try {
+    // 1. Fetch metadata klien dari Supabase
+    const sbUrl = SUPABASE_URL + "/rest/v1/metadata_client?select=ssid,link_invitation";
+    const options = {
+      method: "get",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      },
+      muteHttpExceptions: true
+    };
+    const response = supabaseFetch(sbUrl, options);
+    if (response.getResponseCode() !== 200) {
+      return "Gagal mengambil metadata: " + response.getContentText();
+    }
+    
+    const clients = JSON.parse(response.getContentText());
+    logs.push("Memulai pemantauan wishes untuk " + clients.length + " klien...");
+    
+    for (let i = 0; i < clients.length; i++) {
+      const client = clients[i];
+      const ssid = client.ssid;
+      const link = String(client.link_invitation || "").trim();
+      
+      if (!ssid || !link) continue;
+      
+      // Deteksi jika link eksternal (bukan sapatamu.id)
+      const isSapaTamu = link.includes("sapatamu.id") || link.includes("localhost");
+      if (isSapaTamu) {
+        continue; // Undangan internal SapaTamu sudah otomatis terintegrasi langsung
+      }
+      
+      try {
+        let wishes = [];
+        
+        // ─── CASE A: LEAFITATION ───
+        if (link.includes("leafitation.com")) {
+          // 1. Fetch HTML halaman untuk mendapatkan post_id
+          const htmlResponse = UrlFetchApp.fetch(link, { muteHttpExceptions: true });
+          if (htmlResponse.getResponseCode() === 200) {
+            const html = htmlResponse.getContentText();
+            const postIdMatch = html.match(/post_id=(\d+)/) || html.match(/"post":(\d+)/) || html.match(/posts\/(\d+)/) || html.match(/postId["']\s*:\s*(\d+)/);
+            if (postIdMatch) {
+              const postId = postIdMatch[1];
+              // 2. Fetch comments dari API WordPress WP-JSON
+              const commentUrl = "https://inv.leafitation.com/wp-json/wp/v2/comments?post=" + postId + "&per_page=100";
+              const commentRes = UrlFetchApp.fetch(commentUrl, { muteHttpExceptions: true });
+              if (commentRes.getResponseCode() === 200) {
+                const items = JSON.parse(commentRes.getContentText());
+                for (let j = 0; j < items.length; j++) {
+                  const author = String(items[j].author_name || "").trim();
+                  const rawContent = String(items[j].content.rendered || "");
+                  const content = rawContent.replace(/<[^>]*>/g, '').replace(/[\r\n\t]+/g, ' ').trim();
+                  if (author && content) {
+                    wishes.push({ nama: author, ucapan: content });
+                  }
+                }
+              }
+            }
+          }
+        }
+        // ─── CASE B: UNDGN ───
+        else if (link.includes("undgn.id")) {
+          // Fetch HTML dan parse DOM menggunakan regex
+          const htmlResponse = UrlFetchApp.fetch(link, { muteHttpExceptions: true });
+          if (htmlResponse.getResponseCode() === 200) {
+            const html = htmlResponse.getContentText();
+            const regex = /<h4>([^<]+)<\/h4>[\s\S]*?<div id="comments\d+" class="post-comments-comment">([\s\S]*?)<script/g;
+            let match;
+            while ((match = regex.exec(html)) !== null) {
+              const author = String(match[1] || "").trim();
+              const content = String(match[2] || "").replace(/<[^>]*>/g, '').replace(/[\r\n\t]+/g, ' ').trim();
+              if (author && content && author !== "UNDGN") { // Skip credit default comments
+                wishes.push({ nama: author, ucapan: content });
+              }
+            }
+          }
+        }
+        
+        // Jika ditemukan wishes pada link eksternal ini
+        if (wishes.length > 0) {
+          // Ambil daftar wishes yang sudah ada di Supabase untuk mencocokkan duplikat
+          const existingUrl = SUPABASE_URL + "/rest/v1/wishes_queue?ssid=eq." + ssid + "&select=nama,ucapan";
+          const existingRes = supabaseFetch(existingUrl, {
+            method: "get",
+            headers: {
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY
+            },
+            muteHttpExceptions: true
+          });
+          
+          let existingKeys = new Set();
+          if (existingRes.getResponseCode() === 200) {
+            const existingList = JSON.parse(existingRes.getContentText());
+            for (let k = 0; k < existingList.length; k++) {
+              const key = String(existingList[k].nama).trim() + "|||" + String(existingList[k].ucapan).trim();
+              existingKeys.add(key);
+            }
+          }
+          
+          let countAdded = 0;
+          for (let m = 0; m < wishes.length; m++) {
+            const w = wishes[m];
+            const key = w.nama + "|||" + w.ucapan;
+            if (!existingKeys.has(key)) {
+              // Simpan ke Google Sheets & Supabase secara bersamaan menggunakan addWish
+              addWish(ssid, w.nama, w.ucapan);
+              countAdded++;
+            }
+          }
+          
+          if (countAdded > 0) {
+            logs.push(`- Klien [SSID: ${ssid}]: Menambahkan ${countAdded} ucapan baru dari ${link}`);
+          }
+        }
+      } catch (clientErr) {
+        logs.push(`- Klien [SSID: ${ssid}]: Error memproses link ${link}. Detail: ` + clientErr.toString());
+      }
+    }
+    return logs.length > 1 ? logs.join("\n") : "Tidak ada ucapan baru yang ditemukan pada link eksternal.";
+  } catch (err) {
+    return "Error watchAndScrapeThirdPartyWishes: " + err.toString();
+  }
+}
+
+function setupWishesWatcherTrigger() {
+  try {
+    // Hapus trigger lama jika ada
+    const triggers = ScriptApp.getProjectTriggers();
+    for (let i = 0; i < triggers.length; i++) {
+      if (triggers[i].getHandlerFunction() === "watchAndScrapeThirdPartyWishes") {
+        ScriptApp.deleteTrigger(triggers[i]);
+      }
+    }
+    // Buat trigger baru setiap 10 menit
+    ScriptApp.newTrigger("watchAndScrapeThirdPartyWishes")
+      .timeBased()
+      .everyMinutes(10)
+      .create();
+    return "Trigger otomatis berhasil dibuat! Script memantau wishes dari link eksternal setiap 10 menit.";
+  } catch(e) {
+    return "Gagal membuat trigger: " + e.toString();
   }
 }
 
