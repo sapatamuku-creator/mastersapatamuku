@@ -1430,9 +1430,13 @@ function watchAndScrapeThirdPartyWishes() {
         logs.push(`- Klien [SSID: ${ssid}]: Error memproses link ${link}. Detail: ` + clientErr.toString());
       }
     }
-    return logs.length > 1 ? logs.join("\n") : "Tidak ada ucapan baru yang ditemukan pada link eksternal.";
+    const result = logs.length > 1 ? logs.join("\n") : "Tidak ada ucapan baru yang ditemukan pada link eksternal.";
+    console.log(result);
+    return result;
   } catch (err) {
-    return "Error watchAndScrapeThirdPartyWishes: " + err.toString();
+    const errMsg = "Error watchAndScrapeThirdPartyWishes: " + err.toString();
+    console.error(errMsg);
+    return errMsg;
   }
 }
 
@@ -1450,9 +1454,14 @@ function setupWishesWatcherTrigger() {
       .timeBased()
       .everyMinutes(10)
       .create();
-    return "Trigger otomatis berhasil dibuat! Script memantau wishes dari link eksternal setiap 10 menit.";
+    
+    const msg = "Trigger otomatis berhasil dibuat! Script memantau wishes dari link eksternal setiap 10 menit.";
+    console.log(msg);
+    return msg;
   } catch(e) {
-    return "Gagal membuat trigger: " + e.toString();
+    const errMsg = "Gagal membuat trigger: " + e.toString();
+    console.error(errMsg);
+    return errMsg;
   }
 }
 
