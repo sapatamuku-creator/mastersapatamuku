@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu - Self Check-in Kiosk</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="printer_widget.js"></script>
+    <style>
+        :root { 
+            --primary: #E07B7B; /* Rose */
+            --bg: #FFF9F5;      /* Warm White */
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --gold: #C8962E;
+            --border: #F0E6DE;
+            --success: #10B981;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .scan-header {
+            text-align: center;
+            margin-bottom: 3vh;
+        }
+        .scan-header h1 { 
+            font-family: 'Lora', serif; 
+            font-size: clamp(2rem, 5vw, 3rem); 
+            letter-spacing: 4px; 
+            font-weight: 700; 
+            color: var(--text-main);
+            margin: 0;
+        }
+        .scan-header p { 
+            font-size: clamp(0.9rem, 2vw, 1.1rem); 
+            color: var(--text-muted); 
+            margin-top: 8px; 
+            font-weight: 500; 
+            letter-spacing: 1px;
+        }
+
+        /* --- LAYOUT SCANNER BOX --- */
+        #scanner-wrapper { 
+            position: relative; 
+            width: 90vw; 
+            max-width: 800px;
+            height: 50vh;
+            max-height: 450px;
+            background: #000; 
+            z-index: 1;
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(74, 63, 53, 0.15);
+        }
+        #reader { width: 100% !important; height: 100% !important; }
+        #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+
+        .scan-overlay { 
+            position: absolute; inset: 0; 
+            display: flex; align-items: center; justify-content: center; 
+            z-index: 5; pointer-events: none; 
+        }
+
+        /* Frame Kotak Pindai */
+        .scan-frame { 
+            width: 50%; height: 65%; max-width: 300px; max-height: 300px; 
+            box-shadow: 0 0 0 4000px rgba(0,0,0,0.5); /* Gelapkan area luar */
+            position: relative; border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        /* Sembunyikan kotak putih bawaan html5-qrcode */
+        #qr-shaded-region { display: none !important; }
+
+        .corner { position: absolute; width: 50px; height: 50px; border-color: var(--primary); border-style: solid; transition: 0.3s; }
+        .top-left { top: -2px; left: -2px; border-width: 6px 0 0 6px; border-top-left-radius: 24px; }
+        .top-right { top: -2px; right: -2px; border-width: 6px 6px 0 0; border-top-right-radius: 24px; }
+        .bottom-left { bottom: -2px; left: -2px; border-width: 0 0 6px 6px; border-bottom-left-radius: 24px; }
+        .bottom-right { bottom: -2px; right: -2px; border-width: 0 6px 6px 0; border-bottom-right-radius: 24px; }
+
+        .scan-frame.qr-detected .corner { border-color: var(--success); transform: scale(1.1); }
+
+        @keyframes blinkGreen {
+            0%   { border-color: var(--primary); transform: scale(1); }
+            50%  { border-color: var(--success); transform: scale(1.15); }
+            100% { border-color: var(--primary); transform: scale(1); }
+        }
+        .scan-frame.qr-already .corner {
+            animation: blinkGreen 0.4s ease-in-out 3; /* Berkedip 3 kali */
+        }
+
+        /* --- MODAL FULL SCREEN --- */
+        @keyframes slideUp {
+            from { transform: translateY(100vh); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-full {
+            animation: slideUp 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        .active-gift {
+            border-color: var(--gold) !important;
+            background: rgba(200,150,46,0.05) !important;
+            color: var(--gold) !important;
+            transform: scale(1.05);
+        }
+
+        .loading-overlay { 
+            position: fixed; inset: 0; 
+            background: rgba(255,249,245,0.95); 
+            backdrop-filter: blur(10px); 
+            z-index: 200000; 
+            display: none; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+        }
+        .spinner { width: 60px; height: 60px; border: 4px solid var(--border); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Toggle switch camera */
+        .cam-toggle-wrap { display:inline-flex; align-items:center; gap:5px; }
+        .cam-toggle-label { font-size:9px; font-weight:800; text-transform:uppercase; color:#8C7560; letter-spacing:0.05em; white-space:nowrap; }
+        .cam-toggle { position:relative; width:32px; height:18px; flex-shrink:0; }
+        .cam-toggle input { opacity:0; width:0; height:0; }
+        .cam-toggle-slider { position:absolute; cursor:pointer; inset:0; background:#ddd; border-radius:18px; transition:0.3s; }
+        .cam-toggle-slider:before { content:''; position:absolute; width:12px; height:12px; left:3px; bottom:3px; background:white; border-radius:50%; transition:0.3s; }
+        .cam-toggle input:checked + .cam-toggle-slider { background:#10B981; }
+        .cam-toggle input:checked + .cam-toggle-slider:before { transform:translateX(14px); }
+    </style>
+    <script src="auth_guard.js?v=1.0"></script>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body onload="initApp()">
+
+    <!-- Script Resolver Subdomain -->
+    <script src="subdomain_resolver.js?v=3.3"></script>
+
+    <!-- JALUR SELECTOR DRAWER (Top Edge, Left Side) -->
+    <div class="fixed top-0 left-8 z-[200] flex flex-col items-start group">
+        <!-- Handle Bar -->
+        <div class="w-32 h-1.5 bg-black/20 rounded-b-lg backdrop-blur cursor-pointer group-hover:h-2 transition-all duration-300 ml-4"></div>
+        <!-- Dropdown Content -->
+        <div class="bg-white/90 backdrop-blur border border-[#F0E6DE] border-t-0 rounded-b-2xl px-6 py-2 shadow-lg -translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-3 absolute top-1.5">
+            <span class="text-[9px] text-[#8C7560] font-bold uppercase tracking-widest">JALUR:</span>
+            <select id="kiosk-jalur-selector" class="bg-transparent text-[#4A3F35] text-xs font-bold uppercase outline-none cursor-pointer text-center">
+                <option value="ALL">ALL JALUR</option>
+                <option value="1">JALUR 1</option>
+                <option value="2">JALUR 2</option>
+                <option value="3">JALUR 3</option>
+                <option value="4">JALUR 4</option>
+            </select>
+            <!-- Toggle Kamera -->
+            <div class="cam-toggle-wrap">
+                <span class="cam-toggle-label">CAM</span>
+                <label class="cam-toggle">
+                    <input type="checkbox" id="cam-toggle-kiosk" onchange="toggleScanner(this.checked)">
+                    <span class="cam-toggle-slider"></span>
+                </label>
+            </div>
+            <!-- Printer Widget button injected here by PrinterWidget.init() -->
+        </div>
+    </div>
+
+    <!-- STEP 1: KIOSK IDLE STATE (WELCOME SIGN) -->
+    <div id="kiosk-idle-state" class="fixed inset-0 z-[100] transition-opacity duration-700 bg-black cursor-pointer" onclick="startScanning()">
+        <iframe id="welcome-frame" src="welcome.html?mode=kiosk" class="w-full h-full border-none pointer-events-none"></iframe>
+        
+        <div class="absolute bottom-[10%] left-1/2 transform -translate-x-1/2 bg-white/10 backdrop-blur-md px-10 py-5 rounded-full border border-white/30 shadow-[0_10px_40px_rgba(0,0,0,0.5)] pointer-events-none animate-pulse text-center">
+            <span class="text-white font-bold tracking-[5px] uppercase text-xl md:text-2xl drop-shadow-lg">TAP LAYAR UNTUK CHECK-IN</span>
+        </div>
+    </div>
+
+    <!-- STEP 2: AREA SCANNER -->
+    <div class="scan-header">
+        <h1>SCAN QR CODE</h1>
+        <p>Place your QR Code to the camera to check in.</p>
+    </div>
+
+    <div id="scanner-wrapper">
+        <div id="reader"></div>
+        <div class="scan-overlay">
+            <div class="scan-frame" id="target-frame">
+                <div class="corner top-left"></div>
+                <div class="corner top-right"></div>
+                <div class="corner bottom-left"></div>
+                <div class="corner bottom-right"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tombol Pencarian Manual -->
+    <button onclick="openSearchModal()" class="mt-6 md:mt-8 px-8 py-3 rounded-full border-2 border-[#C8962E] text-[#C8962E] font-bold tracking-widest hover:bg-[#C8962E] hover:text-white transition-colors uppercase text-xs md:text-sm z-10 relative bg-[#FFF9F5]/80 backdrop-blur shadow-sm">
+        🔍  PENCARIAN MANUAL
+    </button>
+    
+    <!-- Tombol Kembali ke Idle -->
+    <button onclick="returnToIdle()" class="fixed bottom-6 md:bottom-10 left-1/2 transform -translate-x-1/2 z-10 px-10 py-3 md:px-12 md:py-4 bg-[#4A3F35] text-white rounded-full font-bold tracking-widest hover:bg-[#E07B7B] transition-colors shadow-2xl uppercase border-none text-sm md:text-base">
+        KEMBALI
+    </button>
+
+    <!-- Tombol Fullscreen -->
+    <button id="btn-fullscreen" onclick="toggleFullScreen()" class="fixed bottom-6 right-6 z-[200] p-3 bg-[#F0E6DE]/80 backdrop-blur text-[#8C7560] rounded-full shadow-lg hover:bg-[#E07B7B] hover:text-white transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+        </svg>
+    </button>
+
+    <!-- STEP 2.5: MODAL PENCARIAN MANUAL -->
+    <div id="search-modal" class="hidden fixed inset-0 bg-[#FFF9F5] z-[80] flex-col overflow-hidden modal-full">
+        <div class="px-6 py-6 md:px-10 md:py-8 bg-white border-b border-[#F0E6DE] flex items-center justify-between shadow-sm shrink-0">
+            <h2 class="text-[#4A3F35] font-bold uppercase tracking-[4px] text-xl md:text-3xl lg:text-4xl" style="font-family: 'Lora', serif;">PENCARIAN MANUAL</h2>
+            <button onclick="closeSearchModal()" class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#F0E6DE] text-[#8C7560] font-bold flex items-center justify-center hover:bg-[#E07B7B] hover:text-white transition-colors text-lg md:text-xl">X</button>
+        </div>
+        <div class="p-6 md:p-10 shrink-0">
+            <input type="text" id="kiosk-search-box" oninput="renderKioskSearch()" placeholder="Ketik nama tamu..." class="w-full px-8 py-4 md:py-5 rounded-full border-2 border-[#F0E6DE] text-lg md:text-xl font-bold text-[#4A3F35] outline-none focus:border-[#C8962E] bg-white shadow-inner transition-colors">
+        </div>
+        <div class="flex-1 overflow-y-auto px-6 md:px-10 pb-10" id="kiosk-search-list">
+            <!-- List Guest Here -->
+        </div>
+    </div>
+
+    <!-- STEP 3: MODAL KONFIRMASI FULL LAYAR -->
+    <div id="kiosk-modal" class="hidden fixed inset-0 bg-[#FFFDFB] z-50 flex-col items-center justify-center modal-full overflow-y-auto py-6 md:py-10">
+        <p class="text-xl md:text-2xl text-[#8C7560] font-serif italic mb-2 mt-auto">Welcome,</p>
+        <h2 id="guest-name" class="text-4xl md:text-6xl font-serif text-[#4A3F35] font-bold text-center px-6 mb-2 uppercase tracking-wide">NAMA TAMU</h2>
+        <p id="guest-category" class="text-lg md:text-xl text-[#C8962E] font-bold tracking-widest uppercase mb-6 md:mb-8">KATEGORI</p>
+
+        <!-- Toggle Selfie Button -->
+        <button id="btn-show-selfie" onclick="toggleSelfieBox()" class="mb-8 px-6 py-2 md:px-8 md:py-3 rounded-full bg-[#F0E6DE] text-[#8C7560] font-bold tracking-widest hover:bg-[#E07B7B] hover:text-white transition-colors uppercase text-xs md:text-sm">
+            📖· TAMBAHKAN FOTO SELFIE
+        </button>
+
+        <!-- SELFIE BOX -->
+        <div id="selfie-container" class="hidden flex-col items-center justify-center mb-6 w-full">
+            <div class="w-[200px] h-[200px] md:w-[300px] md:h-[300px] bg-black rounded-[30px] overflow-hidden border-4 border-[#F0E6DE] mb-4 shadow-xl relative">
+                <video id="camera-preview" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
+                <canvas id="capture-canvas" style="display:none;"></canvas>
+                <div id="countdown-overlay" class="absolute inset-0 hidden items-center justify-center text-[80px] text-white font-black drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-10 bg-black/20"></div>
+            </div>
+            <button id="btn-snap" onclick="takeSelfie()" class="px-6 py-2 rounded-full border-2 border-[#C8962E] text-[#C8962E] font-bold tracking-widest hover:bg-[#C8962E] hover:text-white transition-colors uppercase text-xs bg-transparent">
+                AMBIL FOTO
+            </button>
+        </div>
+
+        <!-- Steppers and Toggles Grid -->
+        <div class="flex flex-wrap items-center justify-center gap-6 md:gap-16 mb-8 md:mb-12">
+            <!-- Dewasa -->
+            <div class="flex items-center gap-3 md:gap-5">
+                <button onclick="updatePax('adult', -1)" class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#F0E6DE] text-[#4A3F35] text-2xl md:text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] hover:text-white transition-colors">-</button>
+                <div class="text-center w-24 md:w-28">
+                    <div id="m-pax-adult" class="text-4xl md:text-5xl font-bold text-[#4A3F35]">1</div>
+                    <div class="text-[10px] md:text-[12px] text-[#8C7560] uppercase tracking-widest font-bold mt-1">Person(s)</div>
+                </div>
+                <button onclick="updatePax('adult', 1)" class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#4A3F35] text-white text-2xl md:text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] transition-colors">+</button>
+            </div>
+
+            <!-- Anak -->
+            <div class="flex items-center gap-3 md:gap-5">
+                <button onclick="updatePax('child', -1)" class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#F0E6DE] text-[#4A3F35] text-2xl md:text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] hover:text-white transition-colors">-</button>
+                <div class="text-center w-24 md:w-28">
+                    <div id="m-pax-child" class="text-4xl md:text-5xl font-bold text-[#4A3F35]">0</div>
+                    <div class="text-[10px] md:text-[12px] text-[#8C7560] uppercase tracking-widest font-bold mt-1">Kid(s)</div>
+                </div>
+                <button onclick="updatePax('child', 1)" class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#4A3F35] text-white text-2xl md:text-3xl font-bold flex items-center justify-center hover:bg-[#E07B7B] transition-colors">+</button>
+            </div>
+        </div>
+
+        <!-- Toggles -->
+        <div class="flex items-center justify-center gap-4 md:gap-8 mb-10 md:mb-12">
+            <button id="btn-angpao" onclick="toggleGift('angpao')" class="flex items-center gap-3 px-6 py-3 md:px-10 md:py-5 rounded-full border-2 border-[#E5D7CA] text-[#8C7560] font-bold text-lg md:text-xl transition-all">
+                <span class="text-2xl md:text-3xl">🧧</span> Angpao
+            </button>
+            <button id="btn-kado" onclick="toggleGift('kado')" class="flex items-center gap-3 px-6 py-3 md:px-10 md:py-5 rounded-full border-2 border-[#E5D7CA] text-[#8C7560] font-bold text-lg md:text-xl transition-all">
+                <span class="text-2xl md:text-3xl">🎁</span> Kado
+            </button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-4 md:gap-8 mb-auto pb-6">
+            <button onclick="cancelCheckin()" class="px-8 py-4 md:px-12 md:py-6 rounded-full border-2 border-[#F0E6DE] text-[#8C7560] font-bold text-lg md:text-xl uppercase tracking-widest hover:bg-[#F0E6DE] transition-colors">
+                BATAL
+            </button>
+            <button onclick="executeCheckin()" class="px-12 py-4 md:px-20 md:py-6 rounded-full bg-[#4A3F35] text-white font-bold text-lg md:text-xl uppercase tracking-widest hover:bg-[#E07B7B] shadow-2xl transition-all">
+                CONTINUE
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Sukses Animasi -->
+    <div id="success-modal" class="hidden fixed inset-0 bg-[#FFF9F5]/95 backdrop-blur-md z-[60] flex items-center justify-center">
+        <div class="text-center scale-150 transform transition-all duration-500 opacity-0" id="success-content">
+            <!-- Icon Checklist Hijau -->
+            <div class="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-[0_20px_50px_rgba(200,150,46,0.3)] mx-auto border-4 border-[#C8962E]">
+                <svg class="w-16 h-16 text-[#C8962E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h3 class="text-4xl mt-10 font-serif text-[#4A3F35] font-bold tracking-wide">Check-in Berhasil</h3>
+            <p class="text-[#C8962E] mt-4 text-sm tracking-[5px] uppercase font-extrabold">Silakan Masuk</p>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <span class="text-[#E07B7B] mt-6 tracking-widest font-bold text-sm">MEMPROSES DATA...</span>
+    </div>
+
+    <!-- Toast Notifikasi Cepat -->
+    <div id="toast" class="fixed top-10 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-8 py-4 rounded-full shadow-2xl font-bold tracking-wide z-[999999] transition-all duration-300 opacity-0 translate-y-[-20px] pointer-events-none">
+        Pesan Notifikasi
+    </div>
+
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid #F0E6DE; animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
+            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: #4A3F35; margin-bottom: 15px;">Pesan</h2>
+            <p id="notify-msg" style="font-size: 15px; color: #8C7560; line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
+            <button onclick="closeSapaModal()" style="width: 100%; padding: 15px; border-radius: 15px; border: none; font-size: 11px; font-weight: 900; letter-spacing: 2px; cursor: pointer; color: white; background: #4A3F35; box-shadow: 0 8px 20px rgba(74, 63, 53, 0.3);">MENGERTI</button>
+        </div>
+    </div>
+
+    <style>
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
+    <script>
+        function showToast(msg, isSuccess = false) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.className = `fixed top-10 left-1/2 transform -translate-x-1/2 px-8 py-4 rounded-full shadow-2xl font-bold tracking-wide z-[999999] transition-all duration-300 pointer-events-none ${isSuccess ? 'bg-[#10B981] text-white' : 'bg-[#E07B7B] text-white'}`;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -20px)';
+            }, 3000);
+        }
+
+        // --- CUSTOM NOTIFICATION SYSTEM ---
+        window.showSapaModal = function(title, msg, icon = "✨") {
+            document.getElementById('notify-title').innerText = title;
+            document.getElementById('notify-msg').innerText = msg;
+            document.getElementById('notify-icon').innerText = icon;
+            document.getElementById('sapa-notify-modal').style.display = 'flex';
+        };
+
+        window.closeSapaModal = function() {
+            document.getElementById('sapa-notify-modal').style.display = 'none';
+        };
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.getElementById('btn-fullscreen');
+            if (document.fullscreenElement) {
+                btn.style.opacity = '0';
+                btn.style.pointerEvents = 'none';
+            } else {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            }
+        });
+
+        let SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+        const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+        let CURRENT_SS_ID = null;
+        let masterData = [];
+        let html5QrCode = null;
+        let selectedGuest = null;
+        let scanCooldown = false;
+        
+        // Settings State
+        let JALUR_ID = "ALL";
+        let scannerEnabled = false; // default OFF - hemat baterai
+
+        function toggleScanner(enabled) {
+            scannerEnabled = enabled;
+            localStorage.setItem('kiosk_cam_on', enabled ? '1' : '0');
+            if (enabled) {
+                // Hanya aktifkan jika sudah di scan-state (idle state tersembunyi)
+                const idleVisible = document.getElementById('kiosk-idle-state').style.opacity !== '0';
+                if (!idleVisible) initScanner();
+            } else {
+                if (html5QrCode) {
+                    html5QrCode.stop().catch(() => {});
+                    html5QrCode.clear();
+                    html5QrCode = null;
+                }
+            }
+        }
+        
+        // Selfie States
+        let currentStream = null;
+        let capturedBase64 = null;
+
+        async function initApp() {
+        SapaGuard.apply('field');
+            if (!window.SAPATAMU_RESOLVED) { setTimeout(initApp, 100); return; }
+            const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+            CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
+            const savedJalur = localStorage.getItem('kiosk_jalur_id');
+            if (savedJalur) { JALUR_ID = savedJalur; document.getElementById('kiosk-jalur-selector').value = savedJalur; }
+            document.getElementById('kiosk-jalur-selector').addEventListener('change', (e) => {
+                JALUR_ID = e.target.value;
+                localStorage.setItem('kiosk_jalur_id', JALUR_ID);
+                showToast(`Jalur rute diubah ke: ${JALUR_ID}`, true);
+            });
+            if (!CURRENT_SS_ID) { window.location.href = "login.html"; return; }
+
+            // Init Bluetooth Printer Widget
+            PrinterWidget.init({
+                sourceId: 'KIOSK',
+                jalurSelectorId: 'kiosk-jalur-selector',
+                jalurKey: 'kiosk_jalur_id'
+            });
+
+            // Restore camera toggle state
+            const savedCam = localStorage.getItem('kiosk_cam_on');
+            scannerEnabled = savedCam === '1';
+            const toggleEl = document.getElementById('cam-toggle-kiosk');
+            if (toggleEl) toggleEl.checked = scannerEnabled;
+
+            fetchData();
+            if (scannerEnabled) initScanner();
+        }
+
+        async function fetchData() {
+            try {
+                const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
+                const response = await fetch(supabaseUrl, {
+                    headers: {
+                        "apikey": SB_KEY,
+                        "Authorization": "Bearer " + SB_KEY
+                    }
+                });
+                const sbData = await response.json();
+                
+                // Map data snake_case Supabase ke format camelCase frontend
+                masterData = (sbData || []).map(item => ({
+                    row: item.row,
+                    nama: item.nama,
+                    whatsapp: item.whatsapp,
+                    kategori: item.kategori,
+                    kode: item.kode,
+                    barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
+                    rencanaHadir: item.rencana_hadir,
+                    statusHadir: String(item.status_hadir),
+                    jamDatang: item.jam_datang,
+                    souvenir: item.souvenir,
+                    pihakPengundang: item.pihak_pengundang,
+                    alamat: item.alamat,
+                    realHadir: item.real_hadir,
+                    statusWA: item.status_wa,
+                    statusHadiah: item.status_hadiah,
+                    tandaKasih: item.tanda_kasih,
+                    sesi: item.sesi
+                }));
+            } catch (e) { console.error("Gagal load data tamu:", e); }
+        }
+
+        function initScanner() {
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+            
+            html5QrCode.start({ facingMode: "user" }, { fps: 15 }, onScanSuccess)
+            .catch(e => {
+                html5QrCode.start({ facingMode: "environment" }, { fps: 15 }, onScanSuccess)
+                .catch(console.error);
+            });
+        }
+
+        function restartScanner() {
+            if (!html5QrCode && scannerEnabled) {
+                document.getElementById('reader').innerHTML = '';
+                initScanner();
+            }
+        }
+
+        function startScanning() {
+            document.getElementById('kiosk-idle-state').style.opacity = '0';
+            document.getElementById('kiosk-idle-state').style.pointerEvents = 'none';
+            if (scannerEnabled && !html5QrCode) initScanner();
+        }
+
+        function returnToIdle() {
+            // Trigger iframe to sync and show latest check-in
+            try {
+                const iframe = document.getElementById('welcome-frame');
+                if(iframe.contentWindow && iframe.contentWindow.syncData) iframe.contentWindow.syncData();
+            } catch(e) {}
+            
+            document.getElementById('kiosk-idle-state').style.opacity = '1';
+            document.getElementById('kiosk-idle-state').style.pointerEvents = 'auto';
+            cleanupSelfie();
+            closeSearchModal();
+            restartScanner();
+        }
+
+        function onScanSuccess(txt) {
+            if (!document.getElementById('kiosk-modal').classList.contains('hidden')) return;
+            if (!document.getElementById('success-modal').classList.contains('hidden')) return;
+            if (!document.getElementById('search-modal').classList.contains('hidden')) return;
+            if (scanCooldown) return;
+
+            // Jika scan berhasil saat Idle State masih aktif, paksa sembunyikan Idle Screen
+            const idleState = document.getElementById('kiosk-idle-state');
+            if (idleState.style.opacity !== '0') {
+                idleState.style.opacity = '0';
+                idleState.style.pointerEvents = 'none';
+            }
+
+            scanCooldown = true;
+
+            const frame = document.getElementById('target-frame');
+            let scCode = txt.trim();
+            
+            // Case-insensitive extraction for ID
+            const match = scCode.match(/id=([^&]+)/i);
+            if (match) scCode = match[1];
+            
+            const guest = masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase());
+            
+            if (guest) {
+                if (String(guest.statusHadir) === "1") {
+                    frame.classList.add('qr-already');
+                    showToast(`Tamu ${guest.nama} sudah check-in!`);
+                    setTimeout(() => {
+                        frame.classList.remove('qr-already');
+                        scanCooldown = false;
+                    }, 1500);
+                } else {
+                    frame.classList.add('qr-detected');
+                    setTimeout(() => {
+                        frame.classList.remove('qr-detected');
+                        openConfirm(guest);
+                        scanCooldown = false;
+                    }, 500);
+                }
+            } else {
+                document.querySelectorAll('.corner').forEach(c => c.style.borderColor = '#E07B7B');
+                showToast("QR Code Tidak Dikenali!");
+                setTimeout(() => {
+                    document.querySelectorAll('.corner').forEach(c => c.style.borderColor = 'var(--primary)');
+                    scanCooldown = false;
+                }, 1500);
+            }
+        }
+
+        /* --- SELFIE LOGIC --- */
+        async function toggleSelfieBox() {
+            document.getElementById('btn-show-selfie').classList.add('hidden');
+            document.getElementById('selfie-container').classList.remove('hidden');
+            document.getElementById('selfie-container').classList.add('flex');
+            
+            // Stop QR Scanner completely to free the camera
+            if (html5QrCode) {
+                try { await html5QrCode.stop(); } catch(e) {}
+                html5QrCode.clear();
+                html5QrCode = null;
+            }
+
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user", width: {ideal: 600}, height: {ideal: 600} }, 
+                    audio: false 
+                });
+                const video = document.getElementById('camera-preview');
+                video.srcObject = currentStream;
+                video.onloadedmetadata = () => video.play();
+            } catch (e) { 
+                console.log("Selfie cam failed", e); 
+                showToast("Kamera ditolak atau tidak tersedia!");
+            }
+        }
+
+        function takeSelfie() {
+            const btnSnap = document.getElementById('btn-snap');
+            btnSnap.disabled = true;
+            btnSnap.innerText = "MENYIAPKAN...";
+            
+            const overlay = document.getElementById('countdown-overlay');
+            if(overlay) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            }
+            let count = 3;
+            if(overlay) overlay.innerText = count;
+            
+            const timer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    if(overlay) overlay.innerText = count;
+                } else if (count === 0) {
+                    if(overlay) overlay.innerText = "📸";
+                } else {
+                    clearInterval(timer);
+                    if(overlay) {
+                        overlay.classList.add('hidden');
+                        overlay.classList.remove('flex');
+                    }
+                    executePhotoCaptureKiosk();
+                }
+            }, 800);
+        }
+
+        function executePhotoCaptureKiosk() {
+            const video = document.getElementById('camera-preview');
+            const canvas = document.getElementById('capture-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth || 600;
+            canvas.height = video.videoHeight || 600;
+            
+            video.pause();
+            
+            ctx.save();
+            ctx.translate(canvas.width, 0); 
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.restore();
+            
+            capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            
+            const btnSnap = document.getElementById('btn-snap');
+            btnSnap.disabled = false;
+            btnSnap.innerText = "ULANGI FOTO";
+            btnSnap.onclick = resetSnapshot;
+        }
+
+        function resetSnapshot() {
+            const video = document.getElementById('camera-preview');
+            video.play();
+            capturedBase64 = null;
+            
+            const btnSnap = document.getElementById('btn-snap');
+            btnSnap.innerText = "AMBIL FOTO";
+            btnSnap.onclick = takeSelfie;
+        }
+
+        function cleanupSelfie() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(t => t.stop());
+                currentStream = null;
+            }
+            capturedBase64 = null;
+            
+            const container = document.getElementById('selfie-container');
+            if(container) {
+                container.classList.add('hidden');
+                container.classList.remove('flex');
+            }
+            
+            const btnShow = document.getElementById('btn-show-selfie');
+            if(btnShow) btnShow.classList.remove('hidden');
+            
+            const btnSnap = document.getElementById('btn-snap');
+            if(btnSnap) {
+                btnSnap.innerText = "AMBIL FOTO";
+                btnSnap.onclick = takeSelfie;
+            }
+        }
+
+        /* --- MANUAL SEARCH LOGIC --- */
+        function openSearchModal() {
+            document.getElementById('search-modal').classList.remove('hidden');
+            document.getElementById('search-modal').classList.add('flex');
+            document.getElementById('kiosk-search-box').value = '';
+            renderKioskSearch();
+        }
+
+        function closeSearchModal() {
+            document.getElementById('search-modal').classList.add('hidden');
+            document.getElementById('search-modal').classList.remove('flex');
+        }
+
+        function renderKioskSearch() {
+            const listBody = document.getElementById('kiosk-search-list');
+            const term = document.getElementById('kiosk-search-box').value.toLowerCase();
+            
+            const searchTerms = term.trim().split(/\s+/).filter(Boolean);
+            const filtered = masterData.filter(row => {
+                const rowText = [
+                    row.nama || "", row.kode || "", row.whatsapp || "",
+                    row.alamat || "", row.pihakPengundang || "",
+                    row.sesi || "", row.kategori || "", String(row.rencanaHadir || "")
+                ].join(" ").toLowerCase();
+                return searchTerms.every(t => rowText.includes(t));
+            });
+
+            listBody.innerHTML = filtered.map(row => {
+                const isDone = row.jamDatang && row.jamDatang !== "-";
+                // Encode to base64 to avoid JSON parsing issues with quotes
+                const guestJson = encodeURIComponent(JSON.stringify(row));
+                
+                let giftIcons = "";
+                if ((row.statusHadiah && row.statusHadiah.includes("ANGPAO")) || parseFloat(row.tandaKasih) > 0) giftIcons += "🧧";
+                if (row.statusHadiah && row.statusHadiah.includes("KADO")) giftIcons += "🎁";
+                
+                return `
+                    <div class="mb-5 bg-white rounded-3xl p-6 md:p-8 border-2 ${isDone ? 'border-[#10B981] opacity-60' : 'border-[#F0E6DE]'} shadow-sm transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <h3 class="text-xl md:text-2xl font-bold text-[#4A3F35] uppercase tracking-wide">${row.nama} <span class="ml-1">${giftIcons}</span></h3>
+                                <span class="text-xs bg-[#FFF9F5] text-[#C8962E] px-4 py-1.5 md:py-2 rounded-full font-bold tracking-widest border border-[#F0E6DE]">${row.kategori || 'UMUM'}</span>
+                            </div>
+                            <div class="flex flex-wrap gap-x-6 md:gap-x-8 gap-y-2 text-sm md:text-base font-bold text-[#8C7560]">
+                                <span>📍 ${row.alamat || '-'}</span>
+                                <span>💌 Inv: ${row.pihakPengundang || '-'}</span>
+                            </div>
+                        </div>
+                        <div class="shrink-0 text-right w-full md:w-auto mt-2 md:mt-0">
+                            ${isDone ? 
+                                `<span class="inline-block text-[#10B981] font-bold text-xs md:text-sm tracking-widest uppercase bg-[#10B981]/10 px-5 md:px-6 py-2.5 md:py-3 rounded-full">✓ SUDAH HADIR (${row.realHadir})</span>` : 
+                                `<button onclick="handleSearchClick('${guestJson}', ${isDone})" class="inline-block text-[#C8962E] font-bold text-xs md:text-sm tracking-widest uppercase bg-[#C8962E]/10 px-5 md:px-6 py-2.5 md:py-3 rounded-full hover:bg-[#C8962E] hover:text-white transition-colors cursor-pointer outline-none">PILIH TAMU</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleSearchClick(encodedGuest, isDone) {
+            if (isDone) {
+                showToast("Tamu ini sudah check-in!", true);
+                return;
+            }
+            const guest = JSON.parse(decodeURIComponent(encodedGuest));
+            closeSearchModal();
+            openConfirm(guest);
+        }
+
+        /* --- CHECKIN LOGIC --- */
+        function openConfirm(guest) {
+            selectedGuest = guest;
+            document.getElementById('guest-name').innerText = guest.nama;
+            document.getElementById('guest-category').innerText = `${guest.kategori || 'UMUM'} | ${guest.alamat || '-'}`;
+            
+            // Reset state
+            cleanupSelfie();
+            
+            const adult = parseInt(guest.rencanaHadir) || 1;
+            document.getElementById('m-pax-adult').innerText = adult;
+            document.getElementById('m-pax-child').innerText = "0";
+            
+            document.getElementById('btn-angpao').classList.remove('active-gift');
+            document.getElementById('btn-kado').classList.remove('active-gift');
+
+            const modal = document.getElementById('kiosk-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function cancelCheckin() {
+            const modal = document.getElementById('kiosk-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            selectedGuest = null;
+            cleanupSelfie();
+            restartScanner();
+        }
+
+        function updatePax(type, delta) {
+            const el = document.getElementById('m-pax-' + type);
+            let val = parseInt(el.innerText) + delta;
+            if (type === 'adult' && val < 1) val = 1;
+            if (type === 'child' && val < 0) val = 0;
+            el.innerText = val;
+        }
+
+        function toggleGift(type) {
+            const btn = document.getElementById('btn-' + type);
+            btn.classList.toggle('active-gift');
+        }
+
+        async function executeCheckin() {
+            if (!selectedGuest) return;
+            
+            const loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+            
+            const adult = document.getElementById('m-pax-adult').innerText;
+            const child = document.getElementById('m-pax-child').innerText;
+            const total = parseInt(adult) + parseInt(child);
+            const paxString = `${total} ( ${adult}D + ${child}A )`;
+
+            const isAngpao = document.getElementById('btn-angpao').classList.contains('active-gift');
+            const isKado = document.getElementById('btn-kado').classList.contains('active-gift');
+            const giftStatus = (isAngpao ? "ANGPAO " : "") + (isKado ? "KADO" : "");
+
+            // Background Upload Selfie if exists
+            if (capturedBase64) {
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        action: "uploadSelfie",
+                        image: capturedBase64,
+                        nama: selectedGuest.nama,
+                        kode: selectedGuest.kode,
+                        ssId: CURRENT_SS_ID
+                    })
+                }).catch(e => console.warn("Selfie upload err:", e));
+            }
+
+            try {
+                // --- STEP 1.5: SUPABASE UPDATE & PRINT QUEUE LANGSUNG (< 200ms) ---
+                const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+                const SB_HEADERS = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                };
+
+                const stationId = JALUR_ID === "ALL" ? "KIOSK-ALL" : "KIOSK-" + JALUR_ID;
+                const mainPrintId = crypto.randomUUID();
+                const nowISO = new Date().toLocaleTimeString('en-GB', { hour12: false });
+
+                try {
+                    // Update tamu status
+                    await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${selectedGuest.kode}`, {
+                        method: "PATCH",
+                        headers: SB_HEADERS,
+                        body: JSON.stringify({
+                            status_hadir: "1",
+                            jam_datang: nowISO,
+                            real_hadir: total || 1,
+                            status_hadiah: giftStatus || "-"
+                        })
+                    });
+
+                    // Write print queue
+                    let catUpper = String(selectedGuest.kategori || "").toUpperCase();
+                    let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
+
+                    const printPromises = [
+                        fetch(`${SB_URL}/rest/v1/print_queue`, {
+                            method: "POST",
+                            headers: SB_HEADERS,
+                            body: JSON.stringify({
+                                id: mainPrintId,
+                                ssid: CURRENT_SS_ID,
+                                nama: selectedGuest.nama || "-",
+                                kode: selectedGuest.kode || "-",
+                                qr: `https://api.qrserver.com/v1/create-qr-code/?data=${selectedGuest.kode}&size=400x400`,
+                                info: labelType,
+                                status: "WAITING",
+                                kategori: selectedGuest.kategori || "Umum",
+                                alamat: selectedGuest.alamat || "-",
+                                pihak: selectedGuest.pihakPengundang || "-",
+                                sesi: selectedGuest.sesi || "-",
+                                pax: paxString,
+                                station_id: stationId
+                            })
+                        })
+                    ];
+
+                    if (giftStatus && giftStatus !== "-" && giftStatus !== "ON-SITE") {
+                        const statusUpper = String(giftStatus).toUpperCase();
+                        const queueSouvenir = (souvenirType) => {
+                            const souvenirPrintId = crypto.randomUUID();
+                            printPromises.push(
+                                fetch(`${SB_URL}/rest/v1/print_queue`, {
+                                    method: "POST",
+                                    headers: SB_HEADERS,
+                                    body: JSON.stringify({
+                                        id: souvenirPrintId,
+                                        ssid: CURRENT_SS_ID,
+                                        nama: selectedGuest.nama || "-",
+                                        kode: selectedGuest.kode || "-",
+                                        qr: `https://api.qrserver.com/v1/create-qr-code/?data=${selectedGuest.kode}&size=400x400`,
+                                        info: "SOUVENIR: " + souvenirType,
+                                        status: "WAITING",
+                                        kategori: selectedGuest.kategori || "Umum",
+                                        alamat: selectedGuest.alamat || "-",
+                                        pihak: selectedGuest.pihakPengundang || "-",
+                                        sesi: selectedGuest.sesi || "-",
+                                        pax: paxString,
+                                        station_id: stationId
+                                    })
+                                })
+                            );
+                        };
+
+                        if (statusUpper.includes("ANGPAO") && statusUpper.includes("KADO")) {
+                            queueSouvenir("KADO");
+                            queueSouvenir("ANGPAO");
+                        } else {
+                            queueSouvenir(statusUpper);
+                        }
+                    }
+                    printPromises.push(
+                        fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                            method: "POST", headers: SB_HEADERS,
+                            body: JSON.stringify({
+                                id: genUUID(),
+                                ssid: CURRENT_SS_ID,
+                                nama: selectedGuest.nama || "-",
+                                kategori: selectedGuest.kategori || "Umum",
+                                alamat: selectedGuest.alamat || "-",
+                                pihak: selectedGuest.pihakPengundang || "-",
+                                pax: paxString,
+                                kode: selectedGuest.kode || "-",
+                                status: "DISPLAY",
+                                created_at: new Date().toISOString()
+                            })
+                        }).then(async res => {
+                            if (!res.ok) console.error("welcome_queue kiosk write error:", await res.text());
+                        }).catch(e => console.warn(e))
+                    );
+
+                    await Promise.all(printPromises);
+
+                } catch (e) {
+                    console.error("Direct Supabase update/print failed in kiosk:", e);
+                }
+
+                // --- STEP 2: CORE CHECKIN (Non-Blocking background sync) ---
+
+                fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ 
+                        action: "confirm_checkin", 
+                        ssId: CURRENT_SS_ID, 
+                        kodeUnik: selectedGuest.kode, 
+                        realHadir: paxString, 
+                        statusAngpao: giftStatus || "-",
+                        stationId: stationId,
+                        customUuid: mainPrintId,
+                        skipSupabase: true,
+                        skipSupabasePrint: true
+                    }) 
+                }).catch(e => console.error("GAS kiosk sync failed:", e));
+
+                // --- STEP 3: FAST FEEDBACK (Immediate Success Animation) ---
+                const modal = document.getElementById('kiosk-modal');
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                
+                // Show success animation
+                const successModal = document.getElementById('success-modal');
+                const successContent = document.getElementById('success-content');
+                successModal.classList.remove('hidden');
+                
+                // Trigger animation frame
+                setTimeout(() => {
+                    successContent.style.opacity = '1';
+                    successContent.style.transform = 'scale(1)';
+                }, 50);
+
+                // Blast WA Automation in background
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ 
+                        action: "sendAutomationBlast", 
+                        ssId: CURRENT_SS_ID, 
+                        type: "checkin",
+                        guestData: { nama: selectedGuest.nama, whatsapp: selectedGuest.whatsapp } 
+                    })
+                }).catch(e => console.warn("Background blast failed:", e));
+
+                // Reset and update local list
+                selectedGuest.statusHadir = "1"; 
+                
+                // Auto close after 3 seconds
+                setTimeout(() => {
+                    successContent.style.opacity = '0';
+                    successContent.style.transform = 'scale(1.5)';
+                    setTimeout(() => {
+                        successModal.classList.add('hidden');
+                        selectedGuest = null;
+                        // GO BACK TO WELCOME SIGN
+                        returnToIdle();
+                    }, 500);
+                }, 3000);
+
+            } catch(e) { 
+                showSapaModal("Error", "Koneksi Error!", "❌"); 
+                console.error(e);
+            } finally { 
+                loading.style.display = 'none'; 
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+
+
