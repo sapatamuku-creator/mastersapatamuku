@@ -2014,7 +2014,43 @@ function syncRowToSupabase(ss, row, ssId) {
  * Jalankan fungsi ini sekali di Apps Script Editor untuk mengaktifkan Watcher Edit Otomatis.
  */
 function setupAutoSyncTrigger() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let ssId = ""; // MASUKKAN ID SPREADSHEET ANDA DI SINI JIKA SCRIPT STANDALONE (Contoh: "1a2b3c4d...")
+  
+  let ss = null;
+  if (ssId && ssId.trim() !== "") {
+    try {
+      ss = SpreadsheetApp.openById(ssId);
+    } catch(e) {
+      Logger.log("Gagal membuka spreadsheet dengan ID yang diberikan: " + e.toString());
+    }
+  }
+  
+  if (!ss) {
+    try {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    } catch(e) {}
+  }
+
+  if (!ss) {
+    try {
+      const savedSsId = PropertiesService.getScriptProperties().getProperty("ACTIVE_SS_ID") 
+                     || PropertiesService.getScriptProperties().getProperty("SS_ID");
+      if (savedSsId) {
+        ss = SpreadsheetApp.openById(savedSsId);
+      }
+    } catch(e) {}
+  }
+  
+  if (!ss) {
+    throw new Error(
+      "Gagal mendeteksi Spreadsheet. Jika ini adalah Script Standalone (tidak melekat pada sheet), " +
+      "buka file Main.gs, temukan fungsi setupAutoSyncTrigger(), " +
+      "dan isi variabel 'ssId' dengan ID spreadsheet Anda."
+    );
+  }
+  
+  // Gunakan ID spreadsheet untuk membuat trigger (lebih aman untuk standalone & container-bound)
+  const targetId = ss.getId();
   
   // Hapus trigger edit yang ada sebelumnya agar tidak ganda
   const triggers = ScriptApp.getProjectTriggers();
@@ -2026,10 +2062,10 @@ function setupAutoSyncTrigger() {
   
   // Buat trigger edit installable baru
   ScriptApp.newTrigger("handleSpreadsheetEdit")
-    .forSpreadsheet(ss)
+    .forSpreadsheet(targetId)
     .onEdit()
     .create();
     
-  Logger.log("Trigger watcher berhasil dipasang untuk spreadsheet: " + ss.getName());
+  Logger.log("Trigger watcher berhasil dipasang untuk spreadsheet: " + ss.getName() + " (ID: " + targetId + ")");
 }
 
