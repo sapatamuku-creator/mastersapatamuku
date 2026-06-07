@@ -188,6 +188,14 @@ function handleMainPost(payload) {
       case "deleteGuest":
         result = deleteGuest(ssId, payload.kodeUnik);
         break;
+
+      case "saveGuestsToSheet":
+        result = saveGuestsToSheet(ssId, payload.guests);
+        break;
+
+      case "deleteGuestsFromSheet":
+        result = deleteGuestsFromSheet(ssId, payload.codes);
+        break;
         
       case "editGuest":
         result = editGuest(payload);
@@ -280,6 +288,87 @@ function deleteGuest(ssId, kodeUnik) {
     return { status: "error", message: err.toString() };
   }
 }
+
+function saveGuestsToSheet(ssId, guests) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    const lastRow = sheet.getLastRow();
+    
+    let existingCodes = new Set();
+    if (lastRow >= START_ROW) {
+      const data = sheet.getRange(START_ROW, COL_KODE_UNIK, lastRow - (START_ROW - 1), 1).getValues();
+      for (let i = 0; i < data.length; i++) {
+        existingCodes.add(String(data[i][0]).trim());
+      }
+    }
+    
+    let addedCount = 0;
+    const nowFormatted = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss");
+    
+    for (let i = 0; i < guests.length; i++) {
+      const g = guests[i];
+      const kode = String(g.kode || "").trim();
+      if (!kode || existingCodes.has(kode)) continue;
+      
+      const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?data=" + kode + "&size=400x400";
+      const rowData = [
+        "=ROW()-" + (START_ROW - 1),
+        nowFormatted,
+        g.nama || "Tanpa Nama",
+        g.whatsapp || "",
+        g.kategori || "Umum",
+        kode,
+        qrUrl,
+        g.rencanaHadir || 1,
+        g.statusHadir || "0",
+        g.jamDatang || "-",
+        g.souvenir || "tidak",
+        g.pihakPengundang || "-",
+        g.alamat || "-",
+        g.realHadir || "0",
+        g.statusHadiah || "-",
+        g.statusWA || "BELUM TERKIRIM",
+        "-",
+        g.tandaKasih || 0,
+        g.sesi || "-"
+      ];
+      sheet.appendRow(rowData);
+      addedCount++;
+    }
+    
+    return { status: "success", message: `Berhasil menambahkan ${addedCount} tamu ke Spreadsheet.` };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
+function deleteGuestsFromSheet(ssId, guestCodes) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < START_ROW) return { status: "success", message: "Data kosong" };
+    
+    const data = sheet.getRange(START_ROW, COL_KODE_UNIK, lastRow - (START_ROW - 1), 1).getValues();
+    const codesToDelete = new Set(guestCodes.map(c => String(c).trim()));
+    
+    let deleteCount = 0;
+    // Loop backwards so row deletions don't affect indices of remaining rows to delete
+    for (let i = data.length - 1; i >= 0; i--) {
+      const rowCode = String(data[i][0]).trim();
+      if (codesToDelete.has(rowCode)) {
+        sheet.deleteRow(i + START_ROW);
+        deleteCount++;
+      }
+    }
+    
+    return { status: "success", message: `Berhasil menghapus ${deleteCount} tamu dari Spreadsheet.` };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
 
 // createResponse removed (using UnifiedRouter version)
 

@@ -946,6 +946,68 @@
     </div>
 </div>
 
+    <!-- DATABASE SYNC COMPARISON MODAL -->
+    <div id="syncCompareModalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.6); backdrop-filter:blur(8px); z-index:11000; align-items:center; justify-content:center; padding:15px; box-sizing:border-box;">
+        <div id="syncCompareModalBox" style="background:#FFF; width:100%; max-width:950px; max-height:90vh; border-radius:24px; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden; border:1px solid rgba(255,255,255,0.2); animation:modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+            <!-- Header -->
+            <div style="padding:25px 30px; border-bottom:1px solid #F1F5F9; display:flex; align-items:flex-start; justify-content:space-between; gap:15px; background:linear-gradient(to right, #F8FAFC, #FFF);">
+                <div>
+                    <h2 style="font-family:'Lora',serif; font-size:20px; font-weight:700; color:#0F172A; margin:0; display:flex; align-items:center; gap:8px;">
+                        🔄 Kelola Sinkronisasi Database
+                    </h2>
+                    <p style="font-size:11px; font-weight:600; color:#64748B; margin:5px 0 0; line-height:1.5; text-align:left;">
+                        Pilih data tamu yang ingin diselaraskan. Anda dapat menghapus data yang tidak valid atau menyimpannya agar sinkron di kedua sisi.
+                    </p>
+                </div>
+                <button onclick="closeSyncCompareModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94A3B8; padding:0; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#0F172A'" onmouseout="this.style.color='#94A3B8'">&times;</button>
+            </div>
+            
+            <!-- Body: Two Columns -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:25px 30px; overflow-y:auto; flex:1; background:#F8FAFC;" class="sync-grid-container">
+                <!-- Column 1: Hanya di Supabase -->
+                <div style="background:#FFF; border-radius:16px; border:1.5px solid #E2E8F0; padding:20px; display:flex; flex-direction:column; max-height:55vh;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; border-bottom:1.5px solid #F1F5F9; padding-bottom:10px;">
+                        <div style="text-align:left;">
+                            <div style="font-size:12px; font-weight:800; color:#3B82F6;">HANYA DI SUPABASE</div>
+                            <div style="font-size:10px; font-weight:600; color:#64748B; margin-top:2px;">(Kosong di Spreadsheet)</div>
+                        </div>
+                        <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:10px; font-weight:800; color:#64748B; cursor:pointer; user-select:none;">
+                            <input type="checkbox" id="selectAllSb" onchange="toggleSelectAllSync('sb')" style="width:14px; height:14px; cursor:pointer; accent-color:#3B82F6;"> PILIH SEMUA
+                        </label>
+                    </div>
+                    <div id="syncListSb" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px; padding-right:4px;">
+                        <!-- JS Render -->
+                    </div>
+                </div>
+                
+                <!-- Column 2: Hanya di Spreadsheet -->
+                <div style="background:#FFF; border-radius:16px; border:1.5px solid #E2E8F0; padding:20px; display:flex; flex-direction:column; max-height:55vh;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; border-bottom:1.5px solid #F1F5F9; padding-bottom:10px;">
+                        <div style="text-align:left;">
+                            <div style="font-size:12px; font-weight:800; color:#10B981;">HANYA DI SPREADSHEET</div>
+                            <div style="font-size:10px; font-weight:600; color:#64748B; margin-top:2px;">(Kosong di Supabase)</div>
+                        </div>
+                        <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:10px; font-weight:800; color:#64748B; cursor:pointer; user-select:none;">
+                            <input type="checkbox" id="selectAllSheet" onchange="toggleSelectAllSync('sheet')" style="width:14px; height:14px; cursor:pointer; accent-color:#10B981;"> PILIH SEMUA
+                        </label>
+                    </div>
+                    <div id="syncListSheet" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px; padding-right:4px;">
+                        <!-- JS Render -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer Actions -->
+            <div style="padding:20px 30px; border-top:1px solid #E2E8F0; display:flex; align-items:center; justify-content:space-between; gap:12px; background:#FFF;">
+                <button onclick="closeSyncCompareModal()" style="padding:12px 20px; border-radius:12px; border:1.5px solid #E2E8F0; background:#FFF; color:#64748B; font-weight:800; font-size:10px; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='#FFF'">BATAL</button>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="processSyncAction('delete')" style="padding:12px 22px; border-radius:12px; border:none; background:#EF4444; color:#FFF; font-weight:800; font-size:10px; cursor:pointer; box-shadow:0 4px 12px rgba(239,68,68,0.2); transition:0.2s;" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter='none'">🗑️ HAPUS TAMU TERPILIH</button>
+                    <button onclick="processSyncAction('save')" style="padding:12px 22px; border-radius:12px; border:none; background:#4F46E5; color:#FFF; font-weight:800; font-size:10px; cursor:pointer; box-shadow:0 4px 12px rgba(79,70,229,0.25); transition:0.2s;" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter='none'">💾 SIMPAN & SELARASKAN TERPILIH</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MANAGE DUPLICATES MODAL -->
     <div id="manageDupModalOverlay">
         <div id="manageDupModalBox">
@@ -2354,41 +2416,279 @@
         }
     }
 
-    // --- SYNC SUPABASE MANUAL (metode owner.html: fire-and-forget via GAS) ---
+    // --- DATABASE SYNC COMPARISON LOGIC ---
     window.syncToSupabase = async function() {
         if (!CURRENT_SS_ID) {
             return showSapaModal("Gagal", "Session tidak ditemukan. Silakan login ulang.", "⚠️");
         }
-        const confirmed = await showConfirm("Sync ke Supabase?", "Proses ini akan mengupload ulang semua data dari Spreadsheet ke database Supabase.\n\nMungkin memerlukan beberapa menit tergantung jumlah tamu.");
-        if (!confirmed) return;
-
-        toggleProcessing(true, "MENGIRIM KE SERVER...");
+        
+        toggleProcessing(true, "MEMBANDINGKAN DATA...");
         try {
-            // Metode owner.html: mode: "no-cors" → GAS memproses di server-side
-            // Browser tidak membaca response (opaque), menghindari deteksi secret key
-            fetch(SCRIPT_URL, {
+            // 1. Fetch latest data from Spreadsheet via GAS
+            const gasResponse = await fetch(SCRIPT_URL, {
                 method: "POST",
-                mode: "no-cors",
                 body: JSON.stringify({
-                    action: "syncSheetToSupabase",
+                    action: "getMasterData",
                     ssId: CURRENT_SS_ID
                 })
-            }).catch(() => {});
-
-            // Beri waktu GAS memproses (estimasi 5-8 detik)
-            for (let i = 8; i >= 1; i--) {
-                toggleProcessing(true, `MEMPROSES DI SERVER... (${i}s)`);
-                await new Promise(r => setTimeout(r, 1000));
+            });
+            const gasResult = await gasResponse.json();
+            if (!gasResult || !gasResult.guestList) {
+                throw new Error("Gagal mengambil data dari Google Sheets.");
             }
-
-            // Refresh data untuk verifikasi
-            toggleProcessing(true, "MEMVERIFIKASI DATA...");
-            await refreshApp();
-            showSapaModal("Permintaan Terkirim ✅",
-                "Sync telah dikirim ke server GAS. Data tamu di bawah sudah diperbarui dari Supabase.", "✅");
+            const sheetGuests = gasResult.guestList || [];
+            
+            // 2. Fetch latest data from Supabase
+            const sbResponse = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&select=*`, {
+                headers: SB_HEADERS
+            });
+            const sbGuests = await sbResponse.json();
+            if (!Array.isArray(sbGuests)) {
+                throw new Error("Gagal mengambil data dari Supabase.");
+            }
+            
+            // 3. Find differences by kode
+            const sheetCodes = new Set(sheetGuests.map(g => String(g.kode || "").trim()).filter(Boolean));
+            const sbCodes = new Set(sbGuests.map(g => String(g.kode || "").trim()).filter(Boolean));
+            
+            // list A: in Supabase only (not in sheet)
+            const onlyInSb = sbGuests.filter(g => !sheetCodes.has(String(g.kode || "").trim()));
+            
+            // list B: in sheet only (not in Supabase)
+            const onlyInSheet = sheetGuests.filter(g => !sbCodes.has(String(g.kode || "").trim()));
+            
+            toggleProcessing(false);
+            
+            if (onlyInSb.length === 0 && onlyInSheet.length === 0) {
+                // Completely in sync!
+                // Hide mismatch banner
+                const mismatchBanner = document.getElementById("mismatch-banner");
+                if (mismatchBanner) mismatchBanner.style.display = "none";
+                
+                return showSapaModal("Database Sinkron ✅", "Semua data tamu di database Supabase dan Google Sheets Anda sudah selaras.", "✅");
+            }
+            
+            // Open comparison modal
+            window.SYNC_ONLY_IN_SB = onlyInSb;
+            window.SYNC_ONLY_IN_SHEET = onlyInSheet;
+            
+            window.renderSyncLists();
+            document.getElementById("syncCompareModalOverlay").style.display = "flex";
+            
         } catch (e) {
-            console.error("syncToSupabase error:", e);
-            showSapaModal("Error ❌", "Gagal mengirim permintaan sync: " + e.message, "❌");
+            console.error("syncToSupabase comparison error:", e);
+            toggleProcessing(false);
+            showSapaModal("Error ❌", "Gagal membandingkan data: " + e.message, "❌");
+        }
+    };
+
+    window.closeSyncCompareModal = function() {
+        document.getElementById("syncCompareModalOverlay").style.display = "none";
+    };
+
+    window.toggleSelectAllSync = function(type) {
+        const selectAll = document.getElementById(type === "sb" ? "selectAllSb" : "selectAllSheet").checked;
+        const checks = document.querySelectorAll(type === "sb" ? ".sync-check-sb" : ".sync-check-sheet");
+        checks.forEach(c => c.checked = selectAll);
+    };
+
+    window.renderSyncLists = function() {
+        const containerSb = document.getElementById("syncListSb");
+        const containerSheet = document.getElementById("syncListSheet");
+        
+        containerSb.innerHTML = "";
+        containerSheet.innerHTML = "";
+        
+        if (window.SYNC_ONLY_IN_SB.length === 0) {
+            containerSb.innerHTML = `<div style="text-align:center; padding:30px; font-size:10px; color:#94A3B8; font-weight:700;">Data sudah sinkron.</div>`;
+        } else {
+            window.SYNC_ONLY_IN_SB.forEach(g => {
+                const card = document.createElement("div");
+                card.style.background = "#F8FAFC";
+                card.style.border = "1px solid #E2E8F0";
+                card.style.borderRadius = "12px";
+                card.style.padding = "10px 14px";
+                card.style.display = "flex";
+                card.style.alignItems = "center";
+                card.style.gap = "10px";
+                card.style.textAlign = "left";
+                
+                card.innerHTML = `
+                    <input type="checkbox" data-kode="${g.kode}" class="sync-check-sb" style="width:16px; height:16px; cursor:pointer; accent-color:#3B82F6;" checked>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:11.5px; font-weight:800; color:#1E293B; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${g.nama}</div>
+                        <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+                            <span style="background:#DBEAFE; color:#1E40AF; padding:2px 6px; border-radius:4px; font-size:8px; font-weight:800;">${g.kategori}</span>
+                            <span style="font-size:8.5px; font-weight:700; color:#64748B;">${g.kode}</span>
+                        </div>
+                    </div>
+                `;
+                containerSb.appendChild(card);
+            });
+        }
+        
+        if (window.SYNC_ONLY_IN_SHEET.length === 0) {
+            containerSheet.innerHTML = `<div style="text-align:center; padding:30px; font-size:10px; color:#94A3B8; font-weight:700;">Data sudah sinkron.</div>`;
+        } else {
+            window.SYNC_ONLY_IN_SHEET.forEach(g => {
+                const card = document.createElement("div");
+                card.style.background = "#F8FAFC";
+                card.style.border = "1px solid #E2E8F0";
+                card.style.borderRadius = "12px";
+                card.style.padding = "10px 14px";
+                card.style.display = "flex";
+                card.style.alignItems = "center";
+                card.style.gap = "10px";
+                card.style.textAlign = "left";
+                
+                card.innerHTML = `
+                    <input type="checkbox" data-kode="${g.kode}" class="sync-check-sheet" style="width:16px; height:16px; cursor:pointer; accent-color:#10B981;" checked>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:11.5px; font-weight:800; color:#1E293B; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${g.nama}</div>
+                        <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+                            <span style="background:#D1FAE5; color:#065F46; padding:2px 6px; border-radius:4px; font-size:8px; font-weight:800;">${g.kategori}</span>
+                            <span style="font-size:8.5px; font-weight:700; color:#64748B;">${g.kode}</span>
+                        </div>
+                    </div>
+                `;
+                containerSheet.appendChild(card);
+            });
+        }
+        
+        document.getElementById("selectAllSb").checked = true;
+        document.getElementById("selectAllSheet").checked = true;
+    };
+
+    window.processSyncAction = async function(actionType) {
+        const codesSb = Array.from(document.querySelectorAll('.sync-check-sb:checked')).map(c => c.dataset.kode);
+        const codesSheet = Array.from(document.querySelectorAll('.sync-check-sheet:checked')).map(c => c.dataset.kode);
+        
+        if (codesSb.length === 0 && codesSheet.length === 0) {
+            return showSapaModal("Peringatan", "Pilih minimal satu tamu untuk diproses.", "⚠️");
+        }
+        
+        let confirmMsg = "";
+        if (actionType === 'delete') {
+            confirmMsg = `Apakah Anda yakin ingin MENGHAPUS:\n- ${codesSb.length} tamu terpilih dari Supabase\n- ${codesSheet.length} tamu terpilih dari Google Sheets?`;
+        } else {
+            confirmMsg = `Apakah Anda yakin ingin MENYELARASKAN:\n- ${codesSb.length} tamu terpilih dari Supabase ke Google Sheets\n- ${codesSheet.length} tamu terpilih dari Google Sheets ke Supabase?`;
+        }
+        
+        const confirmed = await showConfirm("Konfirmasi Sinkronisasi", confirmMsg);
+        if (!confirmed) return;
+        
+        window.closeSyncCompareModal();
+        toggleProcessing(true, "MEMPROSES SINKRONISASI...");
+        
+        try {
+            if (actionType === 'delete') {
+                // 1. Delete selected from Supabase
+                if (codesSb.length > 0) {
+                    const deleteUrl = `${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=in.(${codesSb.map(c => `"${c}"`).join(',')})`;
+                    const sbRes = await fetch(deleteUrl, {
+                        method: 'DELETE',
+                        headers: SB_HEADERS
+                    });
+                    if (!sbRes.ok) throw new Error("Gagal menghapus dari Supabase.");
+                }
+                
+                // 2. Delete selected from Spreadsheet via GAS
+                if (codesSheet.length > 0) {
+                    const gasRes = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: "deleteGuestsFromSheet",
+                            ssId: CURRENT_SS_ID,
+                            codes: codesSheet
+                        })
+                    });
+                    const gasResult = await gasRes.json();
+                    if (gasResult.status !== 'success') throw new Error(gasResult.message || "Gagal menghapus dari Spreadsheet.");
+                }
+                
+                showSapaModal("Sukses Hapus ✅", `Berhasil menghapus ${codesSb.length} tamu dari Supabase dan ${codesSheet.length} tamu dari Google Sheets.`, "✅");
+                
+            } else {
+                // Save / sync actions
+                
+                // 1. Simpan tamu dari Supabase ke Spreadsheet
+                if (codesSb.length > 0) {
+                    const guestsToSaveToSheet = window.SYNC_ONLY_IN_SB.filter(g => codesSb.includes(g.kode)).map(g => ({
+                        nama: g.nama,
+                        whatsapp: g.whatsapp,
+                        kategori: g.kategori,
+                        kode: g.kode,
+                        rencanaHadir: g.rencana_hadir,
+                        statusHadir: g.status_hadir,
+                        jamDatang: g.jam_datang,
+                        souvenir: g.souvenir,
+                        pihakPengundang: g.pihak_pengundang,
+                        alamat: g.alamat,
+                        realHadir: g.real_hadir,
+                        statusWA: g.status_wa,
+                        statusHadiah: g.status_hadiah,
+                        tandaKasih: g.tanda_kasih,
+                        sesi: g.sesi
+                    }));
+                    
+                    const gasRes = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: "saveGuestsToSheet",
+                            ssId: CURRENT_SS_ID,
+                            guests: guestsToSaveToSheet
+                        })
+                    });
+                    const gasResult = await gasRes.json();
+                    if (gasResult.status !== 'success') throw new Error(gasResult.message || "Gagal menyimpan ke Spreadsheet.");
+                }
+                
+                // 2. Simpan tamu dari Spreadsheet ke Supabase
+                if (codesSheet.length > 0) {
+                    const guestsToSaveToSb = window.SYNC_ONLY_IN_SHEET.filter(g => codesSheet.includes(g.kode)).map(g => {
+                        let cleanPhone = String(g.whatsapp || "").replace(/\D/g, ''); 
+                        if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+                        return {
+                            ssid: CURRENT_SS_ID,
+                            kode: g.kode,
+                            nama: g.nama,
+                            whatsapp: cleanPhone,
+                            kategori: g.kategori || "Umum",
+                            rencana_hadir: parseInt(g.rencanaHadir) || 1,
+                            real_hadir: String(g.realHadir || "0"),
+                            souvenir: g.souvenir || "tidak",
+                            pihak_pengundang: g.pihakPengundang || "-",
+                            alamat: g.alamat || "-",
+                            status_hadir: String(g.statusHadir || "0"),
+                            status_wa: g.statusWA || "BELUM TERKIRIM",
+                            status_hadiah: g.statusHadiah || "-",
+                            tanda_kasih: parseFloat(g.tandaKasih) || 0,
+                            jam_datang: g.jamDatang || "-",
+                            sesi: g.sesi || "-",
+                            event_date: window.WA_HARI_TANGGAL ? new Date(window.WA_HARI_TANGGAL).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                        };
+                    });
+                    
+                    const sbRes = await fetch(`${SB_URL}/rest/v1/tamu?on_conflict=ssid,kode`, {
+                        method: 'POST',
+                        headers: {
+                            ...SB_HEADERS,
+                            "Prefer": "resolution=merge-duplicates"
+                        },
+                        body: JSON.stringify(guestsToSaveToSb)
+                    });
+                    if (!sbRes.ok) throw new Error("Gagal menyimpan ke Supabase.");
+                }
+                
+                showSapaModal("Sukses Sinkron ✅", `Berhasil menyelaraskan ${codesSb.length} tamu ke Google Sheets dan ${codesSheet.length} tamu ke Supabase.`, "✅");
+            }
+            
+            // Refresh app data to reflect changes
+            await refreshApp();
+            
+        } catch (error) {
+            console.error("processSyncAction error:", error);
+            showSapaModal("Error Sinkronisasi ❌", error.message, "❌");
         } finally {
             toggleProcessing(false);
         }
