@@ -1898,3 +1898,138 @@ function editGuest(payload) {
   }
 }
 
+/**
+ * Installable Trigger: Diaktifkan ketika spreadsheet diedit.
+ * Mensinkronisasikan baris data tamu yang berubah langsung ke Supabase.
+ */
+function handleSpreadsheetEdit(e) {
+  try {
+    const range = e.range;
+    const sheet = range.getSheet();
+    if (sheet.getName() !== SHEET_DATA) return;
+    
+    const row = range.getRow();
+    if (row < START_ROW) return;
+    
+    const col = range.getColumn();
+    // Monitor kolom penting: Nama (3), Whatsapp (4), Status Hadir (9), Souvenir (11), Pihak (12), Alamat (13), Real Hadir (14), Jenis Gift (15), WA Send API (16), Lucky Draw (17), Sesi (19)
+    const monitoredCols = [3, 4, 5, 9, 11, 12, 13, 14, 15, 16, 17, 19];
+    if (monitoredCols.indexOf(col) === -1) return;
+    
+    const ss = e.source;
+    const ssId = ss.getId();
+    
+    // Sync baris ini ke Supabase
+    syncRowToSupabase(ss, row, ssId);
+  } catch(err) {
+    console.error("Watcher handleSpreadsheetEdit error: " + err.toString());
+  }
+}
+
+/**
+ * Menyinkronkan baris tamu spesifik dari spreadsheet ke Supabase.
+ */
+function syncRowToSupabase(ss, row, ssId) {
+  const sheet = ss.getSheetByName(SHEET_DATA);
+  const rowData = sheet.getRange(row, 1, 1, 19).getValues()[0];
+  
+  // Ambil tanggal acara dari B2 (Metadata)
+  let eventDate = "";
+  try {
+    const eventDateRaw = sheet.getRange("B2").getValue();
+    eventDate = Utilities.formatDate(parseEventDate(eventDateRaw), "GMT+7", "yyyy-MM-dd");
+  } catch(e) {
+    eventDate = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd");
+  }
+  
+  let cleanPhone = String(rowData[3] || "").replace(/\D/g, ''); 
+  if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+  
+  const guestObj = {
+    ssid: ssId,
+    row: row,
+    kode: String(rowData[5] || "").trim(),
+    nama: String(rowData[2] || "").trim(),
+    whatsapp: rowData[3] ? String(rowData[3]) : "",
+    kategori: String(rowData[4] || "Umum"),
+    rencana_hadir: parseInt(rowData[7]) || 1,
+    real_hadir: String(rowData[13]),
+    souvenir: String(rowData[10] || "tidak"),
+    pihak_pengundang: String(rowData[11] || "-"),
+    alamat: String(rowData[12] || "-"),
+    status_hadir: String(rowData[8] || "0"),
+    status_wa: String(rowData[15] || "PENDING"),
+    status_hadiah: (() => {
+      let colO = String(rowData[14] || "").trim();
+      let oTags = [];
+      let upperO = colO.toUpperCase();
+      if (upperO.includes("ANGPAO")) oTags.push("ANGPAO");
+      if (upperO.includes("KADO")) oTags.push("KADO");
+      return oTags.length > 0 ? oTags.join(" ") : "-";
+    })(),
+    status_undian: String(rowData[16] || "-").trim(),
+    tanda_kasih: parseFloat(rowData[17]) || 0,
+    sesi: String(rowData[18] || "-"),
+    jam_datang: (() => {
+      let val = rowData[9];
+      if (val === "" || val === null || val === undefined || String(val).trim() === "-") return "-";
+      if (val instanceof Date) {
+        return Utilities.formatDate(val, "GMT+7", "HH:mm:ss");
+      }
+      let str = String(val).trim();
+      if (str.includes("T") || str.includes("GMT") || str.length > 10) {
+        try {
+          let parsedDate = new Date(str);
+          if (!isNaN(parsedDate.getTime())) {
+            return Utilities.formatDate(parsedDate, "GMT+7", "HH:mm:ss");
+          }
+        } catch(e) {}
+      }
+      return str;
+    })(),
+    event_date: eventDate
+  };
+
+  if (!guestObj.kode || !guestObj.nama) return;
+
+  if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+    const url = `${SUPABASE_URL}/rest/v1/tamu?on_conflict=ssid,kode`;
+    const headers = {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "resolution=merge-duplicates"
+    };
+
+    supabaseFetch(url, {
+      method: "post",
+      headers: headers,
+      payload: JSON.stringify([guestObj]),
+      muteHttpExceptions: true
+    });
+  }
+}
+
+/**
+ * Jalankan fungsi ini sekali di Apps Script Editor untuk mengaktifkan Watcher Edit Otomatis.
+ */
+function setupAutoSyncTrigger() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // Hapus trigger edit yang ada sebelumnya agar tidak ganda
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(t => {
+    if (t.getHandlerFunction() === "handleSpreadsheetEdit") {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  
+  // Buat trigger edit installable baru
+  ScriptApp.newTrigger("handleSpreadsheetEdit")
+    .forSpreadsheet(ss)
+    .onEdit()
+    .create();
+    
+  Logger.log("Trigger watcher berhasil dipasang untuk spreadsheet: " + ss.getName());
+}
+

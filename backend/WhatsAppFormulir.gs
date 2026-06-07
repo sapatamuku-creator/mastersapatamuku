@@ -146,8 +146,30 @@ function handleWAFormPost(data) {
         };
         const res = directFonnteSend("https://api.fonnte.com/send", body, item.token);
         if (res.status) {
-          sheet1.getRange(item.row, 16).setValue(`✅ [${now}]`); 
+          const statusStr = `✅ [${now}]`;
+          sheet1.getRange(item.row, 16).setValue(statusStr); 
           successCount++;
+
+          // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+          try {
+            if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+              const kodeUnik = sheet1.getRange(item.row, 6).getValue(); // Kolom F (Kode Unik)
+              if (kodeUnik) {
+                supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + data.ssId + "&kode=eq." + kodeUnik, {
+                  method: "patch",
+                  headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": "Bearer " + SUPABASE_KEY,
+                    "Content-Type": "application/json"
+                  },
+                  payload: JSON.stringify({ status_wa: statusStr }),
+                  muteHttpExceptions: true
+                });
+              }
+            }
+          } catch(e) {
+            console.error("Failed to sync blast status to Supabase: " + e.toString());
+          }
         } else {
           // ❌ ERROR: session-only, tidak ditulis ke spreadsheet
           // agar saat refresh kembali jadi "BELUM TERKIRIM" dan bisa di-retry
@@ -168,7 +190,29 @@ function handleWAFormPost(data) {
       if (Array.isArray(data.duplicates)) {
         data.duplicates.forEach(item => {
           if (item.row) {
-            sheet1.getRange(item.row, 16).setValue(`⚠️ Duplikasi Nomor [${now}]`);
+            const statusStr = `⚠️ Duplikasi Nomor [${now}]`;
+            sheet1.getRange(item.row, 16).setValue(statusStr);
+
+            // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+            try {
+              if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+                const kodeUnik = sheet1.getRange(item.row, 6).getValue(); // Kolom F (Kode Unik)
+                if (kodeUnik) {
+                  supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + data.ssId + "&kode=eq." + kodeUnik, {
+                    method: "patch",
+                    headers: {
+                      "apikey": SUPABASE_KEY,
+                      "Authorization": "Bearer " + SUPABASE_KEY,
+                      "Content-Type": "application/json"
+                    },
+                    payload: JSON.stringify({ status_wa: statusStr }),
+                    muteHttpExceptions: true
+                  });
+                }
+              }
+            } catch(e) {
+              console.error("Failed to sync duplicate status to Supabase: " + e.toString());
+            }
           }
         });
         SpreadsheetApp.flush();
