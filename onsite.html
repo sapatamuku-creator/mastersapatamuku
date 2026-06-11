@@ -550,6 +550,24 @@
             color: var(--text-main);
         }
 
+        .fab-fullscreen {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 45px;
+            height: 45px;
+            background: rgba(26,26,26,0.9);
+            color: white;
+            border-radius: 50%;
+            border: 1px solid var(--gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            cursor: pointer;
+            transition: opacity 0.5s ease, background 0.3s ease;
+        }
+
         .spinner {
             width: 40px;
             height: 40px;
@@ -1093,6 +1111,10 @@
         <span>[ DATA DIPROSES ]</span>
     </div>
 
+    <div class="fab-fullscreen" id="btn-fs">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+    </div>
+
     <div id="st-modal" class="st-modal-overlay">
         <div id="modal-container" class="st-modal-content">
             <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️</span>
@@ -1348,6 +1370,7 @@
             }
 
             initNavScroll();
+            setupFullscreen();
         }
 
         function syncMetadataOptions() {
@@ -1420,6 +1443,33 @@
             if (active) {
                 container.scrollLeft = active.offsetLeft - (container.clientWidth / 2) + (active.clientWidth / 2);
             }
+        }
+
+        function setupFullscreen() {
+            const btn = document.getElementById('btn-fs');
+            btn.addEventListener('click', function() {
+                const doc = document.documentElement;
+                if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
+                    if (doc.requestFullscreen) doc.requestFullscreen();
+                    else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                }
+            });
+
+            const handleFsChange = () => {
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    btn.style.opacity = '0';
+                    btn.style.pointerEvents = 'none';
+                } else {
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                }
+            };
+
+            document.addEventListener('fullscreenchange', handleFsChange);
+            document.addEventListener('webkitfullscreenchange', handleFsChange);
         }
 
         async function fetchData() {

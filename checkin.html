@@ -117,7 +117,7 @@
         .pax-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; background: #fafafa; padding: 10px 15px; border-radius: 15px; border: 1px solid #eee; }
         .pax-label { font-size: 10px; font-weight: 800; color: #666; text-transform: uppercase; }
 
-        .fab-fullscreen { position: fixed; bottom: 25px; right: 25px; width: 45px; height: 45px; background: rgba(26,26,26,0.9); color: white; border-radius: 50%; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; z-index: 1000; cursor: pointer; }
+        .fab-fullscreen { position: fixed; bottom: 25px; right: 25px; width: 45px; height: 45px; background: rgba(26,26,26,0.9); color: white; border-radius: 50%; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; z-index: 1000; cursor: pointer; transition: opacity 0.5s ease, background 0.3s ease; }
         .loading-overlay { 
             position: fixed; inset: 0; 
             background: rgba(255,255,255,0.7); 
@@ -685,13 +685,24 @@
             if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
                 if (doc.requestFullscreen) doc.requestFullscreen();
                 else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-                btn.style.background = "var(--gold)";
             } else {
                 if (document.exitFullscreen) document.exitFullscreen();
                 else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                btn.style.background = "rgba(26,26,26,0.9)";
             }
         });
+
+        const handleFsChange = () => {
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                btn.style.opacity = '0';
+                btn.style.pointerEvents = 'none';
+            } else {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            }
+        };
+
+        document.addEventListener('fullscreenchange', handleFsChange);
+        document.addEventListener('webkitfullscreenchange', handleFsChange);
     }
 
 
