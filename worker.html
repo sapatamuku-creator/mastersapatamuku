@@ -514,15 +514,6 @@
         if (currentY < 140) currentY = 140; 
         else currentY += 5; // adjust downward if multiline name
         
-        tsplLines.push(`BOX 50,${currentY},220,${currentY+40},3\r\n`);
-        tsplLines.push(`TEXT 65,${currentY+10},"2",0,1,1,"${kategori.substring(0, 12)}"\r\n`); 
-        tsplLines.push(`SET BOLD 3\r\n`);
-        tsplLines.push(`TEXT 240,${currentY+10},"2",0,1,1,"PAX: ${pax}"\r\n`);
-        tsplLines.push(`SET BOLD 0\r\n`);
-
-        currentY += 60; 
-
-        // 4. METADATA
         const wrapMeta = (prefix, val) => {
             let lines = wrapText(val, 26 - prefix.length);
             let res = [{ x: 50, text: `${prefix}${lines[0] || ""}` }];
@@ -533,6 +524,7 @@
         };
 
         const metaFields = [
+            ...wrapMeta("PAX     : ", pax),
             ...wrapMeta("INV BY  : ", pihak),
             ...wrapMeta("SESI    : ", sesi),
             ...wrapMeta("ALAMAT  : ", alamat)
@@ -545,6 +537,8 @@
         
         // 5. ANCHOR (QR & ID)
         tsplLines.push(`QRCODE 380,60,H,9,A,0,"${rawKode}"\r\n`);
+        tsplLines.push(`BOX 380,250,560,290,3\r\n`);
+        tsplLines.push(`TEXT 395,260,"2",0,1,1,"${kategori.substring(0, 12)}"\r\n`);
         tsplLines.push(`SET BOLD 0\r\n`);
         tsplLines.push(`TEXT 380,315,"2",0,1,1,"ID: ${rawKode}"\r\n`);
         tsplLines.push(`PRINT 1,1\r\n`);

@@ -275,14 +275,22 @@
     for (let i = 0; i < Math.min(wrN.length, 2); i++) { tspl += `TEXT 50,${y},"4",0,1,1,"${wrN[i]}"\r\n`; y += 40; }
     tspl += `SET BOLD 0\r\n`;
     if (y < 140) y = 140; else y += 5;
-    tspl += `BOX 50,${y},220,${y + 40},3\r\nTEXT 65,${y + 10},"2",0,1,1,"${kategori.substring(0, 12)}"\r\n`;
-    tspl += `SET BOLD 3\r\nTEXT 240,${y + 10},"2",0,1,1,"PAX: ${pax}"\r\nSET BOLD 0\r\n`;
-    y += 60;
+
     const wrapMeta = (prefix, val) => { let ls = wrap(val, 26 - prefix.length); let r = [{ x: 50, t: `${prefix}${ls[0] || ''}` }]; for (let i = 1; i < Math.min(ls.length, 2); i++) { r.push({ x: 50, t: `${' '.repeat(prefix.length)}${ls[i]}` }); } return r; };
-    for (const f of [...wrapMeta('INV BY  : ', pihak), ...wrapMeta('SESI    : ', sesi), ...wrapMeta('ALAMAT  : ', alamat)]) {
+    const metaList = [
+      ...wrapMeta('PAX     : ', pax),
+      ...wrapMeta('INV BY  : ', pihak),
+      ...wrapMeta('SESI    : ', sesi),
+      ...wrapMeta('ALAMAT  : ', alamat)
+    ];
+    for (const f of metaList) {
       tspl += `TEXT ${f.x},${y},"2",0,1,1,"${f.t}"\r\n`; y += 35;
     }
-    tspl += `QRCODE 380,60,H,9,A,0,"${kode}"\r\nTEXT 380,315,"2",0,1,1,"ID: ${kode}"\r\nPRINT 1,1\r\n`;
+    tspl += `QRCODE 380,60,H,9,A,0,"${kode}"\r\n`;
+    tspl += `BOX 380,250,560,290,3\r\n`;
+    tspl += `TEXT 395,260,"2",0,1,1,"${kategori.substring(0, 12)}"\r\n`;
+    tspl += `TEXT 380,315,"2",0,1,1,"ID: ${kode}"\r\n`;
+    tspl += `PRINT 1,1\r\n`;
 
     const arr = enc.encode(tspl);
     const chunk = 128;
