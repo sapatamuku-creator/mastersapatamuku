@@ -864,6 +864,14 @@
                         <span class="cam-toggle-slider"></span>
                     </label>
                 </div>
+                <!-- Toggle Countdown -->
+                <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                    <span class="cam-toggle-label">CD</span>
+                    <label class="cam-toggle">
+                        <input type="checkbox" id="countdown-toggle" checked>
+                        <span class="cam-toggle-slider"></span>
+                    </label>
+                </div>
                 <!-- pw-btn injected by PrinterWidget.init() -->
             </div>
 
@@ -1329,6 +1337,16 @@
             if (toggleEl) toggleEl.checked = scannerEnabled;
             if (scannerEnabled) initScanner();
 
+            const savedCD = localStorage.getItem('selfie_countdown_on');
+            const cdEnabled = savedCD !== '0';
+            const cdToggle = document.getElementById('countdown-toggle');
+            if (cdToggle) {
+                cdToggle.checked = cdEnabled;
+                cdToggle.addEventListener('change', (e) => {
+                    localStorage.setItem('selfie_countdown_on', e.target.checked ? '1' : '0');
+                });
+            }
+
             initNavScroll();
         }
 
@@ -1651,6 +1669,30 @@
                     alert("Gagal mengakses kamera: " + err.message);
                 }
             } else if (regStream && !capturedBase64) {
+                const isCountdownEnabled = document.getElementById('countdown-toggle')?.checked !== false;
+                if (!isCountdownEnabled) {
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = v.videoWidth || 640;
+                    canvas.height = v.videoHeight || 480;
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+                    capturedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                    
+                    regStream.getTracks().forEach(t => t.stop());
+                    regStream = null;
+                    
+                    v.style.display = 'none';
+                    preview.src = capturedBase64;
+                    preview.style.display = 'block';
+                    
+                    btn.disabled = false;
+                    btn.innerText = "🔄 ULANGI SELFIE";
+                    btn.style.background = "white";
+                    btn.style.color = "var(--gold)";
+                    return;
+                }
+
                 btn.disabled = true;
                 btn.innerText = "MENYIAPKAN...";
 
@@ -1707,6 +1749,12 @@
 
             // If streaming, take picture and freeze
             if (currentStream) {
+                const isCountdownEnabled = document.getElementById('countdown-toggle')?.checked !== false;
+                if (!isCountdownEnabled) {
+                    executePhotoCaptureOnsite();
+                    return;
+                }
+
                 btnSnap.disabled = true;
                 btnSnap.innerText = "MENYIAPKAN...";
 

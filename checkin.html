@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -306,6 +306,14 @@
                 <span class="cam-toggle-label">CAM</span>
                 <label class="cam-toggle">
                     <input type="checkbox" id="cam-toggle-checkin" onchange="toggleScanner(this.checked)">
+                    <span class="cam-toggle-slider"></span>
+                </label>
+            </div>
+            <!-- Toggle Countdown -->
+            <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                <span class="cam-toggle-label">CD</span>
+                <label class="cam-toggle">
+                    <input type="checkbox" id="countdown-toggle" checked>
                     <span class="cam-toggle-slider"></span>
                 </label>
             </div>
@@ -623,6 +631,16 @@
             const toggleEl = document.getElementById('cam-toggle-checkin');
             if (toggleEl) toggleEl.checked = scannerEnabled;
 
+            const savedCD = localStorage.getItem('selfie_countdown_on');
+            const cdEnabled = savedCD !== '0';
+            const cdToggle = document.getElementById('countdown-toggle');
+            if (cdToggle) {
+                cdToggle.checked = cdEnabled;
+                cdToggle.addEventListener('change', (e) => {
+                    localStorage.setItem('selfie_countdown_on', e.target.checked ? '1' : '0');
+                });
+            }
+
             localStorage.setItem("st_saved_ssid", CURRENT_SS_ID);
             syncNavbar();
             if (scannerEnabled) initScanner();
@@ -845,6 +863,12 @@
             cfg.base64 = null;
             buildSelfieGrid();
             loadActiveGuestConfig();
+            return;
+        }
+
+        const isCountdownEnabled = document.getElementById('countdown-toggle')?.checked !== false;
+        if (!isCountdownEnabled) {
+            executePhotoCapture(activeGuestIndex);
             return;
         }
 

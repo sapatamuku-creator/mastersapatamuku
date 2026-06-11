@@ -172,6 +172,14 @@
                     <span class="cam-toggle-slider"></span>
                 </label>
             </div>
+            <!-- Toggle Countdown -->
+            <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                <span class="cam-toggle-label">CD</span>
+                <label class="cam-toggle">
+                    <input type="checkbox" id="countdown-toggle" checked>
+                    <span class="cam-toggle-slider"></span>
+                </label>
+            </div>
             <!-- Printer Widget button injected here by PrinterWidget.init() -->
         </div>
     </div>
@@ -450,6 +458,17 @@
             const toggleEl = document.getElementById('cam-toggle-kiosk');
             if (toggleEl) toggleEl.checked = scannerEnabled;
 
+            // Restore countdown toggle state
+            const savedCD = localStorage.getItem('selfie_countdown_on');
+            const cdEnabled = savedCD !== '0';
+            const cdToggle = document.getElementById('countdown-toggle');
+            if (cdToggle) {
+                cdToggle.checked = cdEnabled;
+                cdToggle.addEventListener('change', (e) => {
+                    localStorage.setItem('selfie_countdown_on', e.target.checked ? '1' : '0');
+                });
+            }
+
             fetchData();
             if (scannerEnabled) initScanner();
         }
@@ -603,6 +622,12 @@
         }
 
         function takeSelfie() {
+            const isCountdownEnabled = document.getElementById('countdown-toggle')?.checked !== false;
+            if (!isCountdownEnabled) {
+                executePhotoCaptureKiosk();
+                return;
+            }
+
             const btnSnap = document.getElementById('btn-snap');
             btnSnap.disabled = true;
             btnSnap.innerText = "MENYIAPKAN...";
