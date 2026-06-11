@@ -11,7 +11,7 @@ async function resolveSapatamuSubdomain() {
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
     const isMainDomain = (hostname === "sapatamu.id" || hostname === "www.sapatamu.id");
-    
+
     // 0. DETEKSI MODE DEMO DARI URL
     const _urlParams = new URLSearchParams(window.location.search);
     const _urlDemo = _urlParams.get('demo') === 'true' || _urlParams.get('triggerDemo') === 'true';
@@ -30,7 +30,7 @@ async function resolveSapatamuSubdomain() {
         };
         localStorage.setItem('sapatamu_db', JSON.stringify(demoSession));
         sessionStorage.setItem('sapatamu_session', JSON.stringify(demoSession));
-        
+
         window.CURRENT_SS_ID = demoSession.ssId;
         window.CURRENT_CATEGORY = demoSession.category;
         window.SAPATAMU_RESOLVED = true;
@@ -42,16 +42,16 @@ async function resolveSapatamuSubdomain() {
                 body: JSON.stringify({ action: "upgradePackage", username: "akundemo", newPackage: _urlPkg })
             }).catch(e => console.error("Gagal update package demo di backend", e));
         }
-        
+
         // Bersihkan parameter demo & pkg dari URL tanpa reload
         const _newUrl = new URL(window.location.href);
         _newUrl.searchParams.delete('demo');
         _newUrl.searchParams.delete('pkg');
         window.history.replaceState({}, '', _newUrl);
-        
+
         return demoSession.ssId;
     }
-    
+
     // 1. TRANSFER DATA DARI URL
     const _urlSsid = _urlParams.get('ssId');
     const _urlUser = _urlParams.get('user');
@@ -60,13 +60,13 @@ async function resolveSapatamuSubdomain() {
     if (_urlSsid) {
         console.log("ID Spreadsheet ditemukan di URL:", _urlSsid);
         window.CURRENT_SS_ID = _urlSsid;
-        
+
         // Simpan ke storage jika ada data user/kategori
         if (_urlUser) {
             const _urlCat = _urlParams.get('category') || "wedding";
             // Preserve role jika ada di URL, jika tidak ambil dari storage lama
-            const _existingRole = _urlRole || (function(){
-                try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
+            const _existingRole = _urlRole || (function () {
+                try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch (e) { return undefined; }
             })();
             const _sessionData = { ssId: _urlSsid, username: _urlUser, category: _urlCat };
             if (_existingRole) _sessionData.role = _existingRole;
@@ -74,7 +74,7 @@ async function resolveSapatamuSubdomain() {
             sessionStorage.setItem('sapatamu_session', JSON.stringify(_sessionData));
             window.CURRENT_CATEGORY = _urlCat;
         }
-        
+
         // Bersihkan URL tanpa reload
         const _newUrl = new URL(window.location.href);
         if (_urlUser) {
@@ -104,9 +104,9 @@ async function resolveSapatamuSubdomain() {
                     console.warn("[Resolver] Username tidak valid di localStorage:", _parsed.username, "→ Paksa re-resolve dari Supabase");
                     // Biarkan ssId tidak diset → resolver akan re-fetch
                 }
-            } catch(e) {}
+            } catch (e) { }
         }
-        
+
         // Fetch SSID jika masih kosong setelah cek localStorage
         if (!window.CURRENT_SS_ID && parts.length >= 3 && parts[0] !== 'www') {
             const sub = parts[0].toLowerCase();
@@ -127,8 +127,8 @@ async function resolveSapatamuSubdomain() {
                 if (Array.isArray(sbData) && sbData.length > 0 && sbData[0].ssid) {
                     window.CURRENT_SS_ID = sbData[0].ssid;
                     window.CURRENT_CATEGORY = sbData[0].category || "wedding";
-                    const _existRole = (function(){
-                        try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
+                    const _existRole = (function () {
+                        try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch (e) { return undefined; }
                     })();
                     const _isDemoUser = sub === 'akundemo';
                     // ✅ FIX: Gunakan subdomain slug (sub) sebagai username, bukan client_name
@@ -149,7 +149,7 @@ async function resolveSapatamuSubdomain() {
                                 console.warn("[Resolver] SSID mismatch Supabase vs GAS — Supabase:", sbData[0].ssid, "GAS:", res.ssId);
                             }
                         })
-                        .catch(() => {}); // silent — tidak pengaruh ke UI
+                        .catch(() => { }); // silent — tidak pengaruh ke UI
                 }
             } catch (e) {
                 console.warn("Supabase resolve gagal, mencoba GAS fallback:", e);
@@ -163,8 +163,8 @@ async function resolveSapatamuSubdomain() {
                     if (res.status === "success") {
                         window.CURRENT_SS_ID = res.ssId;
                         window.CURRENT_CATEGORY = res.category || "wedding";
-                        const _existRole = (function(){
-                            try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch(e){ return undefined; }
+                        const _existRole = (function () {
+                            try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch (e) { return undefined; }
                         })();
                         const _isDemoUser = sub === 'akundemo';
                         // ✅ FIX: Gunakan subdomain slug (sub) sebagai username

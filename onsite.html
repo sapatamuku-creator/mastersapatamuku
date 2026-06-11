@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -1825,6 +1825,15 @@
                 let catUpper = String(selectedGuest.kategori || "").toUpperCase();
                 let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
 
+                // Fallback UUID generator
+                const genUUID = () => {
+                    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                };
+
                 const printPromises = [
                         fetch(`${SB_URL}/rest/v1/print_queue`, {
                             method: "POST",
@@ -1887,12 +1896,12 @@
                             body: JSON.stringify({
                                 id: genUUID(),
                                 ssid: CURRENT_SS_ID,
-                                nama: nama || "Tanpa Nama",
-                                kategori: document.getElementById('reg-kategori').value || "Umum",
-                                alamat: document.getElementById('reg-alamat').value || "-",
-                                pihak: document.getElementById('reg-host').value || "-",
+                                nama: selectedGuest.nama || "Tanpa Nama",
+                                kategori: selectedGuest.kategori || "Umum",
+                                alamat: selectedGuest.alamat || "-",
+                                pihak: selectedGuest.pihakPengundang || "-",
                                 pax: paxString,
-                                kode: kodeUnik,
+                                kode: selectedGuest.kode || "-",
                                 status: "DISPLAY",
                                 created_at: new Date().toISOString()
                             })
@@ -1903,9 +1912,74 @@
 
                     await Promise.all(printPromises);
 
+                // --- STEP 2: CORE CHECKIN (Non-Blocking background sync to GAS) ---
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "confirm_checkin",
+                        ssId: CURRENT_SS_ID,
+                        kodeUnik: selectedGuest.kode,
+                        realHadir: paxString,
+                        statusAngpao: gift || "-",
+                        stationId: stationId,
+                        customUuid: mainPrintId,
+                        skipSupabase: true,
+                        skipSupabasePrint: true
+                    })
+                }).catch(e => console.error("GAS onsite sync failed:", e));
+
+                // Blast WA Automation in background
+                fetch(SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: selectedGuest.kode })
+                }).catch(e => console.warn(e));
+
+                if (capturedBase64) {
+                    fetch(SCRIPT_URL, {
+                        method: 'POST', mode: 'no-cors',
+                        body: JSON.stringify({
+                            action: "uploadSelfie",
+                            image: capturedBase64,
+                            nama: selectedGuest.nama,
+                            kode: selectedGuest.kode,
+                            ssId: CURRENT_SS_ID
+                        })
+                    }).catch(e => console.warn("Background selfie upload failed:", e));
+                }
+
+                // Update local state
+                const idx = masterData.findIndex(r => r.kode === selectedGuest.kode);
+                if (idx !== -1) {
+                    masterData[idx].jamDatang = nowISO;
+                    masterData[idx].realHadir = paxString;
+                    masterData[idx].statusHadiah = gift || "-";
+                    masterData[idx].statusHadir = "1";
+                }
+
+                selectedIDs.clear();
+                document.getElementById('selected-count').innerText = "0";
+                document.getElementById('bulk-btn').style.display = 'none';
+
+                closeModal();
+                renderUI();
+
+                if (blocker) blocker.remove();
+                document.body.style.cursor = 'default';
+
+                await showAlert(
+                    "CHECK-IN BERHASIL",
+                    `Selamat Datang,\n\n${selectedGuest.nama.toUpperCase()}\n(${selectedGuest.kategori || 'REGULER'})\n\nSilakan Masuk`,
+                    "✨"
+                );
+
+                fetchData();
+
             } catch (e) {
                 if (blocker) blocker.remove();
-                showAlert("Error", "Gagal koneksi.", "❌");
+                console.error("Check-in error:", e);
+                showAlert("Error", "Gagal memproses check-in. Cek internet.", "❌");
             } finally {
                 loading.style.display = 'none';
             }

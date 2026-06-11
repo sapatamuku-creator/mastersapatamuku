@@ -3,11 +3,11 @@
  * Inject tombol printer + modal ke panel jalur di kiosk, checkin, onsite.
  * Panggil: PrinterWidget.init({ sourceId: 'CHECKIN', jalurSelectorId: 'jalur-selector', jalurKey: 'checkin_jalur_id' })
  */
-(function(window) {
+(function (window) {
   'use strict';
 
-  const SB_URL  = "https://llrapesaaoliyjrrrsjh.supabase.co";
-  const SB_KEY  = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+  const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+  const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 
   let printCharacteristic = null;
@@ -136,8 +136,8 @@
   function log(msg, isError = false) {
     const el = document.getElementById('pw-console');
     if (!el) return;
-    const t = new Date().toLocaleTimeString('id-ID', { hour12:false });
-    el.innerHTML += `<div style="${isError?'color:#f87171':''}"><span style="opacity:0.35">[${t}]</span> &gt; ${msg}</div>`;
+    const t = new Date().toLocaleTimeString('id-ID', { hour12: false });
+    el.innerHTML += `<div style="${isError ? 'color:#f87171' : ''}"><span style="opacity:0.35">[${t}]</span> &gt; ${msg}</div>`;
     el.scrollTop = el.scrollHeight;
   }
 
@@ -164,7 +164,7 @@
     if (pollingTimer) clearInterval(pollingTimer);
     currentPollingInterval = ms;
     pollingTimer = setInterval(() => { if (!isProcessing && printCharacteristic) fetchQueue(); }, ms);
-    log(`Polling aktif (${ms/1000}s)`);
+    log(`Polling aktif (${ms / 1000}s)`);
   }
 
   function initRealtime() {
@@ -172,7 +172,7 @@
     try {
       supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
       realtimeChannel = supabaseClient.channel('pw_print_queue')
-        .on('postgres_changes', { event:'*', schema:'public', table:'print_queue', filter:`ssid=eq.${CURRENT_SS_ID}` },
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'print_queue', filter: `ssid=eq.${CURRENT_SS_ID}` },
           (payload) => {
             if (payload.new && payload.new.status === 'WAITING' && !isProcessing && printCharacteristic) fetchQueue();
           })
@@ -190,30 +190,30 @@
           }
           log(`Realtime: ${status}`);
         });
-    } catch(e) { log('Realtime error: ' + e.message, true); startPolling(1500); }
+    } catch (e) { log('Realtime error: ' + e.message, true); startPolling(1500); }
   }
 
   async function fetchQueue() {
     if (!CURRENT_SS_ID || !printCharacteristic) return;
-    TAB_ID    = document.getElementById('pw-tab')?.value    || 'REGISTRASI';
+    TAB_ID = document.getElementById('pw-tab')?.value || 'REGISTRASI';
     SOURCE_ID = document.getElementById('pw-source')?.value || 'ALL';
-    JALUR_ID  = document.getElementById('pw-jalur')?.value  || 'ALL';
+    JALUR_ID = document.getElementById('pw-jalur')?.value || 'ALL';
     try {
       const res = await fetch(`${SB_URL}/rest/v1/print_queue?ssid=eq.${CURRENT_SS_ID}&status=eq.WAITING&order=created_at.asc`, {
         headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
       });
       if (!res.ok) return;
       const raw = await res.json();
-      const items = (raw||[]).filter(item => {
-        const info = (item.info||'').toUpperCase();
+      const items = (raw || []).filter(item => {
+        const info = (item.info || '').toUpperCase();
         if (TAB_ID === 'LOKET-1' && !info.includes('SOUVENIR')) return false;
         if (TAB_ID === 'LOKET-2' && !info.includes('CHECKIN')) return false;
         if (SOURCE_ID !== 'ALL' || JALUR_ID !== 'ALL') {
-          const sid = (item.station_id||'ALL').toUpperCase();
+          const sid = (item.station_id || 'ALL').toUpperCase();
           if (sid !== 'ALL' && sid !== '') {
             const parts = sid.split('-');
             if (SOURCE_ID !== 'ALL' && parts[0] !== SOURCE_ID) return false;
-            if (JALUR_ID  !== 'ALL' && (parts[1]||'ALL') !== JALUR_ID) return false;
+            if (JALUR_ID !== 'ALL' && (parts[1] || 'ALL') !== JALUR_ID) return false;
           }
         }
         return true;
@@ -221,7 +221,7 @@
       const badge = document.getElementById('pw-queue-badge');
       if (badge) badge.textContent = items.length > 0 ? `${items.length} WAITING` : 'READY';
       if (items.length > 0 && !isProcessing) { log(`Menemukan ${items.length} antrean...`); await processItems(items); }
-    } catch(e) { log('Fetch error: ' + e.message, true); }
+    } catch (e) { log('Fetch error: ' + e.message, true); }
   }
 
   async function processItems(items) {
@@ -229,39 +229,41 @@
     const delay = parseInt(document.getElementById('pw-delay')?.value) || 1200;
     const printed = [];
     for (const item of items) {
-      try { log(`Cetak: ${item.nama||'GUEST'}`); await printLabel(item); printed.push(item.id); await new Promise(r=>setTimeout(r,delay)); }
-      catch(e) { log('Gagal: ' + e.message, true); break; }
+      try { log(`Cetak: ${item.nama || 'GUEST'}`); await printLabel(item); printed.push(item.id); await new Promise(r => setTimeout(r, delay)); }
+      catch (e) { log('Gagal: ' + e.message, true); break; }
     }
     if (printed.length > 0) {
       await Promise.all(printed.map(id =>
         fetch(`${SB_URL}/rest/v1/print_queue?id=eq.${id}`, {
-          method:'PATCH',
-          headers: { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY, 'Content-Type':'application/json' },
-          body: JSON.stringify({ status:'DONE' })
+          method: 'PATCH',
+          headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'DONE' })
         })
-      )).catch(()=>{});
-      fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ action:'markPrinted', printIds:printed, ssId:CURRENT_SS_ID, station:TAB_ID }) });
+      )).catch(() => { });
+      fetch(SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'markPrinted', printIds: printed, ssId: CURRENT_SS_ID, station: TAB_ID })
+      });
     }
     isProcessing = false;
   }
 
   async function printLabel(data) {
     const enc = new TextEncoder();
-    const nama     = (data.nama||'GUEST').toUpperCase();
-    const kode     = data.kode || '-';
-    const kategori = (data.kategori||'REGULER').toUpperCase();
-    const alamat   = (data.alamat||'-').toUpperCase();
-    const pihak    = (data.pihak||'-').toUpperCase();
-    const sesi     = (data.sesi||'-').toUpperCase();
-    const pax      = data.pax || '1';
+    const nama = (data.nama || 'GUEST').toUpperCase();
+    const kode = data.kode || '-';
+    const kategori = (data.kategori || 'REGULER').toUpperCase();
+    const alamat = (data.alamat || '-').toUpperCase();
+    const pihak = (data.pihak || '-').toUpperCase();
+    const sesi = (data.sesi || '-').toUpperCase();
+    const pax = data.pax || '1';
     let labelTitle = 'CHECK-IN';
-    if ((data.info||'').includes('SOUVENIR')) { labelTitle = (data.info.split(':')[1]||'SOUVENIR').trim(); }
+    if ((data.info || '').includes('SOUVENIR')) { labelTitle = (data.info.split(':')[1] || 'SOUVENIR').trim(); }
 
     function wrap(text, max) {
-      if (!text || text.length <= max) return [text||''];
-      const words = text.split(' '); let lines = [], cur = words[0]||'';
-      for (let i=1;i<words.length;i++) { if (cur.length+1+words[i].length<=max) { cur+=' '+words[i]; } else { lines.push(cur); cur=words[i]; } }
+      if (!text || text.length <= max) return [text || ''];
+      const words = text.split(' '); let lines = [], cur = words[0] || '';
+      for (let i = 1; i < words.length; i++) { if (cur.length + 1 + words[i].length <= max) { cur += ' ' + words[i]; } else { lines.push(cur); cur = words[i]; } }
       lines.push(cur); return lines;
     }
 
@@ -269,26 +271,26 @@
     tspl += `SET BOLD 3\r\nTEXT 50,25,"3",0,1,1,"[ ${labelTitle} ]"\r\nSET BOLD 0\r\n`;
     tspl += `SET BOLD 5\r\n`;
     let y = 75;
-    const wrN = wrap(nama,18);
-    for (let i=0;i<Math.min(wrN.length,2);i++) { tspl+=`TEXT 50,${y},"4",0,1,1,"${wrN[i]}"\r\n`; y+=40; }
+    const wrN = wrap(nama, 18);
+    for (let i = 0; i < Math.min(wrN.length, 2); i++) { tspl += `TEXT 50,${y},"4",0,1,1,"${wrN[i]}"\r\n`; y += 40; }
     tspl += `SET BOLD 0\r\n`;
-    if (y<140) y=140; else y+=5;
-    tspl += `BOX 50,${y},220,${y+40},3\r\nTEXT 65,${y+10},"2",0,1,1,"${kategori.substring(0,12)}"\r\n`;
-    tspl += `SET BOLD 3\r\nTEXT 240,${y+10},"2",0,1,1,"PAX: ${pax}"\r\nSET BOLD 0\r\n`;
-    y+=60;
-    const wrapMeta = (prefix,val) => { let ls=wrap(val,26-prefix.length); let r=[{x:50,t:`${prefix}${ls[0]||''}`}]; for(let i=1;i<Math.min(ls.length,2);i++){r.push({x:50,t:`${' '.repeat(prefix.length)}${ls[i]}`});} return r; };
-    for (const f of [...wrapMeta('INV BY  : ',pihak), ...wrapMeta('SESI    : ',sesi), ...wrapMeta('ALAMAT  : ',alamat)]) {
-      tspl += `TEXT ${f.x},${y},"2",0,1,1,"${f.t}"\r\n`; y+=35;
+    if (y < 140) y = 140; else y += 5;
+    tspl += `BOX 50,${y},220,${y + 40},3\r\nTEXT 65,${y + 10},"2",0,1,1,"${kategori.substring(0, 12)}"\r\n`;
+    tspl += `SET BOLD 3\r\nTEXT 240,${y + 10},"2",0,1,1,"PAX: ${pax}"\r\nSET BOLD 0\r\n`;
+    y += 60;
+    const wrapMeta = (prefix, val) => { let ls = wrap(val, 26 - prefix.length); let r = [{ x: 50, t: `${prefix}${ls[0] || ''}` }]; for (let i = 1; i < Math.min(ls.length, 2); i++) { r.push({ x: 50, t: `${' '.repeat(prefix.length)}${ls[i]}` }); } return r; };
+    for (const f of [...wrapMeta('INV BY  : ', pihak), ...wrapMeta('SESI    : ', sesi), ...wrapMeta('ALAMAT  : ', alamat)]) {
+      tspl += `TEXT ${f.x},${y},"2",0,1,1,"${f.t}"\r\n`; y += 35;
     }
     tspl += `QRCODE 380,60,H,9,A,0,"${kode}"\r\nTEXT 380,315,"2",0,1,1,"ID: ${kode}"\r\nPRINT 1,1\r\n`;
 
     const arr = enc.encode(tspl);
     const chunk = 128;
-    for (let i=0;i<arr.length;i+=chunk) {
-      const c = arr.slice(i,i+chunk);
-      if (typeof printCharacteristic.writeValueWithoutResponse==='function') await printCharacteristic.writeValueWithoutResponse(c);
+    for (let i = 0; i < arr.length; i += chunk) {
+      const c = arr.slice(i, i + chunk);
+      if (typeof printCharacteristic.writeValueWithoutResponse === 'function') await printCharacteristic.writeValueWithoutResponse(c);
       else await printCharacteristic.writeValue(c);
-      await new Promise(r=>setTimeout(r,10));
+      await new Promise(r => setTimeout(r, 10));
     }
   }
 
@@ -359,7 +361,7 @@
 
         // Restore delay
         const savedDelay = localStorage.getItem('worker_print_delay');
-        if (savedDelay) { const d=document.getElementById('pw-delay'); if(d) d.value=savedDelay; }
+        if (savedDelay) { const d = document.getElementById('pw-delay'); if (d) d.value = savedDelay; }
         document.getElementById('pw-delay')?.addEventListener('change', e => localStorage.setItem('worker_print_delay', e.target.value));
 
         log(`Worker aktif | ID: ${CURRENT_SS_ID} | Station: ${sourceId}`);
@@ -368,7 +370,7 @@
       tryInit();
     },
 
-    open()  { document.getElementById('pw-overlay')?.classList.add('open'); },
+    open() { document.getElementById('pw-overlay')?.classList.add('open'); },
     close() { document.getElementById('pw-overlay')?.classList.remove('open'); },
 
     async connect() {
@@ -381,8 +383,8 @@
           ],
           optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
         });
-        currentDeviceName = (device.name||'').toUpperCase();
-        const server  = await device.gatt.connect();
+        currentDeviceName = (device.name || '').toUpperCase();
+        const server = await device.gatt.connect();
         const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
         printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
         device.addEventListener('gattserverdisconnected', () => { log('Printer terputus!', true); setDisconnected(); });
@@ -390,7 +392,7 @@
         log(`Terhubung ke: ${device.name}`);
         startPolling(currentPollingInterval);
         fetchQueue();
-      } catch(e) { log('Error: ' + e.message, true); }
+      } catch (e) { log('Error: ' + e.message, true); }
     }
   };
 
