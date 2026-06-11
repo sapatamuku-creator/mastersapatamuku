@@ -268,13 +268,13 @@
     }
 
     let tspl = `SIZE 75 mm, 45 mm\r\nGAP 3 mm, 0\r\nREFERENCE 0,0\r\nDIRECTION 1,0\r\nCLS\r\n`;
-    tspl += `SET BOLD 3\r\nTEXT 50,25,"3",0,1,1,"[ ${labelTitle} ]"\r\nSET BOLD 0\r\n`;
+    tspl += `SET BOLD 3\r\nTEXT 50,40,"3",0,1,1,"[ ${labelTitle} ]"\r\nSET BOLD 0\r\n`;
     tspl += `SET BOLD 5\r\n`;
-    let y = 75;
+    let y = 90;
     const wrN = wrap(nama, 18);
     for (let i = 0; i < Math.min(wrN.length, 2); i++) { tspl += `TEXT 50,${y},"4",0,1,1,"${wrN[i]}"\r\n`; y += 40; }
     tspl += `SET BOLD 0\r\n`;
-    if (y < 140) y = 140; else y += 5;
+    if (y < 150) y = 150; else y += 5;
 
     const wrapMeta = (prefix, val) => { let ls = wrap(val, 26 - prefix.length); let r = [{ x: 50, t: `${prefix}${ls[0] || ''}` }]; for (let i = 1; i < Math.min(ls.length, 2); i++) { r.push({ x: 50, t: `${' '.repeat(prefix.length)}${ls[i]}` }); } return r; };
     const metaList = [
@@ -286,10 +286,13 @@
     for (const f of metaList) {
       tspl += `TEXT ${f.x},${y},"2",0,1,1,"${f.t}"\r\n`; y += 35;
     }
+    const cleanKategori = kategori.substring(0, 12);
+    const textX = Math.round(380 + (180 - (cleanKategori.length * 14)) / 2);
+
     tspl += `QRCODE 380,60,H,9,A,0,"${kode}"\r\n`;
-    tspl += `BOX 380,250,560,290,3\r\n`;
-    tspl += `TEXT 395,260,"2",0,1,1,"${kategori.substring(0, 12)}"\r\n`;
-    tspl += `TEXT 380,315,"2",0,1,1,"ID: ${kode}"\r\n`;
+    tspl += `BOX 380,265,560,305,3\r\n`;
+    tspl += `TEXT ${textX},275,"2",0,1,1,"${cleanKategori}"\r\n`;
+    tspl += `TEXT 380,325,"2",0,1,1,"ID: ${kode}"\r\n`;
     tspl += `PRINT 1,1\r\n`;
 
     const arr = enc.encode(tspl);

@@ -497,12 +497,12 @@
         
         // 1. HEADER (OPERASIONAL)
         tsplLines.push(`SET BOLD 3\r\n`);
-        tsplLines.push(`TEXT 50,25,"3",0,1,1,"[ ${labelTitle.trim().toUpperCase()} ]"\r\n`);
+        tsplLines.push(`TEXT 50,40,"3",0,1,1,"[ ${labelTitle.trim().toUpperCase()} ]"\r\n`);
         tsplLines.push(`SET BOLD 0\r\n`);
 
         // 2. HERO (NAMA)
         tsplLines.push(`SET BOLD 5\r\n`);
-        let currentY = 75;
+        let currentY = 90;
         const wrappedNama = wrapText(rawNama, 18); // max 18 chars for font 4 before hitting QR
         for (let i = 0; i < Math.min(wrappedNama.length, 2); i++) {
             tsplLines.push(`TEXT 50,${currentY},"4",0,1,1,"${wrappedNama[i]}"\r\n`);
@@ -511,7 +511,7 @@
         tsplLines.push(`SET BOLD 0\r\n`);
         
         // 3. BADGE AREA (KATEGORI & PAX)
-        if (currentY < 140) currentY = 140; 
+        if (currentY < 150) currentY = 150; 
         else currentY += 5; // adjust downward if multiline name
         
         const wrapMeta = (prefix, val) => {
@@ -536,11 +536,14 @@
         }
         
         // 5. ANCHOR (QR & ID)
+        const cleanKategori = kategori.substring(0, 12);
+        const textX = Math.round(380 + (180 - (cleanKategori.length * 14)) / 2);
+
         tsplLines.push(`QRCODE 380,60,H,9,A,0,"${rawKode}"\r\n`);
-        tsplLines.push(`BOX 380,250,560,290,3\r\n`);
-        tsplLines.push(`TEXT 395,260,"2",0,1,1,"${kategori.substring(0, 12)}"\r\n`);
+        tsplLines.push(`BOX 380,265,560,305,3\r\n`);
+        tsplLines.push(`TEXT ${textX},275,"2",0,1,1,"${cleanKategori}"\r\n`);
         tsplLines.push(`SET BOLD 0\r\n`);
-        tsplLines.push(`TEXT 380,315,"2",0,1,1,"ID: ${rawKode}"\r\n`);
+        tsplLines.push(`TEXT 380,325,"2",0,1,1,"ID: ${rawKode}"\r\n`);
         tsplLines.push(`PRINT 1,1\r\n`);
 
         let tspl = tsplLines.join('');
