@@ -651,7 +651,7 @@
     <script>
         const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
         const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
-        let supabase;
+        let supabaseClient;
         let consoleBox = document.getElementById("console-log-box");
 
         // Set info URL
@@ -715,7 +715,7 @@
 
         // Initialize Supabase Client
         try {
-            supabase = window.supabase.createClient(SB_URL, SB_KEY);
+            supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
         } catch (e) {
             console.error("Supabase initialization error:", e);
         }
@@ -725,7 +725,7 @@
             const start = performance.now();
             try {
                 // Lakukan query super ringan (select 1)
-                const { data, error } = await supabase.from('client_public_profile').select('ssid').limit(1);
+                const { data, error } = await supabaseClient.from('client_public_profile').select('ssid').limit(1);
                 const latency = Math.round(performance.now() - start);
                 
                 document.getElementById("val-latency").innerText = latency + " ms";
@@ -760,7 +760,7 @@
             
             try {
                 // Panggil RPC get_db_metrics
-                const { data, error } = await supabase.rpc('get_db_metrics');
+                const { data, error } = await supabaseClient.rpc('get_db_metrics');
 
                 if (error) {
                     addLog("Gagal memanggil RPC get_db_metrics: " + error.message, "error");
@@ -840,7 +840,7 @@
             
             try {
                 // 1. Jalankan RPC optimize_db
-                const { data, error } = await supabase.rpc('optimize_db');
+                const { data, error } = await supabaseClient.rpc('optimize_db');
                 
                 // 2. Bersihkan sessionStorage
                 sessionStorage.clear();
@@ -876,7 +876,7 @@
             const badge = document.getElementById("connection-badge");
             
             try {
-                realtimeChannel = supabase.channel('monitor-heartbeat')
+                realtimeChannel = supabaseClient.channel('monitor-heartbeat')
                     .on('system', { event: 'presence' }, () => {})
                     .subscribe((status) => {
                         addLog(`WebSocket Realtime status changed: ${status}`, "system");
