@@ -538,12 +538,28 @@
             }
         }
 
-        // Tunggu sampai Supabase SDK siap
+        // Tunggu sampai Supabase SDK siap.
+        // Jika SDK belum ada di halaman, inject secara dinamis.
         function waitForSupabaseSDK(cb, tries = 0) {
             if (window.supabase && typeof window.supabase.createClient === 'function') {
                 cb();
+            } else if (tries === 0) {
+                // Cek apakah script CDN sudah ada (tapi belum loaded)
+                const existing = document.querySelector('script[src*="supabase-js"]');
+                if (!existing) {
+                    // Inject CDN dinamis
+                    const s = document.createElement('script');
+                    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+                    s.onload = () => waitForSupabaseSDK(cb, 1);
+                    s.onerror = () => console.error('[SapaPresence] Gagal load Supabase CDN.');
+                    document.head.appendChild(s);
+                } else {
+                    setTimeout(() => waitForSupabaseSDK(cb, tries + 1), 300);
+                }
             } else if (tries < 20) {
                 setTimeout(() => waitForSupabaseSDK(cb, tries + 1), 300);
+            } else {
+                console.error('[SapaPresence] Supabase SDK tidak tersedia setelah 6 detik.');
             }
         }
 
