@@ -20,7 +20,7 @@
     function getSession() {
         try {
             return JSON.parse(sessionStorage.getItem(SESSION_KEY)) ||
-                   JSON.parse(localStorage.getItem(LOCAL_DB)) || {};
+                JSON.parse(localStorage.getItem(LOCAL_DB)) || {};
         } catch (e) { return {}; }
     }
 
@@ -46,9 +46,9 @@
     // tidak pernah di-disable agar user tetap bisa pindah halaman
     function isInsideNav(el) {
         return el.closest('#nav-scroll') ||
-               el.closest('.nav-scroll-container') ||
-               el.closest('[id^="nav-"]') ||
-               el.classList.contains('nav-link');
+            el.closest('.nav-scroll-container') ||
+            el.closest('[id^="nav-"]') ||
+            el.classList.contains('nav-link');
     }
 
     let observer = null;
@@ -62,13 +62,13 @@
                 'button:not(.sapa-guard-exempt), input:not(.sapa-guard-exempt), textarea:not(.sapa-guard-exempt)'
             ).forEach(el => {
                 const isGuardEl = el.closest('#sapa-guard-overlay') ||
-                                  el.closest('#sapa-admin-modal') ||
-                                  el.closest('#sapa-guard-banner');
+                    el.closest('#sapa-admin-modal') ||
+                    el.closest('#sapa-guard-banner');
                 const isNavEl = isInsideNav(el);
                 // Biarkan search input & select tetap bisa dipakai
-                const isSearchInput = el.tagName === 'INPUT' && 
-                                      (el.id.toLowerCase().includes('search') || 
-                                       el.classList.contains('sapa-guard-exempt'));
+                const isSearchInput = el.tagName === 'INPUT' &&
+                    (el.id.toLowerCase().includes('search') ||
+                        el.classList.contains('sapa-guard-exempt'));
                 if (!isGuardEl && !isNavEl && !isSearchInput) {
                     el.disabled = true;
                     el.style.cursor = 'default';
@@ -292,14 +292,14 @@
     window.SapaGuard = {
         apply: function (mode) {
             window.SAPAGUARD_MODE = mode;
-            if (mode === 'field')     applyFieldGuard();
+            if (mode === 'field') applyFieldGuard();
             if (mode === 'sensitive') applySensitiveGuard();
         },
         getRole: getRole,
-        isRestricted: function() {
+        isRestricted: function () {
             const role = getRole();
             return (window.SAPAGUARD_MODE === 'field' && role === 'client') ||
-                   (window.SAPAGUARD_MODE === 'sensitive' && role === 'usher');
+                (window.SAPAGUARD_MODE === 'sensitive' && role === 'usher');
         },
 
         dismissOverlay: function () {
@@ -367,14 +367,15 @@
     // ─── Terapkan Proteksi Timeout & Visibility Terpusat ───────────────────
     (function initTimeoutAndVisibility() {
         const path = window.location.pathname.toLowerCase();
-        
+
         // 1. Tentukan durasi idle berdasarkan halaman
         let idleTimeoutDuration = 15 * 60 * 1000; // Standar 15 Menit
         let isExemptFromLogout = false;
 
-        if (path.includes('welcome.html')) {
+        // welcome.html (TV), wa_blast.html (Blast WA), dan formulir_tamu.html dikecualikan dari auto-logout
+        if (path.includes('welcome.html') || path.includes('wa_blast.html') || path.includes('formulir_tamu.html')) {
             isExemptFromLogout = true;
-        } else if (path.includes('kiosk.html') || path.includes('worker.html')) {
+        } else if (path.includes('kiosk.html') || path.includes('worker.html') || path.includes('onsite.html') || path.includes('checkin.html')) {
             idleTimeoutDuration = 60 * 60 * 1000; // 1 Jam (60 Menit)
         }
 
@@ -397,7 +398,7 @@
                             clientsToClean.push(window[key]);
                         }
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
 
             for (const client of clientsToClean) {
@@ -436,11 +437,11 @@
             const handleIdleLogout = async () => {
                 console.warn("[SapaGuard] Sesi idle terdeteksi. Membersihkan koneksi & memaksa logout...");
                 await cleanupSupabaseConnections();
-                
+
                 // Bersihkan sesi storage
                 sessionStorage.clear();
                 localStorage.clear();
-                
+
                 // Redirect ke login
                 window.location.replace('login.html?reason=idle_timeout');
             };
@@ -463,6 +464,13 @@
         // 5. Page Visibility API (Menghemat koneksi saat tab tidak aktif lebih dari 30 detik)
         let visibilityTimeoutId;
         document.addEventListener('visibilitychange', () => {
+            // Pengecualian halaman yang berjalan di latar belakang (seperti WA Blast, Welcome TV Screen, atau Formulir Tamu)
+            const isExemptFromVisibility = path.includes('wa_blast.html') || path.includes('welcome.html') || path.includes('formulir_tamu.html') || window.SapaExemptVisibility;
+            if (isExemptFromVisibility) {
+                console.log("[SapaGuard] Halaman dikecualikan dari pemutus koneksi otomatis saat tab tidak aktif.");
+                return;
+            }
+
             if (document.hidden) {
                 // Jika tab tersembunyi, tunggu 30 detik sebelum memutuskan channel
                 visibilityTimeoutId = setTimeout(async () => {
@@ -475,7 +483,7 @@
                 // Jika koneksi sudah sempat disuspensi, lakukan refresh/restore saat kembali
                 if (window.SAPAGUARD_CHANNELS_CLEANED) {
                     window.SAPAGUARD_CHANNELS_CLEANED = false;
-                    
+
                     if (hasUnsavedFormChanges()) {
                         // Tampilkan toast pemberitahuan ramah daripada langsung mereload form terisi
                         const toast = document.createElement('div');
@@ -490,6 +498,11 @@
                     }
                 }
             }
+        });
+
+        // 6. Teardown koneksi secara instan saat tab ditutup oleh pengguna
+        window.addEventListener('beforeunload', () => {
+            cleanupSupabaseConnections();
         });
     })();
 })();
