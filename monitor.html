@@ -339,6 +339,145 @@
             height: 420px;
         }
 
+        /* Active Users Panel */
+        .users-card {
+            grid-column: span 4;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .users-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .users-card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .users-count-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 50px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .user-row {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            transition: border-color 0.3s, transform 0.2s;
+            animation: slideIn 0.3s ease;
+        }
+
+        .user-row:hover { border-color: var(--accent-primary); transform: translateY(-2px); }
+
+        .user-row.joining { border-color: var(--accent-success); background: rgba(16,185,129,0.04); }
+        .user-row.leaving { opacity: 0.4; border-color: var(--accent-danger); }
+
+        @keyframes slideIn { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--accent-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            color: white;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .user-info { flex: 1; min-width: 0; }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .user-page-tag {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 2px 7px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-kick {
+            background: transparent;
+            border: 1.5px solid var(--accent-danger);
+            color: var(--accent-danger);
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            flex-shrink: 0;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+        }
+        .btn-kick:hover {
+            background: var(--accent-danger);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .users-empty {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        .users-empty i { font-size: 28px; margin-bottom: 10px; display: block; opacity: 0.4; }
+
         .console-header {
             display: flex;
             justify-content: space-between;
@@ -640,6 +779,27 @@
                 <div class="info-val" style="color: var(--accent-success);"><i class="fa-solid fa-circle-check"></i> Aktif (Postgres RLS)</div>
             </div>
         </div>
+
+        <!-- Active Browser Users Card -->
+        <div class="users-card">
+            <div class="users-card-header">
+                <span class="users-card-title">
+                    <i class="fa-solid fa-users" style="color:var(--accent-success)"></i>
+                    Active Browser Users
+                    <span class="users-count-badge" id="users-count">0 online</span>
+                </span>
+                <span style="font-size:11px; color:var(--text-secondary); font-weight:500">
+                    <i class="fa-solid fa-circle" style="color:var(--accent-success); font-size:8px; animation: blink 1.5s infinite;"></i>
+                    Realtime Presence — update instan saat tab dibuka/ditutup
+                </span>
+            </div>
+            <div class="users-grid" id="users-grid">
+                <div class="users-empty">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                    Menghubungkan ke Presence channel...
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Toast Component -->
@@ -903,12 +1063,144 @@
             }
         }
 
+        // ── Active Browser Users via Supabase Realtime Presence ────────────
+        let presenceChannel = null;
+        const PAGE_ICONS = {
+            'dashboard.html': '📊', 'checkin.html': '✅', 'onsite.html': '🏟️',
+            'kiosk.html': '🖥️', 'formulir_tamu.html': '📋', 'wa_blast.html': '📲',
+            'welcome.html': '📺', 'worker.html': '🖨️', 'angpao.html': '🧧',
+            'luckydraw.html': '🎰', 'owner.html': '👑', 'profile.html': '👤',
+            'analytics.html': '📈', 'config_invitation.html': '🎨'
+        };
+
+        function renderUsers(state) {
+            const grid = document.getElementById('users-grid');
+            const badge = document.getElementById('users-count');
+            const entries = Object.values(state).flat();
+
+            badge.textContent = entries.length + ' online';
+
+            if (entries.length === 0) {
+                grid.innerHTML = '<div class="users-empty"><i class="fa-solid fa-user-slash"></i>Belum ada browser user yang aktif.</div>';
+                return;
+            }
+
+            grid.innerHTML = entries.map((u, i) => {
+                const initial = (u.username || '?').charAt(0).toUpperCase();
+                const page = u.page || 'unknown';
+                const icon = PAGE_ICONS[page] || '🌐';
+                const role = u.role || 'client';
+                const joined = u.joined_at ? new Date(u.joined_at).toLocaleTimeString('id-ID') : '-';
+                const isDemo = u.is_demo ? ' <span style="color:var(--accent-warning);font-size:10px">[DEMO]</span>' : '';
+
+                return `
+                <div class="user-row" id="user-row-${i}">
+                    <div class="user-avatar">${initial}</div>
+                    <div class="user-info">
+                        <div class="user-name">${u.username || 'unknown'}${isDemo}</div>
+                        <div class="user-meta">
+                            <span class="user-page-tag">${icon} ${page}</span>
+                            <span>${role === 'usher' ? '🔑 Usher' : '👤 Client'}</span>
+                            <span>⏱ ${joined}</span>
+                        </div>
+                    </div>
+                    <button class="btn-kick" onclick="forceDisconnectUser('${u.username}', this)" title="Putus koneksi user ini">
+                        <i class="fa-solid fa-plug-circle-xmark"></i> Kick
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        async function forceDisconnectUser(username, btnEl) {
+            if (!confirm(`Yakin ingin memutus koneksi user "${username}"?\n\nUser akan langsung di-redirect ke halaman login.`)) return;
+
+            btnEl.disabled = true;
+            btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            addLog(`Mengirim sinyal force-disconnect ke user: ${username}...`, 'warning');
+
+            try {
+                // 1. Kirim broadcast signal via Realtime (instan jika tab masih aktif)
+                if (presenceChannel) {
+                    await presenceChannel.send({
+                        type: 'broadcast',
+                        event: 'force-disconnect',
+                        payload: { username }
+                    });
+                }
+
+                // 2. Insert ke terminated_sessions sebagai fallback (untuk tab yang crash/offline)
+                await fetch(`${SB_URL}/rest/v1/terminated_sessions`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SB_KEY,
+                        'Authorization': 'Bearer ' + SB_KEY,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify({
+                        username,
+                        terminated_at: new Date().toISOString(),
+                        terminated_by: 'monitor',
+                        reason: 'Diputus secara manual oleh Admin Monitor'
+                    })
+                });
+
+                addLog(`✅ Sinyal kick dikirim ke "${username}". User akan logout dalam <3 detik.`, 'success');
+                showToast(`User "${username}" berhasil di-kick!`);
+
+                // Bersihkan terminated_sessions setelah 10 detik
+                setTimeout(async () => {
+                    try {
+                        await fetch(`${SB_URL}/rest/v1/terminated_sessions?username=eq.${encodeURIComponent(username)}`, {
+                            method: 'DELETE',
+                            headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+                        });
+                    } catch(e) {}
+                }, 10000);
+
+            } catch(err) {
+                addLog(`Gagal mengirim sinyal kick: ${err.message}`, 'error');
+                btnEl.disabled = false;
+                btnEl.innerHTML = '<i class="fa-solid fa-plug-circle-xmark"></i> Kick';
+            }
+        }
+
+        function initPresenceMonitor() {
+            presenceChannel = supabaseClient.channel('sapatamu-online');
+
+            presenceChannel
+                .on('presence', { event: 'sync' }, () => {
+                    const state = presenceChannel.presenceState();
+                    renderUsers(state);
+                    const count = Object.values(state).flat().length;
+                    addLog(`Presence sync: ${count} browser user aktif.`, 'info');
+                })
+                .on('presence', { event: 'join' }, ({ newPresences }) => {
+                    newPresences.forEach(u => {
+                        addLog(`🟢 User bergabung: ${u.username} → ${u.page}`, 'success');
+                    });
+                })
+                .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+                    leftPresences.forEach(u => {
+                        addLog(`🔴 User meninggalkan: ${u.username} (${u.page}) — tab ditutup`, 'warning');
+                    });
+                })
+                // Juga dengarkan broadcast kick dari channel ini
+                .on('broadcast', { event: 'force-disconnect' }, (payload) => {
+                    addLog(`📡 Broadcast kick dikirim ke: ${payload.payload && payload.payload.username}`, 'system');
+                })
+                .subscribe((status) => {
+                    addLog(`Presence channel status: ${status}`, 'system');
+                });
+        }
+
         // Initial Boot function
         function initMonitor() {
             addLog("Memulai sistem dashboard monitor...", "system");
             measureLatency();
             fetchMetrics();
             monitorWebSocket();
+            initPresenceMonitor();
             
             // Auto refresh metrics every 60 seconds
             setInterval(() => {

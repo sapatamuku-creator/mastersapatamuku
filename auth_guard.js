@@ -503,6 +503,129 @@
         // 6. Teardown koneksi secara instan saat tab ditutup oleh pengguna
         window.addEventListener('beforeunload', () => {
             cleanupSupabaseConnections();
+            // Untrack presence saat tab ditutup
+            if (window._sapaPresenceChannel) {
+                try { window._sapaPresenceChannel.untrack(); } catch(e) {}
+            }
         });
+    })();
+
+    // ─── Presence Tracking: Daftarkan browser user ke Supabase Realtime ─────
+    // Setiap tab yang aktif dan login akan broadcast kehadirannya.
+    // Monitor.html membaca channel ini untuk menampilkan "Active Browser Users".
+    (function initPresenceTracking() {
+        const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+        const SESSION_KEY = 'sapatamu_session';
+        const LOCAL_DB = 'sapatamu_db';
+
+        // Baca sesi aktif
+        let session = {};
+        try {
+            session = JSON.parse(sessionStorage.getItem(SESSION_KEY)) ||
+                      JSON.parse(localStorage.getItem(LOCAL_DB)) || {};
+        } catch(e) {}
+
+        // Hanya track jika user sudah login (ada username di session)
+        if (!session.username) return;
+
+        // Tunggu sampai Supabase SDK siap
+        function waitForSupabaseSDK(cb, tries = 0) {
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                cb();
+            } else if (tries < 20) {
+                setTimeout(() => waitForSupabaseSDK(cb, tries + 1), 300);
+            }
+        }
+
+        waitForSupabaseSDK(() => {
+            try {
+                const client = window.supabase.createClient(SB_URL, SB_KEY);
+                const pageName = window.location.pathname.split('/').pop() || 'unknown';
+                const presenceKey = `${session.username}_${Date.now()}`;
+
+                // Join channel 'sapatamu-online'
+                const channel = client.channel('sapatamu-online', {
+                    config: { presence: { key: presenceKey } }
+                });
+
+                channel.subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        // Track kehadiran user ini
+                        await channel.track({
+                            username:   session.username || 'unknown',
+                            ssid:       session.ssId || session.ssid || '-',
+                            role:       session.role || 'client',
+                            page:       pageName,
+                            is_demo:    session.is_demo || false,
+                            joined_at:  new Date().toISOString(),
+                            user_agent: navigator.userAgent.substring(0, 80)
+                        });
+                        console.log('[SapaPresence] Terdaftar di channel sapatamu-online');
+                    }
+                });
+
+                // Simpan reference channel ke window agar bisa di-untrack saat tab ditutup
+                window._sapaPresenceChannel = channel;
+                window._sapaPresenceClient = client;
+
+                // ── Force-Disconnect Listener ──────────────────────────────────
+                // Monitor bisa INSERT ke terminated_sessions untuk kick user ini.
+                // Client mendengarkan via Realtime, jika username-nya muncul → logout paksa.
+                try {
+                    const kickChannel = client.channel('sapatamu-kick-signal')
+                        .on('broadcast', { event: 'force-disconnect' }, (payload) => {
+                            const target = payload.payload && payload.payload.username;
+                            if (target && target === session.username) {
+                                console.warn('[SapaGuard] Force-disconnect signal diterima dari Monitor!');
+                                _handleForceDisconnect(client);
+                            }
+                        })
+                        .subscribe();
+
+                    window._sapaKickChannel = kickChannel;
+                } catch(e) {
+                    console.error('[SapaPresence] Gagal setup kick listener:', e);
+                }
+
+                // Juga polling terminated_sessions sebagai fallback (setiap 15 detik)
+                async function checkTerminated() {
+                    try {
+                        const res = await fetch(
+                            `${SB_URL}/rest/v1/terminated_sessions?username=eq.${encodeURIComponent(session.username)}&limit=1`,
+                            { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+                        );
+                        if (res.ok) {
+                            const rows = await res.json();
+                            if (rows && rows.length > 0) {
+                                console.warn('[SapaGuard] Terdeteksi di terminated_sessions. Force logout!');
+                                _handleForceDisconnect(client);
+                            }
+                        }
+                    } catch(e) {}
+                }
+                // Cek pertama setelah 5 detik, lalu tiap 15 detik
+                setTimeout(checkTerminated, 5000);
+                window._sapaKickPoller = setInterval(checkTerminated, 15000);
+
+            } catch(e) {
+                console.error('[SapaPresence] Gagal inisialisasi presence tracking:', e);
+            }
+        });
+
+        // Handler force disconnect: bersihkan semua & redirect ke login
+        async function _handleForceDisconnect(client) {
+            clearInterval(window._sapaKickPoller);
+            try { if (window._sapaPresenceChannel) await window._sapaPresenceChannel.untrack(); } catch(e) {}
+            try { if (client) await client.removeAllChannels(); } catch(e) {}
+            sessionStorage.clear();
+            localStorage.removeItem('sapatamu_db');
+            // Tampilkan notifikasi sebelum redirect
+            const msg = document.createElement('div');
+            msg.style.cssText = 'position:fixed;inset:0;z-index:9999999;background:rgba(74,63,53,0.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;font-family:sans-serif;';
+            msg.innerHTML = '<div style="text-align:center;color:#fff;"><div style="font-size:48px;margin-bottom:16px">🔒</div><div style="font-size:20px;font-weight:800;margin-bottom:8px">Sesi Diakhiri</div><div style="font-size:13px;opacity:0.7">Admin memutus koneksi Anda. Anda akan diarahkan ke halaman login.</div></div>';
+            document.body.appendChild(msg);
+            setTimeout(() => window.location.replace('login.html?reason=force_disconnect'), 2500);
+        }
     })();
 })();
