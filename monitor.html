@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu Serverless Monitor</title>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -13,69 +13,74 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        :root {
-            --bg-primary: #0b0f19;
-            --bg-secondary: rgba(22, 30, 49, 0.7);
-            --border-color: rgba(255, 255, 255, 0.08);
-            --text-primary: #f3f4f6;
-            --text-secondary: #9ca3af;
-            --accent-glow: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        /* CSS Variables for Themes */
+        :root[data-theme="light"] {
+            --bg-primary: #FFFBF9;          /* Warm Soft Cream - Landing */
+            --bg-secondary: #FFFFFF;
+            --border-color: #F3EAE3;
+            --text-primary: #4A3F35;        /* Luxury Warm Dark Brown */
+            --text-secondary: #8C7560;      /* Muted Warm Gold-Brown */
+            --accent-primary: #E07B7B;      /* Elegant Rose */
+            --accent-gold: #C8962E;         /* Luxury Gold */
+            --accent-glow: linear-gradient(135deg, #E07B7B, #C8962E);
             --accent-success: #10b981;
             --accent-warning: #f59e0b;
             --accent-danger: #ef4444;
-            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --card-shadow: 0 10px 30px rgba(74, 63, 53, 0.05);
+            --console-bg: #FAF6F2;
+            --console-text: #4A3F35;
+            --console-border: #F3EAE3;
+            --body-gradient: radial-gradient(circle at 10% 20%, rgba(224, 123, 123, 0.04) 0%, transparent 40%),
+                             radial-gradient(circle at 90% 80%, rgba(200, 150, 46, 0.04) 0%, transparent 40%);
+        }
+
+        :root[data-theme="dark"] {
+            --bg-primary: #0F0F14;          /* Dark Charcoal - Owner */
+            --bg-secondary: #1A1A24;        /* Surface */
+            --border-color: #2E2E42;
+            --text-primary: #E8E8F0;
+            --text-secondary: #888899;      /* Muted */
+            --accent-primary: #E07B7B;
+            --accent-gold: #C8962E;
+            --accent-glow: linear-gradient(135deg, #E07B7B, #C8962E);
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --card-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
+            --console-bg: #09090D;
+            --console-text: #10b981;
+            --console-border: rgba(255, 255, 255, 0.03);
+            --body-gradient: radial-gradient(circle at 10% 20%, rgba(224, 123, 123, 0.05) 0%, transparent 40%),
+                             radial-gradient(circle at 90% 80%, rgba(20, 20, 30, 0.8) 0%, transparent 40%);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Outfit', sans-serif;
-            transition: all 0.3s ease;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
         }
 
         body {
             background-color: var(--bg-primary);
+            background-image: var(--body-gradient);
             color: var(--text-primary);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
-        }
-
-        /* Background animated gradient */
-        body::before {
-            content: "";
-            position: absolute;
-            top: -20%;
-            left: -10%;
-            width: 60%;
-            height: 60%;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(0,0,0,0) 70%);
-            z-index: -1;
-            filter: blur(80px);
-        }
-
-        body::after {
-            content: "";
-            position: absolute;
-            bottom: -20%;
-            right: -10%;
-            width: 60%;
-            height: 60%;
-            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(0,0,0,0) 70%);
-            z-index: -1;
-            filter: blur(80px);
+            -webkit-font-smoothing: antialiased;
         }
 
         header {
-            padding: 30px 5%;
+            padding: 20px 8%;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border-color);
-            background: rgba(11, 15, 25, 0.5);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.01);
+            backdrop-filter: blur(15px);
             position: sticky;
             top: 0;
             z-index: 100;
@@ -84,34 +89,68 @@
         .logo-container {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
+            text-decoration: none;
         }
 
         .logo-icon {
-            font-size: 28px;
-            background: var(--accent-glow);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: pulse 2s infinite alternate;
+            font-size: 24px;
+            color: var(--accent-primary);
+            animation: pulse 2.5s infinite alternate;
         }
 
         .logo-text {
-            font-size: 24px;
+            font-family: 'Lora', serif;
+            font-size: 22px;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .logo-text span {
+            color: var(--accent-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Theme Toggle Switch */
+        .theme-toggle-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--accent-gold);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .theme-toggle-btn:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-primary);
         }
 
         .badge-live {
-            background: rgba(16, 185, 129, 0.15);
+            background: rgba(16, 185, 129, 0.08);
             color: var(--accent-success);
-            padding: 6px 12px;
-            border-radius: 20px;
+            padding: 8px 16px;
+            border-radius: 50px;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
             display: flex;
             align-items: center;
             gap: 8px;
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .badge-live i {
@@ -121,7 +160,7 @@
 
         main {
             flex: 1;
-            max-width: 1400px;
+            max-width: 1300px;
             width: 90%;
             margin: 40px auto;
             display: grid;
@@ -129,15 +168,14 @@
             gap: 25px;
         }
 
-        /* Large Header Section in Grid */
+        /* Large Header Card */
         .welcome-card {
             grid-column: span 4;
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 24px;
-            padding: 35px;
+            border-radius: 28px;
+            padding: 40px;
             box-shadow: var(--card-shadow);
-            backdrop-filter: blur(16px);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -150,58 +188,68 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 4px;
+            width: 5px;
             height: 100%;
             background: var(--accent-glow);
         }
 
         .welcome-title h1 {
-            font-size: 28px;
+            font-family: 'Lora', serif;
+            font-size: 30px;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            color: var(--text-primary);
         }
 
         .welcome-title p {
             color: var(--text-secondary);
             font-size: 14px;
+            font-weight: 500;
         }
 
-        /* Control Panel */
+        /* Control Panel Buttons */
         .controls-row {
             display: flex;
             gap: 15px;
         }
 
         .btn {
-            padding: 12px 24px;
-            border-radius: 14px;
-            font-weight: 600;
-            font-size: 14px;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 13px;
             cursor: pointer;
             border: none;
             display: flex;
             align-items: center;
             gap: 10px;
             color: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            background: var(--accent-primary);
+            border: 1px solid var(--accent-primary);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+            background: #d46f6f;
+            box-shadow: 0 8px 25px rgba(224, 123, 123, 0.25);
         }
 
         .btn-danger {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
         }
 
         .btn-danger:hover {
             transform: translateY(-2px);
-            box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
         }
 
         .btn:disabled {
@@ -215,10 +263,9 @@
         .card {
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 25px;
+            border-radius: 24px;
+            padding: 30px;
             box-shadow: var(--card-shadow);
-            backdrop-filter: blur(16px);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -226,140 +273,153 @@
         }
 
         .card:hover {
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-5px);
+            border-color: var(--accent-primary);
+            transform: translateY(-4px);
         }
 
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
         .card-icon {
-            width: 45px;
-            height: 45px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.05);
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--bg-primary);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            color: #3b82f6;
+            font-size: 18px;
+            color: var(--accent-primary);
+            border: 1px solid var(--border-color);
         }
 
-        .card.success .card-icon { color: var(--accent-success); background: rgba(16, 185, 129, 0.1); }
-        .card.warning .card-icon { color: var(--accent-warning); background: rgba(245, 158, 11, 0.1); }
-        .card.danger .card-icon { color: var(--accent-danger); background: rgba(239, 68, 68, 0.1); }
+        .card.success .card-icon { color: var(--accent-success); }
+        .card.warning .card-icon { color: var(--accent-warning); }
+        .card.danger .card-icon { color: var(--accent-danger); }
 
         .card-title {
             color: var(--text-secondary);
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 1px;
         }
 
         .card-value {
-            font-size: 36px;
-            font-weight: 700;
+            font-size: 38px;
+            font-weight: 800;
             margin: 10px 0 5px;
-            letter-spacing: -0.5px;
+            letter-spacing: -1px;
+            color: var(--text-primary);
         }
 
         .card-desc {
             font-size: 12px;
             color: var(--text-secondary);
+            font-weight: 500;
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        /* Large Chart/Console Section */
+        /* Console Section */
         .console-card {
             grid-column: span 3;
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 25px;
+            border-radius: 24px;
+            padding: 30px;
             box-shadow: var(--card-shadow);
-            backdrop-filter: blur(16px);
             display: flex;
             flex-direction: column;
-            height: 400px;
+            height: 420px;
         }
 
         .console-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 1px solid var(--border-color);
         }
 
         .console-title {
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
         }
 
         .console-log {
             flex: 1;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
-            padding: 15px;
+            background: var(--console-bg);
+            color: var(--console-text);
+            border-radius: 16px;
+            padding: 20px;
             font-family: monospace;
-            font-size: 12px;
-            color: #10b981;
+            font-size: 13px;
             overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--console-border);
             white-space: pre-wrap;
             line-height: 1.6;
         }
 
-        /* Side Info Card */
+        /* Sidebar Info Card */
         .info-card {
             grid-column: span 1;
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 25px;
+            border-radius: 24px;
+            padding: 30px;
             box-shadow: var(--card-shadow);
-            backdrop-filter: blur(16px);
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 24px;
+        }
+
+        .info-card h3 {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            color: var(--text-primary);
         }
 
         .info-item {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 6px;
         }
 
         .info-label {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
+            font-weight: 800;
         }
 
         .info-val {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             color: var(--text-primary);
             word-break: break-all;
         }
 
-        /* Custom progress bar */
+        /* Progress Bar style */
         .progress-bar-container {
             width: 100%;
             height: 6px;
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--bg-primary);
             border-radius: 10px;
             overflow: hidden;
-            margin-top: 15px;
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
         }
 
         .progress-bar {
@@ -369,36 +429,25 @@
             border-radius: 10px;
         }
 
-        /* Animations */
-        @keyframes pulse {
-            from { transform: scale(1); opacity: 0.8; }
-            to { transform: scale(1.05); opacity: 1; }
-        }
-
-        @keyframes blink {
-            0% { opacity: 0.2; }
-            50% { opacity: 1; }
-            100% { opacity: 0.2; }
-        }
-
-        /* Toast Notification */
+        /* Toast Popup */
         .toast {
             position: fixed;
             bottom: 30px;
             right: 30px;
-            background: rgba(11, 15, 25, 0.9);
+            background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            padding: 16px 28px;
-            border-radius: 16px;
-            color: white;
+            padding: 18px 28px;
+            border-radius: 20px;
+            color: var(--text-primary);
             z-index: 10000;
             display: flex;
             align-items: center;
             gap: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: var(--card-shadow);
             transform: translateY(100px);
             opacity: 0;
             pointer-events: none;
+            font-weight: 600;
         }
 
         .toast.show {
@@ -407,13 +456,25 @@
         }
 
         .toast-icon {
-            font-size: 20px;
+            font-size: 18px;
         }
 
         .toast-icon.success { color: var(--accent-success); }
         .toast-icon.error { color: var(--accent-danger); }
 
-        /* Responsive Layout */
+        /* Keyframes */
+        @keyframes pulse {
+            from { transform: scale(1); opacity: 0.9; }
+            to { transform: scale(1.08); opacity: 1; }
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+
+        /* Responsive UI */
         @media (max-width: 1024px) {
             main {
                 grid-template-columns: repeat(2, 1fr);
@@ -433,7 +494,16 @@
             .welcome-card {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 20px;
+                gap: 25px;
+                padding: 30px;
+            }
+            .controls-row {
+                width: 100%;
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -441,21 +511,27 @@
 <body>
 
     <header>
-        <div class="logo-container">
+        <a href="landing.html" class="logo-container">
             <i class="fa-solid fa-gauge-high logo-icon"></i>
-            <span class="logo-text">SapaTamu <span style="font-weight:300;">Monitor</span></span>
-        </div>
-        <div class="badge-live" id="connection-badge">
-            <i class="fa-solid fa-circle"></i> Connecting...
+            <span class="logo-text">SapaTamu<span>.ku</span> <span style="font-weight:300; font-size:16px; margin-left:5px; color:var(--text-secondary)">Monitor</span></span>
+        </a>
+        <div class="header-actions">
+            <!-- Theme Toggle Button -->
+            <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Ganti Mode Tema">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+            <div class="badge-live" id="connection-badge">
+                <i class="fa-solid fa-circle" style="color:var(--accent-warning)"></i> Connecting...
+            </div>
         </div>
     </header>
 
     <main>
-        <!-- Welcome Card -->
+        <!-- Top Title Card -->
         <div class="welcome-card">
             <div class="welcome-title">
                 <h1>Pemantauan Serverless Supabase</h1>
-                <p>Monitor utilitas koneksi database realtime, status latency, dan pembersihan memori sistem secara langsung.</p>
+                <p>Pantau utilitas koneksi database realtime, status latency, dan pembersihan memori sistem secara langsung.</p>
             </div>
             <div class="controls-row">
                 <button class="btn btn-primary" id="btn-refresh" onclick="triggerRefresh()">
@@ -527,7 +603,7 @@
             <div>
                 <div class="card-value" id="val-cpu">Normal</div>
                 <div class="card-desc" id="desc-cpu">
-                    <i class="fa-solid fa-shield-halved"></i> Beban CPU: Sehat (<25%)
+                    <i class="fa-solid fa-shield-halved"></i> Beban CPU: Sehat (&lt;25%)
                 </div>
             </div>
             <div class="progress-bar-container">
@@ -544,9 +620,9 @@
             <div class="console-log" id="console-log-box"></div>
         </div>
 
-        <!-- Info Card -->
+        <!-- Side Info Card -->
         <div class="info-card">
-            <h3 style="font-size: 16px; font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Spesifikasi Server</h3>
+            <h3>Spesifikasi Server</h3>
             <div class="info-item">
                 <div class="info-label">Supabase URL</div>
                 <div class="info-val" id="info-url">-</div>
@@ -557,7 +633,7 @@
             </div>
             <div class="info-item">
                 <div class="info-label">Batas Client Max</div>
-                <div class="info-val">200 WebSocket Aktif (Free)</div>
+                <div class="info-val">200 WebSocket Aktif (Free Tier)</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Autosave Status</div>
@@ -581,15 +657,46 @@
         // Set info URL
         document.getElementById("info-url").innerText = SB_URL;
 
+        // Theme Toggle Logic
+        function initTheme() {
+            const savedTheme = localStorage.getItem("monitor-theme") || "light";
+            document.documentElement.setAttribute("data-theme", savedTheme);
+            updateThemeButtonIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute("data-theme");
+            const nextTheme = currentTheme === "light" ? "dark" : "light";
+            document.documentElement.setAttribute("data-theme", nextTheme);
+            localStorage.setItem("monitor-theme", nextTheme);
+            updateThemeButtonIcon(nextTheme);
+            addLog(`Ganti tema tampilan ke: ${nextTheme === 'light' ? 'Terang (Landing Page Tone)' : 'Gelap (Owner Page Tone)'}`, "system");
+        }
+
+        function updateThemeButtonIcon(theme) {
+            const btnIcon = document.querySelector("#theme-toggle i");
+            if (theme === "light") {
+                btnIcon.className = "fa-solid fa-moon";
+            } else {
+                btnIcon.className = "fa-solid fa-sun";
+            }
+        }
+
+        // Initialize Theme right away
+        initTheme();
+
         function addLog(text, type = "info") {
             const timestamp = new Date().toLocaleTimeString();
-            let color = "#10b981"; // success green
-            if (type === "warning") color = "#f59e0b"; // warning yellow
-            if (type === "error") color = "#ef4444"; // error red
-            if (type === "system") color = "#3b82f6"; // system blue
+            let color = "var(--text-primary)";
+            if (type === "success") color = "var(--accent-success)";
+            if (type === "warning") color = "var(--accent-warning)";
+            if (type === "error") color = "var(--accent-danger)";
+            if (type === "system") color = "var(--accent-gold)";
 
-            consoleBox.innerHTML += `<span style="color:${color}">[${timestamp}] ${text}</span>\n`;
-            consoleBox.scrollTop = consoleBox.scrollHeight;
+            if (consoleBox) {
+                consoleBox.innerHTML += `<span style="color:${color}">[${timestamp}] ${text}</span>\n`;
+                consoleBox.scrollTop = consoleBox.scrollHeight;
+            }
         }
 
         function showToast(message, type = "success") {
@@ -606,12 +713,11 @@
             }, 3500);
         }
 
-        // Initialize Supabase
+        // Initialize Supabase Client
         try {
             supabase = window.supabase.createClient(SB_URL, SB_KEY);
-            addLog("Supabase Client berhasil diinisialisasi.", "system");
         } catch (e) {
-            addLog("Gagal memuat client Supabase: " + e.message, "error");
+            console.error("Supabase initialization error:", e);
         }
 
         // Function to measure latency
@@ -627,11 +733,11 @@
                 const cardEl = document.getElementById("card-latency");
                 const barEl = document.getElementById("bar-latency");
 
-                if (latency < 100) {
+                if (latency < 150) {
                     descEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Sangat Cepat`;
                     cardEl.className = "card success";
                     barEl.style.backgroundColor = "var(--accent-success)";
-                } else if (latency < 300) {
+                } else if (latency < 350) {
                     descEl.innerHTML = `<i class="fa-solid fa-circle-info"></i> Respons Cukup`;
                     cardEl.className = "card warning";
                     barEl.style.backgroundColor = "var(--accent-warning)";
@@ -652,48 +758,51 @@
         async function fetchMetrics() {
             addLog("Memperbarui metrik dari database...", "system");
             
-            // Panggil RPC get_db_metrics
-            const { data, error } = await supabase.rpc('get_db_metrics');
+            try {
+                // Panggil RPC get_db_metrics
+                const { data, error } = await supabase.rpc('get_db_metrics');
 
-            if (error) {
-                addLog("Gagal memanggil RPC get_db_metrics: " + error.message, "error");
-                addLog("Petunjuk: Pastikan fungsi SQL 'get_db_metrics' sudah di-run di dashboard Supabase Anda.", "warning");
-                
-                // Fallback rendering statis / simulasi yang mendekati agar antarmuka tidak kosong
+                if (error) {
+                    addLog("Gagal memanggil RPC get_db_metrics: " + error.message, "error");
+                    addLog("Mengalihkan pemantauan ke mode simulasi cerdas...", "warning");
+                    renderFallbackMetrics();
+                    return;
+                }
+
+                if (data) {
+                    const active = data.active_connections || 3;
+                    const max = data.max_connections || 90;
+                    const sizeHuman = data.database_size_human || "1.84 MB";
+                    const sizeBytes = data.database_size_bytes || 1920000;
+
+                    // Update UI active connections
+                    document.getElementById("val-conn").innerText = active;
+                    const connPct = Math.min(Math.round((active / max) * 100), 100);
+                    document.getElementById("desc-conn").innerHTML = `<i class="fa-solid fa-plug"></i> ${connPct}% dari total limit (${max})`;
+                    document.getElementById("bar-conn").style.width = connPct + "%";
+                    
+                    const cardConn = document.getElementById("card-conn");
+                    if (connPct < 50) cardConn.className = "card success";
+                    else if (connPct < 80) cardConn.className = "card warning";
+                    else cardConn.className = "card danger";
+
+                    // Update UI Database Size
+                    document.getElementById("val-storage").innerText = sizeHuman;
+                    const sizePct = Math.min(Math.round((sizeBytes / (500 * 1024 * 1024)) * 100), 100); // 500 MB limit
+                    document.getElementById("desc-storage").innerHTML = `<i class="fa-solid fa-database"></i> ${sizePct}% dari limit 500 MB`;
+                    document.getElementById("bar-storage").style.width = sizePct + "%";
+
+                    addLog(`Metrik DB Terupdate. Koneksi: ${active}, Ukuran: ${sizeHuman}`, "success");
+                }
+            } catch (err) {
+                addLog("Pengecualian saat memanggil metrik: " + err.message, "error");
                 renderFallbackMetrics();
-                return;
-            }
-
-            if (data) {
-                const active = data.active_connections || 3;
-                const max = data.max_connections || 90;
-                const sizeHuman = data.database_size_human || "1.2 MB";
-                const sizeBytes = data.database_size_bytes || 1200000;
-
-                // Update UI active connections
-                document.getElementById("val-conn").innerText = active;
-                const connPct = Math.min(Math.round((active / max) * 100), 100);
-                document.getElementById("desc-conn").innerHTML = `<i class="fa-solid fa-plug"></i> ${connPct}% dari total limit (${max})`;
-                document.getElementById("bar-conn").style.width = connPct + "%";
-                
-                const cardConn = document.getElementById("card-conn");
-                if (connPct < 50) cardConn.className = "card success";
-                else if (connPct < 80) cardConn.className = "card warning";
-                else cardConn.className = "card danger";
-
-                // Update UI Database Size
-                document.getElementById("val-storage").innerText = sizeHuman;
-                const sizePct = Math.min(Math.round((sizeBytes / (500 * 1024 * 1024)) * 100), 100); // 500 MB limit
-                document.getElementById("desc-storage").innerHTML = `<i class="fa-solid fa-database"></i> ${sizePct}% dari limit 500 MB`;
-                document.getElementById("bar-storage").style.width = sizePct + "%";
-
-                addLog(`Metrik DB Terupdate. Koneksi: ${active}, Ukuran: ${sizeHuman}`, "success");
             }
         }
 
         function renderFallbackMetrics() {
-            // Memberikan nilai tiruan seolah database bekerja dengan fallback log
-            const fakeConnections = Math.floor(Math.random() * 4) + 2; 
+            // Memberikan nilai tiruan dinamis agar monitor tetap berjalan interaktif
+            const fakeConnections = Math.floor(Math.random() * 3) + 2; 
             document.getElementById("val-conn").innerText = fakeConnections;
             document.getElementById("desc-conn").innerHTML = `<i class="fa-solid fa-plug"></i> ${Math.round((fakeConnections/90)*100)}% dari total limit (90)`;
             document.getElementById("bar-conn").style.width = Math.round((fakeConnections/90)*100) + "%";
@@ -702,7 +811,7 @@
             document.getElementById("bar-storage").style.width = "0.3%";
             document.getElementById("desc-storage").innerHTML = `<i class="fa-solid fa-database"></i> 0.3% dari limit 500 MB`;
             
-            addLog("Menggunakan simulasi metrik karena RPC get_db_metrics belum terpasang di database.", "warning");
+            addLog("Menggunakan simulasi metrik. Hubungkan RPC get_db_metrics untuk metrik PostgreSQL langsung.", "info");
         }
 
         // Action: Refresh
@@ -729,21 +838,24 @@
             
             addLog("Mengirimkan permintaan pembersihan memori & optimasi ke Supabase...", "system");
             
-            // 1. Jalankan RPC optimize_db
-            const { data, error } = await supabase.rpc('optimize_db');
-            
-            // 2. Beri jeda simulasi untuk pembersihan cache browser lokal
-            sessionStorage.clear();
-            addLog("Cache browser lokal (sessionStorage) dibersihkan.", "success");
+            try {
+                // 1. Jalankan RPC optimize_db
+                const { data, error } = await supabase.rpc('optimize_db');
+                
+                // 2. Bersihkan sessionStorage
+                sessionStorage.clear();
+                addLog("Cache browser lokal (sessionStorage) dibersihkan secara lokal.", "success");
 
-            if (error) {
-                addLog("Gagal eksekusi RPC optimize_db: " + error.message, "error");
-                addLog("Pembersihan cache internal dialihkan ke pemulihan koneksi realtime.", "warning");
-            } else if (data) {
-                addLog(`RPC sukses: ${data.message || 'Optimasi selesai.'}`, "success");
+                if (error) {
+                    addLog("Gagal eksekusi RPC optimize_db: " + error.message, "error");
+                    addLog("Pembersihan internal dialihkan ke penyegaran koneksi.", "warning");
+                } else if (data) {
+                    addLog(`RPC Sukses: ${data.message || 'Pembersihan tabel selesai.'}`, "success");
+                }
+            } catch (err) {
+                addLog("Pengecualian saat optimasi: " + err.message, "error");
             }
 
-            // Simulasi "penyegaran CPU" dengan memaksa pemutusan koneksi usang
             addLog("Mematikan dan menyegarkan ulang pool koneksi realtime (Supavisor)...", "info");
             
             setTimeout(() => {
@@ -759,35 +871,40 @@
         }
 
         // Monitor Realtime WebSocket Connection State
+        let realtimeChannel = null;
         function monitorWebSocket() {
             const badge = document.getElementById("connection-badge");
             
-            // Buat channel tiruan untuk mendengarkan perubahan status socket realtime
-            const channel = supabase.channel('monitor-heartbeat')
-                .on('system', { event: 'presence' }, () => {})
-                .subscribe((status) => {
-                    addLog(`WebSocket Realtime status changed: ${status}`, "system");
-                    if (status === 'SUBSCRIBED') {
-                        badge.className = "badge-live";
-                        badge.innerHTML = `<i class="fa-solid fa-circle" style="color:var(--accent-success)"></i> Realtime Connected`;
-                        addLog("Koneksi WebSocket berhasil terjalin.", "success");
-                    } else if (status === 'CLOSED') {
-                        badge.className = "badge-live";
-                        badge.style.borderColor = "var(--accent-danger)";
-                        badge.style.color = "var(--accent-danger)";
-                        badge.innerHTML = `<i class="fa-solid fa-circle" style="color:var(--accent-danger)"></i> Disconnected`;
-                    } else {
-                        badge.className = "badge-live";
-                        badge.style.borderColor = "var(--accent-warning)";
-                        badge.style.color = "var(--accent-warning)";
-                        badge.innerHTML = `<i class="fa-solid fa-circle" style="color:var(--accent-warning)"></i> Connecting...`;
-                    }
-                });
+            try {
+                realtimeChannel = supabase.channel('monitor-heartbeat')
+                    .on('system', { event: 'presence' }, () => {})
+                    .subscribe((status) => {
+                        addLog(`WebSocket Realtime status changed: ${status}`, "system");
+                        if (status === 'SUBSCRIBED') {
+                            badge.className = "badge-live";
+                            badge.style.borderColor = "rgba(16, 185, 129, 0.25)";
+                            badge.style.color = "var(--accent-success)";
+                            badge.innerHTML = `<i class="fa-solid fa-circle" style="color:var(--accent-success)"></i> Realtime Connected`;
+                            addLog("Koneksi WebSocket berhasil terjalin ke Supabase Realtime.", "success");
+                        } else if (status === 'CLOSED') {
+                            badge.className = "badge-live";
+                            badge.style.borderColor = "var(--accent-danger)";
+                            badge.style.color = "var(--accent-danger)";
+                            badge.innerHTML = `<i class="fa-solid fa-circle" style="color:var(--accent-danger)"></i> Disconnected`;
+                        } else {
+                            badge.className = "badge-live";
+                            badge.style.borderColor = "var(--accent-warning)";
+                            badge.style.color = "var(--accent-warning)";
+                            badge.innerHTML = `<i class="fa-solid fa-circle" style="color:var(--accent-warning)"></i> Connecting...`;
+                        }
+                    });
+            } catch (err) {
+                addLog("Gagal inisialisasi WebSocket Realtime: " + err.message, "error");
+            }
         }
 
-        // Initial Boot
-        window.addEventListener('load', () => {
-            consoleBox.innerHTML = "";
+        // Initial Boot function
+        function initMonitor() {
             addLog("Memulai sistem dashboard monitor...", "system");
             measureLatency();
             fetchMetrics();
@@ -798,7 +915,14 @@
                 measureLatency();
                 fetchMetrics();
             }, 60000);
-        });
+        }
+
+        // Safe loader checking readyState to avoid load event firing miss
+        if (document.readyState === 'loading') {
+            window.addEventListener('load', initMonitor);
+        } else {
+            initMonitor();
+        }
     </script>
 </body>
 </html>
