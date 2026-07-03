@@ -474,12 +474,6 @@
         //   diurutkan berdasarkan jam_datang terbaru.
         // ────────────────────────────────────────────────────────────
         // ────────────────────────────────────────────────────────────
-        // syncGuestDisplay() — Ambil tamu terbaru dari welcome_queue
-        //   welcome_queue diisi langsung saat tamu check-in dari
-        //   checkin.html / kiosk.html / onsite.html.
-        //   Lebih cepat karena: INSERT langsung → Realtime EVENT → tampil.
-        //   Polling 10 detik hanya sebagai backup.
-        // ────────────────────────────────────────────────────────────
         async function syncGuestDisplay() {
             if (!ssId) return;
             try {
@@ -494,6 +488,7 @@
                     const latest = guests[0];
                     if (latest.nama && latest.nama !== currentGuestName) {
                         showGuest(latest);
+                        window.dispatchEvent(new Event('sapa-activity')); // Reset timer idle
                     }
                     return;
                 }
@@ -509,6 +504,7 @@
                         if (data.latestGuest && data.latestGuest.nama) {
                             if (data.latestGuest.nama !== currentGuestName) {
                                 showGuest(data.latestGuest);
+                                window.dispatchEvent(new Event('sapa-activity')); // Reset timer idle
                             }
                         }
                     }
@@ -583,6 +579,7 @@
                                 const record = payload.new;
                                 if (record && record.nama) {
                                     showGuest(record);
+                                    window.dispatchEvent(new Event('sapa-activity')); // Reset timer idle
                                     // Marquee is no longer updated here
                                 }
                             }
@@ -684,6 +681,7 @@
                                     const cleanUcapan = record.ucapan.replace(/(\r\n|\n|\r)/gm, " ");
                                     const newWish = `${record.nama || 'Tamu'}: ${cleanUcapan}`;
                                     document.getElementById('marquee-log').innerText = newWish + "  •  " + currentMarquee;
+                                    window.dispatchEvent(new Event('sapa-activity')); // Reset timer idle
                                 }
                             }
                         )

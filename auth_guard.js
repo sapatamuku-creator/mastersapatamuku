@@ -368,15 +368,18 @@
     (function initTimeoutAndVisibility() {
         const path = window.location.pathname.toLowerCase();
 
-        // 1. Tentukan durasi idle berdasarkan halaman
-        let idleTimeoutDuration = 15 * 60 * 1000; // Standar 15 Menit
-        let isExemptFromLogout = false;
+        // 1. Tentukan durasi idle berdasarkan halaman (Optimasi Supabase Pooler)
+        let idleTimeoutDuration = 2 * 60 * 1000; // Standar 2 Menit (Dashboard & Undangan)
 
-        // welcome.html (TV), wa_blast.html (Blast WA), dan formulir_tamu.html dikecualikan dari auto-logout
-        if (path.includes('welcome.html') || path.includes('wa_blast.html') || path.includes('formulir_tamu.html')) {
-            isExemptFromLogout = true;
-        } else if (path.includes('kiosk.html') || path.includes('worker.html') || path.includes('onsite.html') || path.includes('checkin.html')) {
-            idleTimeoutDuration = 60 * 60 * 1000; // 1 Jam (60 Menit)
+        // Halaman operasional Hari H dengan akses konstan mendapatkan batas atas 60 Menit
+        if (
+            path.includes('kiosk.html') || 
+            path.includes('worker.html') || 
+            path.includes('onsite.html') || 
+            path.includes('checkin.html') ||
+            path.includes('welcome.html')
+        ) {
+            idleTimeoutDuration = 60 * 60 * 1000; // 60 Menit
         }
 
         // 2. Pembersihan Koneksi Realtime Supabase Dinamis
@@ -430,42 +433,44 @@
             return false;
         }
 
-        // 4. Pengaktifan Proteksi Idle (jika tidak dikecualikan)
-        if (!isExemptFromLogout) {
-            let idleTimeoutId;
+        // 4. Pengaktifan Proteksi Idle (Seluruh halaman terikat aturan timeout)
+        let idleTimeoutId;
 
-            const handleIdleLogout = async () => {
-                console.warn("[SapaGuard] Sesi idle terdeteksi. Membersihkan koneksi & memaksa logout...");
-                await cleanupSupabaseConnections();
+        const handleIdleLogout = async () => {
+            console.warn("[SapaGuard] Sesi idle terdeteksi. Membersihkan koneksi & memaksa logout...");
+            await cleanupSupabaseConnections();
 
-                // Bersihkan sesi storage
-                sessionStorage.clear();
-                localStorage.clear();
+            // Bersihkan sesi storage
+            sessionStorage.clear();
+            localStorage.clear();
 
-                // Redirect ke login
-                window.location.replace('login.html?reason=idle_timeout');
-            };
+            // Redirect ke login
+            window.location.replace('login.html?reason=idle_timeout');
+        };
 
-            const resetIdleTimer = () => {
-                clearTimeout(idleTimeoutId);
-                idleTimeoutId = setTimeout(handleIdleLogout, idleTimeoutDuration);
-            };
+        const resetIdleTimer = () => {
+            clearTimeout(idleTimeoutId);
+            idleTimeoutId = setTimeout(handleIdleLogout, idleTimeoutDuration);
+        };
 
-            // Event listener aktivitas fisik (pergerakan mouse atau sentuhan/tekan layar)
-            const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-            activityEvents.forEach(event => {
-                window.addEventListener(event, resetIdleTimer, { passive: true });
-            });
+        // Event listener aktivitas fisik (pergerakan mouse atau sentuhan/tekan layar)
+        const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        activityEvents.forEach(event => {
+            window.addEventListener(event, resetIdleTimer, { passive: true });
+        });
 
-            // Jalankan inisialisasi awal timer
-            resetIdleTimer();
-        }
+        // Event listener custom untuk reset timer secara programmatik (misal: event check-in/wishes realtime)
+        window.addEventListener('sapa-activity', resetIdleTimer, { passive: true });
+
+        // Jalankan inisialisasi awal timer
+        resetIdleTimer();
 
         // 5. Page Visibility API (Menghemat koneksi saat tab tidak aktif lebih dari 30 detik)
         let visibilityTimeoutId;
         document.addEventListener('visibilitychange', () => {
-            // Pengecualian halaman yang berjalan di latar belakang (seperti WA Blast, Welcome TV Screen, atau Formulir Tamu)
-            const isExemptFromVisibility = path.includes('wa_blast.html') || path.includes('welcome.html') || path.includes('formulir_tamu.html') || window.SapaExemptVisibility;
+            // Pengecualian halaman yang berjalan di latar belakang (seperti WA Blast atau Formulir Tamu)
+            // Welcome TV Screen tidak lagi dikecualikan sepenuhnya agar mengikuti 60 menit timeout
+            const isExemptFromVisibility = path.includes('wa_blast.html') || path.includes('formulir_tamu.html') || window.SapaExemptVisibility;
             if (isExemptFromVisibility) {
                 console.log("[SapaGuard] Halaman dikecualikan dari pemutus koneksi otomatis saat tab tidak aktif.");
                 return;
@@ -511,8 +516,6 @@
     })();
 
     // ─── Presence Tracking: Daftarkan browser user ke Supabase Realtime ─────
-    // Setiap tab yang aktif dan login akan broadcast kehadirannya.
-    // Monitor.html membaca channel ini untuk menampilkan "Active Browser Users".
     (function initPresenceTracking() {
         const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
         const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
@@ -522,19 +525,57 @@
         // Tunggu sampai subdomain resolver selesai (SAPATAMU_RESOLVED = true)
         // lalu baca sesi. Retry max 30x (tiap 300ms = 9 detik)
         function waitForSession(cb, tries = 0) {
-            const resolved = window.SAPATAMU_RESOLVED === true || typeof window.SAPATAMU_RESOLVED === 'undefined';
+            const resolved = window.SAPATAMU_RESOLVED === true || typeof window.SAPAGUARD_RESOLVED === 'undefined';
             let session = {};
             try {
                 session = JSON.parse(sessionStorage.getItem(SESSION_KEY)) ||
                           JSON.parse(localStorage.getItem(LOCAL_DB)) || {};
             } catch(e) {}
 
-            if (session.username && resolved) {
+            if (resolved) {
+                if (!session.username) {
+                    const path = window.location.pathname.toLowerCase();
+                    const pageName = path.split('/').pop() || 'index.html';
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const rawGuest = urlParams.get('u') || urlParams.get('nama');
+                    
+                    if (rawGuest) {
+                        session.username = `Tamu: ${decodeURIComponent(rawGuest)}`;
+                        session.role = 'guest';
+                    } else if (pageName.includes('welcome.html')) {
+                        session.username = 'TV Welcome Screen';
+                        session.role = 'display';
+                    } else if (pageName.includes('landing.html') || pageName === 'index.html' || pageName === '') {
+                        session.username = 'Pengunjung Landing';
+                        session.role = 'public';
+                    } else if (pageName.includes('invitation.html') || pageName.includes('undangan.html')) {
+                        session.username = 'Pengunjung Undangan';
+                        session.role = 'public';
+                    } else if (pageName.includes('formulir_tamu.html')) {
+                        session.username = 'Pengisi Buku Tamu';
+                        session.role = 'public';
+                    } else if (pageName.includes('monitor.html')) {
+                        session.username = 'System Monitor';
+                        session.role = 'admin';
+                    } else if (pageName.includes('login.html')) {
+                        session.username = 'Halaman Login';
+                        session.role = 'public';
+                    } else {
+                        const cleanName = pageName.replace('.html', '');
+                        session.username = `Public: ${cleanName.charAt(0).toUpperCase() + cleanName.slice(1)}`;
+                        session.role = 'public';
+                    }
+                }
                 cb(session);
             } else if (tries < 30) {
                 setTimeout(() => waitForSession(cb, tries + 1), 300);
             } else {
-                console.log('[SapaPresence] Tidak ada sesi aktif setelah 9 detik. Presence tracking dilewati.');
+                // Fallback jika resolver timeout: tetap daftarkan ke monitor
+                if (!session.username) {
+                    session.username = 'Pengunjung (Unresolved Subdomain)';
+                    session.role = 'public';
+                }
+                cb(session);
             }
         }
 
@@ -595,42 +636,45 @@
                     window._sapaPresenceChannel = channel;
                     window._sapaPresenceClient = client;
 
-                    // ── Force-Disconnect Listener ──────────────────────────────────
-                    try {
-                        const kickChannel = client.channel('sapatamu-kick-signal')
-                            .on('broadcast', { event: 'force-disconnect' }, (payload) => {
-                                const target = payload.payload && payload.payload.username;
-                                if (target && target === session.username) {
-                                    console.warn('[SapaGuard] Force-disconnect signal diterima dari Monitor!');
-                                    _handleForceDisconnect(client);
-                                }
-                            })
-                            .subscribe();
-
-                        window._sapaKickChannel = kickChannel;
-                    } catch(e) {
-                        console.error('[SapaPresence] Gagal setup kick listener:', e);
-                    }
-
-                    // Juga polling terminated_sessions sebagai fallback (setiap 15 detik)
-                    async function checkTerminated() {
+                    // Hanya daftarkan kick listener dan poller untuk role operasional (client/usher)
+                    if (session.role === 'client' || session.role === 'usher') {
+                        // ── Force-Disconnect Listener ──────────────────────────────────
                         try {
-                            const res = await fetch(
-                                `${SB_URL}/rest/v1/terminated_sessions?username=eq.${encodeURIComponent(session.username)}&limit=1`,
-                                { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
-                            );
-                            if (res.ok) {
-                                const rows = await res.json();
-                                if (rows && rows.length > 0) {
-                                    console.warn('[SapaGuard] Terdeteksi di terminated_sessions. Force logout!');
-                                    _handleForceDisconnect(client);
+                            const kickChannel = client.channel('sapatamu-kick-signal')
+                                .on('broadcast', { event: 'force-disconnect' }, (payload) => {
+                                    const target = payload.payload && payload.payload.username;
+                                    if (target && target === session.username) {
+                                        console.warn('[SapaGuard] Force-disconnect signal diterima dari Monitor!');
+                                        _handleForceDisconnect(client);
+                                    }
+                                })
+                                .subscribe();
+
+                            window._sapaKickChannel = kickChannel;
+                        } catch(e) {
+                            console.error('[SapaPresence] Gagal setup kick listener:', e);
+                        }
+
+                        // Juga polling terminated_sessions sebagai fallback (setiap 15 detik)
+                        async function checkTerminated() {
+                            try {
+                                const res = await fetch(
+                                    `${SB_URL}/rest/v1/terminated_sessions?username=eq.${encodeURIComponent(session.username)}&limit=1`,
+                                    { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+                                );
+                                if (res.ok) {
+                                    const rows = await res.json();
+                                    if (rows && rows.length > 0) {
+                                        console.warn('[SapaGuard] Terdeteksi di terminated_sessions. Force logout!');
+                                        _handleForceDisconnect(client);
+                                    }
                                 }
-                            }
-                        } catch(e) {}
+                            } catch(e) {}
+                        }
+                        // Cek pertama setelah 5 detik, lalu tiap 15 detik
+                        setTimeout(checkTerminated, 5000);
+                        window._sapaKickPoller = setInterval(checkTerminated, 15000);
                     }
-                    // Cek pertama setelah 5 detik, lalu tiap 15 detik
-                    setTimeout(checkTerminated, 5000);
-                    window._sapaKickPoller = setInterval(checkTerminated, 15000);
 
                 } catch(e) {
                     console.error('[SapaPresence] Gagal inisialisasi presence tracking:', e);

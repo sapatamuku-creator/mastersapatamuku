@@ -1070,7 +1070,9 @@
             'kiosk.html': '🖥️', 'formulir_tamu.html': '📋', 'wa_blast.html': '📲',
             'welcome.html': '📺', 'worker.html': '🖨️', 'angpao.html': '🧧',
             'luckydraw.html': '🎰', 'owner.html': '👑', 'profile.html': '👤',
-            'analytics.html': '📈', 'config_invitation.html': '🎨'
+            'analytics.html': '📈', 'config_invitation.html': '🎨',
+            'landing.html': '🌐', 'invitation.html': '✉️', 'undangan.html': '✉️',
+            'login.html': '🔑'
         };
 
         function renderUsers(state) {
@@ -1085,6 +1087,16 @@
                 return;
             }
 
+            const roleLabels = {
+                'usher': '🔑 Usher',
+                'client': '👤 Client',
+                'guest': '✉️ Tamu',
+                'display': '📺 Display',
+                'public': '🌐 Publik',
+                'admin': '👑 Admin',
+                'anonymous': '👤 Anonim'
+            };
+
             grid.innerHTML = entries.map((u, i) => {
                 const initial = (u.username || '?').charAt(0).toUpperCase();
                 const page = u.page || 'unknown';
@@ -1092,6 +1104,19 @@
                 const role = u.role || 'client';
                 const joined = u.joined_at ? new Date(u.joined_at).toLocaleTimeString('id-ID') : '-';
                 const isDemo = u.is_demo ? ' <span style="color:var(--accent-warning);font-size:10px">[DEMO]</span>' : '';
+                const roleLabel = roleLabels[role] || '👤 Client';
+
+                // Hanya izinkan kick untuk role operasional (client/usher)
+                const isKickable = role === 'client' || role === 'usher';
+                const actionButton = isKickable ? `
+                    <button class="btn-kick" onclick="forceDisconnectUser('${u.username}', this)" title="Putus koneksi user ini">
+                        <i class="fa-solid fa-plug-circle-xmark"></i> Kick
+                    </button>
+                ` : `
+                    <span style="font-size: 11px; opacity: 0.5; padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary);">
+                        <i class="fa-solid fa-lock" style="font-size: 10px;"></i> View Only
+                    </span>
+                `;
 
                 return `
                 <div class="user-row" id="user-row-${i}">
@@ -1100,13 +1125,11 @@
                         <div class="user-name">${u.username || 'unknown'}${isDemo}</div>
                         <div class="user-meta">
                             <span class="user-page-tag">${icon} ${page}</span>
-                            <span>${role === 'usher' ? '🔑 Usher' : '👤 Client'}</span>
+                            <span>${roleLabel}</span>
                             <span>⏱ ${joined}</span>
                         </div>
                     </div>
-                    <button class="btn-kick" onclick="forceDisconnectUser('${u.username}', this)" title="Putus koneksi user ini">
-                        <i class="fa-solid fa-plug-circle-xmark"></i> Kick
-                    </button>
+                    ${actionButton}
                 </div>`;
             }).join('');
         }
