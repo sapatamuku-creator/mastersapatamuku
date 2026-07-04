@@ -1250,6 +1250,25 @@
     }
     window.generateKodeUnik = generateKodeUnik;
 
+    function getCleanRsvpLink(rawLink) {
+        if (!rawLink) return "";
+        let cleaned = rawLink.trim();
+        const match = cleaned.match(/^(https?:\/\/)([^\/]+)(\/.*)$/i);
+        if (match) {
+            const protocol = match[1];
+            const host = match[2];
+            const path = match[3];
+            const hostParts = host.split('.');
+            if (hostParts.length >= 3) {
+                const sub = hostParts[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+                hostParts[0] = sub;
+                cleaned = protocol + hostParts.join('.') + path;
+            }
+        }
+        return cleaned;
+    }
+    window.getCleanRsvpLink = getCleanRsvpLink;
+
     // --- UTILITIES ---
     window.toggleFullScreen = function() {
         const wrapper = document.getElementById('sapatamu-master-wrapper');
@@ -1366,28 +1385,36 @@
             render(MASTER_LIST);
             toggleProcessing(false); // ← Spinner hilang SEKARANG, tidak tunggu metadata
 
-            // ===== STEP 2: Fetch METADATA di background (tidak blokir UI) =====
-            fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=*`, { headers: SB_HEADERS })
-                .then(r => r.ok ? r.json() : Promise.reject("meta fetch failed"))
-                .then(metaData => {
-                    if (!metaData || metaData.length === 0) return;
-                    const meta = metaData[0];
+            // ===== STEP 2: Fetch METADATA & SUBDOMAIN di background (tidak blokir UI) =====
+            Promise.all([
+                fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=*`, { headers: SB_HEADERS })
+                    .then(r => r.ok ? r.json() : Promise.reject("meta fetch failed")),
+                fetch(`${SB_URL}/rest/v1/client_public_profile?ssid=eq.${CURRENT_SS_ID}&select=subdomain`, { headers: SB_HEADERS })
+                    .then(r => r.ok ? r.json() : Promise.resolve([]))
+            ])
+            .then(([metaData, profileData]) => {
+                if (!metaData || metaData.length === 0) return;
+                const meta = metaData[0];
+                const profile = profileData && profileData.length > 0 ? profileData[0] : null;
 
-                    window.WA_TEMPLATE_DEFAULT = meta.format_pesan_wa || "";
-                    window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
-                    window.WA_HARI_TANGGAL = meta.hari_tanggal || "";
-                    window.WA_WAKTU_ACARA = meta.waktu_acara || "";
-                    
-                    let rsvpLink = meta.rsvp_link || "";
-                    if (!rsvpLink) {
-                        try {
-                            const session = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || "{}");
-                            if (session && session.username) {
-                                rsvpLink = `https://${session.username}.sapatamu.id/rsvp.html`;
-                            }
-                        } catch (e) {}
-                    }
-                    window.WA_RSVP_LINK = rsvpLink;
+                window.WA_TEMPLATE_DEFAULT = meta.format_pesan_wa || "";
+                window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
+                window.WA_HARI_TANGGAL = meta.hari_tanggal || "";
+                window.WA_WAKTU_ACARA = meta.waktu_acara || "";
+                
+                let rsvpLink = "";
+                if (profile && profile.subdomain) {
+                    const cleanSub = profile.subdomain.toLowerCase().trim();
+                    rsvpLink = `https://${cleanSub}.sapatamu.id/rsvp.html`;
+                }
+                if (!rsvpLink) {
+                    try {
+                        const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || "{}");
+                        const rawSub = sessionObj.subdomain || sessionObj.username || "";
+                        rsvpLink = getCleanRsvpLink(rawSub ? `https://${rawSub}.sapatamu.id/rsvp.html` : "");
+                    } catch (e) {}
+                }
+                window.WA_RSVP_LINK = rsvpLink;
 
                     document.getElementById('view-wedding-name').innerText = meta.nama_pengantin || "Event Guestbook";
                     document.getElementById('view-schedule').innerHTML = (meta.hari_tanggal || "") + "<br>" + (meta.waktu_acara || "");
@@ -1469,7 +1496,16 @@
                     window.WA_TEMPLATE_CUSTOM = result.eventMeta.template || ""; // template in eventMeta is C6
                     window.WA_HARI_TANGGAL = result.eventMeta.tanggal || "";
                     window.WA_WAKTU_ACARA = result.eventMeta.waktu || "";
-                    window.WA_RSVP_LINK = result.eventMeta.rsvpLink || "";
+                    
+                    let rsvpLink = getCleanRsvpLink(result.eventMeta.rsvpLink || "");
+                    if (!rsvpLink) {
+                        try {
+                            const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || "{}");
+                            const rawSub = sessionObj.subdomain || sessionObj.username || "";
+                            rsvpLink = getCleanRsvpLink(rawSub ? `https://${rawSub}.sapatamu.id/rsvp.html` : "");
+                        } catch (e) {}
+                    }
+                    window.WA_RSVP_LINK = rsvpLink;
 
                     document.getElementById('view-wedding-name').innerText = result.eventMeta.pengantin || "Event Guestbook";
                     document.getElementById('view-schedule').innerHTML = (result.eventMeta.tanggal || "") + "<br>" + (result.eventMeta.waktu || "");

@@ -723,6 +723,24 @@
 
             let CURRENT_SS_ID;
             let localData = { categories: [], tamu: [], liveUsage: 0, rsvpLink: "" };
+
+            function getCleanRsvpLink(rawLink) {
+                if (!rawLink) return "";
+                let cleaned = rawLink.trim();
+                const match = cleaned.match(/^(https?:\/\/)([^\/]+)(\/.*)$/i);
+                if (match) {
+                    const protocol = match[1];
+                    const host = match[2];
+                    const path = match[3];
+                    const hostParts = host.split('.');
+                    if (hostParts.length >= 3) {
+                        const sub = hostParts[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+                        hostParts[0] = sub;
+                        cleaned = protocol + hostParts.join('.') + path;
+                    }
+                }
+                return cleaned;
+            }
             let isProcessing = false;
             Object.defineProperty(window, 'isProcessing', {
                 get: () => isProcessing,
@@ -854,21 +872,45 @@
                     renderTable();
                     if (isInitial) toggleProcessing(false);
 
-                    // Ambil status koneksi & token Fonnte dari GAS di background
-                    fetch(SCRIPT_URL + "?action=getWAForm&ssId=" + CURRENT_SS_ID)
-                        .then(r => r.json())
-                        .then(gasData => {
-                            localData.categories = gasData.categories || [];
-                            localData.liveUsage = gasData.liveUsage || 0;
-                            localData.weddingTitle = gasData.weddingTitle || "";
-                            localData.masterToken = gasData.masterToken || "";
-                            localData.hariTanggal = gasData.hariTanggal || "";
-                            localData.lokasiAcara = gasData.lokasiAcara || "";
-                            localData.waktuAcara = gasData.waktuAcara || "";
-                            localData.linkInvitation = gasData.linkInvitation || "";
-                            localData.rsvpLink = gasData.rsvpLink || "";
-                            localData.defaultTemplate = gasData.defaultTemplate || "";
-                            localData.customTemplate = gasData.customTemplate || "";
+                    // Ambil status koneksi & token Fonnte dari GAS & Subdomain dari Supabase di background
+                    Promise.all([
+                        fetch(SCRIPT_URL + "?action=getWAForm&ssId=" + CURRENT_SS_ID).then(r => r.json()),
+                        fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/client_public_profile?ssid=eq.${CURRENT_SS_ID}&select=subdomain`, {
+                            headers: {
+                                "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
+                                "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u"
+                            }
+                        }).then(r => r.ok ? r.json() : Promise.resolve([]))
+                    ])
+                    .then(([gasData, profileData]) => {
+                        localData.categories = gasData.categories || [];
+                        localData.liveUsage = gasData.liveUsage || 0;
+                        localData.weddingTitle = gasData.weddingTitle || "";
+                        localData.masterToken = gasData.masterToken || "";
+                        localData.hariTanggal = gasData.hariTanggal || "";
+                        localData.lokasiAcara = gasData.lokasiAcara || "";
+                        localData.waktuAcara = gasData.waktuAcara || "";
+                        localData.linkInvitation = gasData.linkInvitation || "";
+                        localData.defaultTemplate = gasData.defaultTemplate || "";
+                        localData.customTemplate = gasData.customTemplate || "";
+
+                        const profile = profileData && profileData.length > 0 ? profileData[0] : null;
+                        let rsvpLink = "";
+                        if (profile && profile.subdomain) {
+                            const cleanSub = profile.subdomain.toLowerCase().trim();
+                            rsvpLink = `https://${cleanSub}.sapatamu.id/rsvp.html`;
+                        }
+                        if (!rsvpLink) {
+                            rsvpLink = getCleanRsvpLink(gasData.rsvpLink || "");
+                        }
+                        if (!rsvpLink) {
+                            try {
+                                const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || "{}");
+                                const rawSub = sessionObj.subdomain || sessionObj.username || "";
+                                rsvpLink = getCleanRsvpLink(rawSub ? `https://${rawSub}.sapatamu.id/rsvp.html` : "");
+                            } catch (e) {}
+                        }
+                        localData.rsvpLink = rsvpLink;
 
                             const statusEl = document.getElementById('connectionStatus');
                             if (statusEl) {
