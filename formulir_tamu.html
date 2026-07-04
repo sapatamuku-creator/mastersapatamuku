@@ -1269,6 +1269,29 @@
     }
     window.getCleanRsvpLink = getCleanRsvpLink;
 
+    function parseIndonesianDate(dateStr) {
+        if (!dateStr) return null;
+        const months = {
+            januari: '01', februari: '02', maret: '03', april: '04', mei: '05', juni: '06',
+            juli: '07', agustus: '08', september: '09', oktober: '10', november: '11', desember: '12',
+            jan: '01', feb: '02', mar: '03', apr: '04', mei: '05', jun: '06', jul: '07', agt: '08', sep: '09', okt: '10', nov: '11', des: '12'
+        };
+        
+        let cleanStr = dateStr.toLowerCase().replace(/^(sabtu|minggu|senin|selasa|rabu|kamis|jumat|jum'at)\b,?\s*/i, '').trim();
+        const match = cleanStr.match(/^(\d{1,2})\s+([a-zA-Z\']+)\s+(\d{4})$/);
+        if (match) {
+            const day = match[1].padStart(2, '0');
+            const monthName = match[2];
+            const year = match[3];
+            const monthNum = months[monthName];
+            if (monthNum) {
+                return `${year}-${monthNum}-${day}`;
+            }
+        }
+        return null;
+    }
+    window.parseIndonesianDate = parseIndonesianDate;
+
     // --- UTILITIES ---
     window.toggleFullScreen = function() {
         const wrapper = document.getElementById('sapatamu-master-wrapper');
@@ -1406,6 +1429,13 @@
                 window.WA_HARI_TANGGAL = meta.hari_tanggal || "";
                 window.WA_WAKTU_ACARA = meta.waktu_acara || "";
                 
+                if (meta.hari_tanggal) {
+                    const parsedDate = parseIndonesianDate(meta.hari_tanggal);
+                    if (parsedDate) {
+                        window.EVENT_DATE = parsedDate;
+                    }
+                }
+                
                 let rsvpLink = "";
                 if (profile && profile.subdomain) {
                     const cleanSub = profile.subdomain.toLowerCase().trim();
@@ -1500,6 +1530,13 @@
                     window.WA_TEMPLATE_CUSTOM = result.eventMeta.template || ""; // template in eventMeta is C6
                     window.WA_HARI_TANGGAL = result.eventMeta.tanggal || "";
                     window.WA_WAKTU_ACARA = result.eventMeta.waktu || "";
+                    
+                    if (result.eventMeta.tanggal) {
+                        const parsedDate = parseIndonesianDate(result.eventMeta.tanggal);
+                        if (parsedDate) {
+                            window.EVENT_DATE = parsedDate;
+                        }
+                    }
                     
                     let rsvpLink = getCleanRsvpLink(result.eventMeta.rsvpLink || "");
                     if (!rsvpLink) {

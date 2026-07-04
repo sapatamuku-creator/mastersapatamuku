@@ -428,6 +428,30 @@
     const WA_ENGINE_URL = SCRIPT_URL;
     const SELFIE_URL = SCRIPT_URL;
 
+    window.EVENT_DATE = "";
+
+    function parseIndonesianDate(dateStr) {
+        if (!dateStr) return null;
+        const months = {
+            januari: '01', februari: '02', maret: '03', april: '04', mei: '05', juni: '06',
+            juli: '07', agustus: '08', september: '09', oktober: '10', november: '11', desember: '12',
+            jan: '01', feb: '02', mar: '03', apr: '04', mei: '05', jun: '06', jul: '07', agt: '08', sep: '09', okt: '10', nov: '11', des: '12'
+        };
+        
+        let cleanStr = dateStr.toLowerCase().replace(/^(sabtu|minggu|senin|selasa|rabu|kamis|jumat|jum'at)\b,?\s*/i, '').trim();
+        const match = cleanStr.match(/^(\d{1,2})\s+([a-zA-Z\']+)\s+(\d{4})$/);
+        if (match) {
+            const day = match[1].padStart(2, '0');
+            const monthName = match[2];
+            const year = match[3];
+            const monthNum = months[monthName];
+            if (monthNum) {
+                return `${year}-${monthNum}-${day}`;
+            }
+        }
+        return null;
+    }
+
     function syncNavbar() {
         const links = document.querySelectorAll('.nav-link');
         links.forEach(link => {
@@ -695,6 +719,30 @@
                 }
             });
             const sbData = await res.json();
+            
+            if (sbData && sbData.length > 0 && sbData[0].event_date) {
+                window.EVENT_DATE = sbData[0].event_date;
+            } else {
+                try {
+                    const metaRes = await fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=hari_tanggal`, {
+                        headers: {
+                            "apikey": SB_KEY,
+                            "Authorization": "Bearer " + SB_KEY
+                        }
+                    });
+                    if (metaRes.ok) {
+                        const metaData = await metaRes.json();
+                        if (metaData && metaData.length > 0 && metaData[0].hari_tanggal) {
+                            const parsedDate = parseIndonesianDate(metaData[0].hari_tanggal);
+                            if (parsedDate) {
+                                window.EVENT_DATE = parsedDate;
+                            }
+                        }
+                    }
+                } catch (metaErr) {
+                    console.error("Failed to fetch event date from metadata_client:", metaErr);
+                }
+            }
             
             // Map data snake_case Supabase ke format camelCase frontend
             masterData = (sbData || []).map(item => ({
@@ -1058,7 +1106,8 @@
                     tanda_kasih: numericVal,
                     jam_datang: timeOnly,
                     sesi: "SESI 1",
-                    subdomain: CURRENT_SUBDOMAIN
+                    subdomain: CURRENT_SUBDOMAIN,
+                    event_date: window.EVENT_DATE || new Date().toISOString().split('T')[0]
                 };
 
                 const sbResponse = await fetch(`${SB_URL}/rest/v1/tamu`, {
