@@ -1165,14 +1165,19 @@
                     }
 
                     // Ambil semua nomor HP yang sudah sukses terkirim (mengandung centang hijau ✅)
+                    // Helper: normalisasi nomor WA → selalu diawali 62
+                    function normalizeWaNumber(raw) {
+                        let num = (raw || '').toString().trim().replace(/\D/g, '');
+                        if (!num) return '';
+                        if (num.startsWith('62')) return num;        // sudah benar
+                        if (num.startsWith('0'))  return '62' + num.substring(1); // 08xxx → 628xxx
+                        return '62' + num;                           // 8xxx / lainnya → 628xxx
+                    }
+
                     const sentNumbers = new Set(
                         localData.tamu
                             .filter(t => t.status && typeof t.status === 'string' && t.status.includes('✅'))
-                            .map(t => {
-                                let num = (t.nomor || "").toString().trim().replace(/\D/g, '');
-                                if (num.startsWith('0')) num = '62' + num.substring(1);
-                                return num;
-                            })
+                            .map(t => normalizeWaNumber(t.nomor))
                             .filter(Boolean)
                     );
 
@@ -1195,16 +1200,13 @@
                     const duplicates = [];
 
                     targets.forEach(t => {
-                        let rawNomor = (t.nomor || "").toString().trim().replace(/\D/g, '');
-                        if (rawNomor.startsWith('0')) {
-                            rawNomor = '62' + rawNomor.substring(1);
-                        }
+                        const rawNomor = normalizeWaNumber(t.nomor);
                         if (!rawNomor) {
                             // No number at all — skip silently
                             return;
                         }
-                        t.nomor = rawNomor; // update with cleaned number
-                        
+                        t.nomor = rawNomor; // update with cleaned+normalized number
+
                         // Jika nomor ini sudah pernah sukses terkirim (di baris lain) ATAU sudah pernah terlihat di batch ini
                         if (sentNumbers.has(rawNomor) || seenNumbers.has(rawNomor)) {
                             duplicates.push(t);
