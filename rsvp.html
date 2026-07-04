@@ -800,29 +800,30 @@
                 const finalPax = (attendanceStatus === 'hadir') ? paxCount : 0;
                 const senderName = guestName || "Tamu Undangan";
 
-                const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-                const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
-                const SB_HDRS = {
-                    "apikey": SB_KEY,
-                    "Authorization": "Bearer " + SB_KEY,
-                    "Content-Type": "application/json"
-                };
-
-                // 1. Kirim langsung ke Supabase (sangat cepat ~100-200ms)
-                const [sbRsvpRes, sbWishRes] = await Promise.all([
-                    fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${clientSsid}&kode=eq.${guestId}`, {
-                        method: "PATCH",
-                        headers: SB_HDRS,
-                        body: JSON.stringify({ rencana_hadir: finalPax })
-                    }),
-                    fetch(`${SB_URL}/rest/v1/wishes_queue`, {
+                // Kirim RSVP & Wish ke GAS secara paralel (tidak sequential agar lebih cepat)
+                // GAS yang akan menulis ke Spreadsheet dan memicu update ke Supabase secara sinkron.
+                const [rsvpRes, wishRes] = await Promise.all([
+                    fetch(window.SCRIPT_URL, {
                         method: "POST",
-                        headers: SB_HDRS,
-                        body: JSON.stringify({ ssid: clientSsid, nama: senderName, ucapan: wishesText })
-                    })
+                        body: JSON.stringify({
+                            action: "updateRsvp",
+                            ssId: clientSsid,
+                            guestId: guestId,
+                            pax: finalPax
+                        })
+                    }).then(r => r.json()),
+                    fetch(window.SCRIPT_URL, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            action: "addWish",
+                            ssId: clientSsid,
+                            name: senderName,
+                            text: wishesText
+                        })
+                    }).then(r => r.json())
                 ]);
 
-                if (sbRsvpRes.ok && sbWishRes.ok) {
+                if (rsvpRes.status === "success" && wishRes.status === "success") {
                     showToast("✅ RSVP & Ucapan berhasil disimpan!", "success");
                     
                     // Show success view
@@ -834,28 +835,6 @@
                     } else {
                         document.getElementById("successMsg").innerText = "Terima kasih atas konfirmasinya. Ucapan dan doa restu Anda telah kami terima dengan penuh syukur.";
                     }
-
-                    // 2. Jalankan update Google Sheet via GAS di background (non-blocking)
-                    fetch(window.SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify({
-                            action: "updateRsvp",
-                            ssId: clientSsid,
-                            guestId: guestId,
-                            pax: finalPax
-                        })
-                    }).catch(e => console.warn("Background GAS RSVP update failed:", e));
-
-                    fetch(window.SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify({
-                            action: "addWish",
-                            ssId: clientSsid,
-                            name: senderName,
-                            text: wishesText
-                        })
-                    }).catch(e => console.warn("Background GAS Wish update failed:", e));
-
                 } else {
                     showToast("❌ Gagal mengirim konfirmasi. Silakan coba lagi.", "error");
                     btnSubmit.disabled = false;
