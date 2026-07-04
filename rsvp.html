@@ -691,28 +691,25 @@
 
                 let loadedFromSupabase = false;
                 try {
+                    // Ambil langsung dari metadata_client Supabase (yang disinkronkan dari Sheet1 B1:B5)
                     const sbRes = await fetch(
-                        `${SB_URL}/rest/v1/config_invitation?ssid=eq.${clientSsid}&select=data&limit=1`,
+                        `${SB_URL}/rest/v1/metadata_client?ssid=eq.${clientSsid}&limit=1`,
                         { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
                     );
                     if (sbRes.ok) {
                         const rows = await sbRes.json();
-                        if (rows && rows.length > 0 && rows[0].data) {
-                            const config = rows[0].data;
-                            const groomName = config.groom?.name ? config.groom.name.split(" ")[0] : "";
-                            const brideName = config.bride?.name ? config.bride.name.split(" ")[0] : "";
-                            const coupleNames = (groomName && brideName) ? `${groomName} & ${brideName}` : "";
-
-                            document.getElementById("weddingTitle").innerText = coupleNames || config.headerLabel || "Acara Pernikahan";
-                            document.getElementById("weddingDate").innerText = config.ev1?.date || "-";
-                            document.getElementById("weddingTime").innerText = config.ev1?.time ? `${config.ev1.time} ${config.ev1.zone || 'WIB'}` : "-";
-                            document.getElementById("weddingVenue").innerText = config.ev1?.locName || "-";
+                        if (rows && rows.length > 0) {
+                            const m = rows[0];
+                            document.getElementById("weddingTitle").innerText = m.nama_pengantin || "Acara Pernikahan";
+                            document.getElementById("weddingDate").innerText = m.hari_tanggal || "-";
+                            document.getElementById("weddingTime").innerText = m.waktu_acara || "-";
+                            document.getElementById("weddingVenue").innerText = m.lokasi_acara || "-";
                             
                             // Transition to form
                             document.getElementById("loadingView").style.display = "none";
                             document.getElementById("formContent").style.display = "block";
                             loadedFromSupabase = true;
-                            console.log("✅ Wedding settings loaded from Supabase (fast path)");
+                            console.log("✅ Wedding settings loaded from Supabase metadata_client (fast path)");
                         }
                     }
                 } catch (e) {
