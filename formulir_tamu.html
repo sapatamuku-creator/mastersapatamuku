@@ -938,7 +938,11 @@
             </div>
             <div style="background: rgba(212, 175, 55, 0.1); padding: 20px; border-radius: 20px; margin-bottom: 25px; border: 1px solid rgba(212, 175, 55, 0.2);">
                 <div class="input-group" style="border-bottom-color: rgba(0,0,0,0.05);"><label>Nama Acara / Pengantin</label><input type="text" id="edit_ev_nama"></div>
-                <div class="input-group" style="border-bottom-color: rgba(0,0,0,0.05);"><label>Tanggal Acara</label><input type="text" id="edit_ev_date"></div>
+                <div class="input-group" style="border-bottom-color: rgba(0,0,0,0.05); position: relative;">
+                    <label>Tanggal Acara</label>
+                    <input type="text" id="edit_ev_date" readonly style="cursor: pointer;" placeholder="Pilih Tanggal Acara...">
+                    <input type="date" id="edit_ev_date_picker" style="position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; bottom: 0; right: 0;">
+                </div>
                 <div class="input-group" style="border-bottom-color: rgba(0,0,0,0.05);"><label>Lokasi</label><input type="text" id="edit_ev_loc"></div>
                 <div class="input-group" style="border-bottom-color: rgba(0,0,0,0.05);"><label>Waktu</label><input type="text" id="edit_ev_time"></div>
                 <div class="input-group" style="border-bottom-color: rgba(0,0,0,0.05);"><label>Link Undangan</label><input type="text" id="edit_ev_link"></div>
@@ -1291,6 +1295,25 @@
         return null;
     }
     window.parseIndonesianDate = parseIndonesianDate;
+
+    function formatIndonesianDate(isoDateStr) {
+        if (!isoDateStr) return "";
+        const parts = isoDateStr.split('-');
+        if (parts.length !== 3) return "";
+        const year = parts[0];
+        const month = parseInt(parts[1], 10);
+        const day = parseInt(parts[2], 10);
+        
+        const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+        const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        
+        const dateObj = new Date(year, month - 1, day);
+        const dayName = days[dateObj.getDay()];
+        const monthName = months[month - 1];
+        
+        return `${dayName}, ${day} ${monthName} ${year}`;
+    }
+    window.formatIndonesianDate = formatIndonesianDate;
 
     // --- UTILITIES ---
     window.toggleFullScreen = function() {
@@ -2497,6 +2520,15 @@
         const sessionObj = JSON.parse(sessionStr);
         document.getElementById('edit_user').value = sessionObj.username || "User";
         document.getElementById('edit_ssid').value = sessionObj.ssId;
+        
+        const currentDateText = document.getElementById('edit_ev_date').value;
+        const parsedDate = parseIndonesianDate(currentDateText);
+        if (parsedDate) {
+            document.getElementById('edit_ev_date_picker').value = parsedDate;
+        } else {
+            document.getElementById('edit_ev_date_picker').value = "";
+        }
+        
         document.getElementById('editModalOverlay').style.display = 'flex';
     };
 
@@ -3691,7 +3723,34 @@
         });
         scheduleCollapse(4000);
     }
+    function initEventDatePicker() {
+        const textInput = document.getElementById('edit_ev_date');
+        const pickerInput = document.getElementById('edit_ev_date_picker');
+        if (!textInput || !pickerInput) return;
+        
+        textInput.addEventListener('click', function() {
+            try {
+                pickerInput.showPicker();
+            } catch (e) {
+                pickerInput.click();
+            }
+        });
+        
+        pickerInput.addEventListener('change', function() {
+            const selectedVal = this.value; // e.g. "2026-07-04"
+            if (selectedVal) {
+                textInput.value = formatIndonesianDate(selectedVal);
+            }
+        });
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initDynamicIslandNav);
-    } else { initDynamicIslandNav(); }
+        document.addEventListener('DOMContentLoaded', () => {
+            initDynamicIslandNav();
+            initEventDatePicker();
+        });
+    } else {
+        initDynamicIslandNav();
+        initEventDatePicker();
+    }
 </script>
