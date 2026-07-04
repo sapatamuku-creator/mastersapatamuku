@@ -686,6 +686,42 @@
                     return;
                 }
 
+                const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+                const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
+                let loadedFromSupabase = false;
+                try {
+                    const sbRes = await fetch(
+                        `${SB_URL}/rest/v1/config_invitation?ssid=eq.${clientSsid}&select=data&limit=1`,
+                        { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                    );
+                    if (sbRes.ok) {
+                        const rows = await sbRes.json();
+                        if (rows && rows.length > 0 && rows[0].data) {
+                            const config = rows[0].data;
+                            const groomName = config.groom?.name ? config.groom.name.split(" ")[0] : "";
+                            const brideName = config.bride?.name ? config.bride.name.split(" ")[0] : "";
+                            const coupleNames = (groomName && brideName) ? `${groomName} & ${brideName}` : "";
+
+                            document.getElementById("weddingTitle").innerText = coupleNames || config.headerLabel || "Acara Pernikahan";
+                            document.getElementById("weddingDate").innerText = config.ev1?.date || "-";
+                            document.getElementById("weddingTime").innerText = config.ev1?.time ? `${config.ev1.time} ${config.ev1.zone || 'WIB'}` : "-";
+                            document.getElementById("weddingVenue").innerText = config.ev1?.locName || "-";
+                            
+                            // Transition to form
+                            document.getElementById("loadingView").style.display = "none";
+                            document.getElementById("formContent").style.display = "block";
+                            loadedFromSupabase = true;
+                            console.log("✅ Wedding settings loaded from Supabase (fast path)");
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Supabase load settings failed, trying GAS fallback:", e.message);
+                }
+
+                if (loadedFromSupabase) return;
+
+                // Fallback to GAS (slow path)
                 const response = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${clientSsid}&guestId=${guestId}`);
                 const res = await response.json();
 
@@ -764,31 +800,29 @@
                 const finalPax = (attendanceStatus === 'hadir') ? paxCount : 0;
                 const senderName = guestName || "Tamu Undangan";
 
-                // 1. Submit RSVP to GAS
-                const rsvpResponse = await fetch(window.SCRIPT_URL, {
-                    method: "POST",
-                    body: JSON.stringify({
-                        action: "updateRsvp",
-                        ssId: clientSsid,
-                        guestId: guestId,
-                        pax: finalPax
-                    })
-                });
-                const rsvpRes = await rsvpResponse.json();
+                const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+                const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+                const SB_HDRS = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                };
 
-                // 2. Submit Wish to GAS
-                const wishResponse = await fetch(window.SCRIPT_URL, {
-                    method: "POST",
-                    body: JSON.stringify({
-                        action: "addWish",
-                        ssId: clientSsid,
-                        name: senderName,
-                        text: wishesText
+                // 1. Kirim langsung ke Supabase (sangat cepat ~100-200ms)
+                const [sbRsvpRes, sbWishRes] = await Promise.all([
+                    fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${clientSsid}&kode=eq.${guestId}`, {
+                        method: "PATCH",
+                        headers: SB_HDRS,
+                        body: JSON.stringify({ rencana_hadir: finalPax })
+                    }),
+                    fetch(`${SB_URL}/rest/v1/wishes_queue`, {
+                        method: "POST",
+                        headers: SB_HDRS,
+                        body: JSON.stringify({ ssid: clientSsid, nama: senderName, ucapan: wishesText })
                     })
-                });
-                const wishRes = await wishResponse.json();
+                ]);
 
-                if (rsvpRes.status === "success" && wishRes.status === "success") {
+                if (sbRsvpRes.ok && sbWishRes.ok) {
                     showToast("✅ RSVP & Ucapan berhasil disimpan!", "success");
                     
                     // Show success view
@@ -800,6 +834,28 @@
                     } else {
                         document.getElementById("successMsg").innerText = "Terima kasih atas konfirmasinya. Ucapan dan doa restu Anda telah kami terima dengan penuh syukur.";
                     }
+
+                    // 2. Jalankan update Google Sheet via GAS di background (non-blocking)
+                    fetch(window.SCRIPT_URL, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            action: "updateRsvp",
+                            ssId: clientSsid,
+                            guestId: guestId,
+                            pax: finalPax
+                        })
+                    }).catch(e => console.warn("Background GAS RSVP update failed:", e));
+
+                    fetch(window.SCRIPT_URL, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            action: "addWish",
+                            ssId: clientSsid,
+                            name: senderName,
+                            text: wishesText
+                        })
+                    }).catch(e => console.warn("Background GAS Wish update failed:", e));
+
                 } else {
                     showToast("❌ Gagal mengirim konfirmasi. Silakan coba lagi.", "error");
                     btnSubmit.disabled = false;
