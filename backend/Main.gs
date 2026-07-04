@@ -149,7 +149,7 @@ function handleMainPost(payload) {
         break;
 
       case "markSent": 
-        result = markAsSent(ssId, payload.row); 
+        result = markAsSent(ssId, payload.row, payload.kodeUnik); 
         break;
       
       case "confirm_checkin": 
@@ -310,6 +310,15 @@ function saveGuestsToSheet(ssId, guests) {
     let addedCount = 0;
     const nowFormatted = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss");
     
+    // Ambil event date sekali untuk semua tamu
+    let eventDate = "";
+    try {
+      const eventDateRaw = sheet.getRange("B2").getValue();
+      eventDate = Utilities.formatDate(parseEventDate(eventDateRaw), "GMT+7", "yyyy-MM-dd");
+    } catch (dateErr) {
+      console.error("Failed to parse event date in saveGuestsToSheet: " + dateErr.toString());
+    }
+
     for (let i = 0; i < guests.length; i++) {
       const g = guests[i];
       const kode = String(g.kode || "").trim();
@@ -338,7 +347,29 @@ function saveGuestsToSheet(ssId, guests) {
         g.sesi || "-"
       ];
       sheet.appendRow(rowData);
+      const newRowIdx = sheet.getLastRow();
       addedCount++;
+      
+      // Update row index dan event_date kembali ke Supabase secara otomatis
+      try {
+        if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+          supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kode, {
+            method: "patch",
+            headers: {
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY,
+              "Content-Type": "application/json"
+            },
+            payload: JSON.stringify({
+              row: newRowIdx,
+              event_date: eventDate || null
+            }),
+            muteHttpExceptions: true
+          });
+        }
+      } catch (sbErr) {
+        console.error("Failed to sync row index to Supabase for kode " + kode + ": " + sbErr.toString());
+      }
     }
     
     return { status: "success", message: `Berhasil menambahkan ${addedCount} tamu ke Spreadsheet.` };
@@ -1034,29 +1065,52 @@ function submitGuestCollection(formData) {
   return { status: "success", rowID: lastRow, kode: kodeUnik, triggerBlast: true, personalLink: baseLink + "?id=" + kodeUnik + "&u=" + encodeURIComponent(formData.nama) };
 }
 
-function markAsSent(ssId, row) {
-  if (!row) return { status: "error" };
+function markAsSent(ssId, row, kodeUnik) {
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_DATA);
   const statusStr = "✅ " + Utilities.formatDate(new Date(), "GMT+7", "dd/MM HH:mm");
-  sheet.getRange(row, COL_STATUS_WA).setValue(statusStr);
+  
+  let targetRow = row;
+  let targetKode = kodeUnik;
+  
+  if (targetKode) {
+    // Cari row berdasarkan kode
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= START_ROW) {
+      const data = sheet.getRange(START_ROW, COL_KODE_UNIK, lastRow - (START_ROW - 1), 1).getValues();
+      for (let i = 0; i < data.length; i++) {
+        if (String(data[i][0]).trim() === String(targetKode).trim()) {
+          targetRow = i + START_ROW;
+          break;
+        }
+      }
+    }
+  } else if (targetRow) {
+    // Cari kode berdasarkan row
+    try {
+      targetKode = sheet.getRange(targetRow, COL_KODE_UNIK).getValue();
+    } catch (e) {
+      console.error("Failed to get kode from row: " + e.toString());
+    }
+  }
+  
+  if (!targetRow) return { status: "error", message: "Target row/kode tidak ditemukan" };
+  
+  sheet.getRange(targetRow, COL_STATUS_WA).setValue(statusStr);
   
   // SINKRONISASI KE SUPABASE SECARA OTOMATIS
   try {
-    if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
-      const kodeUnik = sheet.getRange(row, COL_KODE_UNIK).getValue();
-      if (kodeUnik) {
-        supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + kodeUnik, {
-          method: "patch",
-          headers: {
-            "apikey": SUPABASE_KEY,
-            "Authorization": "Bearer " + SUPABASE_KEY,
-            "Content-Type": "application/json"
-          },
-          payload: JSON.stringify({ status_wa: statusStr }),
-          muteHttpExceptions: true
-        });
-      }
+    if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL" && targetKode) {
+      supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + targetKode, {
+        method: "patch",
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": "Bearer " + SUPABASE_KEY,
+          "Content-Type": "application/json"
+        },
+        payload: JSON.stringify({ status_wa: statusStr }),
+        muteHttpExceptions: true
+      });
     }
   } catch (e) {
     console.error("Failed to sync markAsSent to Supabase: " + e.toString());

@@ -433,10 +433,34 @@
             return false;
         }
 
+        // 3b. Deteksi Proses Aktif (Mencegah idle timeout saat sinkronisasi/impor berjalan)
+        function hasActiveProcesses() {
+            if (window.isQueueRunning === true) return true;
+            if (window.isBusy === true) return true;
+            if (window.isProcessing === true) return true;
+            if (window.syncQueue && Array.isArray(window.syncQueue) && window.syncQueue.length > 0) return true;
+            
+            const loadingGlobal = document.getElementById('loading-global');
+            if (loadingGlobal && loadingGlobal.style.display !== 'none') return true;
+            
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement && loadingElement.style.display !== 'none') return true;
+            
+            const globalBlocker = document.getElementById('global-blocker');
+            if (globalBlocker) return true;
+            
+            return false;
+        }
+
         // 4. Pengaktifan Proteksi Idle (Seluruh halaman terikat aturan timeout)
         let idleTimeoutId;
 
         const handleIdleLogout = async () => {
+            if (hasActiveProcesses()) {
+                console.log("[SapaGuard] Sesi idle terdeteksi tetapi ada proses berjalan. Menunda logout...");
+                resetIdleTimer();
+                return;
+            }
             console.warn("[SapaGuard] Sesi idle terdeteksi. Membersihkan koneksi & memaksa logout...");
             await cleanupSupabaseConnections();
 

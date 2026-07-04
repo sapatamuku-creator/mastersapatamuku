@@ -724,6 +724,11 @@
             let CURRENT_SS_ID;
             let localData = { categories: [], tamu: [], liveUsage: 0, rsvpLink: "" };
             let isProcessing = false;
+            Object.defineProperty(window, 'isProcessing', {
+                get: () => isProcessing,
+                set: (val) => { isProcessing = val; },
+                configurable: true
+            });
 
             window.initBlast = function () {
                 if (window.SAPATAMU_RESOLVED) {
@@ -923,28 +928,28 @@
             function getStatusColor(status) {
                 if (!status || typeof status !== 'string') return 'var(--primary)';
                 if (status.includes('✅')) return 'var(--success)';
-                if (status.includes('⚠️') || status.toLowerCase().includes('duplikasi')) return 'var(--warning)';
+                if (status.includes('⚠️ ') || status.toLowerCase().includes('duplikasi')) return 'var(--warning)';
                 if (status.includes('❌') || status.toLowerCase().includes('gagal')) return '#DC2626';
                 return 'var(--primary)';
             }
 
             function renderTable() {
                 const tbody = document.getElementById('tamuTable');
-                const pihakMap = {
-                    'PENGANTIN PRIA': 'Pria',
-                    'PENGANTIN WANITA': 'Wanita',
-                    'KELUARGA AYAH PENGANTIN PRIA': 'Keluarga CPP',
-                    'KELUARGA IBU PENGANTIN PRIA': 'Keluarga CPP',
-                    'KELUARGA AYAH PENGANTIN WANITA': 'Keluarga CPW',
-                    'KELUARGA IBU PENGANTIN WANITA': 'Keluarga CPW'
-                };
+                const selectedKat = document.getElementById('kategoriSelect').value.trim();
 
-                tbody.innerHTML = localData.tamu.length ? localData.tamu.map(t => {
+                let filteredTamu = localData.tamu;
+                if (selectedKat) {
+                    filteredTamu = localData.tamu.filter(t => 
+                        String(t.pihak || '').toUpperCase().trim() === selectedKat.toUpperCase().trim()
+                    );
+                }
+
+                tbody.innerHTML = filteredTamu.length ? filteredTamu.map(t => {
                     const statusColor = getStatusColor(t.status);
                     const isDuplicate = t.status && typeof t.status === 'string' &&
-                        (t.status.includes('⚠️') || t.status.toLowerCase().includes('duplikasi'));
+                        (t.status.includes('⚠️ ') || t.status.toLowerCase().includes('duplikasi'));
 
-                    const pihakLabel = pihakMap[String(t.pihak || '').toUpperCase().trim()] || t.pihak || '-';
+                    const pihakLabel = t.pihak || '-';
 
                     return `
             <tr style="${isDuplicate ? 'background: var(--warning-bg);' : ''}">
@@ -956,7 +961,7 @@
                 </td>
             </tr>`;
                 }).join('') : '<tr><td colspan="4" style="text-align:center; padding: 50px;">Data Tidak Tersedia</td></tr>';
-                document.getElementById('countTamu').innerText = localData.tamu.length;
+                document.getElementById('countTamu').innerText = filteredTamu.length;
             }
 
             window.updateClientView = function () {
@@ -985,6 +990,7 @@
                     btnBlast.disabled = true;
                     btnBlast.className = "st-btn btn-disabled";
                 }
+                renderTable();
             };
 
             window.saveMasterToken = async function () {

@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mulai Pakai SapaTamu.ku — Daftar Sekarang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="subdomain_resolver.js?v=3.4"></script>
+    <!-- Midtrans Snap JS Production -->
+    <script src="https://app.midtrans.com/snap/snap.js" data-client-key="Mid-client-6PvcKPvkHyWGLN8l"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #E07B7B; /* Rose */
+            --bg: #FFF9F5;      /* Warm White */
+            --card: #FFFFFF;
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --border: #F0E6DE;
+            --input-bg: #FDF8F4;
+            --gold: #C8962E;
+            --success: #10B981;
+        }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main);
+        }
+        .step-header.active div {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+        .step-header.active span {
+            color: var(--primary);
+            font-weight: 700;
+        }
+        .sapatamu-input { 
+            width: 100%; padding: 14px 18px; border: 1.5px solid var(--border); 
+            border-radius: 12px; font-size: 16px; box-sizing: border-box; transition: all 0.2s;
+            background: var(--input-bg);
+        }
+        .sapatamu-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.15); }
+        .readonly-input { background: #f1f5f9; cursor: not-allowed; }
+        
+        .sapatamu-btn { 
+            width: 100%; padding: 16px; background: var(--primary); color: white; 
+            border: none; border-radius: 12px; font-weight: 700; font-size: 16px;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px;
+            transition: all 0.2s;
+        }
+        .sapatamu-btn:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+        .sapatamu-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .success-btn { background: #10B981; }
+
+        /* CUSTOM NOTIFICATION MODAL */
+        #sapa-notify-modal { position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999; }
+        .sapa-modal-content { background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .sapa-modal-title { font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px; }
+        .sapa-modal-msg { font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px; }
+        
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .loader { 
+            width: 18px; height: 18px; border: 3px solid rgba(255, 255, 255, 0.3); 
+            border-bottom-color: #fff; border-radius: 50%; display: none; 
+            animation: rotation 0.8s linear infinite; 
+        }
+        @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Card Pricing & Selection */
+        .pricing-category-btn {
+            padding: 10px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 700;
+            transition: all 0.2s;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            background: white;
+            color: var(--text-muted);
+        }
+        .pricing-category-btn.active {
+            background: var(--text-main);
+            color: white;
+            border-color: var(--text-main);
+        }
+
+        .pricing-card {
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            background: white;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        .pricing-card.selected {
+            border: 2px solid var(--primary) !important;
+            background: #FFF9F6;
+            box-shadow: 0 10px 25px rgba(224, 123, 123, 0.1);
+        }
+        .pricing-card.selected::after {
+        content: "✔ Pilihan";
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--primary);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        /* -------------------------------------
+           ANIMASI BACKGROUND FLOATING HEARTS
+        ---------------------------------------- */
+        .dynamic-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+            background: linear-gradient(135deg, #FFF9F5 0%, #FDF2F2 100%);
+            margin: 0; padding: 0;
+        }
+
+        .dynamic-bg li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 30px;
+            height: 30px;
+            background: transparent;
+            animation: floatDiagonal 20s linear infinite;
+            bottom: -150px;
+        }
+
+        .dynamic-bg li::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E07B7B' opacity='0.2'%3E%3Cpath d='M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            animation: pulseHeart 4s ease-in-out infinite alternate;
+        }
+
+        .dynamic-bg li:nth-child(1) { left: -10%; width: 40px; height: 40px; animation-delay: 0s; animation-duration: 25s; }
+        .dynamic-bg li:nth-child(2) { left: 5%; width: 20px; height: 20px; animation-delay: 2s; animation-duration: 17s; }
+        .dynamic-bg li:nth-child(3) { left: 15%; width: 60px; height: 60px; animation-delay: 4s; animation-duration: 22s; }
+        .dynamic-bg li:nth-child(4) { left: 25%; width: 35px; height: 35px; animation-delay: 0s; animation-duration: 18s; }
+        .dynamic-bg li:nth-child(5) { left: 40%; width: 25px; height: 25px; animation-delay: 6s; animation-duration: 20s; }
+        .dynamic-bg li:nth-child(6) { left: 55%; width: 50px; height: 50px; animation-delay: 3s; animation-duration: 24s; }
+        .dynamic-bg li:nth-child(7) { left: -20%; width: 30px; height: 30px; animation-delay: 8s; animation-duration: 19s; }
+        .dynamic-bg li:nth-child(8) { left: -5%; width: 45px; height: 45px; animation-delay: 10s; animation-duration: 28s; }
+        .dynamic-bg li:nth-child(9) { left: 45%; width: 20px; height: 20px; animation-delay: 1s; animation-duration: 15s; }
+        .dynamic-bg li:nth-child(10){ left: 10%; width: 55px; height: 55px; animation-delay: 7s; animation-duration: 26s; }
+
+        @keyframes floatDiagonal {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(40vw, -120vh) rotate(260deg); opacity: 0; }
+        }
+
+        @keyframes pulseHeart {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
+        }
+    </style>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body class="bg-[#FFF9F5] min-h-screen py-10 px-4">
+
+    <!-- Animasi Background -->
+    <ul class="dynamic-bg">
+        <li></li><li></li><li></li><li></li><li></li>
+        <li></li><li></li><li></li><li></li><li></li>
+    </ul>
+
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal">
+        <div class="sapa-modal-content">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
+            <h2 id="notify-title" class="sapa-modal-title">Pesan</h2>
+            <p id="notify-msg" class="sapa-modal-msg">Pesan notifikasi akan muncul di sini.</p>
+            <button onclick="closeSapaModal()" class="sapatamu-btn" style="padding: 15px; border-radius: 15px; font-size: 11px; margin-top: 0; background: var(--text-main); width: 100%; border: none; color: white;">MENGERTI</button>
+        </div>
+    </div>
+
+    <!-- MAIN WRAPPER -->
+    <div class="max-w-[480px] mx-auto bg-white/85 backdrop-blur-xl relative z-10 rounded-3xl shadow-xl p-8 border border-[#F0E6DE]">
+        
+        <!-- STEP INDICATOR -->
+        <div class="flex items-center justify-between mb-8 text-[10px] sm:text-xs font-semibold text-gray-400">
+            <div class="flex flex-col items-center flex-1 step-header active" id="header-step-1">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 border-primary text-primary mb-1 font-bold">1</div>
+                <span>Mulai</span>
+            </div>
+            <div class="w-4 h-0.5 bg-gray-200"></div>
+            <div class="flex flex-col items-center flex-1 step-header" id="header-step-2">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 border-gray-200 text-gray-400 mb-1 font-bold">2</div>
+                <span>Akun</span>
+            </div>
+            <div class="w-4 h-0.5 bg-gray-200"></div>
+            <div class="flex flex-col items-center flex-1 step-header" id="header-step-2-5">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 border-gray-200 text-gray-400 mb-1 font-bold">2.5</div>
+                <span>Detail</span>
+            </div>
+            <div class="w-4 h-0.5 bg-gray-200"></div>
+            <div class="flex flex-col items-center flex-1 step-header" id="header-step-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 border-gray-200 text-gray-400 mb-1 font-bold">3</div>
+                <span>Paket</span>
+            </div>
+            <div class="w-4 h-0.5 bg-gray-200"></div>
+            <div class="flex flex-col items-center flex-1 step-header" id="header-step-4">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 border-gray-200 text-gray-400 mb-1 font-bold">4</div>
+                <span>Bayar</span>
+            </div>
+        </div>
+
+        <!-- ==============================================
+             STEP 1: MULAI (IDENTITAS & DATABASE)
+             ============================================== -->
+        <div id="panel-step-1" class="step-panel block">
+            <h2 class="text-2xl font-extrabold text-[#4A3F35] mb-2">Mulai Persiapkan Hari Istimewa Anda 💍</h2>
+            <p class="text-sm text-gray-500 mb-6">Isi detail acara Anda — cukup butuh 2 menit!</p>
+
+            <div class="form-group mb-5">
+                <label class="block text-sm font-bold mb-2">Kategori Acara</label>
+                <select id="reg_category" class="sapatamu-input" onchange="updateCategoryTheme()" style="background-color: #fff; cursor: pointer; border: 1.5px solid #F0E6DE;">
+                    <option value="wedding">&#128141; Wedding (Pernikahan)</option>
+                    <option value="birthday">&#127874; Birthday (Ulang Tahun)</option>
+                    <option value="anniversary">✨ Anniversary (Hari Jadi)</option>
+                    <option value="corporate">&#127962; Corporate (Formal / Meeting)</option>
+                    <option value="gathering">&#129309; Gathering (Reuni / Komunitas)</option>
+                </select>
+            </div>
+
+            <!-- Double Name (Wedding) -->
+            <div id="group_double_name" class="block mb-5">
+                <label class="block text-sm font-bold mb-2">Informasi Mempelai</label>
+                <div class="flex gap-3 items-center">
+                    <input type="text" id="reg_pria" class="sapatamu-input" placeholder="Mita Miftahul" oninput="syncWeddingNames()">
+                    <span class="font-extrabold text-[#E07B7B]">&</span>
+                    <input type="text" id="reg_wanita" class="sapatamu-input" placeholder="Gildan Novianto" oninput="syncWeddingNames()">
+                </div>
+            </div>
+
+            <!-- Single Name (Other) -->
+            <div id="group_single_name" class="hidden mb-5">
+                <label id="lbl_client_name" class="block text-sm font-bold mb-2">Nama Klien</label>
+                <input type="text" id="reg_user" class="sapatamu-input" placeholder="Clara's Birthday Party" oninput="autoSuggestSubdomain(this.value)">
+            </div>
+
+            <!-- Judul Undangan -->
+            <div class="form-group mb-5">
+                <label class="block text-sm font-bold mb-2">Judul Undangan (Otomatis)</label>
+                <input type="text" id="ev_title" class="sapatamu-input readonly-input" placeholder="Nama Undangan" readonly>
+            </div>
+
+            <!-- Subdomain -->
+            <div class="form-group mb-5">
+                <label class="block text-sm font-bold mb-2">
+                    Subdomain Undangan Website
+                    <span id="sub-status" class="ml-2 text-xs font-bold"></span>
+                </label>
+                <div class="relative">
+                    <input type="text" id="reg_subdomain" class="sapatamu-input readonly-input" placeholder="mitadangildan" readonly style="padding-right: 140px;">
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+                        <span id="sub-spinner" class="hidden w-3.5 h-3.5 border-2 border-[#E07B7B] border-b-transparent rounded-full animate-spin"></span>
+                        <span class="font-bold text-xs text-gray-400">.sapatamu.id</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Tanggal Acara -->
+            <div class="form-group mb-5">
+                <label class="block text-sm font-bold mb-2">Tanggal Acara <span class="text-red-500">*</span></label>
+                <input type="date" id="ev_date_picker" class="sapatamu-input" onchange="buildDateFromPicker()" style="cursor: pointer;">
+                <input type="hidden" id="ev_date_main" value="">
+                <input type="hidden" id="reg_ssid" value="">
+                <div id="ev_date_display" class="hidden mt-2 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-700"></div>
+                <div id="sheet-name-preview" class="hidden mt-2 p-3 bg-green-50 border border-green-200 rounded-xl text-xs font-bold text-green-700"></div>
+            </div>
+
+            <!-- Tahap Persiapan -->
+            <div class="form-group mb-6">
+                <label class="block text-sm font-bold mb-2">Sudah sejauh mana persiapan yang dilakukan?</label>
+                <select id="reg_preparation" class="sapatamu-input" style="background-color: #fff; cursor: pointer; border: 1.5px solid #F0E6DE;">
+                    <option value="Belum lamaran">Belum lamaran</option>
+                    <option value="Sudah lamaran & menentukan tanggal">Sudah lamaran &amp; menentukan tanggal</option>
+                    <option value="Mulai memesan vendor-vendor">Mulai memesan vendor-vendor</option>
+                    <option value="Persiapan hampir selesai">Persiapan hampir selesai</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button onclick="goToStep2FromStep1()" id="btn_step1_next" class="sapatamu-btn success-btn" disabled>
+            <span>Lanjut ke Step 2 &#8594;</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ==============================================
+             STEP 2: INFORMASI AKUN & VERIFIKASI OTP
+             ============================================== -->
+        <div id="panel-step-2" class="step-panel hidden">
+            <h2 class="text-2xl font-extrabold text-[#4A3F35] mb-2">Buat Akun SapaTamu.ku</h2>
+            <p class="text-sm text-gray-500 mb-6">Masukkan email dan password untuk akses dashboard Anda.</p>
+
+            <div class="form-group mb-5">
+                <label class="block text-sm font-bold mb-2">Alamat Email</label>
+                <input type="email" id="reg_email" class="sapatamu-input" placeholder="contoh@gmail.com">
+            </div>
+
+            <div class="form-group mb-5">
+                <label class="block text-sm font-bold mb-2">Nomor WhatsApp (Diawali 628...)</label>
+                <input type="text" id="reg_wa" class="sapatamu-input" placeholder="628123456789">
+            </div>
+
+            <div class="form-group mb-6">
+                <label class="block text-sm font-bold mb-2">Password Akun</label>
+                <div class="relative">
+                    <input type="password" id="reg_pass" class="sapatamu-input" style="padding-right: 48px;" placeholder="">
+                    <button type="button" onclick="togglePasswordVisibility('reg_pass', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pemilihan Metode OTP -->
+            <div class="form-group mb-6">
+                <label class="block text-sm font-bold mb-2">Kirim Kode OTP via:</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="otp_channel" value="wa" class="w-4 h-4 text-[#E07B7B]" checked>
+                        <span class="text-sm font-bold text-gray-700">WhatsApp</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="otp_channel" value="email" class="w-4 h-4 text-[#E07B7B]">
+                        <span class="text-sm font-bold text-gray-700">Email</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- OTP Input Section (Hidden initially) -->
+            <div id="otp-section" class="hidden mb-6 p-5 bg-[#FFF9F6] border border-[#F0E6DE] rounded-2xl">
+                <label id="lbl_otp_input" class="block text-sm font-bold text-center mb-3">Masukkan 6 Digit OTP</label>
+                <div class="flex justify-center gap-2 mb-3">
+                    <input type="text" maxlength="6" id="otp_input" class="sapatamu-input text-center text-xl font-bold tracking-widest max-w-[200px]" placeholder="123456">
+                </div>
+                <div class="text-center text-xs font-semibold text-gray-500 mb-2">
+                    Tidak menerima kode OTP? <span id="otp-timer" class="text-red-500 font-bold">02:00</span>
+                </div>
+                <button onclick="sendOTPFonnte()" id="btn_resend_otp" class="text-xs font-bold text-[#E07B7B] block mx-auto hover:underline hidden">Kirim Ulang OTP</button>
+        </div>
+
+        <!-- T&C Checkbox -->
+        <div class="form-group mb-6">
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="reg_tnc" class="mt-1 w-4 h-4 text-[#E07B7B] border-gray-300 rounded focus:ring-[#E07B7B]">
+                <span class="text-xs text-gray-500 leading-relaxed">
+                    Saya telah membaca dan menyetujui <a href="terms.html" class="text-[#E07B7B] font-bold hover:underline" target="_blank">Syarat & Ketentuan SapaTamu.ku</a> serta <a href="terms-payment.html" class="text-[#E07B7B] font-bold hover:underline" target="_blank">Kebijakan Pembayaran Midtrans</a>.
+                </span>
+            </label>
+        </div>
+
+        <div class="flex gap-3">
+                <button onclick="prevStep(1)" class="sapatamu-btn bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold flex-1">
+                    Kembali
+                </button>
+                <button onclick="triggerOTPSending()" id="btn_send_otp" class="sapatamu-btn flex-1">
+                    Kirim Kode OTP
+                </button>
+                <button onclick="verifyOTPAndProceed()" id="btn_verify_otp" class="sapatamu-btn success-btn flex-1 hidden">
+                    Verifikasi OTP
+                </button>
+            </div>
+        </div>
+
+        <!-- ==============================================
+             STEP 2.5: DETAIL ACARA
+             ============================================== -->
+        <div id="panel-step-2-5" class="step-panel hidden">
+            <h2 class="text-2xl font-extrabold text-[#4A3F35] mb-2">Detail Acara</h2>
+            <p class="text-sm text-gray-500 mb-6">Belum yakin semua detailnya? Isi perkiraan terbaik Anda dulu, bisa diubah nanti.</p>
+
+            <div class="form-group mb-5">
+                <label class="block text-sm font-bold mb-2">Di mana lokasi pernikahan diselenggarakan?</label>
+                <div class="relative w-full mb-3">
+                    <input type="text" id="event_address" class="sapatamu-input" placeholder="Nama Jalan, Nama Gedung, Kota">
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="alamat_belum_tahu" onchange="toggleAlamatBelumTahu(this)">
+                    <label for="alamat_belum_tahu" class="text-xs font-bold text-gray-500 cursor-pointer">Masih belum tau</label>
+                </div>
+            </div>
+
+            <div class="form-group mb-5">
+                <label class="block text-sm font-bold mb-2">Gedung / Tempat Acara</label>
+                <input type="text" id="event_venue" class="sapatamu-input" placeholder="Gedung Sasana Kriya">
+            </div>
+
+            <div class="form-group mb-5">
+                <label class="block text-sm font-bold mb-2">Kota</label>
+                <input type="text" id="event_city" class="sapatamu-input" placeholder="Jakarta Timur">
+            </div>
+
+            <div class="form-group mb-6">
+                <label class="block text-sm font-bold mb-2">Berapa jumlah tamu yang rencananya ingin diundang?</label>
+                <input type="number" id="event_guests" class="sapatamu-input mb-3" placeholder="Masukkan jumlah tamu">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="guests_belum_tahu" onchange="toggleGuestsBelumTahu(this)">
+                    <label for="guests_belum_tahu" class="text-xs font-bold text-gray-500 cursor-pointer">Masih belum tau</label>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="prevStep(2)" class="sapatamu-btn bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold flex-1">
+                    Kembali
+                </button>
+                <button onclick="submitDetailAcara()" id="btn_submit_details" class="sapatamu-btn flex-1">
+                    Lanjut
+                </button>
+            </div>
+        </div>
+
+        <!-- ==============================================
+             STEP 3: PILIHAN PAKET & CEK SLOT TANGGAL
+             ============================================== -->
+        <div id="panel-step-3" class="step-panel hidden">
+            <h2 class="text-2xl font-extrabold text-[#4A3F35] text-center mb-2">Pilih Paket yang Pas untuk Anda</h2>
+            <p class="text-sm text-gray-500 text-center mb-6">Investasi sekali untuk kenangan hari istimewa yang sempurna</p>
+
+            <!-- Kategori Filter -->
+            <div class="flex justify-center gap-2 mb-6">
+                <div class="pricing-category-btn active" id="btn-cat-e-inv" onclick="filterPricingCategory('e-inv')">E-INVITATION</div>
+                <div class="pricing-category-btn" id="btn-cat-guestbook" onclick="filterPricingCategory('guestbook')">DIGITAL GUESTBOOK</div>
+                <div class="pricing-category-btn" id="btn-cat-allin" onclick="filterPricingCategory('allin')">ALL-IN COLLABORATION</div>
+            </div>
+
+            <!-- SLOT AVAILABILITY WIDGET (Conditional) -->
+            <div id="slot-checker-widget" class="hidden mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center">
+                <div class="text-xs font-bold text-[#8C7560] mb-1">📅 Ketersediaan Tanggal Acara:</div>
+                <div id="slot-checker-date" class="text-sm font-extrabold text-gray-800 mb-2">📅 Pilih Tanggal Dulu</div>
+                <div id="slot-checker-status" class="inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-gray-200 text-gray-500">Checking Slot...</div>
+            </div>
+
+            <!-- CARDS GRID -->
+            <div class="flex flex-col gap-4 mb-6">
+                <!-- E-Invitation Cards -->
+                <div class="pricing-group e-inv block">
+                    <div class="pricing-card" onclick="selectPricing('E-Inv Standard', 100000)">
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Tipe Standard</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 100.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; RSVP &amp; Google Maps</li>
+                            <li>&#10003; Background Music</li>
+                            <li>&#10003; Galeri Maks. 6 Foto</li>
+                            <li>&#10003; Masa Aktif 6 Bulan</li>
+                        </ul>
+                    </div>
+                    <div class="pricing-card mt-3 selected" onclick="selectPricing('E-Inv Premium', 250000)">
+                        <div class="absolute -top-3 left-6 bg-[#E07B7B] text-white text-[9px] font-extrabold px-2.5 py-0.5 rounded-full">POPULER</div>
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Tipe Premium</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 250.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Premium Template Collection</li>
+                            <li>&#10003; Unlimited Photo Gallery &amp; Video Background</li>
+                            <li>&#10003; Masa Aktif Selamanya</li>
+                            <li>&#10003; Terintegrasi 250 WA Blast</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Digital Guestbook Cards -->
+                <div class="pricing-group guestbook hidden">
+                    <div class="pricing-card" onclick="selectPricing('Bronze Guestbook', 2500000)">
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Paket Bronze</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 2.500.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Kapasitas &lt;250 Tamu</li>
+                            <li>&#10003; Daftar Tamu Mandiri &amp; Check-In Real-Time</li>
+                            <li>&#10003; 1 Kiosk QR Scanner</li>
+                            <li>&#10003; 1 Tim Usher On-site</li>
+                        </ul>
+                    </div>
+                    <div class="pricing-card mt-3" onclick="selectPricing('Silver Guestbook', 3500000)">
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Paket Silver</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 3.500.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Kapasitas 250-500 Tamu</li>
+                            <li>&#10003; Cetak Label Nama Otomatis</li>
+                            <li>&#10003; 1 Kiosk QR Scanner + 2 Tim Usher</li>
+                            <li>&#10003; Welcome Sign di Layar TV (Sambutan Otomatis)</li>
+                        </ul>
+                    </div>
+                    <div class="pricing-card mt-3" onclick="selectPricing('Gold Guestbook', 4500000)">
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Paket Gold</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 4.500.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Kapasitas &gt;500 Tamu</li>
+                            <li>&#10003; 2 Kiosk QR Scanner + 2+1 Tim Usher VIP</li>
+                            <li>&#10003; AI Pencari Foto Wajah (Alface Recognition)</li>
+                            <li>&#10003; Dashboard Grafik Kehadiran Real-time</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- All-in Collaboration Cards -->
+                <div class="pricing-group allin hidden">
+                    <div class="pricing-card" onclick="selectPricing('Exclusive Collaboration', 7500000)">
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Exclusive Package</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 7.500.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Undangan Tipe Premium + Guestbook Paket Silver</li>
+                            <li>&#10003; Layanan Foto &amp; Video Premium Knowhere Studio</li>
+                            <li>&#10003; On-site Team: 3 Orang Usher Profesional</li>
+                        </ul>
+                    </div>
+                    <div class="pricing-card mt-3" onclick="selectPricing('Platinum Collaboration', 10500000)">
+                        <div class="font-extrabold text-lg text-gray-800 mb-1">Platinum Package</div>
+                        <div class="text-2xl font-extrabold text-[#E07B7B] mb-2">Rp 10.500.000</div>
+                        <ul class="text-xs text-gray-500 space-y-1 mt-3">
+                            <li>&#10003; Undangan Tipe Premium + Guestbook Paket Gold</li>
+                            <li>&#10003; Layanan Foto &amp; Video Paket Platinum Knowhere Studio</li>
+                            <li>&#10003; On-site Team: 4 + 2 VIP Usher</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden input for selected pricing -->
+            <input type="hidden" id="final_package_name" value="E-Inv Premium">
+            <input type="hidden" id="final_package_price" value="250000">
+
+            <div class="flex gap-3">
+                <button onclick="prevStep('2-5')" class="sapatamu-btn bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold flex-1">
+                    Kembali
+                </button>
+                <button onclick="submitPricingSelection()" id="btn_pricing_next" class="sapatamu-btn flex-1">
+                    Lanjut
+                </button>
+            </div>
+        </div>
+
+        <!-- ==============================================
+             STEP 4: PEMBAYARAN & RINCIAN PESANAN
+             ============================================== -->
+        <div id="panel-step-4" class="step-panel hidden">
+
+            <!-- SUB-PANEL A: Rincian & Bayar -->
+            <div id="subpanel-checkout" class="block">
+                <h2 class="text-2xl font-extrabold text-[#4A3F35] mb-2">Hampir Selesai! Cek Pesanan Anda</h2>
+                <p class="text-sm text-gray-500 mb-6">Pastikan detail pesanan sudah sesuai sebelum bayar.</p>
+
+                <div class="bg-gray-50 border border-gray-100 rounded-2xl p-5 mb-6 text-sm">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-gray-400 font-bold">Produk / Layanan</span>
+                        <span class="text-gray-800 font-bold text-right" id="checkout-product-name">E-Inv Premium</span>
+                    </div>
+                    <hr class="border-gray-200 my-3">
+                    <div class="flex justify-between items-center mb-3 text-xs">
+                        <span class="text-gray-400">Harga Paket</span>
+                        <span class="text-gray-600 font-bold" id="checkout-base-price">Rp 250.000</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-3 text-xs">
+                        <span class="text-gray-400">Kode Voucher / Referral</span>
+                        <span class="text-green-600 font-bold">Rp 0</span>
+                    </div>
+                    <hr class="border-gray-200 my-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-800 font-bold">Total Pembayaran</span>
+                        <span class="text-[#E07B7B] font-extrabold text-lg" id="checkout-total-price">Rp 250.000</span>
+                    </div>
+                </div>
+
+                <!-- Voucher & Referral (Visual Only) -->
+                <div class="form-group mb-4">
+                    <label class="block text-xs font-bold mb-1">Kode Voucher</label>
+                    <div class="flex gap-2">
+                        <input type="text" class="sapatamu-input py-2 text-sm flex-1" placeholder="Masukkan Kode Voucher">
+                        <button class="px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-500">Gunakan</button>
+                    </div>
+                </div>
+                <div class="form-group mb-6">
+                    <label class="block text-xs font-bold mb-1">Kode Referral</label>
+                    <div class="flex gap-2">
+                        <input type="text" class="sapatamu-input py-2 text-sm flex-1" placeholder="Masukkan Kode Referral">
+                        <button class="px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-500">Gunakan</button>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="prevStep(3)" class="sapatamu-btn bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold flex-1">
+                        Kembali
+                    </button>
+                    <button onclick="prosesPembayaranMidtrans()" id="btn_checkout_pay" class="sapatamu-btn success-btn flex-1">
+                        <span id="text_checkout_pay">Buat Pesanan &amp; Bayar</span>
+                        <span class="loader" id="load_checkout_pay"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SUB-PANEL B: Post-Payment Activation (muncul setelah bayar sukses) -->
+            <div id="subpanel-activation" class="hidden text-center">
+                <div class="text-5xl mb-4">&#128179;</div>
+                <h2 class="text-2xl font-extrabold text-green-600 mb-2">Pembayaran Sukses!</h2>
+                <p class="text-sm text-gray-500 mb-6">Pembayaran Anda telah dikonfirmasi. Lanjutkan aktivasi untuk mengaktifkan akun dan mulai kelola tamu Anda.</p>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-left text-xs">
+                    <div class="font-bold text-amber-700 mb-1">&#128203; Ringkasan Pendaftaran:</div>
+                    <div id="activation-summary" class="text-gray-600 space-y-1"></div>
+                </div>
+
+                <button onclick="activateAccount()" id="btn_activate" class="sapatamu-btn w-full" style="background: linear-gradient(135deg, #E07B7B, #C05555);">
+                    <span id="text_activate">&#128640; Buat Database &amp; Aktifkan Akun</span>
+                    <span class="loader" id="load_activate"></span>
+                </button>
+                <p class="text-xs text-gray-400 mt-3">Proses ini membuat spreadsheet database Anda dan mengaktifkan akun secara permanen.</p>
+            </div>
+
+        </div>
+
+    </div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
+    let currentStep = 1;
+    let generatedOTPCode = "";
+    let otpTimerInterval = null;
+
+    // --- NAVIGATION LOGIC ---
+    // Collected registration data (stored in memory across steps)
+    let regData = {};
+
+    window.goToStep2FromStep1 = function() {
+        const tgl = (document.getElementById('ev_date_main').value || '').trim();
+        const nama = document.getElementById('ev_title').value.trim();
+        const subStatus = (document.getElementById('sub-status').innerText || '');
+        if (!nama) return showSapaModal("Nama Belum Diisi", "Silakan isi nama mempelai / klien.", "⚠️");
+        if (!tgl) return showSapaModal("Tanggal Wajib Diisi", "Silakan pilih tanggal acara.", "📅");
+        if (!subStatus.includes('✅')) return showSapaModal("Subdomain Belum Valid", "Tunggu hingga subdomain tersedia (✅ TERSEDIA).", "⚠️");
+        // Simpan data Step 1 ke memori
+        regData.category = document.getElementById('reg_category').value;
+        regData.clientName = nama;
+        regData.subdomain = document.getElementById('reg_subdomain').value;
+        regData.weddingDate = tgl;
+        nextStep(2);
+    };
+
+    window.nextStep = function(stepNum) {
+        document.querySelectorAll('.step-panel').forEach(p => p.classList.replace('block', 'hidden'));
+        
+        // Show target panel
+        let panelId = 'panel-step-' + stepNum;
+        if (stepNum === '2-5') panelId = 'panel-step-2-5';
+        const panel = document.getElementById(panelId);
+        if (panel) {
+            panel.classList.replace('hidden', 'block');
+        }
+
+        // Update headers active classes
+        document.querySelectorAll('.step-header').forEach(h => h.classList.remove('active'));
+        
+        // Mark all steps up to target as active
+        if (stepNum === 1) {
+            document.getElementById('header-step-1').classList.add('active');
+        } else if (stepNum === 2) {
+            document.getElementById('header-step-1').classList.add('active');
+            document.getElementById('header-step-2').classList.add('active');
+        } else if (stepNum === '2-5') {
+            document.getElementById('header-step-1').classList.add('active');
+            document.getElementById('header-step-2').classList.add('active');
+            document.getElementById('header-step-2-5').classList.add('active');
+        } else if (stepNum === 3) {
+            document.getElementById('header-step-1').classList.add('active');
+            document.getElementById('header-step-2').classList.add('active');
+            document.getElementById('header-step-2-5').classList.add('active');
+            document.getElementById('header-step-3').classList.add('active');
+        } else if (stepNum === 4) {
+            document.querySelectorAll('.step-header').forEach(h => h.classList.add('active'));
+        }
+
+        currentStep = stepNum;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.prevStep = function(stepNum) {
+        nextStep(stepNum);
+    };
+
+    // --- STEP 1 LOGIC ---
+    window.togglePasswordVisibility = function(inputId, buttonEl) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        if (isPassword) {
+            buttonEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>`;
+        } else {
+            buttonEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>`;
+        }
+    };
+
+    window.showSapaModal = function(title, msg, icon = "✨") {
+        document.getElementById('notify-title').innerText = title;
+        document.getElementById('notify-msg').innerText = msg;
+        document.getElementById('notify-icon').innerText = icon;
+        document.getElementById('sapa-notify-modal').style.display = 'flex';
+    };
+
+    window.closeSapaModal = function() {
+        document.getElementById('sapa-notify-modal').style.display = 'none';
+    };
+
+    window.buildDateFromPicker = function() {
+        const HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+        const BULAN_NAMA = ['Januari','Februari','Maret','April','Mei','Juni','Juli',
+                            'Agustus','September','Oktober','November','Desember'];
+
+        const val = document.getElementById('ev_date_picker').value;
+        const display = document.getElementById('ev_date_display');
+        const hidden  = document.getElementById('ev_date_main');
+
+        if (!val) {
+            display.style.display = 'none';
+            hidden.value = '';
+            updateSheetPreview();
+            return;
+        }
+
+        const [yy, mm, dd] = val.split('-').map(Number);
+        const dateObj = new Date(yy, mm - 1, dd);
+        const namaHari  = HARI[dateObj.getDay()];
+        const namaBulan = BULAN_NAMA[mm - 1];
+        const plaintext = `${namaHari}, ${dd} ${namaBulan} ${yy}`;
+
+        hidden.value = plaintext;
+        display.style.display = 'block';
+                display.innerHTML = `📅 Acara: <strong>${plaintext}</strong>`;
+
+        updateSheetPreview();
+    };
+
+    window.updateCategoryTheme = function() {
+        const cat = document.getElementById('reg_category').value;
+        const lbl = document.getElementById('lbl_client_name');
+        const input = document.getElementById('reg_user');
+        
+        const groupSingle = document.getElementById('group_single_name');
+        const groupDouble = document.getElementById('group_double_name');
+
+        if (cat === 'wedding') {
+            groupSingle.style.display = 'none';
+            groupDouble.style.display = 'block';
+        } else {
+            groupSingle.style.display = 'block';
+            groupDouble.style.display = 'none';
+        }
+
+        const themes = {
+            wedding: { label: "Nama Klien / Wedding", placeholder: "Gildan & Mita" },
+            birthday: { label: "Nama Klien / Birthday", placeholder: "Clara's 17th Birthday" },
+            anniversary: { label: "Nama Klien / Perusahaan", placeholder: "Anniversary 10th SapaTamu" },
+            corporate: { label: "Nama Perusahaan / Acara", placeholder: "Annual Meeting 2026" },
+            gathering: { label: "Nama Komunitas / Acara", placeholder: "Reuni Akbar 2026" }
+        };
+        
+        const theme = themes[cat] || themes.wedding;
+        lbl.innerText = theme.label;
+        input.placeholder = theme.placeholder;
+        syncWeddingNames();
+    };
+
+    window.syncWeddingNames = function() {
+        const cat = document.getElementById('reg_category').value;
+        let combined = "";
+        let shortName = "";
+        
+        if (cat === 'wedding') {
+            const pria = document.getElementById('reg_pria').value.trim();
+            const wanita = document.getElementById('reg_wanita').value.trim();
+            if (pria || wanita) {
+                combined = (pria + " & " + wanita).trim();
+                shortName = getFirstName(pria) + " & " + getFirstName(wanita);
+            }
+        } else {
+            combined = document.getElementById('reg_user').value.trim();
+            shortName = combined;
+        }
+
+        document.getElementById('ev_title').value = shortName;
+        if (shortName) {
+            autoSuggestSubdomain(shortName);
+        }
+        updateSheetPreview();
+    };
+
+    function getFirstName(fullName) {
+        return (fullName || '').trim().split(/\s+/)[0];
+    }
+
+    window.updateSheetPreview = function() {
+        const tgl = (document.getElementById('ev_date_main').value || '').trim();
+        const nama = document.getElementById('ev_title').value.trim();
+        const preview = document.getElementById('sheet-name-preview');
+        if (!preview) return;
+        if (tgl && nama) {
+            preview.style.display = 'block';
+                    preview.innerHTML = `📅 Preview: <span style="color:#1e40af;">${tgl} - ${nama}</span>`;
+        } else {
+            preview.style.display = 'none';
+        }
+        // Enable Step 1 next button
+        const subOk = (document.getElementById('sub-status').innerText || '').includes('✅');
+        const nextBtn = document.getElementById('btn_step1_next');
+        if (nextBtn) {
+            nextBtn.disabled = !(nama && tgl && subOk);
+            nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1';
+        }
+    };
+
+    function checkGenSheetBtn() { /* No longer needed */ }
+
+    // Kept for backward compat if called from checkSubdomainSupabase
+    function checkStep1NextBtn() {
+        const tgl = (document.getElementById('ev_date_main').value || '').trim();
+            const subOk = (document.getElementById('sub-status').innerText || '').includes('✅');
+        const nama = document.getElementById('ev_title').value.trim();
+        const nextBtn = document.getElementById('btn_step1_next');
+        if (nextBtn) {
+            nextBtn.disabled = !(nama && tgl && subOk);
+            nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1';
+        }
+    }
+
+    let subDebounceTimer = null;
+    let lastCheckedSlug = '';
+
+    window.autoSuggestSubdomain = function(val) {
+        const slug = val.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const subInput = document.getElementById('reg_subdomain');
+        const statusEl = document.getElementById('sub-status');
+        const spinner = document.getElementById('sub-spinner');
+
+        subInput.value = slug;
+
+        if (!slug || slug.length < 3) {
+            statusEl.innerText = slug.length > 0 ? '⚠️ Min. 3 karakter' : '';
+            statusEl.style.color = 'var(--gold)';
+            clearTimeout(subDebounceTimer);
+            return;
+        }
+
+        spinner.style.display = 'inline-block';
+        statusEl.innerText = '';
+
+        clearTimeout(subDebounceTimer);
+        subDebounceTimer = setTimeout(() => checkSubdomainSupabase(slug), 500);
+    };
+
+    async function checkSubdomainSupabase(slug) {
+        const statusEl = document.getElementById('sub-status');
+        const spinner = document.getElementById('sub-spinner');
+
+        if (slug === lastCheckedSlug) {
+            spinner.style.display = 'none';
+            return;
+        }
+
+        try {
+            // Pengecekan subdomain sekarang via GAS Backend (Aman & Sesuai RLS)
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "checkSubdomain", subdomain: slug })
+            });
+            const res = await response.json();
+            
+            lastCheckedSlug = slug;
+
+            if (res.status === "available") {
+                statusEl.innerText = '✅ TERSEDIA';
+                statusEl.style.color = 'var(--success)';
+            } else if (res.status === "taken") {
+                statusEl.innerText = '❌ SUDAH DIPAKAI';
+                statusEl.style.color = '#E07B7B';
+            } else if (res.status === "too_short") {
+                statusEl.innerText = '⚠️ Minimal 3 Karakter';
+                statusEl.style.color = 'var(--gold)';
+            } else {
+                statusEl.innerText = '⚠️ Error Server';
+                statusEl.style.color = 'var(--gold)';
+            }
+        } catch (e) {
+            statusEl.innerText = '⚠️ Gagal cek';
+            statusEl.style.color = 'var(--gold)';
+        } finally {
+            spinner.style.display = 'none';
+            updateSheetPreview();
+        }
+    }
+
+    function setLoading(btnId, isLoad) {
+        const btn = document.getElementById(btnId);
+        const text = document.getElementById(btnId.replace('btn', 'text'));
+        const load = document.getElementById(btnId.replace('btn', 'load'));
+        if (btn) btn.disabled = isLoad;
+        if (text) text.style.display = isLoad ? 'none' : 'block';
+        if (load) load.style.display = isLoad ? 'block' : 'none';
+    }
+
+    // ==============================================
+    // STEP 2 LOGIC: EMAIL, WHATSAPP, OTP
+    // ==============================================
+    window.triggerOTPSending = async function() {
+        const email = document.getElementById('reg_email').value.trim();
+        const wa = document.getElementById('reg_wa').value.trim();
+        const pass = document.getElementById('reg_pass').value.trim();
+        const tnc = document.getElementById('reg_tnc').checked;
+        const channelRadio = document.querySelector('input[name="otp_channel"]:checked');
+        const channel = channelRadio ? channelRadio.value : 'wa';
+
+        if (!email || !wa || !pass) {
+            return showSapaModal("Lengkapi Data", "Silakan lengkapi Email, WhatsApp, dan Password.", "⚠️ ");
+        }
+        if (!wa.startsWith("628")) {
+            return showSapaModal("Format WA Salah", "Nomor WhatsApp wajib diawali format 628...", "⚠️ ");
+        }
+        if (!tnc) {
+            return showSapaModal("Syarat & Ketentuan", "Harap setujui Syarat & Ketentuan dan Kebijakan Pembayaran sebelum melanjutkan.", "⚠️ ");
+        }
+
+        // Generate 6 digit OTP code
+        generatedOTPCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        setLoading('btn_send_otp', true);
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "cors",
+                redirect: "follow",
+                body: JSON.stringify({
+                    action: "sendOTP",
+                    whatsapp: wa,
+                    email: email,
+                    channel: channel,
+                    otp: generatedOTPCode
+                })
+            });
+            const res = await response.json();
+            if (res.status === "success") {
+                // Show OTP section
+                document.getElementById('otp-section').classList.remove('hidden');
+                document.getElementById('btn_send_otp').classList.add('hidden');
+                document.getElementById('btn_verify_otp').classList.remove('hidden');
+                
+                // Update label based on channel
+                const lbl = document.getElementById('lbl_otp_input');
+                if(lbl) lbl.innerText = channel === 'wa' ? "Masukkan 6 Digit OTP WhatsApp" : "Masukkan 6 Digit OTP Email";
+
+                startOTPTimer();
+                const msgDesc = channel === 'wa' ? "Kode OTP 6-digit telah dikirimkan ke nomor WhatsApp Anda." : "Kode OTP 6-digit telah dikirimkan ke Email Anda (cek inbox/spam).";
+                showSapaModal("OTP Terkirim!", msgDesc, channel === 'wa' ? "📱" : "✉️");
+            } else {
+                showSapaModal("Gagal Kirim OTP", res.message, "❌");
+            }
+        } catch (e) {
+                showSapaModal("Error OTP", "Gagal menghubungi server OTP: " + e.toString(), "⚠️ ");
+        }
+        setLoading('btn_send_otp', false);
+    };
+
+    window.sendOTPFonnte = function() {
+        document.getElementById('btn_resend_otp').classList.add('hidden');
+        triggerOTPSending();
+    };
+
+    function startOTPTimer() {
+        let timeLeft = 120; // 2 minutes
+        const timerEl = document.getElementById('otp-timer');
+        
+        clearInterval(otpTimerInterval);
+        otpTimerInterval = setInterval(() => {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerEl.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(otpTimerInterval);
+                document.getElementById('btn_resend_otp').classList.remove('hidden');
+            }
+            timeLeft--;
+        }, 1000);
+    }
+
+    window.verifyOTPAndProceed = function() {
+        const inputVal = document.getElementById('otp_input').value.trim();
+        if (inputVal === generatedOTPCode) {
+            clearInterval(otpTimerInterval);
+                showSapaModal("Verifikasi Sukses!", "WhatsApp Anda telah diverifikasi secara sukses.", "✅");
+            setTimeout(() => {
+                nextStep('2-5');
+            }, 1000);
+        } else {
+                showSapaModal("OTP Salah", "Kode OTP yang Anda masukkan tidak cocok.", "❌");
+        }
+    };
+
+    // ==============================================
+    // STEP 2.5 LOGIC: DETAIL PERNIKAHAN
+    // ==============================================
+    window.toggleAlamatBelumTahu = function(el) {
+        const addr = document.getElementById('event_address');
+        const venue = document.getElementById('event_venue');
+        const city = document.getElementById('event_city');
+        if (el.checked) {
+            addr.value = "Masih belum tahu";
+            venue.value = "Masih belum tahu";
+            city.value = "Masih belum tahu";
+            addr.disabled = true;
+            venue.disabled = true;
+            city.disabled = true;
+        } else {
+            addr.value = "";
+            venue.value = "";
+            city.value = "";
+            addr.disabled = false;
+            venue.disabled = false;
+            city.disabled = false;
+        }
+    };
+
+    window.toggleGuestsBelumTahu = function(el) {
+        const guests = document.getElementById('event_guests');
+        if (el.checked) {
+            guests.value = 0;
+            guests.disabled = true;
+        } else {
+            guests.value = "";
+            guests.disabled = false;
+        }
+    };
+
+    window.submitDetailAcara = async function() {
+        const addr = document.getElementById('event_address').value.trim();
+        const venue = document.getElementById('event_venue').value.trim();
+        const city = document.getElementById('event_city').value.trim();
+        const guests = document.getElementById('event_guests').value.trim();
+
+        if (!addr || !venue || !city || guests === "") {
+            return showSapaModal("Data Belum Lengkap", "Silakan isi detail alamat, tempat rekreasi, dan perkiraan tamu.", "⚠️");
+        }
+
+        nextStep(3);
+    };
+
+    // ==============================================
+    // STEP 3 LOGIC: PILIHAN PAKET & CEK SLOT SUPABASE
+    // ==============================================
+    let currentPricingCategory = 'e-inv';
+
+    window.filterPricingCategory = function(cat) {
+        currentPricingCategory = cat;
+        // Buttons active style
+        document.getElementById('btn-cat-e-inv').classList.remove('active');
+        document.getElementById('btn-cat-guestbook').classList.remove('active');
+        document.getElementById('btn-cat-allin').classList.remove('active');
+        
+        document.getElementById('btn-cat-' + cat).classList.add('active');
+
+        // Hide pricing group
+        document.querySelectorAll('.pricing-group').forEach(g => g.classList.replace('block', 'hidden'));
+        document.querySelector('.pricing-group.' + cat).classList.replace('hidden', 'block');
+
+        // Select first item of selected category
+        if (cat === 'e-inv') {
+            selectPricing('E-Inv Premium', 250000);
+            document.getElementById('slot-checker-widget').classList.add('hidden');
+        } else if (cat === 'guestbook') {
+            selectPricing('Silver Guestbook', 3500000);
+            document.getElementById('slot-checker-widget').classList.remove('hidden');
+            triggerSlotCheck();
+        } else if (cat === 'allin') {
+            selectPricing('Exclusive Collaboration', 7500000);
+            document.getElementById('slot-checker-widget').classList.remove('hidden');
+            triggerSlotCheck();
+        }
+    };
+
+    window.selectPricing = function(name, price) {
+        document.querySelectorAll('.pricing-card').forEach(c => c.classList.remove('selected'));
+        
+        // Find matching card by checking its onclick attribute
+        const cards = document.querySelectorAll('.pricing-card');
+        cards.forEach(card => {
+            const onclickAttr = card.getAttribute('onclick') || '';
+            if (onclickAttr.includes(`'${name}'`)) {
+                card.classList.add('selected');
+            }
+        });
+
+        document.getElementById('final_package_name').value = name;
+        document.getElementById('final_package_price').value = price;
+    };
+
+    async function triggerSlotCheck() {
+        const tgl = document.getElementById('ev_date_main').value.trim();
+        const statusEl = document.getElementById('slot-checker-status');
+        const dateEl = document.getElementById('slot-checker-date');
+        const btnPay = document.getElementById('btn_pricing_next');
+        
+        dateEl.innerText = tgl;
+        statusEl.innerText = "⏳ Sedang Cek Slot...";
+        statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-amber-200 text-amber-800";
+        btnPay.disabled = true;
+
+        try {
+            // Cek slot via Supabase (langsung baca view publik 'client_public_profile')
+            const qDate = encodeURIComponent(tgl);
+            
+            const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?wedding_date=eq.${qDate}&status=eq.Active`, {
+                headers: {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY
+                }
+            });
+            
+            if (!response.ok) throw new Error("Gagal mengambil data slot dari Supabase");
+            const rows = await response.json();
+
+            // Hitung booking yang paketnya guestbook/collaboration (butuh tim usher)
+            let bookedCount = 0;
+            if (rows && rows.length > 0) {
+                rows.forEach(row => {
+                    const pkg = (row.package || "").toLowerCase();
+                    if (pkg.includes('guestbook') || pkg.includes('collaboration')) {
+                        bookedCount++;
+                    }
+                });
+            }
+
+            if (bookedCount === 0) {
+                statusEl.innerText = "✅ Slot Tersedia";
+                statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-green-200 text-green-800";
+                btnPay.disabled = false;
+            } else {
+                statusEl.innerText = "❌ Slot Penuh";
+                statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-200 text-red-800";
+                btnPay.disabled = true;
+                showSapaModal("Tanggal Penuh", "Maaf, seluruh slot tim Usher/Guestbook untuk tanggal acara Anda sudah di-booking oleh klien lain. Pembayaran ditangguhkan.", "📅");
+            }
+        } catch (e) {
+            console.error("Slot Sync Error:", e);
+            statusEl.innerText = "⚠️  Gagal Sinkronisasi Slot";
+            statusEl.className = "inline-block text-xs font-extrabold px-3 py-1 rounded-full bg-red-100 text-red-700";
+        }
+    }
+
+    window.submitPricingSelection = function() {
+        const name = document.getElementById('final_package_name').value;
+        const price = document.getElementById('final_package_price').value;
+
+        // Injeksi detail checkout
+        document.getElementById('checkout-product-name').innerText = name;
+        document.getElementById('checkout-base-price').innerText = `Rp ${Number(price).toLocaleString('id-ID')}`;
+        document.getElementById('checkout-total-price').innerText = `Rp ${Number(price).toLocaleString('id-ID')}`;
+
+        nextStep(4);
+    };
+
+    // ==============================================
+    // STEP 4 LOGIC: PEMBAYARAN VIA MIDTRANS SNAP
+    // ==============================================
+    window.prosesPembayaranMidtrans = async function() {
+        // Ambil semua data dari regData + form
+        regData.pkg = document.getElementById('final_package_name').value;
+        regData.price = document.getElementById('final_package_price').value;
+        regData.email = document.getElementById('reg_email').value.trim();
+        regData.whatsapp = document.getElementById('reg_wa').value.trim();
+        regData.password = document.getElementById('reg_pass').value;
+        regData.address = document.getElementById('event_address').value.trim();
+        regData.venue = document.getElementById('event_venue').value.trim();
+        regData.city = document.getElementById('event_city').value.trim();
+
+        const btnEl = document.getElementById('btn_checkout_pay');
+        btnEl.disabled = true;
+            showSapaModal("Membuat Invoice", "Menghubungi Midtrans payment gateway...", "⏳");
+
+        try {
+            const txResponse = await fetch(SCRIPT_URL, {
+                method: "POST", mode: "cors", redirect: "follow",
+                body: JSON.stringify({
+                    action: "createMidtransTransaction",
+                    subdomain: regData.subdomain,
+                    clientName: regData.clientName,
+                    whatsapp: regData.whatsapp,
+                    email: regData.email,
+                    packageName: regData.pkg,
+                    price: regData.price
+                })
+            });
+            const txResult = await txResponse.json();
+
+            if (txResult.status !== "success") {
+                closeSapaModal();
+                showSapaModal("Transaksi Gagal", txResult.message || "Gagal membuat token pembayaran.", "❌");
+                btnEl.disabled = false;
+                return;
+            }
+
+            closeSapaModal();
+
+            snap.pay(txResult.token, {
+                onSuccess: async function(result) {
+                    // PHASE 1: Simpan data pending ke Supabase
+                    await fetch(SCRIPT_URL, {
+                        method: "POST", mode: "cors", redirect: "follow",
+                        body: JSON.stringify({
+                            action: "savePendingClient",
+                            subdomain: regData.subdomain,
+                            clientName: regData.clientName,
+                            category: regData.category,
+                            weddingDate: regData.weddingDate,
+                            email: regData.email,
+                            whatsapp: regData.whatsapp,
+                            password: regData.password,
+                            package: regData.pkg
+                        })
+                    });
+
+                    // Tampilkan subpanel aktivasi
+                    document.getElementById('subpanel-checkout').classList.add('hidden');
+                    document.getElementById('subpanel-checkout').classList.replace('block', 'hidden');
+                    document.getElementById('subpanel-activation').classList.remove('hidden');
+                    document.getElementById('subpanel-activation').classList.replace('hidden', 'block');
+
+                    // Isi ringkasan aktivasi
+                    document.getElementById('activation-summary').innerHTML = `
+                        <div>&#128100; <b>Nama:</b> ${regData.clientName}</div>
+                        <div>&#128279; <b>Subdomain:</b> ${regData.subdomain}.sapatamu.id</div>
+                        <div>📅 <b>Tanggal:</b> ${regData.weddingDate}</div>
+                        <div>&#128230; <b>Paket:</b> ${regData.pkg}</div>
+                        <div>&#128231; <b>Email:</b> ${regData.email}</div>
+                    `;
+                },
+                onPending: function() {
+                    showSapaModal("Menunggu Pembayaran", "Selesaikan pembayaran sesuai instruksi invoice.", "ðŸ•");
+                    btnEl.disabled = false;
+                },
+                onError: function() {
+                    showSapaModal("Pembayaran Gagal", "Terjadi kesalahan saat memproses pembayaran.", "❌");
+                    btnEl.disabled = false;
+                },
+                onClose: function() {
+                    showSapaModal("Transaksi Batal", "Anda membatalkan pembayaran.", "⚠️");
+                    btnEl.disabled = false;
+                }
+            });
+
+        } catch (e) {
+            closeSapaModal();
+            showSapaModal("Error Transaksi", "Masalah pembayaran: " + e.toString(), "⚠️");
+            btnEl.disabled = false;
+        }
+    };
+
+    // PHASE 2: Buat Spreadsheet + Aktifkan Akun (setelah bayar)
+    window.activateAccount = async function() {
+        const btn = document.getElementById('btn_activate');
+        const textEl = document.getElementById('text_activate');
+        const loadEl = document.getElementById('load_activate');
+        btn.disabled = true;
+        textEl.style.display = 'none';
+        loadEl.style.display = 'block';
+
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST", mode: "cors", redirect: "follow",
+                body: JSON.stringify({
+                    action: "registerAndActivate",
+                    subdomain: regData.subdomain,
+                    clientName: regData.clientName,
+                    category: regData.category,
+                    weddingDate: regData.weddingDate,
+                    email: regData.email,
+                    whatsapp: regData.whatsapp,
+                    password: regData.password,
+                    package: regData.pkg,
+                    address: regData.address ? `${regData.venue}, ${regData.address}, ${regData.city}` : ""
+                })
+            });
+            const res = await response.json();
+
+            if (res.status === "success") {
+                const pesan = encodeURIComponent(
+                    `*Aktivasi Akun SapaTamu.ku* 🎉\n` +
+                    `*Pembayaran:* ✅ LUNAS (Via Midtrans)\n` +
+                    `*Paket:* ${regData.pkg}\n` +
+                    `*Nama Acara:* ${regData.clientName}\n` +
+                    `*Tanggal:* ${regData.weddingDate}\n` +
+                    `*Subdomain:* ${regData.subdomain}.sapatamu.id\n` +
+                    `*Password:* ${regData.password}\n` +
+                    `*WhatsApp:* ${regData.whatsapp}\n` +
+                    `*Email:* ${regData.email}\n` +
+                    `*Database ID:* ${res.data ? res.data.ssId : '-'}`
+                );
+                window.open(`https://wa.me/6285111567829?text=${pesan}`, '_blank');
+                showSapaModal("🎉 Akun Aktif!", "Database dibuat & akun Anda sudah aktif. Mengalihkan ke halaman login...", "🎉");
+                setTimeout(() => { window.location.href = 'login.html'; }, 3500);
+            } else {
+                showSapaModal("Aktivasi Gagal", res.message || "Terjadi kesalahan saat aktivasi.", "❌");
+                btn.disabled = false;
+                textEl.style.display = 'block';
+                loadEl.style.display = 'none';
+            }
+        } catch (e) {
+                showSapaModal("Error Aktivasi", "Masalah koneksi saat aktivasi: " + e.toString(), "⚠️");
+            btn.disabled = false;
+            textEl.style.display = 'block';
+            loadEl.style.display = 'none';
+        }
+    };
+
+    // Run on startup
+    document.addEventListener('DOMContentLoaded', () => {
+        updateCategoryTheme();
+    });
+</script>
+</body>
+</html>

@@ -1226,6 +1226,30 @@
     let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
     let MASTER_LIST = [];
 
+    // Helper untuk generate kode unik tamu di client-side (Supabase First)
+    function generateKodeUnik(category, source) {
+        let prefix = "STK-";
+        if (source === "onsite") {
+            prefix = "ONS-";
+        } else if (source === "offline") {
+            prefix = "OFF-";
+        } else if (category) {
+            const cat = category.toLowerCase();
+            if (cat.includes("wedding")) prefix = "WDG-";
+            else if (cat.includes("birthday")) prefix = "BTH-";
+            else if (cat.includes("anniversary")) prefix = "ANV-";
+            else if (cat.includes("corporate")) prefix = "CPT-";
+            else if (cat.includes("gathering")) prefix = "GTH-";
+        }
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let randomPart = "";
+        for (let i = 0; i < 5; i++) {
+            randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return prefix + randomPart;
+    }
+    window.generateKodeUnik = generateKodeUnik;
+
     // --- UTILITIES ---
     window.toggleFullScreen = function() {
         const wrapper = document.getElementById('sapatamu-master-wrapper');
@@ -1490,7 +1514,13 @@
                 let isIg = /[a-zA-Z]/.test(clean) || clean.startsWith('@');
                 if (isIg) return clean;
                 let num = clean.replace(/\D/g, '');
-                if (num.startsWith('0')) num = '62' + num.substring(1);
+                if (num) {
+                    if (num.startsWith('0')) {
+                        num = '62' + num.substring(1);
+                    } else if (!num.startsWith('62')) {
+                        num = '62' + num;
+                    }
+                }
                 return num || clean;
             })(document.getElementById('in-d7-wa').value),
             kategori: document.getElementById('in-e7-kategori').value,
@@ -1501,14 +1531,16 @@
             sesi: document.getElementById('in-sesi-undangan').value
         };
 
-        if(!formData.nama || !formData.whatsapp) return showSapaModal("Data Belum Lengkap", "Silakan isi Nama & WhatsApp/User IG tamu.", "⚠️");
+        if(!formData.nama || !formData.whatsapp) return showSapaModal("Data Belum Lengkap", "Silakan isi Nama & WhatsApp/User IG tamu.", "⚠️ ");
         
-        // --- STEP 1: OPTIMISTIC UI (Instant Add) ---
+        // --- STEP 1: GENERATE KODE UNIK DULU (SUPABASE FIRST) ---
+        const kodeUnik = generateKodeUnik(window.CURRENT_CATEGORY, "form");
         const tempId = "temp_" + Date.now();
+        
         const draftGuest = {
             id: tempId,
             row: null,
-            kode: "SYNCING...",
+            kode: kodeUnik,
             nama: formData.nama,
             whatsapp: formData.whatsapp,
             kategori: formData.kategori,
@@ -1532,43 +1564,109 @@
         document.getElementById('in-h7-rencana').value = "1";
         document.getElementById('in-c7-nama').focus();
 
-        // --- STEP 2: BACKGROUND SYNC ---
-        const payload = {
-            action: "submitCollection",
-            ssId: CURRENT_SS_ID,
-            ...formData,
-            fastMode: true 
+        // --- STEP 2: SIMPAN KE SUPABASE FIRST ---
+        const sessionStr = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
+        const sessionObj = sessionStr ? JSON.parse(sessionStr) : {};
+        const CURRENT_SUBDOMAIN = (sessionObj.subdomain || sessionObj.username || "").toLowerCase().trim();
+
+        const supabasePayload = {
+            ssid: CURRENT_SS_ID,
+            kode: kodeUnik,
+            nama: formData.nama,
+            whatsapp: formData.whatsapp,
+            kategori: formData.kategori || "Umum",
+            rencana_hadir: parseInt(formData.rencana) || 1,
+            real_hadir: "0",
+            souvenir: formData.souvenir || "tidak",
+            pihak_pengundang: formData.pihak || "-",
+            alamat: formData.alamat || "-",
+            status_hadir: "0",
+            status_wa: "PENDING",
+            status_hadiah: "-",
+            tanda_kasih: 0,
+            jam_datang: "-",
+            sesi: formData.sesi || "-",
+            subdomain: CURRENT_SUBDOMAIN
         };
 
         try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
+            // Simpan ke Supabase
+            const sbResponse = await fetch(`${SB_URL}/rest/v1/tamu`, {
+                method: "POST",
+                headers: {
+                    ...SB_HEADERS,
+                    "Content-Type": "application/json",
+                    "Prefer": "return=representation"
+                },
+                body: JSON.stringify(supabasePayload)
             });
-            const result = await response.json();
 
-            if (result.status === "success") {
-                // Update status ke DONE
-                const idx = MASTER_LIST.findIndex(g => g.id === tempId);
-                if (idx !== -1) {
-                    MASTER_LIST[idx].syncStatus = "done";
-                    MASTER_LIST[idx].row = result.row || result.rowID; // GAS returns rowID
-                    MASTER_LIST[idx].kode = result.kode;
-                    render(MASTER_LIST);
-                    
-                    // Hilangkan indikator centang setelah 3 detik
-                    setTimeout(() => {
-                        const guest = MASTER_LIST.find(g => g.id === tempId);
-                        if(guest) {
-                            delete guest.syncStatus;
-                            render(MASTER_LIST);
-                        }
-                    }, 3000);
-                }
-                setTimeout(checkSpreadsheetCountMismatch, 2000);
-            } else {
-                throw new Error(result.message);
+            if (!sbResponse.ok) {
+                const sbErrText = await sbResponse.text();
+                throw new Error("Supabase insert failed: " + sbErrText);
             }
+
+            // --- STEP 3: ASYNC BACKGROUND SYNC KE GOOGLE SPREADSHEET ---
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "saveGuestsToSheet",
+                    ssId: CURRENT_SS_ID,
+                    guests: [{
+                        kode: kodeUnik,
+                        nama: formData.nama,
+                        whatsapp: formData.whatsapp,
+                        kategori: formData.kategori,
+                        rencanaHadir: formData.rencana,
+                        pihakPengundang: formData.pihak,
+                        souvenir: formData.souvenir,
+                        alamat: formData.alamat,
+                        sesi: formData.sesi,
+                        statusWA: "BELUM TERKIRIM"
+                    }]
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                console.log("Async sheet sync complete:", res);
+                // Update local state row number when GAS/Supabase updates
+                setTimeout(async () => {
+                    try {
+                        const sbRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${kodeUnik}&select=row`, { headers: SB_HEADERS });
+                        if (sbRes.ok) {
+                            const data = await sbRes.json();
+                            if (data && data.length > 0 && data[0].row) {
+                                const idx = MASTER_LIST.findIndex(g => g.kode === kodeUnik);
+                                if (idx !== -1) {
+                                    MASTER_LIST[idx].row = data[0].row;
+                                    render(MASTER_LIST);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch assigned row ID:", e);
+                    }
+                }, 3000);
+            })
+            .catch(err => console.error("GAS sync failed in background:", err));
+
+            // Mark local guest as done syncing to Supabase
+            const idx = MASTER_LIST.findIndex(g => g.id === tempId);
+            if (idx !== -1) {
+                MASTER_LIST[idx].syncStatus = "done";
+                render(MASTER_LIST);
+                
+                // Hilangkan indikator sync setelah 3 detik
+                setTimeout(() => {
+                    const guest = MASTER_LIST.find(g => g.id === tempId);
+                    if (guest) {
+                        delete guest.syncStatus;
+                        render(MASTER_LIST);
+                    }
+                }, 3000);
+            }
+            setTimeout(checkSpreadsheetCountMismatch, 5000);
+
         } catch (err) {
             console.error("Sync Failed:", err);
             const idx = MASTER_LIST.findIndex(g => g.id === tempId);
@@ -1576,6 +1674,7 @@
                 MASTER_LIST[idx].syncStatus = "failed";
                 render(MASTER_LIST);
             }
+            showSapaModal("Sync Gagal", "Gagal menyimpan data tamu ke database: " + err.message, "❌");
         }
     };
 
@@ -1631,7 +1730,13 @@
                 let isIg = /[a-zA-Z]/.test(clean) || clean.startsWith('@');
                 if (isIg) return clean;
                 let num = clean.replace(/\D/g, '');
-                if (num.startsWith('0')) num = '62' + num.substring(1);
+                if (num) {
+                    if (num.startsWith('0')) {
+                        num = '62' + num.substring(1);
+                    } else if (!num.startsWith('62')) {
+                        num = '62' + num;
+                    }
+                }
                 return num || clean;
             })(document.getElementById('edit-wa').value),
             pihak: document.getElementById('edit-pihak').value,
@@ -1763,8 +1868,17 @@
 
         const qrCodeLink = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(code)}&size=400x400`;
         
-        let cleanPhone = String(phone).replace(/\D/g, ''); 
-        if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
+        const isInstagram = phone && (/[a-zA-Z]/.test(phone) || String(phone).trim().startsWith('@'));
+
+        let cleanPhone = "";
+        if (!isInstagram) {
+            cleanPhone = String(phone).replace(/\D/g, ''); 
+            if (cleanPhone.startsWith('0')) {
+                cleanPhone = '62' + cleanPhone.substring(1);
+            } else if (cleanPhone && !cleanPhone.startsWith('62')) {
+                cleanPhone = '62' + cleanPhone;
+            }
+        }
 
         const fallbackJSONTemplates = {
             "vvip": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon konfirmasikan kehadiran Bapak/Ibu/Saudara/i melalui tautan RSVP berikut: {LINK_RSVP}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
@@ -1830,7 +1944,42 @@
                   `Terima kasih.`;
         }
 
-        window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`, '_blank');
+        if (isInstagram) {
+            let igUser = String(phone).trim();
+            if (igUser.startsWith('@')) igUser = igUser.substring(1);
+            
+            const copyToClipboard = (text) => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    return navigator.clipboard.writeText(text);
+                } else {
+                    const el = document.createElement('textarea');
+                    el.value = text;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
+                    return Promise.resolve();
+                }
+            };
+
+            copyToClipboard(msg).then(() => {
+                showSapaModal(
+                    "IG DM Undangan",
+                    `Pesan undangan untuk <b>${name}</b> telah disalin ke clipboard.<br><br>Gunakan tombol <b>Tempel / Paste (Ctrl+V)</b> untuk mengirim pesan di DM Instagram.<br><br>Kami membuka profil Instagram <b>@${igUser}</b> di tab baru.`,
+                    "📸"
+                );
+            }).catch(() => {
+                showSapaModal(
+                    "IG DM Undangan",
+                    `Gagal menyalin pesan secara otomatis. Kami tetap membuka profil Instagram <b>@${igUser}</b> di tab baru.`,
+                    "⚠️"
+                );
+            });
+
+            window.open(`https://instagram.com/${igUser}`, '_blank');
+        } else {
+            window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`, '_blank');
+        }
 
         // ===== OPTIMISTIC UPDATE: langsung hijau tanpa tunggu API =====
         // User sudah klik kirim → WA sudah terbuka → tandai SENT di-memory sekarang
@@ -2521,29 +2670,141 @@
         reader.readAsArrayBuffer(file);
     };
 
+    function parseRowSmart(row, selNama, selAlamat, selWa, selPax, defaultKategori) {
+        let nama = "";
+        let alamat = "";
+        let wa = "";
+        let kategori = defaultKategori || "Umum";
+        let pax = 1;
+
+        // Track which cell indices we matched for special fields
+        let matchedIndices = new Set();
+
+        // 1. Scan for WA, IG, and Category
+        row.forEach((val, idx) => {
+            if (val === undefined || val === null) return;
+            const cellStr = val.toString().trim();
+            if (cellStr === "") return;
+
+            // A. IG User check (starts with @)
+            if (cellStr.startsWith('@')) {
+                wa = cellStr;
+                matchedIndices.add(idx);
+                return;
+            }
+
+            // B. Category check (VIP, VVIP, UMUM, KELUARGA)
+            const cellLower = cellStr.toLowerCase();
+            if (['vip', 'vvip', 'umum', 'keluarga'].includes(cellLower)) {
+                // Keep original casing style
+                kategori = cellStr.toUpperCase();
+                matchedIndices.add(idx);
+                return;
+            }
+
+            // C. WhatsApp Check (has digits, length > 8 when only digits)
+            const digits = cellStr.replace(/\D/g, '');
+            if (digits.length > 8) {
+                let num = digits;
+                if (num.startsWith('0')) {
+                    num = '62' + num.substring(1);
+                } else if (!num.startsWith('62')) {
+                    num = '62' + num;
+                }
+                wa = num;
+                matchedIndices.add(idx);
+                return;
+            }
+        });
+
+        // 2. Scan for Pax (numeric values, not matched as WA, and usually in a typical range e.g. 1-20)
+        row.forEach((val, idx) => {
+            if (matchedIndices.has(idx)) return;
+            if (val === undefined || val === null) return;
+            
+            const cellStr = val.toString().trim();
+            const num = parseInt(cellStr);
+            if (!isNaN(num) && num >= 1 && num <= 20 && cellStr === num.toString()) {
+                pax = num;
+                matchedIndices.add(idx);
+            }
+        });
+
+        // 3. The remaining cells are Nama and Alamat.
+        let remainingTexts = [];
+        row.forEach((val, idx) => {
+            if (matchedIndices.has(idx)) return;
+            if (val === undefined || val === null) return;
+            const cellStr = val.toString().trim();
+            if (cellStr !== "") {
+                remainingTexts.push(cellStr);
+            }
+        });
+
+        if (remainingTexts.length > 0) {
+            nama = remainingTexts[0];
+        }
+        if (remainingTexts.length > 1) {
+            alamat = remainingTexts.slice(1).join(', ');
+        }
+
+        // Fallbacks if not found by smart detection:
+        if (!nama && selNama !== undefined && selNama !== "") {
+            nama = (row[selNama] || "").toString().trim();
+        }
+        if (!alamat && selAlamat !== undefined && selAlamat !== "") {
+            alamat = (row[selAlamat] || "").toString().trim();
+        }
+        if (!wa && selWa !== undefined && selWa !== "") {
+            wa = (row[selWa] || "").toString().trim();
+            if (wa && wa !== "-") {
+                let isIg = /[a-zA-Z]/.test(wa) || wa.startsWith('@');
+                if (!isIg) {
+                    let num = wa.replace(/\D/g, '');
+                    if (num.startsWith('0')) {
+                        num = '62' + num.substring(1);
+                    } else if (num && !num.startsWith('62')) {
+                        num = '62' + num;
+                    }
+                    wa = num || wa;
+                }
+            }
+        }
+        if (pax === 1 && selPax !== undefined && selPax !== "") {
+            const paxRaw = parseInt(row[selPax]);
+            pax = isNaN(paxRaw) || paxRaw < 1 ? 1 : paxRaw;
+        }
+
+        return {
+            nama: nama || "",
+            alamat: alamat || "-",
+            whatsapp: wa || "-",
+            kategori: kategori,
+            rencanaHadir: pax
+        };
+    }
+
     window.updateExcelPreview = function() {
         const selNama = document.getElementById('imp-map-nama').value;
         const selAlamat = document.getElementById('imp-map-alamat').value;
         const selWa = document.getElementById('imp-map-wa').value;
         const selPax = document.getElementById('imp-map-pax').value;
+        const defaultKategori = document.getElementById('imp-kategori').value;
 
         const tbody = document.getElementById('imp-preview-tbody');
         tbody.innerHTML = "";
 
         const previewRows = parsedExcelRows.slice(0, 5);
         previewRows.forEach(row => {
-            const nama = row[selNama] || "-";
-            const alamat = row[selAlamat] || "-";
-            const wa = selWa !== "" ? (row[selWa] || "-") : "-";
-            const pax = selPax !== "" ? (row[selPax] || 1) : 1;
+            const parsed = parseRowSmart(row, selNama, selAlamat, selWa, selPax, defaultKategori);
 
             const tr = document.createElement('tr');
             tr.style.borderBottom = "1px solid #f9f9f9";
             tr.innerHTML = `
-                <td style="padding:4px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>${nama}</b></td>
-                <td style="padding:4px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${alamat}</td>
-                <td style="padding:4px;">${wa}</td>
-                <td style="padding:4px;">${pax}</td>
+                <td style="padding:4px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>${parsed.nama || '-'}</b></td>
+                <td style="padding:4px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${parsed.alamat}</td>
+                <td style="padding:4px;">${parsed.whatsapp}</td>
+                <td style="padding:4px;">${parsed.rencanaHadir}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -2553,7 +2814,19 @@
     let syncQueue = [];
     let isQueueRunning = false;
 
-    window.startExcelImport = function() {
+    // Expose to window for auth_guard.js idle timeout protection
+    Object.defineProperty(window, 'syncQueue', {
+        get: () => syncQueue,
+        set: (val) => { syncQueue = val; },
+        configurable: true
+    });
+    Object.defineProperty(window, 'isQueueRunning', {
+        get: () => isQueueRunning,
+        set: (val) => { isQueueRunning = val; },
+        configurable: true
+    });
+
+    window.startExcelImport = async function() {
         const selNama = document.getElementById('imp-map-nama').value;
         const selAlamat = document.getElementById('imp-map-alamat').value;
         const selWa = document.getElementById('imp-map-wa').value;
@@ -2566,71 +2839,110 @@
             souvenir: document.getElementById('imp-souvenir').value
         };
 
-        let addedCount = 0;
+        const sessionStr = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
+        const sessionObj = sessionStr ? JSON.parse(sessionStr) : {};
+        const CURRENT_SUBDOMAIN = (sessionObj.subdomain || sessionObj.username || "").toLowerCase().trim();
+
+        let addedGuests = [];
 
         parsedExcelRows.forEach(row => {
-            const nama = (row[selNama] || "").toString().trim();
-            if (!nama) return; // Skip empty rows
+            const parsed = parseRowSmart(row, selNama, selAlamat, selWa, selPax, metadata.kategori);
+            if (!parsed.nama) return; // Skip empty rows
 
-            const alamat = (row[selAlamat] || "").toString().trim() || "-";
-            let wa = selWa !== "" ? (row[selWa] || "").toString().trim() : "-";
-            if (wa && wa !== "-") {
-                let isIg = /[a-zA-Z]/.test(wa) || wa.startsWith('@');
-                if (!isIg) {
-                    let num = wa.replace(/\D/g, '');
-                    if (num.startsWith('0')) num = '62' + num.substring(1);
-                    wa = num || wa;
-                }
-            }
-            const paxRaw = selPax !== "" ? parseInt(row[selPax]) : 1;
-            const pax = isNaN(paxRaw) || paxRaw < 1 ? 1 : paxRaw;
-
+            const kodeUnik = generateKodeUnik(window.CURRENT_CATEGORY, "form");
             const tempId = "imp_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
 
-            // Create locally in MASTER_LIST (Optimistic UI)
-            const draftGuest = {
+            addedGuests.push({
                 id: tempId,
                 row: null,
-                kode: "SYNCING...",
-                nama: nama,
-                whatsapp: wa,
-                kategori: metadata.kategori,
+                kode: kodeUnik,
+                nama: parsed.nama,
+                whatsapp: parsed.whatsapp,
+                kategori: parsed.kategori,
                 pihakPengundang: metadata.pihak,
                 souvenir: metadata.souvenir,
-                alamat: alamat,
-                rencanaHadir: pax,
+                alamat: parsed.alamat,
+                rencanaHadir: parsed.rencanaHadir,
                 sesi: metadata.sesi,
                 statusWA: "PENDING",
-                syncStatus: "syncing"
-            };
-
-            MASTER_LIST.unshift(draftGuest);
-            
-            // Push to background sync queue
-            syncQueue.push({
-                tempId: tempId,
-                payload: {
-                    nama: nama,
-                    whatsapp: wa,
-                    kategori: metadata.kategori,
-                    pihak: metadata.pihak,
-                    souvenir: metadata.souvenir,
-                    alamat: alamat,
-                    rencana: pax,
-                    sesi: metadata.sesi
-                }
+                syncStatus: "syncing",
+                subdomain: CURRENT_SUBDOMAIN
             });
-
-            addedCount++;
         });
 
-        if (addedCount > 0) {
-            render(MASTER_LIST);
-            closeImportExcelModal();
-            showSapaModal("Import Berhasil", `${addedCount} tamu dimasukkan ke draft. Sinkronisasi latar belakang dimulai...`, "📥");
-            startQueueProcessor();
+        if (addedGuests.length > 0) {
+            toggleProcessing(true, "MEMASUKKAN TAMU KE SUPABASE...");
+            try {
+                // Simpan ke Supabase secara batch (100 per request)
+                const chunkSize = 100;
+                for (let i = 0; i < addedGuests.length; i += chunkSize) {
+                    const chunk = addedGuests.slice(i, i + chunkSize);
+                    const payloads = chunk.map(g => ({
+                        ssid: CURRENT_SS_ID,
+                        kode: g.kode,
+                        nama: g.nama,
+                        whatsapp: g.whatsapp,
+                        kategori: g.kategori || "Umum",
+                        rencana_hadir: g.rencanaHadir,
+                        real_hadir: "0",
+                        souvenir: g.souvenir || "tidak",
+                        pihak_pengundang: g.pihakPengundang || "-",
+                        alamat: g.alamat || "-",
+                        status_hadir: "0",
+                        status_wa: "PENDING",
+                        status_hadiah: "-",
+                        tanda_kasih: 0,
+                        jam_datang: "-",
+                        sesi: g.sesi || "-",
+                        subdomain: g.subdomain
+                    }));
+
+                    const sbRes = await fetch(`${SB_URL}/rest/v1/tamu`, {
+                        method: 'POST',
+                        headers: {
+                            ...SB_HEADERS,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal'
+                        },
+                        body: JSON.stringify(payloads)
+                    });
+
+                    if (!sbRes.ok) {
+                        const errText = await sbRes.text();
+                        throw new Error("Supabase batch insert failed: " + errText);
+                    }
+                }
+
+                // Tambahkan tamu ke local list dan render (Optimistic & responsif)
+                addedGuests.forEach(g => MASTER_LIST.unshift(g));
+                render(MASTER_LIST);
+                closeImportExcelModal();
+                toggleProcessing(false);
+
+                // Buat queue untuk disinkronisasikan ke Google Sheets secara background
+                syncQueue = addedGuests.map(g => ({
+                    tempId: g.id,
+                    kode: g.kode,
+                    nama: g.nama,
+                    whatsapp: g.whatsapp,
+                    kategori: g.kategori,
+                    pihakPengundang: g.pihakPengundang,
+                    souvenir: g.souvenir,
+                    alamat: g.alamat,
+                    rencanaHadir: g.rencanaHadir,
+                    sesi: g.sesi
+                }));
+
+                showSapaModal("Import Berhasil", `${addedGuests.length} tamu berhasil disimpan ke database. Sinkronisasi Spreadsheet berjalan di latar belakang...`, "📥");
+                startQueueProcessor();
+
+            } catch (err) {
+                toggleProcessing(false);
+                console.error("Bulk Supabase Insert Error:", err);
+                showSapaModal("Gagal Import", "Gagal menyimpan tamu ke Supabase: " + err.message, "❌");
+            }
         } else {
-            showSapaModal("Gagal Import", "Tidak ada baris tamu valid untuk diimpor.", "⚠️");
+            showSapaModal("Gagal Import", "Tidak ada baris tamu valid untuk diimpor.", "⚠️ ");
         }
     };
 
@@ -2638,36 +2950,80 @@
         if (isQueueRunning || syncQueue.length === 0) return;
         isQueueRunning = true;
 
+        const totalToSync = syncQueue.length;
+        let remaining = totalToSync;
+        
+        if (typeof window.showGasCountdown === 'function') {
+            window.showGasCountdown(remaining, totalToSync);
+        }
+
+        // Gunakan batch sync (chunk 50 tamu per request) untuk performa super cepat
+        const chunkSize = 50;
+        
         while (syncQueue.length > 0) {
-            const task = syncQueue.shift();
+            const chunk = syncQueue.splice(0, chunkSize);
             
             try {
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     body: JSON.stringify({
-                        action: "submitCollection",
+                        action: "saveGuestsToSheet",
                         ssId: CURRENT_SS_ID,
-                        ...task.payload,
-                        fastMode: true
+                        guests: chunk
                     })
                 });
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    updateGuestSyncStatus(task.tempId, "done", result.kode, result.row);
+                    chunk.forEach(task => {
+                        updateGuestSyncStatus(task.tempId, "done", task.kode);
+                    });
                 } else {
-                    updateGuestSyncStatus(task.tempId, "failed");
+                    chunk.forEach(task => {
+                        updateGuestSyncStatus(task.tempId, "failed");
+                    });
                 }
             } catch (err) {
-                console.error("Import sync error:", err);
-                updateGuestSyncStatus(task.tempId, "failed");
+                console.error("Chunk import sync error:", err);
+                chunk.forEach(task => {
+                    updateGuestSyncStatus(task.tempId, "failed");
+                });
             }
 
-            // Safe delay of 600ms to stay within Apps Script concurrency limits
-            await new Promise(resolve => setTimeout(resolve, 600));
+            remaining -= chunk.length;
+            if (typeof window.updateGasCountdown === 'function') {
+                window.updateGasCountdown(remaining, totalToSync);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
 
+        if (typeof window.finishGasCountdown === 'function') {
+            window.finishGasCountdown();
+        }
         isQueueRunning = false;
+
+        // Tarik kembali row number terbaru yang dihasilkan spreadsheet secara background
+        setTimeout(async () => {
+            try {
+                const sbRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&select=kode,row`, { headers: SB_HEADERS });
+                if (sbRes.ok) {
+                    const data = await sbRes.json();
+                    const rowMap = {};
+                    data.forEach(item => {
+                        rowMap[item.kode] = item.row;
+                    });
+                    MASTER_LIST.forEach(g => {
+                        if (rowMap[g.kode]) {
+                            g.row = rowMap[g.kode];
+                        }
+                    });
+                    render(MASTER_LIST);
+                }
+            } catch (e) {
+                console.error("Failed to refresh row indexes in background:", e);
+            }
+        }, 5000);
     }
 
     function updateGuestSyncStatus(tempId, syncStatus, kodeUnik, rowNum) {
@@ -2675,10 +3031,9 @@
         if (idx !== -1) {
             MASTER_LIST[idx].syncStatus = syncStatus;
             if (syncStatus === "done") {
-                MASTER_LIST[idx].row = rowNum;
-                MASTER_LIST[idx].kode = kodeUnik;
+                if (rowNum) MASTER_LIST[idx].row = rowNum;
+                if (kodeUnik) MASTER_LIST[idx].kode = kodeUnik;
                 
-                // Clear the checkmark after 3 seconds
                 setTimeout(() => {
                     const guest = MASTER_LIST.find(g => g.id === tempId);
                     if (guest) {

@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="subdomain_resolver.js?v=3.3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700&display=swap');
+    
+    html, body { 
+      margin: 0 !important; 
+      padding: 0 !important; 
+      background-color: #000 !important;
+      overflow: hidden !important;
+      height: 100% !important;
+      width: 100% !important;
+    }
+
+
+    #app-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #000;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      box-sizing: border-box;
+    }
+
+    .status-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+    #fsButton {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    #app-container:hover #fsButton {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+    <script src="auth_guard.js?v=1.0"></script>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- HEADER -->
+    <div class="flex flex-col items-center mb-10">
+      <img src="https://drive.google.com/uc?id=1_s9STgzJy9ahOekn_zMqhM8LyDNAt3zl" alt="SapaTamu.Ku" class="h-14 mb-3 object-contain">
+      <div class="flex items-center gap-2">
+        <p class="text-[10px] tracking-[0.5em] text-emerald-500 font-bold uppercase">System Worker v3.5</p>
+        <span class="text-zinc-600">|</span>
+        <!-- STATION SELECTOR -->
+        <div class="flex items-center gap-2">
+            <div class="flex items-center bg-zinc-900 border border-emerald-500/30 rounded px-2">
+                <span class="text-[8px] text-emerald-500/50 font-bold mr-1">LOKET:</span>
+                <select id="tabIdInput" class="bg-transparent text-emerald-400 text-[10px] font-bold uppercase outline-none py-0.5 cursor-pointer">
+                    <option value="REGISTRASI" class="bg-zinc-900">REGISTRASI (ALL)</option>
+                    <option value="LOKET-1" class="bg-zinc-900">LOKET-1 (SOUVENIR)</option>
+                    <option value="LOKET-2" class="bg-zinc-900">LOKET-2 (CHECKIN)</option>
+                </select>
+            </div>
+            <div class="flex items-center bg-zinc-900 border border-blue-500/30 rounded px-2">
+                <span class="text-[8px] text-blue-500/50 font-bold mr-1">STATION:</span>
+                <select id="sourceInput" class="bg-transparent text-blue-400 text-[10px] font-bold uppercase outline-none py-0.5 cursor-pointer">
+                    <option value="ALL" class="bg-zinc-900">ALL STATION</option>
+                    <option value="CHECKIN" class="bg-zinc-900">CHECKIN</option>
+                    <option value="ONSITE" class="bg-zinc-900">ONSITE</option>
+                    <option value="KIOSK" class="bg-zinc-900">KIOSK</option>
+                </select>
+            </div>
+            <div class="flex items-center bg-zinc-900 border border-amber-500/30 rounded px-2">
+                <span class="text-[8px] text-amber-500/50 font-bold mr-1">JALUR:</span>
+                <select id="jalurInput" class="bg-transparent text-amber-400 text-[10px] font-bold uppercase outline-none py-0.5 cursor-pointer">
+                    <option value="ALL" class="bg-zinc-900">ALL JALUR</option>
+                    <option value="1" class="bg-zinc-900">JALUR 1</option>
+                    <option value="2" class="bg-zinc-900">JALUR 2</option>
+                    <option value="3" class="bg-zinc-900">JALUR 3</option>
+                    <option value="4" class="bg-zinc-900">JALUR 4</option>
+                </select>
+            </div>
+            <div class="flex items-center bg-zinc-900 border border-purple-500/30 rounded px-2">
+                <span class="text-[8px] text-purple-500/50 font-bold mr-1">JEDA:</span>
+                <select id="delayInput" class="bg-transparent text-purple-400 text-[10px] font-bold uppercase outline-none py-0.5 cursor-pointer">
+                    <option value="200" class="bg-zinc-900">200ms</option>
+                    <option value="400" class="bg-zinc-900">400ms</option>
+                    <option value="600" class="bg-zinc-900">600ms</option>
+                    <option value="800" class="bg-zinc-900">800ms</option>
+                    <option value="1200" class="bg-zinc-900" selected>1.2s</option>
+                </select>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN PANEL -->
+    <div class="max-w-md mx-auto w-full bg-zinc-900 border border-white/10 rounded-3xl p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex gap-6">
+          <div>
+            <p class="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Printer Engine</p>
+            <div class="flex items-center gap-2">
+                <div id="statusDot" class="w-2 h-2 rounded-full bg-red-500"></div>
+                <span id="statusText" class="text-xs font-bold text-zinc-400 uppercase">Disconnected</span>
+            </div>
+          </div>
+          <div>
+            <p class="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Jalur Data</p>
+            <div class="flex items-center gap-2">
+                <div id="dbStatusDot" class="w-2 h-2 rounded-full bg-amber-500"></div>
+                <span id="dbStatusText" class="text-xs font-bold text-zinc-400 uppercase">Inisialisasi</span>
+            </div>
+          </div>
+        </div>
+        <button id="connectBtn" class="bg-white text-black text-[10px] font-extrabold px-6 py-3 rounded-full hover:bg-emerald-400 transition-all shadow-lg">PAIR PRINTER</button>
+      </div>
+
+      <div class="bg-black/50 rounded-2xl p-4 border border-white/5">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-[9px] font-bold text-zinc-600 uppercase">Print Queue</span>
+          <span id="queueCounter" class="bg-emerald-500/10 text-emerald-400 text-[9px] px-2 py-1 rounded-md border border-emerald-500/20">READY</span>
+        </div>
+        <div id="consoleLog" class="h-44 overflow-y-auto font-mono text-[10px] text-emerald-200/70 leading-relaxed">
+          > System ready. Visual tuning applied.
+        </div>
+      </div>
+    </div>
+
+    <!-- FULLSCREEN -->
+    <button id="fsButton" class="fixed bottom-6 right-6 p-4 bg-zinc-800/90 border border-white/10 rounded-full hover:bg-emerald-500 hover:scale-110 active:scale-95 transition-all z-[100000] shadow-2xl">
+      <svg id="fsIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+      </svg>
+    </button>
+
+  </div>
+
+  <script>
+    // --- CONFIG ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+    
+    let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
+    let TAB_ID = urlParams.get('tabId') || "REGISTRASI";
+    let SOURCE_ID = urlParams.get('sourceId') || "ALL";
+    let JALUR_ID = urlParams.get('jalurId') || "ALL";
+
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+    
+    let printCharacteristic = null;
+    let isProcessing = false;
+    let pollingTimer = null;
+    let currentDeviceName = ""; 
+
+    const tabInput = document.getElementById('tabIdInput');
+    const sourceInput = document.getElementById('sourceInput');
+    const jalurInput = document.getElementById('jalurInput');
+
+    async function initApp() {
+        SapaGuard.apply('field'); // RBAC Guard
+      if (window.SAPATAMU_RESOLVED) {
+        CURRENT_SS_ID = window.CURRENT_SS_ID || CURRENT_SS_ID;
+        tabInput.value = TAB_ID;
+        sourceInput.value = SOURCE_ID;
+        jalurInput.value = JALUR_ID;
+        
+        // Load saved delay
+        const savedDelay = localStorage.getItem('worker_print_delay');
+        if (savedDelay) {
+            document.getElementById('delayInput').value = savedDelay;
+        }
+
+        if (!CURRENT_SS_ID) {
+          log("CRITICAL ERROR: ssId tidak ditemukan! Harap login ulang.", true);
+          document.getElementById('connectBtn').disabled = true;
+          document.getElementById('connectBtn').style.opacity = "0.5";
+        } else {
+          log(`Worker Active | ID: ${CURRENT_SS_ID}`);
+          initSupabaseRealtime();
+        }
+      } else {
+        setTimeout(initApp, 100);
+      }
+    }
+
+    window.onload = initApp;
+
+    tabInput.addEventListener('change', () => {
+        const newTabId = tabInput.value.toUpperCase().replace(/\s+/g, '-');
+        TAB_ID = newTabId;
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('tabId', newTabId);
+        window.history.pushState({path: newUrl.href}, '', newUrl.href);
+        log(`Loket updated: ${newTabId}`);
+    });
+
+    sourceInput.addEventListener('change', () => {
+        const newSourceId = sourceInput.value;
+        SOURCE_ID = newSourceId;
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('sourceId', newSourceId);
+        window.history.pushState({path: newUrl.href}, '', newUrl.href);
+        log(`Station rute diubah ke: ${newSourceId}`);
+    });
+
+    jalurInput.addEventListener('change', () => {
+        const newJalurId = jalurInput.value;
+        JALUR_ID = newJalurId;
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('jalurId', newJalurId);
+        window.history.pushState({path: newUrl.href}, '', newUrl.href);
+        log(`Jalur rute diubah ke: ${newJalurId}`);
+    });
+
+    document.getElementById('delayInput').addEventListener('change', (e) => {
+        localStorage.setItem('worker_print_delay', e.target.value);
+        log(`Jeda cetak updated: ${e.target.value}ms`);
+    });
+
+    const fsButton = document.getElementById('fsButton');
+    const appContainer = document.getElementById('app-container');
+
+    fsButton.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        appContainer.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    });
+
+    function log(msg, isError = false) {
+      const logDiv = document.getElementById('consoleLog');
+      const time = new Date().toLocaleTimeString('id-ID', { hour12: false });
+      logDiv.innerHTML += `<div class="mb-1 ${isError ? 'text-red-400' : ''}"><span class="opacity-30">[${time}]</span> > ${msg}</div>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    let supabaseClient = null;
+    let realtimeChannel = null;
+    let currentPollingInterval = 1500;
+
+    async function handleConnect() {
+      try {
+        log(`Mencari Bluetooth...`);
+        const device = await navigator.bluetooth.requestDevice({
+          filters: [
+            { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+            { namePrefix: 'TP' }, { namePrefix: 'BT' }, { namePrefix: 'BY' }
+          ],
+          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+        });
+        
+        currentDeviceName = device.name.toUpperCase();
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+        printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+        
+        document.getElementById('statusDot').className = "w-2 h-2 rounded-full bg-emerald-500 status-pulse";
+        document.getElementById('statusText').innerText = `${device.name} CONNECTED`;
+        document.getElementById('statusText').classList.add("text-emerald-500");
+        document.getElementById('connectBtn').style.display = 'none';
+        
+        startPolling(currentPollingInterval);
+        fetchQueue();
+      } catch (e) { log("Error: " + e.message, true); }
+    }
+
+    function startPolling(intervalMs = 1500) {
+      if (pollingTimer && currentPollingInterval === intervalMs) return;
+      if (pollingTimer) clearInterval(pollingTimer);
+      currentPollingInterval = intervalMs;
+      pollingTimer = setInterval(() => {
+        if (!isProcessing && printCharacteristic) fetchQueue();
+      }, intervalMs);
+      log(`Backup Polling: Aktif (${intervalMs / 1000}s)`);
+    }
+
+    function initSupabaseRealtime() {
+      if (!CURRENT_SS_ID) return;
+      try {
+        const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+        
+        if (window.supabase) {
+          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          log("Menghubungkan ke Supabase Realtime...");
+          
+          realtimeChannel = supabaseClient
+            .channel('print_queue_changes')
+            .on(
+              'postgres_changes',
+              {
+                event: '*',
+                schema: 'public',
+                table: 'print_queue',
+                filter: `ssid=eq.${CURRENT_SS_ID}`
+              },
+              (payload) => {
+                const record = payload.new;
+                if (record && record.status === 'WAITING') {
+                  log(`Realtime: Data cetak baru (${record.nama || 'GUEST'})`);
+                  if (!isProcessing && printCharacteristic) {
+                    fetchQueue();
+                  }
+                }
+              }
+            )
+            .subscribe((status) => {
+              const dot = document.getElementById('dbStatusDot');
+              const txt = document.getElementById('dbStatusText');
+              log(`Status Realtime: ${status}`);
+              
+              if (status === 'SUBSCRIBED') {
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 status-pulse";
+                if (txt) {
+                  txt.innerText = "Realtime Aktif";
+                  txt.className = "text-xs font-bold text-emerald-500 uppercase";
+                }
+                startPolling(8000); // Polling backup lambat (8 detik)
+              } else {
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
+                if (txt) {
+                  txt.innerText = "Offline (Polling)";
+                  txt.className = "text-xs font-bold text-amber-500 uppercase";
+                }
+                startPolling(1500); // Terjadi gangguan websocket, balik ke polling cepat (1.5 detik)
+              }
+            });
+        } else {
+          log("Supabase Library tidak termuat. Menggunakan Polling.", true);
+          startPolling(1500);
+        }
+      } catch (e) {
+        log("Gagal inisialisasi Realtime: " + e.message, true);
+        startPolling(1500);
+      }
+    }
+
+    async function fetchQueue() {
+      if (!CURRENT_SS_ID) return;
+      try {
+        TAB_ID = document.getElementById('tabIdInput').value;
+        SOURCE_ID = document.getElementById('sourceInput').value;
+        JALUR_ID = document.getElementById('jalurInput').value;
+        
+        const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/print_queue?ssid=eq." + CURRENT_SS_ID + "&status=eq.WAITING&order=created_at.asc";
+        const response = await fetch(supabaseUrl, {
+            headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization": "Bearer " + SUPABASE_KEY
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const rawItems = await response.json();
+        
+        // Filter di frontend sesuai loket (station), source, dan jalur
+        const currentStation = TAB_ID.toUpperCase().trim();
+        const currentSource = SOURCE_ID.toUpperCase().trim();
+        const currentJalur = JALUR_ID.toUpperCase().trim();
+        
+        const items = (rawItems || []).filter(item => {
+          const jenisInfo = item.info ? item.info.toUpperCase().trim() : "";
+          if (currentStation === "LOKET-1" && jenisInfo.indexOf("SOUVENIR") === -1) return false;
+          if (currentStation === "LOKET-2" && jenisInfo.indexOf("CHECKIN") === -1) return false;
+          
+          if (currentSource !== "ALL" || currentJalur !== "ALL") {
+            const rowStationId = item.station_id ? item.station_id.toUpperCase().trim() : "ALL";
+            if (rowStationId !== "ALL" && rowStationId !== "") {
+              let parts = rowStationId.split("-");
+              let rowSource = parts[0];
+              let rowJalur = parts[1] || "ALL";
+              
+              if (currentSource !== "ALL" && rowSource !== currentSource) return false;
+              if (currentJalur !== "ALL" && rowJalur !== currentJalur) return false;
+            }
+          }
+          return true;
+        });
+
+        const count = items.length;
+        document.getElementById('queueCounter').innerText = `${count} WAITING`;
+        
+        if (count > 0 && !isProcessing) {
+          log(`Polling ${TAB_ID}: Menemukan ${count} antrean...`);
+          await processItems(items);
+        }
+      } catch (e) { 
+        log(`Fetch Error: ${e.message}`, true);
+        console.error("DEBUG FETCH:", e);
+      }
+    }
+
+    async function processItems(items) {
+      isProcessing = true;
+      let printedIds = [];
+      const printDelay = parseInt(document.getElementById('delayInput').value) || 1200;
+      for (let item of items) {
+        try {
+          log(`Cetak: ${item.nama || 'GUEST'}`);
+          await printLabel(item);
+          printedIds.push(item.id);
+          await new Promise(r => setTimeout(r, printDelay)); 
+        } catch (e) { log(`Gagal: ` + e.message, true); break; }
+      }
+      
+      if (printedIds.length > 0) {
+        try {
+          // Update status ke DONE di Supabase secara instan agar antrean langsung kosong
+          const promises = printedIds.map(id => 
+            fetch("https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/print_queue?id=eq." + id, {
+              method: "PATCH",
+              headers: {
+                "apikey": SUPABASE_KEY,
+                "Authorization": "Bearer " + SUPABASE_KEY,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ status: "DONE" })
+            })
+          );
+          await Promise.all(promises);
+
+          // Panggil GAS di background
+          fetch(SCRIPT_URL, {
+            method: "POST", mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ 
+                action: "markPrinted", 
+                printIds: printedIds, 
+                ssId: CURRENT_SS_ID,
+                station: TAB_ID 
+            })
+          });
+        } catch (e) { log("Sync Error", true); }
+      }
+      isProcessing = false;
+    }
+
+    async function printLabel(data) {
+      const encoder = new TextEncoder();
+      const rawNama = data.nama ? String(data.nama).toUpperCase() : "GUEST";
+      const rawKode = data.kode ? String(data.kode) : "-";
+      const kategori = data.kategori ? String(data.kategori).toUpperCase() : "REGULER";
+      const alamat = data.alamat ? String(data.alamat).toUpperCase() : "-";
+      const pihak = data.pihak ? String(data.pihak).toUpperCase() : "-";
+      const sesi = data.sesi ? String(data.sesi).toUpperCase() : "-";
+      const pax = data.pax || "1";
+      
+      // Extract Clean Label Title (e.g. "SOUVENIR: KADO" -> "KADO" or "CHECKIN-LABEL" -> "CHECK-IN")
+      let labelTitle = "CHECK-IN";
+      if (data.info.includes("SOUVENIR")) {
+          labelTitle = data.info.split(":")[1] || "SOUVENIR";
+      } else if (data.info.includes("CHECKIN")) {
+          labelTitle = "CHECK-IN";
+      }
+
+      if (currentDeviceName.includes("BY") || currentDeviceName.includes("TP") || currentDeviceName.includes("B") || currentDeviceName.includes("RHEBAR")) {
+        // Helper to wrap text manually (Safe TSPL method)
+        function wrapText(text, maxChars) {
+            if (!text) return [];
+            if (text.length <= maxChars) return [text];
+            let words = text.split(' ');
+            let lines = [];
+            let currentLine = words[0] || "";
+            for (let i = 1; i < words.length; i++) {
+                if (currentLine.length + 1 + words[i].length <= maxChars) {
+                    currentLine += " " + words[i];
+                } else {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        }
+
+        let tsplLines = [];
+        tsplLines.push(`SIZE 75 mm, 45 mm\r\n`);
+        tsplLines.push(`GAP 3 mm, 0\r\n`);
+        tsplLines.push(`REFERENCE 0,0\r\n`);
+        tsplLines.push(`DIRECTION 1,0\r\n`);
+        tsplLines.push(`CLS\r\n`);
+        
+        // 1. HEADER (OPERASIONAL)
+        tsplLines.push(`SET BOLD 3\r\n`);
+        tsplLines.push(`TEXT 50,40,"3",0,1,1,"[ ${labelTitle.trim().toUpperCase()} ]"\r\n`);
+        tsplLines.push(`SET BOLD 0\r\n`);
+
+        // 2. HERO (NAMA)
+        tsplLines.push(`SET BOLD 5\r\n`);
+        let currentY = 90;
+        const wrappedNama = wrapText(rawNama, 18); // max 18 chars for font 4 before hitting QR
+        for (let i = 0; i < Math.min(wrappedNama.length, 2); i++) {
+            tsplLines.push(`TEXT 50,${currentY},"4",0,1,1,"${wrappedNama[i]}"\r\n`);
+            currentY += 40;
+        }
+        tsplLines.push(`SET BOLD 0\r\n`);
+        
+        // 3. BADGE AREA (KATEGORI & PAX)
+        if (currentY < 150) currentY = 150; 
+        else currentY += 5; // adjust downward if multiline name
+        
+        const wrapMeta = (prefix, val) => {
+            let lines = wrapText(val, 26 - prefix.length);
+            let res = [{ x: 50, text: `${prefix}${lines[0] || ""}` }];
+            for (let i=1; i < Math.min(lines.length, 2); i++) { 
+                res.push({ x: 50, text: `${" ".repeat(prefix.length)}${lines[i]}` });
+            }
+            return res;
+        };
+
+        const metaFields = [
+            ...wrapMeta("PAX     : ", pax),
+            ...wrapMeta("INV BY  : ", pihak),
+            ...wrapMeta("SESI    : ", sesi),
+            ...wrapMeta("ALAMAT  : ", alamat)
+        ];
+
+        for (let field of metaFields) {
+            tsplLines.push(`TEXT ${field.x},${currentY},"2",0,1,1,"${field.text}"\r\n`);
+            currentY += 35; 
+        }
+        
+        // 5. ANCHOR (QR & ID)
+        const cleanKategori = kategori.substring(0, 12);
+        const textX = Math.round(380 + (180 - (cleanKategori.length * 14)) / 2);
+
+        tsplLines.push(`QRCODE 380,60,H,9,A,0,"${rawKode}"\r\n`);
+        tsplLines.push(`BOX 380,265,560,305,3\r\n`);
+        tsplLines.push(`TEXT ${textX},275,"2",0,1,1,"${cleanKategori}"\r\n`);
+        tsplLines.push(`SET BOLD 0\r\n`);
+        tsplLines.push(`TEXT 380,325,"2",0,1,1,"ID: ${rawKode}"\r\n`);
+        tsplLines.push(`PRINT 1,1\r\n`);
+
+        let tspl = tsplLines.join('');
+        
+        // CHUNKING LOGIC: Menggunakan ukuran chunk yang lebih besar (128 byte) & writeValueWithoutResponse jika didukung untuk kecepatan maksimal
+        const dataArray = encoder.encode(tspl);
+        const chunkSize = 128; 
+        for (let i = 0; i < dataArray.length; i += chunkSize) {
+          const chunk = dataArray.slice(i, i + chunkSize);
+          if (typeof printCharacteristic.writeValueWithoutResponse === 'function') {
+            await printCharacteristic.writeValueWithoutResponse(chunk);
+          } else {
+            await printCharacteristic.writeValue(chunk);
+          }
+          await new Promise(r => setTimeout(r, 10)); // Jeda 10ms agar buffer printer stabil
+        }
+      } else {
+        // Fallback ESC/POS
+        let esc = `\x1B@\x1Ba\x01\x1BE\x01${rawNama}\n${kategori}\n${rawKode}\n\n\n`;
+        await printCharacteristic.writeValue(encoder.encode(esc));
+      }
+    }
+
+    document.getElementById('connectBtn').addEventListener('click', handleConnect);
+  </script>
+</body>
+</html>
