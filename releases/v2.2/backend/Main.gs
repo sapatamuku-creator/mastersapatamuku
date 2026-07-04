@@ -221,10 +221,6 @@ function handleMainPost(payload) {
         result = getSettings(ssId);
         break;
       
-      case "updateRsvp":
-        result = updateRsvp(ssId, payload.guestId, payload.pax);
-        break;
-      
       case "saveSettings":
         result = saveSettings(ssId, payload.settings);
         break;
@@ -1219,60 +1215,12 @@ function formatTime(timeVal) {
   
   return hours.toString().padStart(2, '0') + ":" + mins.padStart(2, '0');
 }
-function getOrGenerateRsvpLink(ssId, sheet) {
-  let rsvpLink = sheet.getRange("C5").getValue();
-  if (!rsvpLink || rsvpLink.toString().trim() === "") {
-    try {
-      const res = supabaseFetch(SUPABASE_URL + "/rest/v1/client_public_profile?ssid=eq." + ssId + "&select=subdomain", {
-        method: "get",
-        headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": "Bearer " + SUPABASE_KEY
-        }
-      });
-      const data = JSON.parse(res.getContentText());
-      if (data && data.length > 0 && data[0].subdomain) {
-        const subdomain = data[0].subdomain.toLowerCase().trim();
-        rsvpLink = "https://" + subdomain + ".sapatamu.id/rsvp.html";
-        sheet.getRange("C5").setValue(rsvpLink);
-      } else {
-        // Fallback: search clients table
-        const res2 = supabaseFetch(SUPABASE_URL + "/rest/v1/clients?ssid=eq." + ssId + "&select=subdomain", {
-          method: "get",
-          headers: {
-            "apikey": SUPABASE_KEY,
-            "Authorization": "Bearer " + SUPABASE_KEY
-          }
-        });
-        const data2 = JSON.parse(res2.getContentText());
-        if (data2 && data2.length > 0 && data2[0].subdomain) {
-          const subdomain = data2[0].subdomain.toLowerCase().trim();
-          rsvpLink = "https://" + subdomain + ".sapatamu.id/rsvp.html";
-          sheet.getRange("C5").setValue(rsvpLink);
-        }
-      }
-    } catch (e) {
-      console.error("Gagal mendapatkan subdomain dari Supabase: " + e.toString());
-    }
-  }
-  return rsvpLink;
-}
-
 function getSettings(ssId, guestId = null) {
   try {
     const ss = getSS(ssId);
     const sheet = ss.getSheetByName(SHEET_DATA);
     const configSheet = ss.getSheetByName("Config");
     const settingsSheet = ss.getSheetByName("Settings");
-    
-    // Cek & isi otomatis RSVP Link jika kosong
-    let rsvpLink = "";
-    try {
-      rsvpLink = getOrGenerateRsvpLink(ssId, sheet);
-    } catch (errR) {
-      console.error("Gagal getOrGenerateRsvpLink: " + errR.toString());
-      rsvpLink = sheet.getRange("C5").getValue() || "";
-    }
     
     const meta = sheet.getRange("B1:B5").getValues();
     const sesi = sheet.getRange("E1:G1").getValues()[0];
@@ -1354,7 +1302,6 @@ function getSettings(ssId, guestId = null) {
         lokasi: meta[2][0],
         waktu: meta[3][0],
         link: meta[4][0],
-        rsvpLink: rsvpLink,
         sesi1: sesi[0],
         sesi2: sesi[1],
         sesi3: sesi[2],
@@ -1598,7 +1545,7 @@ function getWishes(ssId) {
 function updateRsvp(ssId, guestId, pax) {
   try {
     const ss = getSS(ssId);
-    const sheet = ss.getSheetByName(SHEET_DATA);
+    const sheet = ss.getSheetByName("Sheet1");
     if (!sheet) return { status: "error", message: "Sheet1 tidak ditemukan" };
     
     const lastRow = sheet.getLastRow();
@@ -1609,31 +1556,7 @@ function updateRsvp(ssId, guestId, pax) {
     
     if (guestIndex > -1) {
       // Row 7 + guestIndex. Kolom H (Rencana Hadir) adalah kolom ke-8.
-      const paxVal = (pax !== undefined && pax !== null && pax !== "") ? parseInt(pax) : 0;
-      sheet.getRange(7 + guestIndex, 8).setValue(paxVal);
-      
-      // --- UPDATE KE SUPABASE tamu table ---
-      try {
-        if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
-          const url = `${SUPABASE_URL}/rest/v1/tamu?ssid=eq.${ssId}&kode=eq.${guestId}`;
-          const headers = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": `Bearer ${SUPABASE_KEY}`,
-            "Content-Type": "application/json",
-            "Prefer": "return=minimal"
-          };
-          const options = {
-            method: "patch",
-            headers: headers,
-            payload: JSON.stringify({ rencana_hadir: paxVal }),
-            muteHttpExceptions: true
-          };
-          supabaseFetch(url, options);
-        }
-      } catch (sbErr) {
-        console.error("Gagal update rencana_hadir ke Supabase: " + sbErr.toString());
-      }
-      
+      sheet.getRange(7 + guestIndex, 8).setValue(parseInt(pax) || 1);
       return { status: "success", message: "Rencana Hadir diupdate" };
     } else {
       return { status: "error", message: "Tamu tidak ditemukan" };

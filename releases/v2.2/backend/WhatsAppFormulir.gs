@@ -25,14 +25,6 @@ function handleWAFormGet(e) {
   // setelah deteksi apakah vendor SapaTamu.id atau vendor lain (custom)
   const linkInvitation = sheet1.getRange("B5").getValue().toString().trim();
 
-  let rsvpLink = "";
-  try {
-    rsvpLink = getOrGenerateRsvpLink(ssId, sheet1);
-  } catch(errR) {
-    console.error("Gagal getOrGenerateRsvpLink: " + errR.toString());
-    rsvpLink = sheet1.getRange("C5").getValue().toString().trim();
-  }
-
   const deviceData = settings.getRange("A3:D8").getValues();
   const categoryMap = deviceData
     .filter(row => row[0] !== "")
@@ -64,7 +56,6 @@ function handleWAFormGet(e) {
 
   const result = { 
     masterToken, weddingTitle, hariTanggal, lokasiAcara, waktuAcara, linkInvitation, 
-    rsvpLink,
     defaultTemplate,
     customTemplate, // Teks kata pengantar dinamis di kolom C6
     liveUsage: liveDeviceCount, categories: categoryMap, tamu: listTamu 
