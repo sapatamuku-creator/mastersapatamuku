@@ -1,0 +1,370 @@
+/**
+ * SAPATAMU.KU - AUTO SYNC QUEUE SYSTEM (INDEXEDDB CLIENT-SIDE)
+ * Mencegah Google Apps Script & Supabase Overload Request Paralel & Kehilangan Sinyal
+ */
+(function() {
+    const DB_NAME = 'SapaTamuOfflineDB';
+    const STORE_NAME = 'checkin_queue';
+    const DB_VERSION = 1;
+    let isProcessing = false;
+    let dbPromise = null;
+
+    // Inisialisasi/koneksi IndexedDB
+    function getDB() {
+        if (!window.indexedDB) {
+            console.error('[SyncQueue] Browser tidak mendukung IndexedDB.');
+            return null;
+        }
+        if (dbPromise) return dbPromise;
+        dbPromise = new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                    store.createIndex('status_sync', 'status_sync', { unique: false });
+                    store.createIndex('timestamp', 'timestamp', { unique: false });
+                }
+            };
+            request.onsuccess = (e) => resolve(e.target.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+        return dbPromise;
+    }
+
+    // Antrekan request fallback ke localStorage jika IndexedDB bermasalah
+    function fallbackEnqueue(url, options) {
+        try {
+            const queue = JSON.parse(localStorage.getItem('sapatamu_sync_queue')) || [];
+            queue.push({
+                id: 'fb_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                url: url,
+                method: options.method || 'POST',
+                headers: options.headers || {},
+                body: options.body,
+                retryCount: 0,
+                isFallback: true
+            });
+            localStorage.setItem('sapatamu_sync_queue', JSON.stringify(queue));
+            updateQueueCount();
+            if (!isProcessing) processQueue();
+        } catch(e) {}
+    }
+
+    // Tambahkan request ke dalam antrean IndexedDB
+    async function enqueue(url, options) {
+        try {
+            const db = await getDB();
+            if (!db) {
+                fallbackEnqueue(url, options);
+                return;
+            }
+
+            const newItem = {
+                url: url,
+                method: options.method || 'POST',
+                headers: options.headers || {},
+                body: options.body,
+                status_sync: 'pending',
+                timestamp: Date.now(),
+                retries: 0,
+                error_log: ''
+            };
+
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            store.add(newItem);
+
+            tx.oncomplete = () => {
+                console.log('[SyncQueue] Request dimasukkan ke antrean IndexedDB:', url);
+                updateQueueCount();
+                if (!isProcessing) processQueue();
+            };
+        } catch (e) {
+            console.error('[SyncQueue] Gagal menyimpan antrean ke IndexedDB:', e);
+            fallbackEnqueue(url, options);
+        }
+    }
+
+    // Ambil request berikutnya (FIFO) dari fallback localStorage atau IndexedDB
+    async function getNextQueueItem() {
+        try {
+            const fbQueue = JSON.parse(localStorage.getItem('sapatamu_sync_queue')) || [];
+            if (fbQueue.length > 0) {
+                const item = fbQueue[0];
+                return {
+                    id: item.id,
+                    url: item.url,
+                    method: item.method,
+                    headers: item.headers,
+                    body: item.body,
+                    isFallback: true
+                };
+            }
+        } catch(e) {}
+
+        try {
+            const db = await getDB();
+            if (!db) return null;
+            return new Promise((resolve) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const index = store.index('timestamp');
+                const request = index.openCursor();
+                request.onsuccess = (e) => {
+                    const cursor = e.target.result;
+                    if (cursor) {
+                        const item = cursor.value;
+                        if (item.status_sync === 'pending' || item.status_sync === 'failed') {
+                            resolve(item);
+                        } else {
+                            cursor.continue();
+                        }
+                    } else {
+                        resolve(null);
+                    }
+                };
+                request.onerror = () => resolve(null);
+            });
+        } catch(e) {
+            return null;
+        }
+    }
+
+    // Update status antrean IndexedDB
+    async function updateStatus(id, status, errorMsg = '') {
+        if (typeof id === 'string' && id.startsWith('fb_')) return;
+        try {
+            const db = await getDB();
+            if (!db) return;
+            return new Promise((resolve) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.get(id);
+                request.onsuccess = () => {
+                    const data = request.value;
+                    if (data) {
+                        data.status_sync = status;
+                        if (status === 'failed') {
+                            data.retries = (data.retries || 0) + 1;
+                            data.error_log = errorMsg;
+                        }
+                        store.put(data);
+                    }
+                };
+                tx.oncomplete = () => {
+                    updateQueueCount();
+                    resolve();
+                };
+            });
+        } catch(e) {}
+    }
+
+    // Hapus antrean setelah sukses dikirim
+    async function deleteItem(id) {
+        if (typeof id === 'string' && id.startsWith('fb_')) {
+            try {
+                const fbQueue = JSON.parse(localStorage.getItem('sapatamu_sync_queue')) || [];
+                const updated = fbQueue.filter(item => item.id !== id);
+                localStorage.setItem('sapatamu_sync_queue', JSON.stringify(updated));
+                updateQueueCount();
+            } catch(e) {}
+            return;
+        }
+        try {
+            const db = await getDB();
+            if (!db) return;
+            return new Promise((resolve) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.delete(id);
+                tx.oncomplete = () => {
+                    updateQueueCount();
+                    resolve();
+                };
+            });
+        } catch(e) {}
+    }
+
+    // Kirim request antrean satu per satu secara terkontrol (Sequensial)
+    async function processQueue() {
+        if (isProcessing) return;
+        
+        const nextItem = await getNextQueueItem();
+        if (!nextItem) {
+            isProcessing = false;
+            updateQueueCount();
+            return;
+        }
+
+        isProcessing = true;
+        
+        if (!nextItem.isFallback) {
+            await updateStatus(nextItem.id, 'syncing');
+        }
+
+        try {
+            const fetchOptions = {
+                method: nextItem.method,
+                headers: nextItem.headers,
+                body: nextItem.body
+            };
+            
+            // Bypass CORS redirect pada request Google Apps Script
+            if (nextItem.url.includes('script.google.com')) {
+                fetchOptions.mode = 'no-cors';
+            }
+
+            await window.originalFetch(nextItem.url, fetchOptions);
+
+            // Sukses, hapus dari database lokal
+            await deleteItem(nextItem.id);
+            
+            isProcessing = false;
+            // Jeda 1.5 detik sebelum memproses berikutnya (Rate Limiter)
+            setTimeout(processQueue, 1500);
+        } catch (err) {
+            console.warn("[SyncQueue] Gagal mengirim request background. Retrying...", err);
+            
+            if (!nextItem.isFallback) {
+                await updateStatus(nextItem.id, 'failed', err.message);
+            }
+            
+            isProcessing = false;
+            // Jeda 5 detik jika terjadi timeout/koneksi putus sebelum retry
+            setTimeout(processQueue, 5000); 
+        }
+    }
+
+    // Hitung total sisa antrean dan perbarui UI indicator
+    async function updateQueueCount() {
+        let count = 0;
+        try {
+            const fbQueue = JSON.parse(localStorage.getItem('sapatamu_sync_queue')) || [];
+            count += fbQueue.length;
+        } catch(e) {}
+
+        try {
+            const db = await getDB();
+            if (db) {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.count();
+                request.onsuccess = () => {
+                    count += request.result;
+                    updateQueueIndicator(count);
+                };
+                request.onerror = () => {
+                    updateQueueIndicator(count);
+                };
+                return;
+            }
+        } catch(e) {}
+        
+        updateQueueIndicator(count);
+    }
+
+    // Intercept fungsi fetch global browser
+    if (!window.originalFetch) {
+        window.originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            let shouldIntercept = false;
+            
+            if (options) {
+                const method = (options.method || 'GET').toUpperCase();
+                
+                // 1. Intersepsi GAS background requests (POST + no-cors)
+                if (method === 'POST' && options.mode === 'no-cors') {
+                    try {
+                        const payload = JSON.parse(options.body);
+                        const interceptActions = ['confirm_checkin', 'broadcastWA', 'uploadSelfie', 'register_new_onsite', 'sendAutomationBlast'];
+                        if (interceptActions.includes(payload.action)) {
+                            shouldIntercept = true;
+                        }
+                    } catch(e) {}
+                }
+                
+                // 2. Intersepsi Supabase REST API writes (POST, PATCH, DELETE)
+                if (['POST', 'PATCH', 'DELETE'].includes(method) && url.includes('supabase.co/rest/v1/')) {
+                    shouldIntercept = true;
+                }
+            }
+            
+            if (shouldIntercept) {
+                enqueue(url, options);
+                
+                // Kembalikan Response sukses palsu ke frontend asli agar tidak merusak alur JS utama
+                return Promise.resolve(new Response(JSON.stringify({ status: 'queued' }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                }));
+            }
+            
+            return window.originalFetch.apply(this, arguments);
+        };
+    }
+
+    // Tampilkan Indikator Sinkronisasi Latar Belakang yang Elegan
+    function updateQueueIndicator(pendingCount) {
+        let indicator = document.getElementById('sync-queue-badge');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'sync-queue-badge';
+            
+            if (!document.getElementById('sync-queue-style')) {
+                const styleEl = document.createElement('style');
+                styleEl.id = 'sync-queue-style';
+                styleEl.innerHTML = `
+                    @keyframes syncPulse {
+                        0% { transform: scale(0.95); opacity: 0.5; }
+                        50% { transform: scale(1.1); opacity: 1; }
+                        100% { transform: scale(0.95); opacity: 0.5; }
+                    }
+                `;
+                document.head.appendChild(styleEl);
+            }
+
+            indicator.style = `
+                position: fixed;
+                bottom: 80px;
+                right: 20px;
+                background: rgba(74, 63, 53, 0.95);
+                backdrop-filter: blur(10px);
+                border: 1px solid var(--border, #F0E6DE);
+                color: #FFF9F5;
+                padding: 8px 14px;
+                border-radius: 30px;
+                font-size: 9px;
+                font-weight: 800;
+                z-index: 99999;
+                display: none;
+                align-items: center;
+                gap: 8px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+                transition: 0.3s;
+                font-family: 'Plus Jakarta Sans', sans-serif;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            `;
+            document.body.appendChild(indicator);
+        }
+
+        if (pendingCount > 0) {
+            indicator.style.display = 'flex';
+            indicator.innerHTML = `
+                <span style="display:inline-block; width:6px; height:6px; background:#C8962E; border-radius:50%; animation:syncPulse 1.5s infinite;"></span>
+                Sync Data: ${pendingCount} Antrean
+            `;
+        } else {
+            indicator.style.display = 'none';
+        }
+    }
+
+    // Cek sisa antrean saat pertama kali aplikasi dibuka
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            updateQueueCount();
+            processQueue();
+        }, 1000);
+    });
+})();
