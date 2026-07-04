@@ -1353,6 +1353,17 @@
                     window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
                     window.WA_HARI_TANGGAL = meta.hari_tanggal || "";
                     window.WA_WAKTU_ACARA = meta.waktu_acara || "";
+                    
+                    let rsvpLink = meta.rsvp_link || "";
+                    if (!rsvpLink) {
+                        try {
+                            const session = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || "{}");
+                            if (session && session.username) {
+                                rsvpLink = `https://${session.username}.sapatamu.id/rsvp.html`;
+                            }
+                        } catch (e) {}
+                    }
+                    window.WA_RSVP_LINK = rsvpLink;
 
                     document.getElementById('view-wedding-name').innerText = meta.nama_pengantin || "Event Guestbook";
                     document.getElementById('view-schedule').innerHTML = (meta.hari_tanggal || "") + "<br>" + (meta.waktu_acara || "");
@@ -1434,6 +1445,7 @@
                     window.WA_TEMPLATE_CUSTOM = result.eventMeta.template || ""; // template in eventMeta is C6
                     window.WA_HARI_TANGGAL = result.eventMeta.tanggal || "";
                     window.WA_WAKTU_ACARA = result.eventMeta.waktu || "";
+                    window.WA_RSVP_LINK = result.eventMeta.rsvpLink || "";
 
                     document.getElementById('view-wedding-name').innerText = result.eventMeta.pengantin || "Event Guestbook";
                     document.getElementById('view-schedule').innerHTML = (result.eventMeta.tanggal || "") + "<br>" + (result.eventMeta.waktu || "");
@@ -1699,6 +1711,7 @@
 
     window.WA_TEMPLATE_DEFAULT = "";
     window.WA_TEMPLATE_CUSTOM = "";
+    window.WA_RSVP_LINK = "";
 
     window.executeBlast = function(row, phone, name, code) {
         const guest = MASTER_LIST.find(g => g.row == row);
@@ -1742,16 +1755,22 @@
                 }
             }
         }
+        let rsvpLink = "";
+        const rsvpBase = window.WA_RSVP_LINK || "";
+        if (rsvpBase) {
+            rsvpLink = `${rsvpBase}?id=${encodeURIComponent(code)}&u=${encodeURIComponent(name)}`;
+        }
+
         const qrCodeLink = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(code)}&size=400x400`;
         
         let cleanPhone = String(phone).replace(/\D/g, ''); 
         if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
 
         const fallbackJSONTemplates = {
-            "vvip": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
-            "vip": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
-            "keluarga": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
-            "umum": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`
+            "vvip": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon konfirmasikan kehadiran Bapak/Ibu/Saudara/i melalui tautan RSVP berikut: {LINK_RSVP}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
+            "vip": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon konfirmasikan kehadiran Bapak/Ibu/Saudara/i melalui tautan RSVP berikut: {LINK_RSVP}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
+            "keluarga": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon konfirmasikan kehadiran Bapak/Ibu/Saudara/i melalui tautan RSVP berikut: {LINK_RSVP}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`,
+            "umum": `Kepada Yth. Bapak/Ibu/Saudara/i\n*{NAMA_TAMU_KAPITAL}*\n\nTanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara Pernikahan Kami . *Tepat pada pukul: [{SESI_TAMU}]*\n\n*{NAMA_PENGANTIN}*\n▫️ Hari/Tgl: {HARI_TANGGAL}\n▫️ Waktu: {WAKTU_ACARA}\n▫️ Lokasi: {LOKASI_ACARA}\n\nInformasi lengkap dapat diakses melalui tautan berikut:\n{LINK_UNDANGAN}\n\nMohon konfirmasikan kehadiran Bapak/Ibu/Saudara/i melalui tautan RSVP berikut: {LINK_RSVP}\n\nMohon simpan QR Code di bawah untuk ditunjukkan saat memasuki area acara sebagai akses masuk digital Anda:\n{LINK_QR}\n\nMerupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\nTerima kasih.\n\nHormat kami,\n*{NAMA_PENGANTIN}*\n________________`
         };
 
         let templateString = "";
@@ -1796,6 +1815,7 @@
                 .replace(/{WAKTU_ACARA}/g, waktuAcara)    // B4 — Waktu Acara saja
                 .replace(/{LOKASI_ACARA}/g, location)
                 .replace(/{LINK_UNDANGAN}/g, personalLink)
+                .replace(/{LINK_RSVP}/g, rsvpLink)
                 .replace(/{LINK_QR}/g, qrCodeLink);
         } else {
             msg = `Kepada Yth. Bapak/Ibu/Saudara/i\n*${name.toUpperCase()}*\n\n` +
@@ -1805,6 +1825,7 @@
                   `▫️ Waktu: ${waktuAcara}\n` +
                   `▫️ Lokasi: ${location}\n\n` +
                   `Informasi lengkap dapat diakses melalui tautan berikut:\n${personalLink}\n\n` +
+                  (rsvpLink ? `Mohon konfirmasikan kehadiran Bapak/Ibu/Saudara/i melalui tautan RSVP berikut:\n${rsvpLink}\n\n` : "") +
                   `Mohon simpan QR Code ini untuk akses masuk:\n${qrCodeLink}\n\n` +
                   `Terima kasih.`;
         }

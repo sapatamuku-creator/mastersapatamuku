@@ -516,6 +516,14 @@ function getMasterDataV3(ssId) {
   const weddingTime = meta[3][0] || "-";
   const weddingLink = meta[4][0] || "";
 
+  let rsvpLink = "";
+  try {
+    rsvpLink = getOrGenerateRsvpLink(ssId, sheet);
+  } catch (errR) {
+    console.error("Gagal getOrGenerateRsvpLink: " + errR.toString());
+    rsvpLink = sheet.getRange("C5").getValue().toString().trim();
+  }
+
   const sesiMeta = sheet.getRange("D1:G1").getValues()[0];
 
   const eventMeta = {
@@ -524,6 +532,7 @@ function getMasterDataV3(ssId) {
     lokasi: weddingLoc,
     waktu: weddingTime,
     link: weddingLink,
+    rsvpLink: rsvpLink,
     defaultTemplate: sheet.getRange("B6").getValue().toString().trim(),
     template: sheet.getRange("C6").getValue().toString().trim(), // Teks kata pengantar dinamis di kolom C6
     labelSesi: sesiMeta[0], 
