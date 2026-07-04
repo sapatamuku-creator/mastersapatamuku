@@ -288,10 +288,23 @@
         applyViewOnlyContent();
     }
 
+    function isAuthenticated() {
+        const s = getSession();
+        // Sesi demo dianggap terautentikasi
+        if (s.is_demo || s.username === 'akundemo') return true;
+        // Sesi operasional harus memiliki role eksplisit client atau usher
+        return s.role === 'client' || s.role === 'usher';
+    }
+
     // ─── Public API ────────────────────────────────────────────────────────
     window.SapaGuard = {
         apply: function (mode) {
             window.SAPAGUARD_MODE = mode;
+            if (!isAuthenticated()) {
+                console.warn("[SapaGuard] Sesi tidak valid atau belum login. Mengarahkan ke login.html...");
+                window.location.replace("login.html?reason=unauthenticated");
+                return;
+            }
             if (mode === 'field') applyFieldGuard();
             if (mode === 'sensitive') applySensitiveGuard();
         },

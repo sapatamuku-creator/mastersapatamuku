@@ -383,22 +383,28 @@
 
         if (session) {
             const data = JSON.parse(session);
-            const sub = (data.subdomain || data.username || "").toLowerCase().replace(/[\s&]/g, '');
-            if (sub) {
-                const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
-                const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
-                window.location.replace("https://" + sub + ".sapatamu.id/" + targetPage);
-                return;
+            const hasVerifiedSession = data.role === 'client' || data.role === 'usher' || data.is_demo || data.username === 'akundemo';
+            if (hasVerifiedSession) {
+                const sub = (data.subdomain || data.username || "").toLowerCase().replace(/[\s&]/g, '');
+                if (sub) {
+                    const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
+                    const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
+                    window.location.replace("https://" + sub + ".sapatamu.id/" + targetPage);
+                    return;
+                }
             }
         } else if (localData) {
             const data = JSON.parse(localData);
-            const sub = (data.subdomain || data.username || "").toLowerCase().replace(/[\s&]/g, '');
-            if (sub) {
-                sessionStorage.setItem(SESSION_KEY, localData);
-                const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
-                const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
-                window.location.replace("https://" + sub + ".sapatamu.id/" + targetPage);
-                return;
+            const hasVerifiedSession = data.role === 'client' || data.role === 'usher' || data.is_demo || data.username === 'akundemo';
+            if (hasVerifiedSession) {
+                const sub = (data.subdomain || data.username || "").toLowerCase().replace(/[\s&]/g, '');
+                if (sub) {
+                    sessionStorage.setItem(SESSION_KEY, localData);
+                    const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
+                    const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
+                    window.location.replace("https://" + sub + ".sapatamu.id/" + targetPage);
+                    return;
+                }
             }
         }
     }
