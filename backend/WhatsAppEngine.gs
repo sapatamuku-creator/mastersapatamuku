@@ -55,7 +55,37 @@ function handleWAEnginePost(data) {
         body = `Halo *${guest.nama}*,\n\nTerima kasih telah hadir merayakan hari spesial *${eventName}*.`;
       }
 
-      const footer = `\n\n📸 *Informasi Penting:* \nFoto dokumentasi kebersamaan Anda dapat diakses secara berkala dengan memindai QR-Code AI Gallery yang tersedia di area visual.\n\nSelamat menikmati seluruh rangkaian acara!\n\nSalam hangat,\n— *sapatamu.id x Knowhere Studio*`;
+      // Deteksi Paket Client (Collaboration atau bukan) dari Supabase
+      let isCollaboration = false;
+      try {
+        if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && SUPABASE_KEY) {
+          const clientProfileUrl = SUPABASE_URL + "/rest/v1/client_public_profile?ssid=eq." + ssId + "&select=package";
+          const res = supabaseFetch(clientProfileUrl, {
+            method: "get",
+            headers: {
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY
+            }
+          });
+          const data = JSON.parse(res.getContentText());
+          if (data && data.length > 0 && data[0].package) {
+            const clientPackage = data[0].package.toLowerCase();
+            if (clientPackage.includes("collaboration")) {
+              isCollaboration = true;
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Gagal mendeteksi paket client dari Supabase: " + e.toString());
+      }
+
+      let footer = "";
+      if (isCollaboration) {
+        footer = `\n\n📸 *Informasi Penting:* \nFoto dokumentasi kebersamaan Anda dapat diakses secara berkala dengan memindai QR-Code AI Gallery yang tersedia di area visual.\n\nSelamat menikmati seluruh rangkaian acara!\n\nSalam hangat,\n— *sapatamu.id x Knowhere Studio*`;
+      } else {
+        footer = `\n\nSelamat menikmati seluruh rangkaian acara!\n\nSalam hangat,\n— *sapatamu.id*`;
+      }
+
       const finalMessage = `${greeting}\n\n${body}${footer}`;
       
       return sendToFonnte(cleanedPhone, finalMessage);
