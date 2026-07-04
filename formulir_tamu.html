@@ -254,15 +254,21 @@
             letter-spacing: 0.3px;
             white-space: nowrap;
         }
-        .gas-spin-dot {
-            width: 6px; height: 6px; border-radius: 50%;
+        .gas-sync-live-dot {
+            width: 7px; height: 7px; border-radius: 50%;
             background: #10B981; flex-shrink: 0;
-            animation: gasPulse 0.8s ease infinite;
+            box-shadow: 0 0 0 0 rgba(16,185,129,0.6);
+            animation: gasSyncPing 1s ease-out infinite;
         }
-        @keyframes gasPulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.3; transform: scale(0.6); }
+        @keyframes gasSyncPing {
+            0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+            70%  { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+            100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
         }
+        #gas-cd-processed { font-size: 13px; font-weight: 900; color: #059669; letter-spacing: -0.5px; }
+        #gas-cd-realtime-label { font-size: 8px; font-weight: 700; color: #6EE7B7; vertical-align: super; letter-spacing: 0.2px; }
+        #gas-cd-total { font-size: 11px; font-weight: 800; color: #374151; }
+        #gas-cd-suffix { font-size: 9px; font-weight: 700; color: #6b7280; letter-spacing: 0.5px; }
         #btn-manage-dup:hover {
             background: rgba(254, 226, 226, 0.9);
             border-color: rgba(239, 68, 68, 0.5);
@@ -812,7 +818,14 @@
                                 </div>
                             </div>
                         </div>
-                        <span id="gas-countdown-indicator" style="display:none; align-items:center; gap:5px; font-size:9.5px; font-weight:800; color:#059669; background:rgba(209,250,229,0.7); border:1.5px solid rgba(16,185,129,0.25); padding:5px 10px; border-radius:50px; white-space:nowrap;">
+                        <span id="gas-countdown-indicator" style="display:none; align-items:center; gap:6px; background:rgba(209,250,229,0.85); border:1.5px solid rgba(16,185,129,0.3); padding:6px 12px; border-radius:50px; white-space:nowrap; box-shadow:0 2px 8px rgba(16,185,129,0.15);">
+                            <span class="gas-sync-live-dot"></span>
+                            <span style="display:flex; align-items:baseline; gap:2px;">
+                                <span id="gas-cd-processed">0</span><span id="gas-cd-realtime-label">(realtime)</span>
+                                <span style="font-size:11px; font-weight:700; color:#6b7280; margin:0 1px;">/</span>
+                                <span id="gas-cd-total">0</span>
+                                <span id="gas-cd-suffix">&nbsp;guest</span>
+                            </span>
                         </span>
                         <span id="dup-filter-info"></span>
                     </div>
@@ -3669,26 +3682,39 @@
         function showGasCountdown(remaining, total) {
             var indicator = document.getElementById('gas-countdown-indicator');
             if (!indicator) return;
+            var processed = total - remaining;
             indicator.style.display = 'inline-flex';
-            indicator.innerHTML = '<span class="gas-spin-dot"></span><span id="gas-cd-text">' + remaining + '/' + total + ' sync GS</span>';
+            var dotEl = indicator.querySelector('.gas-sync-live-dot');
+            if (dotEl) { dotEl.style.animation = 'gasSyncPing 1s ease-out infinite'; dotEl.style.background = '#10B981'; }
+            var procEl = document.getElementById('gas-cd-processed');
+            var totEl  = document.getElementById('gas-cd-total');
+            if (procEl) procEl.textContent = processed;
+            if (totEl)  totEl.textContent  = total;
         }
 
         function updateGasCountdown(remaining, total) {
-            var textEl = document.getElementById('gas-cd-text');
-            if (textEl) textEl.innerText = remaining + '/' + total + ' sync GS';
+            var processed = total - remaining;
+            var procEl = document.getElementById('gas-cd-processed');
+            if (procEl) procEl.textContent = processed;
+            var totEl  = document.getElementById('gas-cd-total');
+            if (totEl)  totEl.textContent  = total;
         }
 
         function finishGasCountdown() {
-            var textEl = document.getElementById('gas-cd-text');
             var indicator = document.getElementById('gas-countdown-indicator');
-            if (textEl) textEl.innerText = 'Spreadsheet selesai';
-            var dot = indicator ? indicator.querySelector('.gas-spin-dot') : null;
-            if (dot) { dot.style.animation = 'none'; dot.style.background = '#10B981'; }
-            // Hide after 3 seconds
+            var procEl = document.getElementById('gas-cd-processed');
+            var totEl  = document.getElementById('gas-cd-total');
+            if (totEl && procEl) procEl.textContent = totEl.textContent; // show total = total (all done)
+            var realtimeLbl = document.getElementById('gas-cd-realtime-label');
+            if (realtimeLbl) realtimeLbl.textContent = '(selesai)';
+            var dotEl = indicator ? indicator.querySelector('.gas-sync-live-dot') : null;
+            if (dotEl) { dotEl.style.animation = 'none'; dotEl.style.boxShadow = 'none'; }
+            // Hide after 4 seconds
             if (_gasCountdownTimer) clearTimeout(_gasCountdownTimer);
             _gasCountdownTimer = setTimeout(function() {
                 if (indicator) indicator.style.display = 'none';
-            }, 3000);
+                if (realtimeLbl) realtimeLbl.textContent = '(realtime)';
+            }, 4000);
         }
 
         initApp();
