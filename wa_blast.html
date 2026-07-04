@@ -868,9 +868,29 @@
                         pihak: item.pihak_pengundang
                     }));
 
-                    // Reset filter ke "tampilkan semua" saat data fresh dari Supabase
+                    // Rebuild dropdown kategori dari unique pihak_pengundang di data Supabase (bukan GAS)
+                    // Ini memastikan filter selalu cocok dengan data aktual
                     const katSelect = document.getElementById('kategoriSelect');
-                    if (katSelect && isInitial) katSelect.value = '';
+                    if (katSelect) {
+                        const prevVal = isInitial ? '' : katSelect.value; // preserve selection on refresh
+                        const uniquePihak = [...new Set(
+                            localData.tamu
+                                .map(t => (t.pihak || '').trim())
+                                .filter(Boolean)
+                        )].sort();
+
+                        katSelect.innerHTML = '<option value="">-- Semua Pihak Pengundang --</option>';
+                        uniquePihak.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p;
+                            opt.textContent = p;
+                            katSelect.appendChild(opt);
+                        });
+
+                        if (prevVal && uniquePihak.includes(prevVal)) {
+                            katSelect.value = prevVal;
+                        }
+                    }
 
                     // Tampilkan tabel tamu instan ke layar
                     renderTable();
