@@ -278,6 +278,104 @@
                 transform: translateY(0);
             }
         }
+        /* VENDOR LIST ANIMATION */
+        .vendor-display-area {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .vendor-card {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .vendor-card .vendor-role {
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-bottom: 0.5vh;
+            font-weight: 600;
+        }
+
+        .vendor-card .vendor-name {
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        /* MAINSHOW State */
+        .vendor-card.mainshow {
+            transform: translateY(-2vh) scale(1);
+            opacity: 1;
+            z-index: 10;
+        }
+        .vendor-card.mainshow .vendor-role {
+            font-size: clamp(0.7rem, 1.1vw, 1.1rem);
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .vendor-card.mainshow .vendor-name {
+            font-size: clamp(1.4rem, 2.2vw, 2.2rem);
+            color: var(--gold);
+            text-shadow: 0 4px 20px rgba(212, 175, 55, 0.35);
+        }
+
+        /* SUBSHOW State (film credits style below mainshow) */
+        .vendor-card.subshow {
+            transform: translateY(12vh) scale(0.65);
+            opacity: 0.35;
+            z-index: 5;
+        }
+        .vendor-card.subshow .vendor-role {
+            font-size: clamp(0.5rem, 0.8vw, 0.8rem);
+            color: rgba(255, 255, 255, 0.4);
+        }
+        .vendor-card.subshow .vendor-name {
+            font-size: clamp(1rem, 1.5vw, 1.5rem);
+            color: var(--pure-white);
+        }
+
+        /* Enter from top */
+        .vendor-card.enter-from-top {
+            transform: translateY(-25vh) scale(0.8);
+            opacity: 0;
+            z-index: 1;
+        }
+
+        /* Exit completely to bottom */
+        .vendor-card.exit-completely {
+            transform: translateY(28vh) scale(0.4);
+            opacity: 0;
+            z-index: 0;
+        }
+
+        /* Character Rotation Style */
+        .char-span {
+            display: inline-block;
+            transform-origin: center bottom;
+            animation: charRotateIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+        }
+
+        @keyframes charRotateIn {
+            0% {
+                opacity: 0;
+                transform: rotateY(-90deg) translateY(5px);
+            }
+            100% {
+                opacity: 1;
+                transform: rotateY(0deg) translateY(0);
+            }
+        }
     </style>
     <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
@@ -293,10 +391,18 @@
     <div class="master-container">
         <div id="timeline-panel">
             <div class="flex justify-between items-center mb-8 opacity-80">
-                <div class="text-[10px] font-bold tracking-[4px] text-[#D4AF37] uppercase">Event Timeline</div>
+                <div id="timeline-title" class="text-[10px] font-bold tracking-[4px] text-[#D4AF37] uppercase">Event Timeline</div>
                 <div id="realtime-clock" class="text-[14px] font-bold tracking-[2px] text-white">00:00:00</div>
             </div>
-            <div id="rundown-list" class="flex-grow"></div>
+            <!-- Rundown View -->
+            <div id="rundown-view" class="flex-grow flex flex-col justify-start transition-all duration-1000 opacity-100">
+                <div id="rundown-list" class="flex-grow"></div>
+            </div>
+
+            <!-- Vendor View -->
+            <div id="vendor-view" class="absolute inset-x-0 bottom-[8vh] top-[10vh] px-[2.5vw] flex flex-col transition-all duration-1000 opacity-0 pointer-events-none">
+                <div class="vendor-display-area flex-grow"></div>
+            </div>
             <div class="powered-by">Powered by <span>SapaTamu.ku</span></div>
         </div>
 
@@ -346,6 +452,157 @@
         function updateInternalLinks() {
             // ssId injection disabled for security (subdomain resolver will handle it)
             return;
+        }
+
+        let localVendors = [];
+        let currentView = 'rundown';
+        let rotationTimer = null;
+        let activeVendorTimeout = null;
+        let loopTimeout = null;
+        let rotationStarted = false;
+
+        // Helper: wrap characters in spans for wave rotation animation
+        function wrapCharacters(text, delayStart = 0) {
+            if (!text) return '';
+            return text.toString().split('').map((char, i) => {
+                if (char === ' ') return '<span>&nbsp;</span>';
+                const delay = delayStart + (i * 0.03); // 30ms delay per character
+                return `<span class="char-span" style="animation-delay: ${delay}s">${char}</span>`;
+            }).join('');
+        }
+
+        // Main Rotation Loop: Rundown <-> Vendors
+        function startRotationLoop() {
+            if (rotationStarted) return;
+            rotationStarted = true;
+            runRotation();
+        }
+
+        function runRotation() {
+            const rundownView = document.getElementById('rundown-view');
+            const vendorView = document.getElementById('vendor-view');
+            const titleEl = document.getElementById('timeline-title');
+
+            if (currentView === 'rundown') {
+                // Switch to Rundown View
+                if (rundownView) {
+                    rundownView.classList.remove('opacity-0', 'pointer-events-none');
+                    rundownView.classList.add('opacity-100');
+                }
+                if (vendorView) {
+                    vendorView.classList.remove('opacity-100');
+                    vendorView.classList.add('opacity-0', 'pointer-events-none');
+                }
+                if (titleEl) titleEl.innerText = "Event Timeline";
+
+                // Show rundown for 10 seconds, then switch to vendors if available
+                rotationTimer = setTimeout(() => {
+                    if (localVendors && localVendors.length > 0) {
+                        currentView = 'vendor';
+                    }
+                    runRotation();
+                }, 10000);
+            } else {
+                // Switch to Vendor View
+                if (rundownView) {
+                    rundownView.classList.remove('opacity-100');
+                    rundownView.classList.add('opacity-0', 'pointer-events-none');
+                }
+                if (vendorView) {
+                    vendorView.classList.remove('opacity-0', 'pointer-events-none');
+                    vendorView.classList.add('opacity-100');
+                }
+                if (titleEl) titleEl.innerText = "Wedding Vendors";
+
+                // Start animating vendors
+                animateVendorsSequence(() => {
+                    // Switch back to rundown when sequence completes
+                    currentView = 'rundown';
+                    runRotation();
+                });
+            }
+        }
+
+        function animateVendorsSequence(onComplete) {
+            const displayArea = document.querySelector('.vendor-display-area');
+            if (!displayArea) {
+                onComplete();
+                return;
+            }
+
+            // Clear previous cards
+            displayArea.innerHTML = '';
+            clearTimeout(activeVendorTimeout);
+            clearTimeout(loopTimeout);
+
+            if (!localVendors || localVendors.length === 0) {
+                // Fallback: if no vendors, show empty space for 6 seconds
+                loopTimeout = setTimeout(onComplete, 6000);
+                return;
+            }
+
+            let index = 0;
+            let mainCard = null;
+            let subCard = null;
+
+            function nextVendor() {
+                if (index >= localVendors.length) {
+                    // All vendors shown. Wait for the last one to be viewed (3 seconds)
+                    // Then clear cards and finish
+                    loopTimeout = setTimeout(() => {
+                        if (mainCard) mainCard.className = 'vendor-card exit-completely';
+                        if (subCard) subCard.className = 'vendor-card exit-completely';
+                        
+                        // Wait for transition to complete
+                        loopTimeout = setTimeout(() => {
+                            displayArea.innerHTML = '';
+                            onComplete();
+                        }, 1200);
+                    }, 3000);
+                    return;
+                }
+
+                const vendor = localVendors[index];
+
+                // Create new vendor card in entry state
+                const card = document.createElement('div');
+                card.className = 'vendor-card enter-from-top';
+                card.innerHTML = `
+                    <div class="vendor-role">${wrapCharacters(vendor.role, 0)}</div>
+                    <div class="vendor-name">${wrapCharacters(vendor.name, 0.2)}</div>
+                `;
+                displayArea.appendChild(card);
+
+                // Force reflow
+                void card.offsetWidth;
+
+                // Move cards down the film credit trail
+                if (subCard) {
+                    const oldSub = subCard;
+                    oldSub.className = 'vendor-card exit-completely';
+                    setTimeout(() => oldSub.remove(), 1200);
+                }
+
+                if (mainCard) {
+                    subCard = mainCard;
+                    subCard.className = 'vendor-card subshow';
+                }
+
+                mainCard = card;
+                mainCard.className = 'vendor-card mainshow';
+
+                index++;
+
+                // If only 1 vendor exists in total, let it stay for 6 seconds as mainshow
+                let delay = 3000;
+                if (localVendors.length === 1) {
+                    delay = 6000;
+                }
+
+                activeVendorTimeout = setTimeout(nextVendor, delay);
+            }
+
+            nextVendor();
         }
 
         let currentGuestName = "";
@@ -434,6 +691,14 @@
                     </div>`;
                 });
                 document.getElementById('rundown-list').innerHTML = rundownHtml;
+
+                // Update Vendors data
+                if (data.vendors) {
+                    localVendors = data.vendors;
+                }
+                
+                // Start rotation loop
+                startRotationLoop();
 
                 metadataLoaded = true;
             } catch (e) {

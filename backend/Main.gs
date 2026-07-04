@@ -1200,6 +1200,7 @@ function getWelcomeData(ssId) {
 
     // Ambil Rundown (Timeline)
     let rundown = [];
+    let vendors = [];
     if (rundownSheet) {
       const rdLast = rundownSheet.getLastRow();
       if (rdLast >= 2) {
@@ -1210,6 +1211,15 @@ function getWelcomeData(ssId) {
             displayTime: String(row[0] || ""),
             eventName: String(row[1] || ""),
             syncTime: formatTime(row[2])
+          }));
+
+        // Ambil Vendor (Kolom K & L)
+        const vendorRaw = rundownSheet.getRange(2, 11, Math.max(1, rdLast - 1), 2).getValues();
+        vendors = vendorRaw
+          .filter(r => r[0] || r[1])
+          .map(row => ({
+            role: String(row[0] || "").trim(),
+            name: String(row[1] || "").trim()
           }));
       }
     }
@@ -1244,6 +1254,7 @@ function getWelcomeData(ssId) {
       weddingDate,
       latestGuest,
       rundown,
+      vendors,
       log: guestLog.toUpperCase(),
       urlFoto,
       teksSambutan1,
