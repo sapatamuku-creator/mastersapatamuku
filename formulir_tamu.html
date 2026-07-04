@@ -1374,6 +1374,10 @@
             if (!tamuRes.ok) throw new Error("Supabase tamu fetch failed");
             const tamuData = await tamuRes.json();
 
+            if (tamuData && tamuData.length > 0 && tamuData[0].event_date) {
+                window.EVENT_DATE = tamuData[0].event_date;
+            }
+
             MASTER_LIST = tamuData.map(t => ({
                 id: t.kode, row: t.row, kode: t.kode, nama: t.nama, whatsapp: t.whatsapp,
                 kategori: t.kategori, pihakPengundang: t.pihak_pengundang, souvenir: t.souvenir,
@@ -1853,6 +1857,7 @@
     window.WA_TEMPLATE_DEFAULT = "";
     window.WA_TEMPLATE_CUSTOM = "";
     window.WA_RSVP_LINK = "";
+    window.EVENT_DATE = "";
 
     window.executeBlast = function(row, phone, name, code) {
         const guest = MASTER_LIST.find(g => g.row == row);
@@ -2930,7 +2935,8 @@
                         tanda_kasih: 0,
                         jam_datang: "-",
                         sesi: g.sesi || "-",
-                        subdomain: g.subdomain
+                        subdomain: g.subdomain,
+                        event_date: window.EVENT_DATE || new Date().toISOString().split('T')[0]
                     }));
 
                     const sbRes = await fetch(`${SB_URL}/rest/v1/tamu`, {
@@ -3331,7 +3337,7 @@
                             tanda_kasih: parseFloat(g.tandaKasih) || 0,
                             jam_datang: g.jamDatang || "-",
                             sesi: g.sesi || "-",
-                            event_date: window.WA_HARI_TANGGAL ? new Date(window.WA_HARI_TANGGAL).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                            event_date: window.EVENT_DATE || (window.WA_HARI_TANGGAL && !isNaN(Date.parse(window.WA_HARI_TANGGAL)) ? new Date(window.WA_HARI_TANGGAL).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
                         };
                     });
                     
