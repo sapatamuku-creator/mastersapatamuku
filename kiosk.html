@@ -181,6 +181,14 @@
                     <span class="cam-toggle-slider"></span>
                 </label>
             </div>
+            <!-- Toggle Quick Check In -->
+            <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                <span class="cam-toggle-label">QUICK</span>
+                <label class="cam-toggle">
+                    <input type="checkbox" id="quick-checkin-toggle" onchange="localStorage.setItem('quick_checkin_on', this.checked ? '1' : '0')">
+                    <span class="cam-toggle-slider"></span>
+                </label>
+            </div>
             <!-- Printer Widget button injected here by PrinterWidget.init() -->
         </div>
     </div>
@@ -468,6 +476,13 @@
                 cdToggle.addEventListener('change', (e) => {
                     localStorage.setItem('selfie_countdown_on', e.target.checked ? '1' : '0');
                 });
+            }
+
+            const savedQuick = localStorage.getItem('quick_checkin_on');
+            const quickEnabled = savedQuick === '1';
+            const quickToggle = document.getElementById('quick-checkin-toggle');
+            if (quickToggle) {
+                quickToggle.checked = quickEnabled;
             }
 
             fetchData();
@@ -785,7 +800,145 @@
         }
 
         /* --- CHECKIN LOGIC --- */
+        async function executeQuickCheckin(guest) {
+            selectedGuest = guest;
+            const loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+
+            const plan = parseInt(guest.rencanaHadir) || 1;
+            const paxString = `${plan} ( ${plan}D + 0A )`;
+            const giftStatus = "-";
+
+            // Fallback UUID generator
+            const genUUID = () => {
+                if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            };
+
+            try {
+                const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+                const SB_HEADERS = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                };
+
+                const stationId = JALUR_ID === "ALL" ? "KIOSK-ALL" : "KIOSK-" + JALUR_ID;
+                const nowISO = new Date().toLocaleTimeString('en-GB', { hour12: false });
+
+                // Update tamu status
+                await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${selectedGuest.kode}`, {
+                    method: "PATCH",
+                    headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        status_hadir: "1",
+                        jam_datang: nowISO,
+                        real_hadir: plan,
+                        status_hadiah: giftStatus
+                    })
+                });
+
+                // Write welcome queue (skip print queue)
+                await fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                    method: "POST", headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        id: genUUID(),
+                        ssid: CURRENT_SS_ID,
+                        nama: selectedGuest.nama || "-",
+                        kategori: selectedGuest.kategori || "Umum",
+                        alamat: selectedGuest.alamat || "-",
+                        pihak: selectedGuest.pihakPengundang || "-",
+                        pax: paxString,
+                        kode: selectedGuest.kode || "-",
+                        status: "DISPLAY",
+                        created_at: new Date().toISOString()
+                    })
+                }).then(async res => {
+                    if (!res.ok) console.error("welcome_queue kiosk write error:", await res.text());
+                }).catch(e => console.warn(e));
+
+                // GAS update in background
+                fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ 
+                        action: "confirm_checkin", 
+                        ssId: CURRENT_SS_ID, 
+                        kodeUnik: selectedGuest.kode, 
+                        realHadir: paxString, 
+                        statusAngpao: giftStatus,
+                        stationId: stationId,
+                        customUuid: null,
+                        skipSupabase: true,
+                        skipSupabasePrint: true
+                    }) 
+                }).catch(e => console.error("GAS kiosk sync failed:", e));
+
+                // Show success animation
+                const successModal = document.getElementById('success-modal');
+                const successContent = document.getElementById('success-content');
+                successModal.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    successContent.style.opacity = '1';
+                    successContent.style.transform = 'scale(1)';
+                }, 50);
+
+                // Blast WA Automation in background
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ 
+                        action: "sendAutomationBlast", 
+                        ssId: CURRENT_SS_ID, 
+                        type: "checkin",
+                        guestData: { nama: selectedGuest.nama, whatsapp: selectedGuest.whatsapp } 
+                    })
+                }).catch(e => console.warn("Background blast failed:", e));
+
+                // Reset and update local list
+                const idx = masterData.findIndex(g => String(g.kode).trim().toUpperCase() === String(selectedGuest.kode).trim().toUpperCase());
+                if (idx !== -1) {
+                    masterData[idx].statusHadir = "1";
+                    masterData[idx].jamDatang = nowISO;
+                    masterData[idx].realHadir = paxString;
+                    masterData[idx].statusHadiah = giftStatus;
+                }
+                selectedGuest.statusHadir = "1";
+                selectedGuest.jamDatang = nowISO;
+                selectedGuest.realHadir = paxString;
+                selectedGuest.statusHadiah = giftStatus;
+                
+                // Auto close after 3 seconds
+                setTimeout(() => {
+                    successContent.style.opacity = '0';
+                    successContent.style.transform = 'scale(1.5)';
+                    setTimeout(() => {
+                        successModal.classList.add('hidden');
+                        selectedGuest = null;
+                        returnToIdle();
+                    }, 500);
+                }, 3000);
+
+            } catch (e) {
+                showToast("Koneksi Error!", true);
+                console.error(e);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
         function openConfirm(guest) {
+            const isQuickActive = document.getElementById('quick-checkin-toggle')?.checked;
+            if (isQuickActive) {
+                executeQuickCheckin(guest);
+                return;
+            }
             selectedGuest = guest;
             document.getElementById('guest-name').innerText = guest.nama;
             document.getElementById('guest-category').innerText = `${guest.kategori || 'UMUM'} | ${guest.alamat || '-'}`;

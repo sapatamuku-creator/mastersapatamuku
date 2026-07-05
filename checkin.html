@@ -318,6 +318,14 @@
                     <span class="cam-toggle-slider"></span>
                 </label>
             </div>
+            <!-- Toggle Quick Check In -->
+            <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                <span class="cam-toggle-label">QUICK</span>
+                <label class="cam-toggle">
+                    <input type="checkbox" id="quick-checkin-toggle" onchange="localStorage.setItem('quick_checkin_on', this.checked ? '1' : '0')">
+                    <span class="cam-toggle-slider"></span>
+                </label>
+            </div>
             <!-- pw-btn injected by PrinterWidget.init() -->
         </div>
 
@@ -640,6 +648,13 @@
                 cdToggle.addEventListener('change', (e) => {
                     localStorage.setItem('selfie_countdown_on', e.target.checked ? '1' : '0');
                 });
+            }
+
+            const savedQuick = localStorage.getItem('quick_checkin_on');
+            const quickEnabled = savedQuick === '1';
+            const quickToggle = document.getElementById('quick-checkin-toggle');
+            if (quickToggle) {
+                quickToggle.checked = quickEnabled;
             }
 
             localStorage.setItem("st_saved_ssid", CURRENT_SS_ID);
@@ -1087,9 +1102,172 @@
         }
     }
 
+    async function executeQuickCheckin(selectedList) {
+        if (isBusy) return;
+        isBusy = true;
+
+        const loading = document.getElementById('loading');
+        loading.style.display = 'flex';
+
+        const blocker = document.createElement('div');
+        blocker.id = "global-blocker";
+        blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
+        document.body.appendChild(blocker);
+
+        try {
+            const nowISO = new Date().toISOString();
+            const stationId = JALUR_ID === "ALL" ? "CHECKIN-ALL" : "CHECKIN-" + JALUR_ID;
+
+            const quickConfigs = selectedList.map(g => {
+                const initialAdult = parseInt(g.rencanaHadir) || 1;
+                return {
+                    id: g.kode,
+                    nama: g.nama,
+                    adult: initialAdult,
+                    child: 0,
+                    gift: "-",
+                    kategori: g.kategori || 'UMUM',
+                    alamat: g.alamat || '-',
+                    pihakPengundang: g.pihakPengundang || '-',
+                    sesi: g.sesi || '-'
+                };
+            });
+
+            // Update local masterData
+            quickConfigs.forEach(cfg => {
+                const idx = masterData.findIndex(r => r.kode === cfg.id);
+                if (idx !== -1) {
+                    masterData[idx].jamDatang = nowISO;
+                    masterData[idx].realHadir = `${cfg.adult} ( ${cfg.adult}D + 0A )`;
+                    masterData[idx].statusHadiah = "-";
+                    masterData[idx].statusHadir = "1";
+                }
+            });
+            renderUI();
+
+            // Patch Supabase
+            const supabasePatchPromises = quickConfigs.map(cfg =>
+                fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${cfg.id}`, {
+                    method: "PATCH",
+                    headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        status_hadir: "1",
+                        jam_datang: nowISO,
+                        real_hadir: `${cfg.adult} ( ${cfg.adult}D + 0A )`,
+                        status_hadiah: "-"
+                    })
+                })
+            );
+            await Promise.all(supabasePatchPromises);
+
+            // Write welcome queue (skip print_queue)
+            const printPromises = [];
+            const genUUID = () => {
+                if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            };
+
+            quickConfigs.forEach((guest, index) => {
+                const d = new Date();
+                d.setSeconds(d.getSeconds() + index);
+                const staggeredNow = d.toISOString();
+
+                printPromises.push(
+                    fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                        method: "POST", headers: SB_HEADERS,
+                        body: JSON.stringify({
+                            id: genUUID(),
+                            ssid: CURRENT_SS_ID,
+                            nama: guest.nama || "-",
+                            kategori: guest.kategori || "Umum",
+                            alamat: guest.alamat || "-",
+                            pihak: guest.pihakPengundang || "-",
+                            pax: `${guest.adult} ( ${guest.adult}D + 0A )`,
+                            kode: guest.id || "-",
+                            status: "DISPLAY",
+                            created_at: staggeredNow
+                        })
+                    }).then(async res => {
+                        if (!res.ok) console.error("Supabase welcome_queue error:", await res.text());
+                    }).catch(e => console.warn(e))
+                );
+            });
+            if (printPromises.length > 0) {
+                await Promise.all(printPromises);
+            }
+
+            // Sync with Google Sheets (GAS)
+            quickConfigs.forEach(cfg => {
+                fetch(SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "confirm_checkin",
+                        ssId: CURRENT_SS_ID,
+                        kodeUnik: cfg.id,
+                        realHadir: `${cfg.adult} ( ${cfg.adult}D + 0A )`,
+                        statusAngpao: "-",
+                        stationId: stationId,
+                        customUuid: null,
+                        skipSupabase: true,
+                        skipSupabasePrint: true
+                    })
+                });
+            });
+
+            // WA Blast Broadcast
+            quickConfigs.forEach(cfg => {
+                fetch(WA_ENGINE_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: cfg.id })
+                });
+            });
+
+            // Clean UI & show success
+            selectedIDs.clear();
+            document.getElementById('selected-count').innerText = "0";
+            document.getElementById('bulk-btn').style.display = 'none';
+
+            document.getElementById('loading').style.display = 'none';
+            if (document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+            document.body.style.cursor = 'default';
+
+            const guestData = quickConfigs.length > 0 ? masterData.find(r => r.kode === quickConfigs[0].id) : null;
+            if (guestData) {
+                const message = quickConfigs.length > 1 ? 
+                    `${quickConfigs.length} Tamu Berhasil di Check-in (Quick)` : 
+                    `Selamat Datang,\n\n${guestData.nama.toUpperCase()}\n(${guestData.kategori || 'REGULER'})\n\nSilakan Masuk`;
+
+                await showAlert(
+                    "CHECK-IN BERHASIL",
+                    message,
+                    "✨"
+                );
+            }
+            fetchData();
+
+        } catch (e) {
+            console.error("Quick check-in error:", e);
+            showAlert("Gagal", "Gagal memproses check-in. Cek internet.", "❌");
+        } finally {
+            isBusy = false;
+            document.getElementById('loading').style.display = 'none';
+            if (document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+        }
+    }
+
     window.openConfirmModal = function() {
         const selectedList = Array.from(selectedIDs).map(id => masterData.find(r => r.kode === id));
         if (selectedList.length === 0) return;
+
+        const isQuickActive = document.getElementById('quick-checkin-toggle')?.checked;
+        if (isQuickActive) {
+            executeQuickCheckin(selectedList);
+            return;
+        }
 
         multiConfig = selectedList.map(g => {
             const initialAdult = parseInt(g.rencanaHadir) || 1;

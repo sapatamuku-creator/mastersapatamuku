@@ -898,6 +898,14 @@
                         <span class="cam-toggle-slider"></span>
                     </label>
                 </div>
+                <!-- Toggle Quick Check In -->
+                <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                    <span class="cam-toggle-label">QUICK</span>
+                    <label class="cam-toggle">
+                        <input type="checkbox" id="quick-checkin-toggle" onchange="localStorage.setItem('quick_checkin_on', this.checked ? '1' : '0')">
+                        <span class="cam-toggle-slider"></span>
+                    </label>
+                </div>
                 <!-- pw-btn injected by PrinterWidget.init() -->
             </div>
 
@@ -1377,6 +1385,13 @@
                 });
             }
 
+            const savedQuick = localStorage.getItem('quick_checkin_on');
+            const quickEnabled = savedQuick === '1';
+            const quickToggle = document.getElementById('quick-checkin-toggle');
+            if (quickToggle) {
+                quickToggle.checked = quickEnabled;
+            }
+
             initNavScroll();
             setupFullscreen();
         }
@@ -1629,7 +1644,132 @@
             }).join('');
         }
 
+        async function executeQuickCheckin(guest) {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+
+            const blocker = document.createElement('div');
+            blocker.id = "global-blocker";
+            blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
+            document.body.appendChild(blocker);
+
+            const plan = parseInt(guest.rencanaHadir) || 1;
+            const paxString = `${plan} ( ${plan}D + 0A )`;
+            const gift = "-";
+
+            try {
+                const stationId = JALUR_ID === "ALL" ? "ONSITE-ALL" : "ONSITE-" + JALUR_ID;
+                const nowISO = new Date().toLocaleTimeString('en-GB', { hour12: false });
+                const SB_HEADERS = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                };
+
+                // Update tamu status
+                await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${guest.kode}`, {
+                    method: "PATCH",
+                    headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        status_hadir: "1",
+                        jam_datang: nowISO,
+                        real_hadir: paxString,
+                        status_hadiah: gift
+                    })
+                });
+
+                const genUUID = () => {
+                    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                };
+
+                // Write welcome queue (skip print queue)
+                await fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                    method: "POST", headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        id: genUUID(),
+                        ssid: CURRENT_SS_ID,
+                        nama: guest.nama || "Tanpa Nama",
+                        kategori: guest.kategori || "Umum",
+                        alamat: guest.alamat || "-",
+                        pihak: guest.pihakPengundang || "-",
+                        pax: paxString,
+                        kode: guest.kode || "-",
+                        status: "DISPLAY",
+                        created_at: new Date().toISOString()
+                    })
+                }).then(async res => {
+                    if (!res.ok) console.warn("welcome_queue onsite write error:", await res.text());
+                }).catch(e => console.warn(e));
+
+                // GAS update in background
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "confirm_checkin",
+                        ssId: CURRENT_SS_ID,
+                        kodeUnik: guest.kode,
+                        realHadir: paxString,
+                        statusAngpao: gift,
+                        stationId: stationId,
+                        customUuid: null,
+                        skipSupabase: true,
+                        skipSupabasePrint: true
+                    })
+                }).catch(e => console.error("GAS onsite sync failed:", e));
+
+                // Blast WA Automation in background
+                fetch(SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: guest.kode })
+                }).catch(e => console.warn(e));
+
+                // Update local state
+                const idx = masterData.findIndex(r => r.kode === guest.kode);
+                if (idx !== -1) {
+                    masterData[idx].jamDatang = nowISO;
+                    masterData[idx].realHadir = paxString;
+                    masterData[idx].statusHadiah = gift;
+                    masterData[idx].statusHadir = "1";
+                }
+
+                selectedIDs.clear();
+                document.getElementById('selected-count').innerText = "0";
+                document.getElementById('bulk-btn').style.display = 'none';
+
+                renderUI();
+
+                if (blocker) blocker.remove();
+                document.body.style.cursor = 'default';
+
+                await showAlert(
+                    "CHECK-IN BERHASIL",
+                    `Selamat Datang,\n\n${guest.nama.toUpperCase()}\n(${guest.kategori || 'REGULER'})\n\nSilakan Masuk`,
+                    "✨"
+                );
+
+                fetchData();
+
+            } catch (e) {
+                if (blocker) blocker.remove();
+                console.error("Check-in error:", e);
+                showAlert("Error", "Gagal memproses check-in. Cek internet.", "❌");
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
         async function openConfirm(guest) {
+            const isQuickActive = document.getElementById('quick-checkin-toggle')?.checked;
+            if (isQuickActive) {
+                executeQuickCheckin(guest);
+                return;
+            }
             selectedGuest = guest;
             document.getElementById('m-nama').innerText = guest.nama;
             document.getElementById('m-info').innerText = `${guest.kategori || 'UMUM'} | ${guest.alamat || '-'}`;
@@ -2130,60 +2270,65 @@
                     let catUpper = String(document.getElementById('reg-kategori').value || "").toUpperCase();
                     let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
 
-                    const printPromises = [
-                        fetch(`${SB_URL}/rest/v1/print_queue`, {
-                            method: "POST",
-                            headers: SB_HEADERS,
-                            body: JSON.stringify({
-                                id: mainPrintId,
-                                ssid: CURRENT_SS_ID,
-                                nama: nama || "-",
-                                kode: kodeUnik,
-                                qr: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
-                                info: labelType,
-                                status: "WAITING",
-                                kategori: document.getElementById('reg-kategori').value || "Umum",
-                                alamat: document.getElementById('reg-alamat').value || "-",
-                                pihak: document.getElementById('reg-host').value || "-",
-                                sesi: document.getElementById('reg-sesi').value || "-",
-                                pax: paxString,
-                                station_id: stationId
-                            })
-                        })
-                    ];
-
-                    if (gift && gift !== "-" && gift !== "ON-SITE") {
-                        const statusUpper = String(gift).toUpperCase();
-                        const queueSouvenir = (souvenirType) => {
-                            const souvenirPrintId = crypto.randomUUID();
-                            printPromises.push(
-                                fetch(`${SB_URL}/rest/v1/print_queue`, {
-                                    method: "POST",
-                                    headers: SB_HEADERS,
-                                    body: JSON.stringify({
-                                        id: souvenirPrintId,
-                                        ssid: CURRENT_SS_ID,
-                                        nama: nama || "-",
-                                        kode: kodeUnik,
-                                        qr: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
-                                        info: "SOUVENIR: " + souvenirType,
-                                        status: "WAITING",
-                                        kategori: document.getElementById('reg-kategori').value || "Umum",
-                                        alamat: document.getElementById('reg-alamat').value || "-",
-                                        pihak: document.getElementById('reg-host').value || "-",
-                                        sesi: document.getElementById('reg-sesi').value || "-",
-                                        pax: paxString,
-                                        station_id: stationId
-                                    })
+                    const printPromises = [];
+                    const isQuickActive = document.getElementById('quick-checkin-toggle')?.checked;
+                    
+                    if (!isQuickActive) {
+                        printPromises.push(
+                            fetch(`${SB_URL}/rest/v1/print_queue`, {
+                                method: "POST",
+                                headers: SB_HEADERS,
+                                body: JSON.stringify({
+                                    id: mainPrintId,
+                                    ssid: CURRENT_SS_ID,
+                                    nama: nama || "-",
+                                    kode: kodeUnik,
+                                    qr: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
+                                    info: labelType,
+                                    status: "WAITING",
+                                    kategori: document.getElementById('reg-kategori').value || "Umum",
+                                    alamat: document.getElementById('reg-alamat').value || "-",
+                                    pihak: document.getElementById('reg-host').value || "-",
+                                    sesi: document.getElementById('reg-sesi').value || "-",
+                                    pax: paxString,
+                                    station_id: stationId
                                 })
-                            );
-                        };
+                            })
+                        );
 
-                        if (statusUpper.includes("ANGPAO") && statusUpper.includes("KADO")) {
-                            queueSouvenir("KADO");
-                            queueSouvenir("ANGPAO");
-                        } else {
-                            queueSouvenir(statusUpper);
+                        if (gift && gift !== "-" && gift !== "ON-SITE") {
+                            const statusUpper = String(gift).toUpperCase();
+                            const queueSouvenir = (souvenirType) => {
+                                const souvenirPrintId = crypto.randomUUID();
+                                printPromises.push(
+                                    fetch(`${SB_URL}/rest/v1/print_queue`, {
+                                        method: "POST",
+                                        headers: SB_HEADERS,
+                                        body: JSON.stringify({
+                                            id: souvenirPrintId,
+                                            ssid: CURRENT_SS_ID,
+                                            nama: nama || "-",
+                                            kode: kodeUnik,
+                                            qr: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
+                                            info: "SOUVENIR: " + souvenirType,
+                                            status: "WAITING",
+                                            kategori: document.getElementById('reg-kategori').value || "Umum",
+                                            alamat: document.getElementById('reg-alamat').value || "-",
+                                            pihak: document.getElementById('reg-host').value || "-",
+                                            sesi: document.getElementById('reg-sesi').value || "-",
+                                            pax: paxString,
+                                            station_id: stationId
+                                        })
+                                    })
+                                );
+                            };
+
+                            if (statusUpper.includes("ANGPAO") && statusUpper.includes("KADO")) {
+                                queueSouvenir("KADO");
+                                queueSouvenir("ANGPAO");
+                            } else {
+                                queueSouvenir(statusUpper);
+                            }
                         }
                     }
 
