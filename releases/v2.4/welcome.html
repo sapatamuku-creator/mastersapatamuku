@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu.ku - Welcome Sign V7.2 (Multi-Client Support)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth_guard.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap"
+        rel="stylesheet">
+    <script src="subdomain_resolver.js?v=3.3"></script>
+    <style>
+        :root {
+            --gold: #D4AF37;
+            --pure-white: #FFFFFF;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Montserrat', sans-serif;
+            cursor: none;
+        }
+
+        .master-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 1.2fr 2.8fr;
+            z-index: 999;
+        }
+
+        /* TIMELINE PANEL */
+        #timeline-panel {
+            background: #0a0a0a;
+            padding: 4vh 2.5vw;
+            border-right: 1px solid #222;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .rundown-item {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 3vh;
+            opacity: 0.2;
+            transition: all 0.8s ease;
+            color: var(--pure-white);
+        }
+
+        .rundown-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+            z-index: 2;
+            transition: all 0.5s ease;
+        }
+
+        .event-time {
+            font-size: clamp(0.8rem, 1.2vw, 1.1rem);
+            font-weight: 600;
+            opacity: 0.8;
+        }
+
+        .event-name {
+            font-size: clamp(1rem, 1.8vw, 1.6rem);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+        }
+
+        .active-event {
+            opacity: 1 !important;
+            color: var(--gold) !important;
+            transform: translateX(10px);
+        }
+
+        .active-event::before {
+            background: var(--gold) !important;
+            box-shadow: 0 0 20px var(--gold);
+            transform: scale(1.5);
+        }
+
+        .powered-by {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            letter-spacing: 3px;
+            color: rgba(255, 255, 255, 0.15);
+            text-transform: uppercase;
+            text-align: center;
+            width: 100%;
+        }
+
+        .powered-by span {
+            font-weight: 800;
+            color: var(--gold);
+            opacity: 0.8;
+        }
+
+        /* WELCOME PANEL */
+        #welcome-panel {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background: #050505;
+        }
+
+        #welcome-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 5;
+        }
+
+        #slideshow-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 2.5s ease;
+        }
+
+        .slide.active {
+            opacity: 1;
+            z-index: 3;
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            width: 90%;
+        }
+
+        .main-label {
+            font-size: clamp(0.7rem, 1.1vw, 1.2rem);
+            letter-spacing: 0.8vw;
+            margin-bottom: 1vh;
+        }
+
+        .couple-title {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: clamp(2.5rem, 5vw, 5.5rem);
+            color: var(--gold);
+            line-height: 1.1;
+            text-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        .wedding-date {
+            font-size: clamp(0.8rem, 1.2vw, 1.4rem);
+            letter-spacing: 0.5vw;
+            margin-top: 2vh;
+        }
+
+        /* Guest Box */
+        .guest-label {
+            font-size: clamp(0.8rem, 1vw, 1.2rem);
+            letter-spacing: 0.6vw;
+            margin-bottom: 1vh;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .guest-name {
+            font-weight: 800;
+            font-size: clamp(2rem, 5.5vw, 6rem);
+            color: var(--pure-white);
+            text-transform: uppercase;
+            margin: 1vh 0;
+            line-height: 1.1;
+            word-wrap: break-word;
+            text-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .guest-info {
+            font-size: clamp(0.9rem, 1.3vw, 1.5rem);
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 2vh 0;
+            border-top: 1px solid var(--gold);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #marquee-log {
+            font-size: clamp(1.2rem, 2.5vw, 2.2rem);
+            white-space: nowrap;
+        }
+
+        /* Clock Style */
+        #realtime-clock {
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* Controls */
+        #fs-btn {
+            position: fixed;
+            bottom: 120px;
+            right: 40px;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1.5px solid var(--gold);
+            color: var(--gold);
+            padding: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            opacity: 0;
+            transition: 0.5s;
+            visibility: hidden;
+        }
+
+        .show-btn {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .show-cursor {
+            cursor: default !important;
+        }
+
+        .animate-in {
+            animation: slideUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(60px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        /* VENDOR LIST ANIMATION */
+        .vendor-display-area {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .vendor-card {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .vendor-card .vendor-role {
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-bottom: 0.5vh;
+            font-weight: 600;
+        }
+
+        .vendor-card .vendor-name {
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        /* MAINSHOW State */
+        .vendor-card.mainshow {
+            transform: translateY(-2vh) scale(1);
+            opacity: 1;
+            z-index: 10;
+        }
+        .vendor-card.mainshow .vendor-role {
+            font-size: clamp(0.7rem, 1.1vw, 1.1rem);
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .vendor-card.mainshow .vendor-name {
+            font-size: clamp(1.4rem, 2.2vw, 2.2rem);
+            color: var(--gold);
+            text-shadow: 0 4px 20px rgba(212, 175, 55, 0.35);
+        }
+
+        /* SUBSHOW State (film credits style below mainshow) */
+        .vendor-card.subshow {
+            transform: translateY(12vh) scale(0.65);
+            opacity: 0.35;
+            z-index: 5;
+        }
+        .vendor-card.subshow .vendor-role {
+            font-size: clamp(0.5rem, 0.8vw, 0.8rem);
+            color: rgba(255, 255, 255, 0.4);
+        }
+        .vendor-card.subshow .vendor-name {
+            font-size: clamp(1rem, 1.5vw, 1.5rem);
+            color: var(--pure-white);
+        }
+
+        /* Enter from top */
+        .vendor-card.enter-from-top {
+            transform: translateY(-25vh) scale(0.8);
+            opacity: 0;
+            z-index: 1;
+        }
+
+        /* Exit completely to bottom */
+        .vendor-card.exit-completely {
+            transform: translateY(28vh) scale(0.4);
+            opacity: 0;
+            z-index: 0;
+        }
+
+        /* Character Rotation Style */
+        .char-span {
+            display: inline-block;
+            transform-origin: center bottom;
+            animation: charRotateIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+        }
+
+        @keyframes charRotateIn {
+            0% {
+                opacity: 0;
+                transform: rotateY(-90deg) translateY(5px);
+            }
+            100% {
+                opacity: 1;
+                transform: rotateY(0deg) translateY(0);
+            }
+        }
+    </style>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+
+<body>
+
+    <button id="fs-btn" onclick="toggleFS()">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+        </svg>
+    </button>
+
+    <div class="master-container">
+        <div id="timeline-panel">
+            <div class="flex justify-between items-center mb-8 opacity-80">
+                <div id="timeline-title" class="text-[10px] font-bold tracking-[4px] text-[#D4AF37] uppercase">Event Timeline</div>
+                <div id="realtime-clock" class="text-[14px] font-bold tracking-[2px] text-white">00:00:00</div>
+            </div>
+            <!-- Rundown View -->
+            <div id="rundown-view" class="flex-grow flex flex-col justify-start transition-all duration-1000 opacity-100">
+                <div id="rundown-list" class="flex-grow"></div>
+            </div>
+
+            <!-- Vendor View -->
+            <div id="vendor-view" class="absolute inset-x-0 bottom-[8vh] top-[10vh] px-[2.5vw] flex flex-col transition-all duration-1000 opacity-0 pointer-events-none">
+                <div class="vendor-display-area flex-grow"></div>
+            </div>
+            <div class="powered-by">Powered by <span>SapaTamu.ku</span></div>
+        </div>
+
+        <div id="welcome-panel">
+            <div id="slideshow-container"></div>
+            <div class="content-wrapper">
+                <span id="welcome-teks-1" class="main-label block uppercase text-white/70">Selamat Datang di
+                    Pernikahan</span>
+                <h1 id="couple-name" class="couple-title">Memuat...</h1>
+                <div id="wedding-date" class="wedding-date uppercase text-white/80"></div>
+
+                <div id="guest-box" class="mt-12 opacity-0">
+                    <span id="welcome-teks-2" class="guest-label block uppercase">Yth. Bapak/Ibu/Sdr/i</span>
+                    <h1 id="guest-name" class="guest-name">...</h1>
+                    <div class="guest-info font-medium text-[#F3F4F6] tracking-wide">
+                        <span id="g-cat" class="text-[#D4AF37] font-bold"></span> &nbsp;&bull;&nbsp;
+                        <span id="g-addr"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="footer">
+                <marquee id="marquee-log" class="text-white font-bold tracking-wider" scrollamount="25" scrolldelay="0"></marquee>
+            </div>
+        </div>
+    </div>
+
+    <script>function getSSID() {
+            const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+            let id = window.CURRENT_SS_ID || (session ? session.ssId : null);
+
+            if (id) {
+                const params = new URLSearchParams(window.location.search);
+                let qs = '?ssId=' + id;
+                if (params.has('mode')) qs += '&mode=' + params.get('mode');
+
+                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + qs;
+                window.history.replaceState({ path: newUrl }, '', newUrl);
+                return id;
+            }
+            return null;
+        }
+
+        let ssId = null;
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+
+
+        function updateInternalLinks() {
+            // ssId injection disabled for security (subdomain resolver will handle it)
+            return;
+        }
+
+        let localVendors = [];
+        let currentView = 'rundown';
+        let rotationTimer = null;
+        let activeVendorTimeout = null;
+        let loopTimeout = null;
+        let rotationStarted = false;
+
+        // Helper: wrap characters in spans for wave rotation animation
+        function wrapCharacters(text, delayStart = 0) {
+            if (!text) return '';
+            return text.toString().split('').map((char, i) => {
+                if (char === ' ') return '<span>&nbsp;</span>';
+                const delay = delayStart + (i * 0.03); // 30ms delay per character
+                return `<span class="char-span" style="animation-delay: ${delay}s">${char}</span>`;
+            }).join('');
+        }
+
+        // Main Rotation Loop: Rundown <-> Vendors
+        function startRotationLoop() {
+            if (rotationStarted) return;
+            rotationStarted = true;
+            runRotation();
+        }
+
+        function runRotation() {
+            const rundownView = document.getElementById('rundown-view');
+            const vendorView = document.getElementById('vendor-view');
+            const titleEl = document.getElementById('timeline-title');
+
+            if (currentView === 'rundown') {
+                // Switch to Rundown View
+                if (rundownView) {
+                    rundownView.classList.remove('opacity-0', 'pointer-events-none');
+                    rundownView.classList.add('opacity-100');
+                }
+                if (vendorView) {
+                    vendorView.classList.remove('opacity-100');
+                    vendorView.classList.add('opacity-0', 'pointer-events-none');
+                }
+                if (titleEl) titleEl.innerText = "Event Timeline";
+
+                // Show rundown for 10 seconds, then switch to vendors if available
+                rotationTimer = setTimeout(() => {
+                    if (localVendors && localVendors.length > 0) {
+                        currentView = 'vendor';
+                    }
+                    runRotation();
+                }, 10000);
+            } else {
+                // Switch to Vendor View
+                if (rundownView) {
+                    rundownView.classList.remove('opacity-100');
+                    rundownView.classList.add('opacity-0', 'pointer-events-none');
+                }
+                if (vendorView) {
+                    vendorView.classList.remove('opacity-0', 'pointer-events-none');
+                    vendorView.classList.add('opacity-100');
+                }
+                if (titleEl) titleEl.innerText = "Wedding Vendors";
+
+                // Start animating vendors
+                animateVendorsSequence(() => {
+                    // Switch back to rundown when sequence completes
+                    currentView = 'rundown';
+                    runRotation();
+                });
+            }
+        }
+
+        function animateVendorsSequence(onComplete) {
+            const displayArea = document.querySelector('.vendor-display-area');
+            if (!displayArea) {
+                onComplete();
+                return;
+            }
+
+            // Clear previous cards
+            displayArea.innerHTML = '';
+            clearTimeout(activeVendorTimeout);
+            clearTimeout(loopTimeout);
+
+            if (!localVendors || localVendors.length === 0) {
+                // Fallback: if no vendors, show empty space for 6 seconds
+                loopTimeout = setTimeout(onComplete, 6000);
+                return;
+            }
+
+            let index = 0;
+            let mainCard = null;
+            let subCard = null;
+
+            function nextVendor() {
+                if (index >= localVendors.length) {
+                    // All vendors shown. Wait for the last one to be viewed (3 seconds)
+                    // Then clear cards and finish
+                    loopTimeout = setTimeout(() => {
+                        if (mainCard) mainCard.className = 'vendor-card exit-completely';
+                        if (subCard) subCard.className = 'vendor-card exit-completely';
+                        
+                        // Wait for transition to complete
+                        loopTimeout = setTimeout(() => {
+                            displayArea.innerHTML = '';
+                            onComplete();
+                        }, 1200);
+                    }, 3000);
+                    return;
+                }
+
+                const vendor = localVendors[index];
+
+                // Create new vendor card in entry state
+                const card = document.createElement('div');
+                card.className = 'vendor-card enter-from-top';
+                card.innerHTML = `
+                    <div class="vendor-role">${wrapCharacters(vendor.role, 0)}</div>
+                    <div class="vendor-name">${wrapCharacters(vendor.name, 0.2)}</div>
+                `;
+                displayArea.appendChild(card);
+
+                // Force reflow
+                void card.offsetWidth;
+
+                // Move cards down the film credit trail
+                if (subCard) {
+                    const oldSub = subCard;
+                    oldSub.className = 'vendor-card exit-completely';
+                    setTimeout(() => oldSub.remove(), 1200);
+                }
+
+                if (mainCard) {
+                    subCard = mainCard;
+                    subCard.className = 'vendor-card subshow';
+                }
+
+                mainCard = card;
+                mainCard.className = 'vendor-card mainshow';
+
+                index++;
+
+                // If only 1 vendor exists in total, let it stay for 6 seconds as mainshow
+                let delay = 3000;
+                if (localVendors.length === 1) {
+                    delay = 6000;
+                }
+
+                activeVendorTimeout = setTimeout(nextVendor, delay);
+            }
+
+            nextVendor();
+        }
+
+        let currentGuestName = "";
+        let syncTimer;
+        let btnTimer, cursorTimer;
+
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('realtime-clock').innerText = `${h}:${m}:${s}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function handleUIVisibility() {
+            const fsBtn = document.getElementById('fs-btn');
+            document.body.classList.add('show-cursor');
+            fsBtn.classList.add('show-btn');
+            clearTimeout(btnTimer);
+            btnTimer = setTimeout(() => { fsBtn.classList.remove('show-btn'); }, 3000);
+            clearTimeout(cursorTimer);
+            cursorTimer = setTimeout(() => { document.body.classList.remove('show-cursor'); }, 10000);
+        }
+        document.addEventListener('mousemove', handleUIVisibility);
+
+        function convertToTimeValue(input) {
+            if (!input) return 0;
+            let str = String(input);
+            const parts = str.match(/(\d{2}):(\d{2})/);
+            return parts ? (parseInt(parts[1], 10) * 100) + parseInt(parts[2], 10) : 0;
+        }
+
+        // ================================================================
+        // SUPABASE DIRECT CONFIG — untuk deteksi tamu terbaru secara cepat
+        // ================================================================
+        const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
+        // Metadata (couple name, rundown, dll) hanya perlu diambil sekali
+        // dan diperbarui setiap 5 menit — tidak perlu setiap polling.
+        let metadataLoaded = false;
+        let metadataTimer = null;
+
+        // ────────────────────────────────────────────────────────────
+        // syncMetadata() — Ambil dari GAS (lambat, tapi jarang berubah)
+        //   Dipanggil sekali saat load, lalu setiap 5 menit.
+        //   Mengisi: couple name, tanggal, rundown, slideshow, teks sambutan.
+        // ────────────────────────────────────────────────────────────
+        async function syncMetadata() {
+            if (!ssId) return;
+            try {
+                const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`;
+                const response = await fetch(fetchUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (data.status === "error" || data.error) throw new Error(data.message || data.error);
+
+                // Update konten statis (couple name, tanggal, dsb)
+                document.getElementById('couple-name').innerHTML = (data.weddingName || "SapaTamu.Ku").replace(" & ", " &amp; ");
+                document.getElementById('wedding-date').innerText = data.weddingDate;
+                if (data.teksSambutan1) document.getElementById('welcome-teks-1').innerText = data.teksSambutan1;
+                if (data.teksSambutan2) document.getElementById('welcome-teks-2').innerText = data.teksSambutan2;
+                if (data.urlFoto) {
+                    const photoUrls = data.urlFoto.split(",").map(u => u.trim()).filter(u => u !== "");
+                    initSlideshow(photoUrls);
+                } else {
+                    initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
+                }
+
+                // Update Rundown
+                const now = new Date();
+                const nowVal = (now.getHours() * 100) + now.getMinutes();
+                let rundownHtml = "";
+                (data.rundown || []).forEach((item, i, arr) => {
+                    const startVal = convertToTimeValue(item.syncTime);
+                    const nextItem = arr[i + 1];
+                    const active = nextItem
+                        ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime))
+                        : (nowVal >= startVal);
+                    rundownHtml += `
+                    <div class="rundown-item ${active ? 'active-event' : ''}">
+                        <div class="event-time">${item.displayTime}</div>
+                        <div class="event-name">${item.eventName}</div>
+                    </div>`;
+                });
+                document.getElementById('rundown-list').innerHTML = rundownHtml;
+
+                // Update Vendors data
+                if (data.vendors) {
+                    localVendors = data.vendors;
+                }
+                
+                // Start rotation loop
+                startRotationLoop();
+
+                metadataLoaded = true;
+            } catch (e) {
+                console.warn("Metadata sync error:", e);
+                if (!metadataLoaded) {
+                    // Tampilkan pesan fallback hanya jika belum pernah load sama sekali
+                    document.getElementById('couple-name').innerText = "Memuat...";
+                }
+            }
+            // Jadwalkan refresh metadata berikutnya dalam 5 menit
+            clearTimeout(metadataTimer);
+            metadataTimer = setTimeout(syncMetadata, 5 * 60 * 1000);
+        }
+
+        let supabaseClient = null;
+        let realtimeChannel = null;
+        let syncGuestTimer = null;
+        let currentGuestPollingInterval = 3000;
+
+        function startGuestPolling(intervalMs = 3000) {
+            if (syncGuestTimer && currentGuestPollingInterval === intervalMs) return;
+            if (syncGuestTimer) clearTimeout(syncGuestTimer);
+            currentGuestPollingInterval = intervalMs;
+
+            async function runPoll() {
+                await syncGuestDisplay();
+                syncGuestTimer = setTimeout(runPoll, currentGuestPollingInterval);
+            }
+            runPoll();
+            console.log(`Backup Polling Tamu: Aktif (${intervalMs / 1000}s)`);
+        }
+
+        // ────────────────────────────────────────────────────────────
+        // syncGuestDisplay() — Ambil tamu terbaru LANGSUNG dari Supabase
+        //   Ini yang sebelumnya dilakukan oleh GAS setiap 5–8 detik.
+        //   Sekarang langsung dari Supabase → latency < 300ms.
+        //   Filter: tamu yang sudah check-in (jam_datang != '-' & != null)
+        //   diurutkan berdasarkan jam_datang terbaru.
+        // ────────────────────────────────────────────────────────────
+        // ────────────────────────────────────────────────────────────
+        async function syncGuestDisplay() {
+            if (!ssId) return;
+            try {
+                const url = `${SB_URL}/rest/v1/welcome_queue?ssid=eq.${ssId}&status=eq.DISPLAY&order=created_at.desc&limit=5&select=nama,kategori,alamat,pihak,pax,created_at`;
+                const res = await fetch(url, {
+                    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                });
+                if (!res.ok) throw new Error(`Supabase error: ${res.status}`);
+                const guests = await res.json();
+
+                if (guests && guests.length > 0) {
+                    const latest = guests[0];
+                    if (latest.nama && latest.nama !== currentGuestName) {
+                        showGuest(latest);
+                        window.dispatchEvent(new Event('sapa-activity')); // Reset timer idle
+                    }
+                    return;
+                }
+
+                throw new Error("Data welcome_queue kosong, mencoba fallback GAS...");
+            } catch (e) {
+                console.warn("welcome_queue sync info:", e.message);
+                try {
+                    const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`;
+                    const response = await fetch(fetchUrl);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.latestGuest && data.latestGuest.nama) {
+                            if (data.latestGuest.nama !== currentGuestName) {
+                                showGuest(data.latestGuest);
+                                window.dispatchEvent(new Event('sapa-activity')); // Reset timer idle
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error("Fallback GAS error:", err);
+                }
+            }
+        }
+
+        let localDisplayQueue = [];
+        let isDisplaying = false;
+
+        function processDisplayQueue() {
+            if (isDisplaying || localDisplayQueue.length === 0) return;
+            isDisplaying = true;
+            
+            const guest = localDisplayQueue.shift();
+            
+            const box = document.getElementById('guest-box');
+            box.classList.remove('animate-in');
+            void box.offsetWidth;
+            box.classList.add('animate-in');
+            box.style.opacity = "1";
+            document.getElementById('guest-name').innerText = (guest.nama || "").toUpperCase();
+            document.getElementById('g-cat').innerText = guest.kategori || "";
+            document.getElementById('g-addr').innerText = guest.alamat || "";
+            currentGuestName = guest.nama;
+
+            // Ping ke Google Sheet untuk update status antrean (Rundown: WAITING -> DISPLAY -> DONE)
+            try {
+                if (ssId) {
+                    fetch(`${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`, { mode: "no-cors" })
+                        .catch(e => console.log("Silent sheet sync error", e));
+                }
+            } catch(e) {}
+
+            // Tahan tampilan selama 6 detik, lalu lanjut ke antrean berikutnya
+            setTimeout(() => {
+                isDisplaying = false;
+                processDisplayQueue();
+            }, 6000);
+        }
+
+        function showGuest(guest) {
+            // Hindari duplikasi beruntun
+            if (currentGuestName === guest.nama && localDisplayQueue.length === 0 && isDisplaying) return;
+            if (localDisplayQueue.some(g => g.nama === guest.nama)) return;
+            
+            localDisplayQueue.push(guest);
+            processDisplayQueue();
+        }
+
+        function initSupabaseRealtimeTamu() {
+            if (!ssId) return;
+            try {
+                if (window.supabase) {
+                    supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+                    console.log("Menghubungkan ke Supabase Realtime (welcome_queue)...");
+
+                    realtimeChannel = supabaseClient
+                        .channel('welcome_queue_channel')
+                        .on(
+                            'postgres_changes',
+                            {
+                                event: 'INSERT',
+                                schema: 'public',
+                                table: 'welcome_queue',
+                                filter: `ssid=eq.${ssId}`
+                            },
+                            (payload) => {
+                                console.log("Realtime welcome_queue INSERT:", payload);
+                                const record = payload.new;
+                                if (record && record.nama) {
+                                    showGuest(record);
+                                    window.dispatchEvent(new Event('sapa-activity')); // Reset timer idle
+                                    // Marquee is no longer updated here
+                                }
+                            }
+                        )
+                        .subscribe((status) => {
+                            console.log(`Status Realtime welcome_queue: ${status}`);
+                            if (status === 'SUBSCRIBED') {
+                                startGuestPolling(30000); // Polling lambat — 30 detik, realtime yg utama
+                            } else {
+                                startGuestPolling(5000);  // Cepatkan polling jika realtime offline
+                            }
+                        });
+                } else {
+                    console.warn("Supabase library tidak termuat, fallback ke Polling.");
+                    startGuestPolling(5000);
+                }
+            } catch (e) {
+                console.error("Gagal inisialisasi Realtime welcome_queue:", e);
+                startGuestPolling(5000);
+            }
+        }
+
+        // ────────────────────────────────────────────────────────────
+        // syncData() — Entry point utama (dipanggil saat halaman load)
+        //   Menggantikan fungsi syncData() yang lama.
+        //   Sekarang memisahkan dua tugas:
+        //   1. Metadata (GAS, lambat tapi jarang) → syncMetadata()
+        //   2. Tamu terbaru (Supabase, cepat) → syncGuestDisplay()
+        // ────────────────────────────────────────────────────────────
+        async function syncData() {
+            if (!window.SAPATAMU_RESOLVED) {
+                setTimeout(syncData, 100);
+                return;
+            }
+            ssId = getSSID();
+            if (!ssId) {
+                console.error("SSID NOT FOUND");
+                return;
+            }
+            // Jalankan keduanya bersamaan — tidak saling menunggu
+            syncMetadata();    // GAS: lambat, jarang diulang
+            syncGuestDisplay(); // Ambil data awal secara langsung
+            initSupabaseRealtimeTamu(); // Supabase: cepat, realtime + backup polling
+            syncWishesDisplay(); // Ambil daftar ucapan
+            initSupabaseRealtimeWishes(); // Dengarkan ucapan baru
+        }
+
+        // ────────────────────────────────────────────────────────────
+        // JALUR 2: WISHES (UCAPAN) UNTUK MARQUEE
+        // ────────────────────────────────────────────────────────────
+        async function syncWishesDisplay() {
+            if (!ssId) return;
+            try {
+                const url = `${SB_URL}/rest/v1/wishes_queue?ssid=eq.${ssId}&order=created_at.desc&limit=15`;
+                const res = await fetch(url, {
+                    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                });
+                if (!res.ok) throw new Error(`Supabase error: ${res.status}`);
+                const wishes = await res.json();
+
+                if (wishes && wishes.length > 0) {
+                    const wishesText = wishes.map(w => {
+                        const cleanUcapan = (w.ucapan || '').replace(/(\r\n|\n|\r)/gm, " ");
+                        return `${w.nama || 'Tamu'}: ${cleanUcapan}`;
+                    }).join("  •  ");
+                    document.getElementById('marquee-log').innerText = wishesText;
+                } else {
+                    document.getElementById('marquee-log').innerText = "BELUM ADA UCAPAN";
+                }
+            } catch (e) {
+                console.warn("wishes_queue sync error:", e);
+            }
+        }
+
+        function initSupabaseRealtimeWishes() {
+            if (!ssId) return;
+            try {
+                if (window.supabase) {
+                    if (!supabaseClient) {
+                        supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+                    }
+                    console.log("Menghubungkan ke Supabase Realtime (wishes_queue)...");
+
+                    supabaseClient
+                        .channel('wishes_queue_channel')
+                        .on(
+                            'postgres_changes',
+                            {
+                                event: 'INSERT',
+                                schema: 'public',
+                                table: 'wishes_queue',
+                                filter: `ssid=eq.${ssId}`
+                            },
+                            (payload) => {
+                                console.log("Realtime wishes_queue INSERT:", payload);
+                                const record = payload.new;
+                                if (record && record.ucapan) {
+                                    const currentMarquee = document.getElementById('marquee-log').innerText;
+                                    const cleanUcapan = record.ucapan.replace(/(\r\n|\n|\r)/gm, " ");
+                                    const newWish = `${record.nama || 'Tamu'}: ${cleanUcapan}`;
+                                    document.getElementById('marquee-log').innerText = newWish + "  •  " + currentMarquee;
+                                    window.dispatchEvent(new Event('sapa-activity')); // Reset timer idle
+                                }
+                            }
+                        )
+                        .subscribe();
+                }
+            } catch (e) {
+                console.error("Gagal inisialisasi Realtime wishes_queue:", e);
+            }
+        }
+
+        let currentPhotos = [];
+        let slideIdx = 0;
+        let slideInterval;
+
+        function initSlideshow(urls) {
+            // Auto-fix Google Drive links to direct thumbnail links for reliability
+            urls = urls.map(url => {
+                const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+                const match = url.match(driveRegex);
+                if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file"))) {
+                    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1920`;
+                }
+                return url;
+            });
+
+            // Only re-init if the photo list actually changed
+            const newStr = urls.join(",");
+            if (newStr === currentPhotos.join(",")) return;
+            currentPhotos = urls;
+
+            console.log("Slideshow initialized with:", urls);
+
+            const container = document.getElementById('slideshow-container');
+            container.innerHTML = "";
+            clearInterval(slideInterval);
+
+            urls.forEach((url, i) => {
+                const div = document.createElement('div');
+                div.className = `slide ${i === 0 ? 'active' : ''}`;
+                div.style.backgroundImage = `url('${url}')`;
+                container.appendChild(div);
+            });
+
+            if (urls.length > 1) {
+                slideIdx = 0;
+                slideInterval = setInterval(() => {
+                    const slides = document.querySelectorAll('.slide');
+                    if (slides.length < 2) return;
+                    slides[slideIdx].classList.remove('active');
+                    slideIdx = (slideIdx + 1) % slides.length;
+                    slides[slideIdx].classList.add('active');
+                }, 11000);
+            }
+        }
+
+        window.toggleFS = function () {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('mode') === 'kiosk') {
+                document.getElementById('timeline-panel').style.display = 'none';
+                document.querySelector('.master-container').style.gridTemplateColumns = '1fr';
+            }
+
+            handleUIVisibility();
+            syncData();
+            updateInternalLinks();
+            setTimeout(updateInternalLinks, 1500);
+        });
+    </script>
+</body>
+
+</html>
+
+
