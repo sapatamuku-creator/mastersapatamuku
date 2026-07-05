@@ -1616,26 +1616,66 @@ function addWish(ssId, name, text) {
       sheet = ss.insertSheet("Wishes");
       sheet.appendRow(["Timestamp", "Name", "Text"]);
     }
-    sheet.appendRow([new Date(), name, text]);
     
-    // --- INSERT KE SUPABASE wishes_queue ---
+    // Proteksi duplikat di Spreadsheet: cek apakah nama dan ucapan yang sama sudah ada
+    const lastRow = sheet.getLastRow();
+    let alreadyInSheet = false;
+    if (lastRow >= 2) {
+      const data = sheet.getRange(2, 2, lastRow - 1, 2).getValues(); // Kolom B (Name) dan C (Text)
+      for (let i = 0; i < data.length; i++) {
+        if (String(data[i][0]).trim() === String(name).trim() && String(data[i][1]).trim() === String(text).trim()) {
+          alreadyInSheet = true;
+          break;
+        }
+      }
+    }
+    
+    if (!alreadyInSheet) {
+      sheet.appendRow([new Date(), name, text]);
+    }
+    
+    // --- INSERT KE SUPABASE wishes_queue (Dengan Proteksi Duplikat) ---
     try {
       if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
-        const payload = {
-          ssid: ssId,
-          nama: name,
-          ucapan: text
-        };
-        supabaseFetch(SUPABASE_URL + "/rest/v1/wishes_queue", {
-          method: "post",
+        // Cek apakah ucapan sudah ada di Supabase
+        let alreadyInSupabase = false;
+        const checkUrl = SUPABASE_URL + "/rest/v1/wishes_queue?ssid=eq." + encodeURIComponent(ssId) + 
+                         "&nama=eq." + encodeURIComponent(name) + 
+                         "&ucapan=eq." + encodeURIComponent(text) + 
+                         "&select=id";
+        const checkRes = supabaseFetch(checkUrl, {
+          method: "get",
           headers: {
             "apikey": SUPABASE_KEY,
-            "Authorization": "Bearer " + SUPABASE_KEY,
-            "Content-Type": "application/json"
+            "Authorization": "Bearer " + SUPABASE_KEY
           },
-          payload: JSON.stringify(payload),
           muteHttpExceptions: true
         });
+        
+        if (checkRes.getResponseCode() === 200) {
+          const checkData = JSON.parse(checkRes.getContentText());
+          if (checkData && checkData.length > 0) {
+            alreadyInSupabase = true;
+          }
+        }
+        
+        if (!alreadyInSupabase) {
+          const payload = {
+            ssid: ssId,
+            nama: name,
+            ucapan: text
+          };
+          supabaseFetch(SUPABASE_URL + "/rest/v1/wishes_queue", {
+            method: "post",
+            headers: {
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY,
+              "Content-Type": "application/json"
+            },
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
+          });
+        }
       }
     } catch(err) {
       console.error("Gagal insert ke Supabase wishes_queue: " + err.toString());
@@ -1978,6 +2018,36 @@ function syncWishesToSupabase(ssId) {
 
     if (wishesList.length === 0) {
       return { status: "success", message: "Tidak ada data ucapan yang valid." };
+    }
+
+    // Ambil daftar wishes yang sudah ada di Supabase untuk mencocokkan duplikat
+    const existingUrl = SUPABASE_URL + "/rest/v1/wishes_queue?ssid=eq." + encodeURIComponent(ssId) + "&select=nama,ucapan";
+    const existingRes = supabaseFetch(existingUrl, {
+      method: "get",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      },
+      muteHttpExceptions: true
+    });
+    
+    let existingKeys = new Set();
+    if (existingRes.getResponseCode() === 200) {
+      const existingList = JSON.parse(existingRes.getContentText());
+      for (let k = 0; k < existingList.length; k++) {
+        const key = String(existingList[k].nama).trim() + "|||" + String(existingList[k].ucapan).trim();
+        existingKeys.add(key);
+      }
+    }
+
+    // Saring hanya ucapan yang belum ada di Supabase
+    wishesList = wishesList.filter(w => {
+      const key = w.nama + "|||" + w.ucapan;
+      return !existingKeys.has(key);
+    });
+
+    if (wishesList.length === 0) {
+      return { status: "success", message: "Semua ucapan sudah tersinkronisasi di Supabase." };
     }
 
     // Lakukan bulk insert ke Supabase REST API
