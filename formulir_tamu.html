@@ -1528,6 +1528,20 @@
                     } else {
                         if (banner) banner.style.display = 'none';
                     }
+                    
+                    // Muat ulang metadata_client dari Supabase secara asinkron untuk memperbarui template pasca auto-sync GAS
+                    fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=*`, { headers: SB_HEADERS })
+                        .then(r => r.ok ? r.json() : [])
+                        .then(metaData => {
+                            if (metaData && metaData.length > 0) {
+                                const meta = metaData[0];
+                                window.WA_TEMPLATE_DEFAULT = meta.format_pesan_wa || "";
+                                window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
+                                window.WA_HARI_TANGGAL = meta.hari_tanggal || "";
+                                window.WA_WAKTU_ACARA = meta.waktu_acara || "";
+                            }
+                        })
+                        .catch(e => console.warn("Failed to update synced templates:", e));
                 }
             })
             .catch(err => console.warn("Failed to check spreadsheet count:", err));

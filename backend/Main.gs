@@ -1919,6 +1919,14 @@ function getSpreadsheetGuestCount(ssId) {
   try {
     const ss = getSS(ssId);
     const sheet = ss.getSheetByName(SHEET_DATA);
+    
+    // Auto-sync metadata ke Supabase sebagai pengaman tambahan jika trigger onEdit tidak berjalan
+    try {
+      syncMetadataClientToSupabase(ssId, sheet);
+    } catch(err) {
+      console.error("Auto sync in getSpreadsheetGuestCount failed: " + err.toString());
+    }
+
     const lastRow = sheet.getLastRow();
     
     // Hitung tamu riil (baris yang memiliki Nama di kolom C)
