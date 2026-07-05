@@ -70,6 +70,13 @@ function handleWAFormGet(e) {
     liveUsage: liveDeviceCount, categories: categoryMap, tamu: listTamu 
   };
   
+  // Auto-sync metadata to Supabase to keep them in sync
+  try {
+    syncMetadataClientToSupabase(ssId, sheet1);
+  } catch(e) {
+    console.error("Auto-sync inside handleWAFormGet failed: " + e.toString());
+  }
+  
   return createResponse(result);
 }
 
