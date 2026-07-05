@@ -1448,29 +1448,20 @@
             render(MASTER_LIST);
             toggleProcessing(false); // ← Spinner hilang SEKARANG, tidak tunggu metadata
 
-            // ===== STEP 2: Fetch METADATA, SUBDOMAIN & GAS TEMPLATES di background (tidak blokir UI) =====
+            // ===== STEP 2: Fetch METADATA & SUBDOMAIN di background (tidak blokir UI) =====
             Promise.all([
                 fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=*`, { headers: SB_HEADERS })
                     .then(r => r.ok ? r.json() : Promise.reject("meta fetch failed")),
                 fetch(`${SB_URL}/rest/v1/client_public_profile?ssid=eq.${CURRENT_SS_ID}&select=subdomain`, { headers: SB_HEADERS })
-                    .then(r => r.ok ? r.json() : Promise.resolve([])),
-                fetch(`${SCRIPT_URL}?action=getWAForm&ssId=${CURRENT_SS_ID}`)
-                    .then(r => r.ok ? r.json() : Promise.resolve(null))
-                    .catch(() => null)
+                    .then(r => r.ok ? r.json() : Promise.resolve([]))
             ])
-            .then(([metaData, profileData, gasData]) => {
+            .then(([metaData, profileData]) => {
                 if (!metaData || metaData.length === 0) return;
                 const meta = metaData[0];
                 const profile = profileData && profileData.length > 0 ? profileData[0] : null;
 
-                // Prioritaskan template real-time dari Google Sheet via GAS
-                if (gasData) {
-                    window.WA_TEMPLATE_DEFAULT = gasData.defaultTemplate || "";
-                    window.WA_TEMPLATE_CUSTOM = gasData.customTemplate || "";
-                } else {
-                    window.WA_TEMPLATE_DEFAULT = meta.format_pesan_wa || "";
-                    window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
-                }
+                window.WA_TEMPLATE_DEFAULT = meta.format_pesan_wa || "";
+                window.WA_TEMPLATE_CUSTOM = meta.format_pesan_wa_custom || "";
                 window.WA_HARI_TANGGAL = meta.hari_tanggal || "";
                 window.WA_WAKTU_ACARA = meta.waktu_acara || "";
                 

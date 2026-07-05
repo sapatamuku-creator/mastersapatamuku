@@ -1000,18 +1000,36 @@ function syncMetadataClientToSupabase(ssId, targetSS) {
       updated_at: new Date().toISOString()
     };
     
+    // Gunakan service role key jika ada di Script Properties untuk bypass RLS
+    let authKey = SUPABASE_KEY;
+    try {
+      const secretKey = PropertiesService.getScriptProperties().getProperty("SUPABASE_KEY");
+      if (secretKey) {
+        authKey = secretKey;
+      }
+    } catch(err) {
+      console.warn("Gagal membaca SUPABASE_KEY dari properties: " + err.toString());
+    }
+    
     const options = {
       method: "post",
       contentType: "application/json",
       headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": "Bearer " + SUPABASE_KEY,
+        "apikey": authKey,
+        "Authorization": "Bearer " + authKey,
         "Prefer": "resolution=merge-duplicates"
       },
       payload: JSON.stringify(payload),
       muteHttpExceptions: true
     };
-    supabaseFetch(sbUrl, options);
+    
+    const res = UrlFetchApp.fetch(sbUrl, options);
+    const code = res.getResponseCode();
+    if (code >= 300) {
+      console.error("syncMetadataClientToSupabase failed status " + code + ": " + res.getContentText());
+    } else {
+      console.log("syncMetadataClientToSupabase success (" + code + ")");
+    }
   } catch(e) {
     console.error("syncMetadataClientToSupabase error: " + e.toString());
   }
