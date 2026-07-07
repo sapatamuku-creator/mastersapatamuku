@@ -1217,6 +1217,77 @@
                 });
         }
 
+        // --- SYSTEM LOGS MONITORING ---
+        let systemLogsChannel = null;
+
+        async function fetchSystemLogs() {
+            try {
+                // Ambil 30 log terakhir dari system_logs
+                const { data, error } = await supabaseClient
+                    .from('system_logs')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(30);
+
+                if (error) {
+                    // Jika tabel belum dibuat, abaikan secara senyap & infokan cara setup
+                    console.warn("Table system_logs not found. Please run setup_system_logs.sql in Supabase.", error.message);
+                    addLog("Tabel system_logs tidak ditemukan. Jalankan setup_system_logs.sql di Supabase.", "warning");
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    addLog(`Memuat ${data.length} riwayat log audit sistem...`, "system");
+                    // Tampilkan dari yang terlama ke terbaru di console box
+                    data.reverse().forEach(log => {
+                        appendSystemLogToBox(log);
+                    });
+                } else {
+                    addLog("Belum ada data log aktivitas di tabel system_logs.", "info");
+                }
+            } catch (err) {
+                console.error("Gagal memuat log sistem:", err);
+            }
+        }
+
+        function appendSystemLogToBox(log) {
+            const timestamp = log.created_at ? new Date(log.created_at).toLocaleTimeString('id-ID') : new Date().toLocaleTimeString('id-ID');
+            let color = "var(--text-primary)";
+            if (log.status === "SUCCESS") color = "var(--accent-success)";
+            if (log.status === "WARNING") color = "var(--accent-warning)";
+            if (log.status === "FAILED") color = "var(--accent-danger)";
+
+            if (consoleBox) {
+                const source = log.error_source ? `[${log.error_source}]` : '[SYSTEM]';
+                const client = log.client_name ? ` (${log.client_name})` : '';
+                const desc = log.description ? ` - ${log.description}` : '';
+                consoleBox.innerHTML += `<span style="color:${color}">[${timestamp}] 🖥️ ${source} *${log.action_type}*${client}${desc}</span>\n`;
+                consoleBox.scrollTop = consoleBox.scrollHeight;
+            }
+        }
+
+        function subscribeToSystemLogs() {
+            try {
+                systemLogsChannel = supabaseClient.channel('realtime-system-logs')
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'system_logs' }, (payload) => {
+                        const newLog = payload.new;
+                        appendSystemLogToBox(newLog);
+                        if (newLog.status === 'FAILED') {
+                            showToast(`⚠️ Error Sistem Baru Terdeteksi: ${newLog.action_type}`, "error");
+                        } else {
+                            showToast(`Log baru: ${newLog.action_type}`);
+                        }
+                    })
+                    .subscribe((status) => {
+                        if (status === 'SUBSCRIBED') {
+                            addLog("Terhubung ke jalur monitoring realtime system_logs.", "success");
+                        }
+                    });
+            } catch (err) {
+                console.error("Gagal berlangganan ke realtime system_logs:", err);
+            }
+        }
+
         // Initial Boot function
         function initMonitor() {
             addLog("Memulai sistem dashboard monitor...", "system");
@@ -1224,6 +1295,8 @@
             fetchMetrics();
             monitorWebSocket();
             initPresenceMonitor();
+            fetchSystemLogs();
+            subscribeToSystemLogs();
             
             // Auto refresh metrics every 60 seconds
             setInterval(() => {
