@@ -818,6 +818,22 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <div style="position: relative; display: inline-block;">
+                            <button id="btn-sort-dropdown" onclick="toggleSortDropdown(event)" title="Urutkan Tamu" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 50px; border: 1.5px solid rgba(224, 123, 123, 0.25); background: rgba(243, 244, 246, 0.8); color: #374151; font-size: 10px; font-weight: 800; cursor: pointer; transition: all 0.25s ease; letter-spacing: 0.3px; white-space: nowrap;">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="flex-shrink:0"><path d="M15 4l6 6h-4v10h-4V10H9l6-6zM9 20l-6-6h4V4h4v10h4l-6 6z"/></svg>
+                                URUTKAN: <span id="current-sort-label" style="color:var(--primary);">TERBARU</span>
+                            </button>
+                            <!-- Sort Dropdown Menu -->
+                            <div id="sort-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 8px); left: 0; background: #FFF; border: 1.5px solid var(--border); border-radius: 18px; box-shadow: 0 15px 35px rgba(140, 117, 96, 0.15); padding: 10px; width: 190px; z-index: 1000; box-sizing: border-box;">
+                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                    <button onclick="changeSortOrder('newest', event)" style="text-align: left; background: none; border: none; padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">🆕 Terbaru (Baru ke Lama)</button>
+                                    <button onclick="changeSortOrder('oldest', event)" style="text-align: left; background: none; border: none; padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">⏳ Terlama (Lama ke Baru)</button>
+                                    <button onclick="changeSortOrder('name-asc', event)" style="text-align: left; background: none; border: none; padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">🔤 Nama A - Z</button>
+                                    <button onclick="changeSortOrder('name-desc', event)" style="text-align: left; background: none; border: none; padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">🔤 Nama Z - A</button>
+                                </div>
+                            </div>
+                        </div>
                         <span id="gas-countdown-indicator" style="display:none; align-items:center; gap:6px; background:rgba(209,250,229,0.85); border:1.5px solid rgba(16,185,129,0.3); padding:6px 12px; border-radius:50px; white-space:nowrap; box-shadow:0 2px 8px rgba(16,185,129,0.15);">
                             <span class="gas-sync-live-dot"></span>
                             <span style="display:flex; align-items:baseline; gap:2px;">
@@ -2310,6 +2326,70 @@
         }
     });
 
+    // Close sort dropdown on click outside
+    document.addEventListener('click', function(event) {
+        const menu = document.getElementById('sort-dropdown-menu');
+        const btn = document.getElementById('btn-sort-dropdown');
+        if (menu && menu.style.display === 'block') {
+            if (!menu.contains(event.target) && !btn.contains(event.target)) {
+                menu.style.display = 'none';
+            }
+        }
+    });
+
+    let currentSortOrder = "newest";
+
+    window.toggleSortDropdown = function(event) {
+        if (event) event.stopPropagation();
+        const menu = document.getElementById('sort-dropdown-menu');
+        const isHidden = menu.style.display === 'none';
+        
+        // Close filter menu if open
+        const filterMenu = document.getElementById('filter-dropdown-menu');
+        if (filterMenu) filterMenu.style.display = 'none';
+        
+        menu.style.display = isHidden ? 'block' : 'none';
+    };
+
+    window.changeSortOrder = function(order, event) {
+        if (event) event.stopPropagation();
+        currentSortOrder = order;
+        
+        const labels = {
+            'newest': 'TERBARU',
+            'oldest': 'TERLAMA',
+            'name-asc': 'NAMA A-Z',
+            'name-desc': 'NAMA Z-A'
+        };
+        const labelEl = document.getElementById('current-sort-label');
+        if (labelEl) labelEl.innerText = labels[order] || 'TERBARU';
+        
+        const menu = document.getElementById('sort-dropdown-menu');
+        if (menu) menu.style.display = 'none';
+        
+        filterGuestList();
+    };
+
+    function sortList(list) {
+        if (currentSortOrder === "newest") {
+            list.sort((a, b) => {
+                const rowA = a.row === null ? Infinity : Number(a.row);
+                const rowB = b.row === null ? Infinity : Number(b.row);
+                return rowB - rowA;
+            });
+        } else if (currentSortOrder === "oldest") {
+            list.sort((a, b) => {
+                const rowA = a.row === null ? Infinity : Number(a.row);
+                const rowB = b.row === null ? Infinity : Number(b.row);
+                return rowA - rowB;
+            });
+        } else if (currentSortOrder === "name-asc") {
+            list.sort((a, b) => (a.nama || "").localeCompare(b.nama || ""));
+        } else if (currentSortOrder === "name-desc") {
+            list.sort((a, b) => (b.nama || "").localeCompare(a.nama || ""));
+        }
+    }
+
     let filterTimeout;
     window.debouncedFilterGuestList = function() {
         clearTimeout(filterTimeout);
@@ -2355,7 +2435,11 @@
             });
         }
 
-        if (!query) { render(baseList); return; }
+        if (!query) { 
+            sortList(baseList);
+            render(baseList); 
+            return; 
+        }
 
         const filtered = baseList.filter(g => {
             const statusWA = g.statusWA || '';
@@ -2365,6 +2449,7 @@
             const searchableText = [g.nama, g.whatsapp, g.kategori, g.pihakPengundang, g.alamat, statusStr].join(" ").toLowerCase();
             return searchableText.includes(query);
         });
+        sortList(filtered);
         render(filtered);
     };
 
