@@ -191,9 +191,38 @@ function handleWAFormPost(data) {
           // ❌ ERROR: session-only, tidak ditulis ke spreadsheet
           // agar saat refresh kembali jadi "BELUM TERKIRIM" dan bisa di-retry
           failedRows.push({ row: item.row, reason: res.msg || "Gagal" });
+          // 🔴 LOG ke system_logs — akan memicu Webhook → Gemini Alert → WA Admin
+          logToSupabase(
+            'SEND_WA_BLAST',
+            'FAILED',
+            'GAS',
+            'Fonnte gagal kirim ke target baris ' + item.row + ': ' + (res.msg || 'Tidak ada respons'),
+            { target: item.target, row: item.row, reason: res.msg, ssId: data.ssId }
+          );
         }
       });
-      SpreadsheetApp.flush(); 
+      SpreadsheetApp.flush();
+
+      // 📊 LOG RINGKASAN BLAST ke system_logs
+      const totalTarget = data.payload ? data.payload.length : 0;
+      if (failedRows.length > 0) {
+        logToSupabase(
+          'SEND_WA_BLAST',
+          'WARNING',
+          'GAS',
+          'Blast WA selesai dengan ' + failedRows.length + ' kegagalan dari ' + totalTarget + ' target. Sukses: ' + successCount,
+          { successCount, failedCount: failedRows.length, totalTarget, ssId: data.ssId }
+        );
+      } else if (successCount > 0) {
+        logToSupabase(
+          'SEND_WA_BLAST',
+          'SUCCESS',
+          'GAS',
+          'Blast WA berhasil terkirim ke ' + successCount + ' dari ' + totalTarget + ' target tamu.',
+          { successCount, totalTarget, ssId: data.ssId }
+        );
+      }
+
       return createResponse({ 
         status: "success", 
         sent: successCount, 
@@ -238,6 +267,14 @@ function handleWAFormPost(data) {
     }
 
   } catch (err) {
+    // 🔴 LOG ERROR FATAL ke system_logs — akan memicu Webhook + Gemini Alert
+    logToSupabase(
+      'WA_FORMULIR_HANDLER',
+      'FAILED',
+      'GAS',
+      'Error fatal di handleWAFormPost: ' + err.toString(),
+      { action: data ? data.action : 'unknown', stack: err.stack || '' }
+    );
     return createResponse({ status: "error", msg: err.toString() });
   }
 }

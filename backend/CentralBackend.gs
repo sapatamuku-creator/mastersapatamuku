@@ -155,6 +155,8 @@ function handleRegister(data) {
 
     return createResponse({ status: "success", message: "Pendaftaran berhasil" });
   } catch (err) {
+    // 🔴 LOG ke system_logs — akan memicu alert WA admin via Gemini
+    logToSupabase('REGISTER_CLIENT', 'FAILED', 'GAS', 'Gagal pendaftaran klien baru: ' + err.toString(), { stack: err.stack || '' });
     return createResponse({ status: "error", message: "Gagal pendaftaran: " + err.toString() });
   }
 }
@@ -297,6 +299,8 @@ function handleRegisterAndActivate(data) {
       data: { ssId: newSsId, fileName: finalFileName }
     });
   } catch (err) {
+    // 🔴 LOG ke system_logs — error aktivasi akun adalah kejadian kritis
+    logToSupabase('ACTIVATE_CLIENT', 'FAILED', 'GAS', 'Gagal aktivasi akun ' + (data.subdomain || '?') + ': ' + err.toString(), { stack: err.stack || '', subdomain: data.subdomain });
     return createResponse({ status: "error", message: "Gagal aktivasi: " + err.toString() });
   }
 }
@@ -622,16 +626,20 @@ function sendWA(target, message) {
   try {
     const response = UrlFetchApp.fetch(url, options);
     const result = response.getContentText();
-    console.log("Fonnte Response: " + result); // Cek log di GAS untuk melihat detailnya
+    console.log("Fonnte Response: " + result);
     
     const json = JSON.parse(result);
     if (json.status === true) {
       return "success";
     } else {
+      // 🔴 LOG kegagalan pengiriman WA ke system_logs
+      logToSupabase('SEND_WA', 'FAILED', 'GAS', 'Fonnte menolak pengiriman WA ke ' + cleanTarget + ': ' + (json.reason || 'Tidak ada alasan'), { target: cleanTarget, reason: json.reason });
       return "failed: " + json.reason;
     }
   } catch (e) {
     console.log("Error: " + e.toString());
+    // 🔴 LOG error jaringan ke system_logs
+    logToSupabase('SEND_WA', 'FAILED', 'GAS', 'Error jaringan saat hubungi Fonnte API: ' + e.toString(), { target: cleanTarget });
     return "error: " + e.toString();
   }
 }
