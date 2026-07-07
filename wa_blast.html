@@ -1393,38 +1393,99 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                         };
                     });
 
-                    const res = await fetch(SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify({ action: "executeFonnteBlast", ssId: CURRENT_SS_ID, payload: payload })
-                    });
+                    const batchSize = 25;
+                    const totalEntries = payload.length;
+                    const needsCooldown = totalEntries > 50;
+                    
+                    let totalSent = 0;
+                    let allFailedRows = [];
+                    let serverError = null;
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    const nowStr = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+
+                    for (let i = 0; i < payload.length; i += batchSize) {
+                        const batch = payload.slice(i, i + batchSize);
+                        const batchNum = Math.floor(i / batchSize) + 1;
+                        const totalBatches = Math.ceil(payload.length / batchSize);
+                        
+                        toggleProcessing(true, `Mengirim Batch ${batchNum}/${totalBatches} (${batch.length} pesan)...`);
+                        
+                        try {
+                            const res = await fetch(SCRIPT_URL, {
+                                method: "POST",
+                                body: JSON.stringify({ action: "executeFonnteBlast", ssId: CURRENT_SS_ID, payload: batch })
+                            });
+                            
+                            const result = await res.json();
+                            if (result.status === "success") {
+                                totalSent += result.sent || 0;
+                                if (result.failedRows && Array.isArray(result.failedRows)) {
+                                    allFailedRows = allFailedRows.concat(result.failedRows);
+                                }
+                                
+                                // Tandai baris sukses di localData dari batch ini
+                                const successRows = [];
+                                const failedRows = result.failedRows || [];
+                                batch.forEach(item => {
+                                    if (!failedRows.some(f => f.row === item.row)) {
+                                        const entry = localData.tamu.find(x => x.row === item.row);
+                                        if (entry) {
+                                            entry.status = '\u2705 [' + nowStr + ']';
+                                            const targetObj = uniqueTargets.find(x => x.row === item.row);
+                                            if (targetObj) successRows.push(targetObj);
+                                        }
+                                    }
+                                });
+
+                                // Sinkronisasikan status ke Supabase secara langsung dan asinkron (background)
+                                const supabaseApiKey = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+                                await Promise.all(
+                                    successRows.map(t => 
+                                        fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${t.row}`, {
+                                            method: "PATCH",
+                                            headers: {
+                                                "apikey": supabaseApiKey,
+                                                "Authorization": "Bearer " + supabaseApiKey,
+                                                "Content-Type": "application/json"
+                                            },
+                                            body: JSON.stringify({ status_wa: '✅ [' + nowStr + ']' })
+                                        }).catch(e => console.error("Supabase sync failed for row", t.row, e))
+                                    )
+                                );
+                                
+                                renderTable();
+                            } else {
+                                serverError = result.msg || "Terjadi kesalahan pada backend.";
+                                batch.forEach(item => {
+                                    allFailedRows.push({ row: item.row, reason: serverError });
+                                });
+                            }
+                        } catch (err) {
+                            serverError = err.toString();
+                            batch.forEach(item => {
+                                allFailedRows.push({ row: item.row, reason: serverError });
+                            });
+                        }
+                        
+                        // Cooldown logic
+                        if (needsCooldown && (i + batchSize) < payload.length) {
+                            let cooldownTime = 60;
+                            while (cooldownTime > 0) {
+                                toggleProcessing(true, `Cooldown Pengiriman...\nMenunggu ${cooldownTime} detik sebelum batch berikutnya.`);
+                                await new Promise(r => setTimeout(r, 1000));
+                                cooldownTime--;
+                            }
+                        }
+                    }
 
                     toggleProcessing(false);
-                    const result = await res.json();
 
-                    if (result.status === "success") {
-                        // ===== UPDATE TABEL IN-MEMORY (tidak fetch ulang dari spreadsheet) =====
-                        const now = new Date();
-                        const pad = n => String(n).padStart(2, '0');
-                        const nowStr = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
-
-                        // Tandai baris sukses di localData
-                        const successRows = [];
-                        const failedRows = result.failedRows || [];
-                        uniqueTargets.forEach(t => {
-                            if (!failedRows.some(f => f.row === t.row)) {
-                                const entry = localData.tamu.find(x => x.row === t.row);
-                                if (entry) {
-                                    entry.status = '\u2705 [' + nowStr + ']';
-                                    successRows.push(t);
-                                }
-                            }
-                        });
-
-                        // Sinkronisasikan status ke Supabase secara langsung dan asinkron (background)
-                        const supabaseApiKey = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
-                        
-                        Promise.all(
-                            successRows.map(t => 
+                    // Sinkronisasikan status duplikat ke Supabase jika ada
+                    const supabaseApiKey = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+                    if (duplicates.length > 0) {
+                        await Promise.all(
+                            duplicates.map(t => 
                                 fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${t.row}`, {
                                     method: "PATCH",
                                     headers: {
@@ -1432,50 +1493,35 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                                         "Authorization": "Bearer " + supabaseApiKey,
                                         "Content-Type": "application/json"
                                     },
-                                    body: JSON.stringify({ status_wa: '✅ [' + nowStr + ']' })
-                                }).catch(e => console.error("Supabase sync failed for row", t.row, e))
+                                    body: JSON.stringify({ status_wa: '⚠️  Duplikasi Nomor [' + nowStr + ']' })
+                                }).catch(e => console.error("Supabase duplicate sync failed for row", t.row, e))
                             )
-                        );
-
-                        if (duplicates.length > 0) {
-                            Promise.all(
-                                duplicates.map(t => 
-                                    fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${t.row}`, {
-                                        method: "PATCH",
-                                        headers: {
-                                            "apikey": supabaseApiKey,
-                                            "Authorization": "Bearer " + supabaseApiKey,
-                                            "Content-Type": "application/json"
-                                        },
-                                        body: JSON.stringify({ status_wa: '⚠️ Duplikasi Nomor [' + nowStr + ']' })
-                                    }).catch(e => console.error("Supabase duplicate sync failed for row", t.row, e))
-                                )
-                            );
-                        }
-
-                        // Tandai baris error — SESSION ONLY, tidak ditulis ke spreadsheet
-                        // Saat user klik "Refresh Data" → kembali jadi BELUM TERKIRIM → bisa retry
-                        failedRows.forEach(f => {
-                            const entry = localData.tamu.find(x => x.row === f.row);
-                            if (entry) entry.status = '\u274c Gagal: ' + (f.reason || 'Rejected') + ' [' + nowStr + '] (Refresh untuk Retry)';
+                        ).then(() => {
+                            duplicates.forEach(d => {
+                                const entry = localData.tamu.find(x => x.row === d.row);
+                                if (entry) entry.status = '⚠️  Duplikasi Nomor [' + nowStr + ']';
+                            });
+                            renderTable();
                         });
+                    }
 
-                        // Re-render tabel dari localData (bukan dari spreadsheet)
-                        renderTable();
+                    // Tandai baris error di tabel lokal
+                    allFailedRows.forEach(f => {
+                        const entry = localData.tamu.find(x => x.row === f.row);
+                        if (entry) entry.status = '\u274c Gagal: ' + (f.reason || 'Rejected') + ' [' + nowStr + '] (Refresh untuk Retry)';
+                    });
+                    renderTable();
 
-                        // Summary
-                        const failCount = failedRows.length;
-                        const dupCount = duplicates.length;
-                        let summary = result.sent + ' pesan berhasil dikirim.';
-                        if (failCount > 0) summary += '\n\u274c ' + failCount + ' gagal — Refresh halaman untuk retry.';
-                        if (dupCount > 0) summary += '\n\u26a0\ufe0f ' + dupCount + ' di-skip (duplikasi nomor).';
-                        await showAlert("Selesai!", summary, result.sent > 0 ? "\u2705" : "\u26a0\ufe0f");
+                    // Summary
+                    const failCount = allFailedRows.length;
+                    const dupCount = duplicates.length;
+                    let summary = totalSent + ' pesan berhasil dikirim.';
+                    if (failCount > 0) summary += '\n\u274c ' + failCount + ' gagal — Refresh halaman untuk retry.';
+                    if (dupCount > 0) summary += '\n\u26a0\ufe0f ' + dupCount + ' di-skip (duplikasi nomor).';
+                    await showAlert("Selesai!", summary, totalSent > 0 ? "\u2705" : "\u26a0\ufe0f");
 
-                        // Auto-refresh hanya jika tidak ada error (agar row error tidak hilang sebelum user baca)
-                        if (failCount === 0) await refreshData();
-
-                    } else {
-                        await showAlert("Gagal Server", result.msg || "Terjadi kesalahan pada backend.", "\u274c");
+                    // Auto-refresh hanya jika tidak ada error (agar row error tidak hilang sebelum user baca)
+                    if (failCount === 0) {
                         await refreshData();
                     }
                 } catch (e) {

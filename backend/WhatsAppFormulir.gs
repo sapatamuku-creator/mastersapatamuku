@@ -158,7 +158,8 @@ function handleWAFormPost(data) {
           target: item.target, 
           message: item.message,
           url: item.url || "",
-          delay: "5"
+          delay: "5-12",
+          duration: "3"
         };
         const res = directFonnteSend("https://api.fonnte.com/send", body, item.token);
         if (res.status) {
