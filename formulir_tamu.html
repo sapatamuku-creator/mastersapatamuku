@@ -746,7 +746,7 @@
                         <button onclick="syncToSupabase()" style="background:#EF4444; border:none; cursor:pointer; color:#FFF; padding:6px 15px; border-radius:50px; font-size:9.5px; font-weight:800; white-space:nowrap; transition:0.2s;" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter='none'">SINKRONKAN SEKARANG</button>
                     </div>
 
-                    <input type="text" id="guest-search" oninput="filterGuestList()" placeholder="🔍 Cari Nama, WA, Kategori, atau Status..." 
+                    <input type="text" id="guest-search" oninput="debouncedFilterGuestList()" placeholder="🔍 Cari Nama, WA, Kategori, atau Status..." 
                            style="width: 100%; padding: 18px 25px; border-radius: 18px; border: 1.5px solid var(--border); font-size: 14px; font-weight: 600; background: #FFF; outline: none; box-sizing: border-box; box-shadow: 0 10px 20px rgba(140, 117, 96, 0.03);">
                     <div id="dup-filter-bar">
                         <button id="btn-dup-filter" onclick="toggleDuplicateFilter()" title="Tampilkan hanya tamu yang namanya terduplikat (case-insensitive)">
@@ -2309,6 +2309,12 @@
             }
         }
     });
+
+    let filterTimeout;
+    window.debouncedFilterGuestList = function() {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(window.filterGuestList, 200);
+    };
 
     window.filterGuestList = function() {
         const query = document.getElementById('guest-search').value.trim().toLowerCase();
