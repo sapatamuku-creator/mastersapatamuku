@@ -7,8 +7,9 @@
     
     <script src="subdomain_resolver.js?v=3.3"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
         :root { 
@@ -2810,9 +2811,30 @@
         document.getElementById('importExcelModalOverlay').style.display = 'none';
     };
 
-    window.handleExcelUpload = function(event) {
+    function loadExcelLibrary() {
+        if (window.XLSX) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error("Gagal memuat modul Excel"));
+            document.head.appendChild(script);
+        });
+    }
+
+    window.handleExcelUpload = async function(event) {
         const file = event.target.files[0];
         if (!file) return;
+
+        toggleProcessing(true, "MEMUAT MODUL EXCEL...");
+        try {
+            await loadExcelLibrary();
+        } catch (err) {
+            console.error(err);
+            toggleProcessing(false);
+            return showSapaModal("Error", "Gagal memuat pustaka Excel. Silakan periksa koneksi internet.", "⚠️ ");
+        }
+        toggleProcessing(false);
 
         const reader = new FileReader();
         reader.onload = function(e) {
