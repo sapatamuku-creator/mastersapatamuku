@@ -1692,7 +1692,7 @@
             alamat: formData.alamat,
             rencanaHadir: formData.rencana,
             sesi: formData.sesi,
-            statusWA: "PENDING",
+            statusWA: "BELUM TERKIRIM",
             syncStatus: "syncing"
         };
 
@@ -1724,7 +1724,7 @@
             pihak_pengundang: formData.pihak || "-",
             alamat: formData.alamat || "-",
             status_hadir: "0",
-            status_wa: "PENDING",
+            status_wa: "BELUM TERKIRIM",
             status_hadiah: "-",
             tanda_kasih: 0,
             jam_datang: "-",
@@ -1964,7 +1964,7 @@
     window.EVENT_DATE = "";
 
     window.executeBlast = function(row, phone, name, code) {
-        const guest = MASTER_LIST.find(g => g.row == row);
+        const guest = MASTER_LIST.find(g => g.kode === code || (row && g.row == row));
         if(!guest) return;
 
         // Block jika sudah terkirim (SENT)
@@ -2148,7 +2148,7 @@
         // Persist ke spreadsheet di background (fire-and-forget)
         fetch(SCRIPT_URL, {
             method: "POST",
-            body: JSON.stringify({ action: "markSent", ssId: CURRENT_SS_ID, row: row })
+            body: JSON.stringify({ action: "markSent", ssId: CURRENT_SS_ID, row: row, kodeUnik: code })
         }).catch(err => console.warn("markSent background failed:", err));
     };
 
@@ -3095,7 +3095,7 @@
                 alamat: parsed.alamat,
                 rencanaHadir: parsed.rencanaHadir,
                 sesi: metadata.sesi,
-                statusWA: "PENDING",
+                statusWA: "BELUM TERKIRIM",
                 syncStatus: "syncing",
                 subdomain: CURRENT_SUBDOMAIN
             });
@@ -3120,7 +3120,7 @@
                         pihak_pengundang: g.pihakPengundang || "-",
                         alamat: g.alamat || "-",
                         status_hadir: "0",
-                        status_wa: "PENDING",
+                        status_wa: "BELUM TERKIRIM",
                         status_hadiah: "-",
                         tanda_kasih: 0,
                         jam_datang: "-",

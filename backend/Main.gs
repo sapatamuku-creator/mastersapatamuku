@@ -1874,7 +1874,7 @@ function syncSheetToSupabase(ssId) {
         pihak_pengundang: String(row[11] || "-"),
         alamat: String(row[12] || "-"),
         status_hadir: String(row[8] || "0"),
-        status_wa: String(row[15] || "PENDING"),
+        status_wa: String(row[15] || "BELUM TERKIRIM"),
         status_hadiah: (() => {
           let colO = String(row[14] || "").trim();
           let oTags = [];
@@ -2286,7 +2286,7 @@ function syncRowToSupabase(ss, row, ssId) {
     pihak_pengundang: String(rowData[11] || "-"),
     alamat: String(rowData[12] || "-"),
     status_hadir: String(rowData[8] || "0"),
-    status_wa: String(rowData[15] || "PENDING"),
+    status_wa: String(rowData[15] || "BELUM TERKIRIM"),
     status_hadiah: (() => {
       let colO = String(rowData[14] || "").trim();
       let oTags = [];
