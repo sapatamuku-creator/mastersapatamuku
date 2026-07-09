@@ -1980,10 +1980,12 @@
     window.EVENT_DATE = "";
 
     window.executeBlast = function(row, phone, name, code) {
-        const guest = MASTER_LIST.find(g => 
-            (code && g.kode === code) || 
-            (row && row !== 'null' && row !== 'undefined' && g.row !== null && g.row !== undefined && g.row !== 'null' && g.row !== 'undefined' && String(g.row) === String(row))
-        );
+        const guest = MASTER_LIST.find(g => {
+            if (code && code !== 'null' && code !== 'undefined') {
+                return g.kode === code;
+            }
+            return (row && row !== 'null' && row !== 'undefined' && g.row !== null && g.row !== undefined && g.row !== 'null' && g.row !== 'undefined' && String(g.row) === String(row));
+        });
         if(!guest) return;
 
         // Block jika sudah terkirim (SENT)
