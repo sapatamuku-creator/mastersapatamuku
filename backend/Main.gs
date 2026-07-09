@@ -197,6 +197,10 @@ function handleMainPost(payload) {
         result = deleteGuestsFromSheet(ssId, payload.codes);
         break;
         
+      case "overwriteSheetWithGuests":
+        result = overwriteSheetWithGuests(ssId, payload.guests);
+        break;
+        
       case "editGuest":
         result = editGuest(payload);
         break;
@@ -2372,5 +2376,64 @@ function setupAutoSyncTrigger() {
     .create();
     
   Logger.log("Trigger watcher berhasil dipasang untuk spreadsheet: " + ss.getName() + " (ID: " + targetId + ")");
+}
+
+function overwriteSheetWithGuests(ssId, guests) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    const lastRow = sheet.getLastRow();
+    
+    // 1. Bersihkan semua baris data dari START_ROW sampai baris terakhir
+    if (lastRow >= START_ROW) {
+      sheet.getRange(START_ROW, 1, lastRow - START_ROW + 1, sheet.getLastColumn()).clearContent();
+    }
+    
+    // 2. Tulis ulang semua data tamu
+    const nowFormatted = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss");
+    
+    // Ambil event date
+    let eventDate = "";
+    try {
+      const eventDateRaw = sheet.getRange("B2").getValue();
+      eventDate = Utilities.formatDate(parseEventDate(eventDateRaw), "GMT+7", "yyyy-MM-dd");
+    } catch (e) {}
+
+    // Siapkan array data untuk bulk write (lebih cepat daripada appendRow satu per satu)
+    const rowsToWrite = guests.map((g, index) => {
+      const kode = String(g.kode || "").trim();
+      const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?data=" + kode + "&size=400x400";
+      
+      return [
+        "=ROW()-" + (START_ROW - 1),                   // A: No
+        g.created_at ? Utilities.formatDate(new Date(g.created_at), "GMT+7", "yyyy-MM-dd HH:mm:ss") : nowFormatted, // B: Tgl Input
+        g.nama || "Tanpa Nama",                         // C: Nama
+        g.whatsapp || "",                               // D: No. WhatsApp
+        g.kategori || "Umum",                           // E: Kategori
+        kode,                                           // F: Kode
+        qrUrl,                                          // G: QR Code Link
+        g.rencana_hadir || 1,                           // H: Pax
+        g.status_hadir || "0",                          // I: Check-in
+        g.jam_datang || "-",                            // J: Jam Datang
+        g.souvenir || "tidak",                          // K: Souvenir
+        g.pihak_pengundang || "-",                      // L: Pihak Pengundang
+        g.alamat || "-",                                // M: Alamat
+        g.real_hadir || "0",                            // N: Real Hadir
+        g.status_hadiah || "-",                         // O: Angpao/Gift
+        g.status_wa || "BELUM TERKIRIM",                // P: Status WA
+        g.status_undian || "-",                         // Q: Lucky Draw
+        g.tanda_kasih || 0,                             // R: Nominal Angpao
+        g.sesi || "-"                                   // S: Sesi
+      ];
+    });
+
+    if (rowsToWrite.length > 0) {
+      sheet.getRange(START_ROW, 1, rowsToWrite.length, 19).setValues(rowsToWrite);
+    }
+    
+    return { status: "success", message: "Spreadsheet berhasil ditimpa dengan data backup baru (" + rowsToWrite.length + " tamu)." };
+  } catch (err) {
+    return { status: "error", message: "Failed to overwrite sheet: " + err.toString() };
+  }
 }
 
