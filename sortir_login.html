@@ -267,13 +267,14 @@
                 email: email
             }));
 
-            // Update on DB
-            const { error: sessionError } = await supabase
+            // Update session token on DB (non-blocking — don't fail login if this fails)
+            supabase
                 .from('sortir_vendors')
                 .update({ active_session_token: sessionToken })
-                .eq('id', userId);
-
-            if (sessionError) throw sessionError;
+                .eq('id', userId)
+                .then(({ error }) => {
+                    if (error) console.warn('Session token update failed (non-critical):', error.message);
+                });
 
             // 5. Redirect to Dashboard
             window.location.replace('/sortir_dashboard.html');
