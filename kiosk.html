@@ -69,6 +69,7 @@
         }
         #reader { width: 100% !important; height: 100% !important; }
         #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+        #reader.mirror-mode video { transform: scaleX(-1) !important; }
 
         .scan-overlay { 
             position: absolute; inset: 0; 
@@ -173,6 +174,14 @@
                     <span class="cam-toggle-slider"></span>
                 </label>
             </div>
+            <!-- Toggle Frontcam Mode -->
+            <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                <span class="cam-toggle-label">FC</span>
+                <label class="cam-toggle">
+                    <input type="checkbox" id="frontcam-toggle" onchange="toggleFrontcamMode(this.checked)">
+                    <span class="cam-toggle-slider"></span>
+                </label>
+            </div>
             <!-- Toggle Countdown -->
             <div class="cam-toggle-wrap" style="margin-left: 5px;">
                 <span class="cam-toggle-label">CD</span>
@@ -243,8 +252,15 @@
             <h2 class="text-[#4A3F35] font-bold uppercase tracking-[4px] text-xl md:text-3xl lg:text-4xl" style="font-family: 'Lora', serif;">PENCARIAN MANUAL</h2>
             <button onclick="closeSearchModal()" class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#F0E6DE] text-[#8C7560] font-bold flex items-center justify-center hover:bg-[#E07B7B] hover:text-white transition-colors text-lg md:text-xl">X</button>
         </div>
-        <div class="p-6 md:p-10 shrink-0">
-            <input type="text" id="kiosk-search-box" oninput="renderKioskSearch()" placeholder="Ketik nama tamu..." class="w-full px-8 py-4 md:py-5 rounded-full border-2 border-[#F0E6DE] text-lg md:text-xl font-bold text-[#4A3F35] outline-none focus:border-[#C8962E] bg-white shadow-inner transition-colors">
+        <div class="p-6 md:p-10 shrink-0 flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+            <input type="text" id="kiosk-search-box" oninput="renderKioskSearch()" placeholder="Ketik nama tamu..." class="flex-1 px-8 py-4 md:py-5 rounded-full border-2 border-[#F0E6DE] text-lg md:text-xl font-bold text-[#4A3F35] outline-none focus:border-[#C8962E] bg-white shadow-inner transition-colors">
+            <div class="flex items-center gap-3 bg-white border-2 border-[#F0E6DE] px-6 py-3 rounded-full shrink-0">
+                <span class="text-[#8C7560] font-bold text-xs md:text-sm uppercase tracking-wider">HID Barcode</span>
+                <label class="cam-toggle">
+                    <input type="checkbox" id="hid-barcode-toggle" onchange="localStorage.setItem('hid_barcode_on', this.checked ? '1' : '0')">
+                    <span class="cam-toggle-slider"></span>
+                </label>
+            </div>
         </div>
         <div class="flex-1 overflow-y-auto px-6 md:px-10 pb-10" id="kiosk-search-list">
             <!-- List Guest Here -->
@@ -487,6 +503,24 @@
 
             fetchData();
             if (scannerEnabled) initScanner();
+
+            // Restore HID Barcode toggle state
+            const savedHID = localStorage.getItem('hid_barcode_on');
+            const hidEnabled = savedHID === '1';
+            const hidToggle = document.getElementById('hid-barcode-toggle');
+            if (hidToggle) {
+                hidToggle.checked = hidEnabled;
+            }
+            setupHIDBarcodeListener();
+
+            // Restore Frontcam toggle state
+            const savedFrontcam = localStorage.getItem('force_frontcam_on');
+            const frontcamEnabled = savedFrontcam === '1';
+            const frontcamToggle = document.getElementById('frontcam-toggle');
+            if (frontcamToggle) {
+                frontcamToggle.checked = frontcamEnabled;
+            }
+            document.getElementById('reader')?.classList.toggle('mirror-mode', frontcamEnabled);
         }
 
         async function fetchData() {
@@ -523,12 +557,40 @@
             } catch (e) { console.error("Gagal load data tamu:", e); }
         }
 
+        function toggleFrontcamMode(enabled) {
+            localStorage.setItem('force_frontcam_on', enabled ? '1' : '0');
+            document.getElementById('reader')?.classList.toggle('mirror-mode', enabled);
+            if (scannerEnabled) {
+                if (html5QrCode) {
+                    html5QrCode.stop().then(() => {
+                        html5QrCode = null;
+                        initScanner();
+                    }).catch(() => {
+                        html5QrCode = null;
+                        initScanner();
+                    });
+                } else {
+                    initScanner();
+                }
+            }
+        }
+
         function initScanner() {
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+            const useFront = localStorage.getItem('force_frontcam_on') === '1';
+            const mode = useFront ? "user" : "environment";
             
-            html5QrCode.start({ facingMode: "user" }, { fps: 15 }, onScanSuccess)
+            html5QrCode.start({ facingMode: mode }, { fps: 15 }, onScanSuccess)
+            .then(() => {
+                document.getElementById('reader')?.classList.toggle('mirror-mode', useFront);
+            })
             .catch(e => {
-                html5QrCode.start({ facingMode: "environment" }, { fps: 15 }, onScanSuccess)
+                const fallbackMode = useFront ? "environment" : "user";
+                html5QrCode.start({ facingMode: fallbackMode }, { fps: 15 }, onScanSuccess)
+                .then(() => {
+                    const finalUseFront = fallbackMode === "user";
+                    document.getElementById('reader')?.classList.toggle('mirror-mode', finalUseFront);
+                })
                 .catch(console.error);
             });
         }
@@ -1210,6 +1272,100 @@
             } finally { 
                 loading.style.display = 'none'; 
             }
+        }
+        function setupHIDBarcodeListener() {
+            const searchBox = document.getElementById('kiosk-search-box');
+            if (!searchBox) return;
+
+            let keyTimes = [];
+            let lastVal = "";
+            let lastScannedCode = "";
+            let lastScanTime = 0;
+
+            searchBox.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const val = searchBox.value.trim();
+                    const isHIDEnabled = localStorage.getItem('hid_barcode_on') === '1';
+                    if (isHIDEnabled) {
+                        const last9 = val.slice(-9);
+                        if (last9.length === 9 && last9.charAt(3) === '-') {
+                            e.preventDefault();
+                        }
+                    }
+                }
+            });
+
+            searchBox.addEventListener('input', async (e) => {
+                const val = searchBox.value.trim();
+                const now = Date.now();
+
+                if (val.length === 0) {
+                    keyTimes = [];
+                    lastVal = "";
+                    return;
+                }
+
+                const addedCount = val.length - lastVal.length;
+                if (addedCount > 0) {
+                    for (let i = 0; i < addedCount; i++) {
+                        keyTimes.push(now);
+                    }
+                }
+                if (keyTimes.length > 9) {
+                    keyTimes = keyTimes.slice(-9);
+                }
+                lastVal = val;
+
+                const isHIDEnabled = localStorage.getItem('hid_barcode_on') === '1';
+                if (!isHIDEnabled) return;
+
+                const last9 = val.slice(-9);
+                if (last9.length === 9) {
+                    const isPattern = last9.charAt(3) === '-';
+                    const duration = keyTimes.length === 9 ? (keyTimes[8] - keyTimes[0]) : Infinity;
+                    const isFast = duration < 250;
+
+                    if (isPattern && isFast) {
+                        const codeToCheck = last9.toUpperCase();
+                        if (codeToCheck === lastScannedCode && (now - lastScanTime < 1500)) {
+                            searchBox.value = "";
+                            lastVal = "";
+                            keyTimes = [];
+                            renderKioskSearch();
+                            return;
+                        }
+
+                        const matchedGuest = masterData.find(g => String(g.kode).trim().toUpperCase() === codeToCheck);
+                        if (matchedGuest) {
+                            searchBox.value = "";
+                            lastVal = "";
+                            keyTimes = [];
+                            renderKioskSearch();
+
+                            lastScannedCode = codeToCheck;
+                            lastScanTime = now;
+
+                            const isAlreadyCheckedIn = matchedGuest.jamDatang && matchedGuest.jamDatang !== "-";
+                            if (isAlreadyCheckedIn) {
+                                showToast(`Tamu ${matchedGuest.nama} sudah check-in!`);
+                            } else {
+                                closeSearchModal();
+                                openConfirm(matchedGuest);
+                            }
+                        } else {
+                            if (codeToCheck !== lastScannedCode || (now - lastScanTime > 2000)) {
+                                lastScannedCode = codeToCheck;
+                                lastScanTime = now;
+                                showToast(`Kode unik "${codeToCheck}" tidak terdaftar!`);
+                            }
+                            searchBox.value = "";
+                            lastVal = "";
+                            keyTimes = [];
+                            renderKioskSearch();
+                        }
+                    }
+                }
+            });
         }
     </script>
 </body>
