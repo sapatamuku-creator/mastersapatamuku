@@ -84,7 +84,7 @@ export default async function handler(req, res) {
       }
 
       const authRes = await fetch(`${SB_URL}/auth/v1/admin/users/${vendorId}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'apikey': SB_KEY,
           'Authorization': `Bearer ${SB_KEY}`,
