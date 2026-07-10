@@ -77,6 +77,37 @@ export default async function handler(req, res) {
       const updated = await dbRes.json();
       return res.status(200).json(updated[0] || null);
 
+    } else if (action === 'reset_vendor_password') {
+      const { newPassword } = req.body;
+      if (!vendorId || !newPassword) {
+        return res.status(400).json({ error: 'Missing vendor ID or new password' });
+      }
+
+      const authRes = await fetch(`${SB_URL}/auth/v1/admin/users/${vendorId}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SB_KEY,
+          'Authorization': `Bearer ${SB_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          password: newPassword
+        })
+      });
+
+      if (!authRes.ok) {
+        const errText = await authRes.text();
+        console.error('Supabase Auth User update error:', errText);
+        let errorMsg = 'Failed to reset password';
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.msg) errorMsg = parsed.msg;
+        } catch(e){}
+        return res.status(500).json({ error: errorMsg });
+      }
+
+      return res.status(200).json({ message: 'Password successfully updated' });
+
     } else if (action === 'register_vendor_manual') {
       const { username, vendorName, whatsappAdmin, emailRecovery, password, clientName, driveFolderUrl, driveFolderId, quotaLimit } = req.body;
 

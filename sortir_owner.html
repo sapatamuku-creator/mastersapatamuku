@@ -331,6 +331,9 @@
                     <button onclick="toggleVendorActive('${v.id}', ${v.is_active})" class="text-xs font-bold border border-[#F0E6DE] rounded-xl px-3 py-2 hover:bg-neutral-100">
                         ${v.is_active ? 'Matikan' : 'Aktifkan'}
                     </button>
+                    <button onclick="resetVendorPassword('${v.id}', '${v.vendor_name}')" class="text-xs font-bold text-rose-500 border border-rose-200 rounded-xl px-3 py-2 hover:bg-rose-50">
+                        Reset Pass
+                    </button>
                     <select onchange="extendSubscription('${v.id}', this.value)" class="text-xs border border-[#F0E6DE] bg-neutral-100 hover:bg-neutral-200 rounded-xl p-2 focus:outline-none">
                         <option value="">+ Perpanjang</option>
                         <option value="30">+ 30 Hari</option>
@@ -365,6 +368,37 @@
 
         } catch (err) {
             showToast("❌ Gagal merubah status vendor.", "bg-red-600");
+        }
+    }
+
+    async function resetVendorPassword(id, vendorName) {
+        const newPassword = prompt(`Masukkan password baru untuk vendor "${vendorName}" (minimal 6 karakter):`);
+        if (newPassword === null) return; // Cancelled
+        if (newPassword.trim().length < 6) {
+            alert("Password baru harus minimal 6 karakter.");
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/sortir-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pass: ownerPass,
+                    action: 'reset_vendor_password',
+                    vendorId: id,
+                    newPassword: newPassword.trim()
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || "Gagal mengubah password");
+            }
+
+            showToast(`✅ Password vendor "${vendorName}" berhasil diubah!`, "bg-green-600");
+        } catch (err) {
+            showToast("❌ " + err.message, "bg-red-600");
         }
     }
 
