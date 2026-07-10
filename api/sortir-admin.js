@@ -108,51 +108,6 @@ export default async function handler(req, res) {
 
       return res.status(200).json({ message: 'Password successfully updated' });
 
-    } else if (action === 'debug_find_and_fix_vendor') {
-      const { emailRecovery, username, vendorName, whatsappAdmin } = req.body;
-      if (!emailRecovery) return res.status(400).json({ error: 'Missing emailRecovery' });
-
-      // List all auth users to find the one with matching email
-      const usersRes = await fetch(`${SB_URL}/auth/v1/admin/users?per_page=1000`, {
-        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-      });
-      if (!usersRes.ok) return res.status(500).json({ error: 'Failed to list auth users', status: usersRes.status, body: await usersRes.text() });
-
-      const usersData = await usersRes.json();
-      const users = usersData.users || [];
-      const targetUser = users.find(u => u.email === emailRecovery);
-      if (!targetUser) return res.status(404).json({ error: `No auth user found with email: ${emailRecovery}`, total_users: users.length });
-
-      // Check if vendor profile already exists
-      const vendorCheckRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors?id=eq.${targetUser.id}&select=id,username`, {
-        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-      });
-      const vendorCheck = await vendorCheckRes.json();
-      if (vendorCheck.length > 0) {
-        return res.status(200).json({ message: 'Profile already exists', userId: targetUser.id, vendor: vendorCheck[0] });
-      }
-
-      // Insert missing vendor profile
-      const insertRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors`, {
-        method: 'POST',
-        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-        body: JSON.stringify({
-          id: targetUser.id,
-          username: (username || emailRecovery.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, ''),
-          vendor_name: vendorName || 'Vendor',
-          whatsapp_admin: whatsappAdmin || '62800000000',
-          email_recovery: emailRecovery,
-          is_active: true,
-          billing_cycle: 'monthly',
-          subscription_expires_at: null
-        })
-      });
-      if (!insertRes.ok) {
-        return res.status(500).json({ error: 'Failed to insert vendor profile', detail: await insertRes.text() });
-      }
-      const inserted = await insertRes.json();
-      return res.status(200).json({ message: 'Vendor profile created!', userId: targetUser.id, vendor: inserted[0] });
-
     } else if (action === 'register_vendor_manual') {
       const { username, vendorName, whatsappAdmin, emailRecovery, password, clientName, driveFolderUrl, driveFolderId, quotaLimit } = req.body;
 
