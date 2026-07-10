@@ -6,6 +6,7 @@
     <title>Vendor Dashboard — SapaTamu Sortir</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="text/javascript" src="https://app.midtrans.com/snap/snap.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -88,7 +89,10 @@
         <span class="font-serif text-xl font-bold tracking-tight text-neutral-800">SapaTamu <span class="text-[#E07B7B]">Sortir</span></span>
     </div>
     <div class="flex items-center gap-4">
-        <span class="text-sm font-semibold text-neutral-600 hidden sm:inline" id="user-display-name">Memuat...</span>
+        <div class="flex flex-col items-end hidden sm:flex">
+            <span class="text-sm font-semibold text-neutral-600" id="user-display-name">Memuat...</span>
+            <span class="text-[10px] font-bold text-[#E07B7B] bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded mt-0.5" id="user-plan-badge" style="display: none;">Bonus Plan</span>
+        </div>
         <button onclick="handleLogout()" class="text-xs font-bold text-[#E07B7B] border border-[#F0E6DE] hover:bg-red-50 rounded-xl px-4 py-2 transition-all">Sign Out</button>
     </div>
 </nav>
@@ -116,7 +120,10 @@
         <section id="tab-events" class="flex flex-col gap-8">
             <!-- Event Creation Form -->
             <div class="glass-card p-6" id="tour-create-event">
-                <h3 class="font-serif text-lg font-bold text-neutral-800 mb-4">Buat Event Baru</h3>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-serif text-lg font-bold text-neutral-800">Buat Event Baru</h3>
+                    <button onclick="openUpgradeModal()" id="btn-upgrade-banner" class="hidden text-xs font-bold bg-[#E07B7B]/10 text-[#E07B7B] border border-[#E07B7B]/20 rounded-xl px-3.5 py-1.5 hover:bg-[#E07B7B]/20 transition-all">⭐ Upgrade Premium</button>
+                </div>
                 <form onsubmit="handleCreateEvent(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-neutral-500 mb-1 uppercase tracking-wider">Nama Event / Klien</label>
@@ -332,6 +339,25 @@
                 document.getElementById('prof_vendor_name').value = vendorData.vendor_name;
                 document.getElementById('prof_whatsapp').value = vendorData.whatsapp_admin;
                 document.getElementById('prof_email').value = vendorData.email_recovery;
+                
+                // Show plan badge and upgrade banner if on bonus plan
+                const badge = document.getElementById('user-plan-badge');
+                const upgradeBtn = document.getElementById('btn-upgrade-banner');
+                if (!vendorData.subscription_expires_at) {
+                    if (badge) {
+                        badge.innerText = "Paket Bonus (Maks. 1 Client)";
+                        badge.style.display = "inline-block";
+                    }
+                    if (upgradeBtn) upgradeBtn.classList.remove('hidden');
+                } else {
+                    const exp = new Date(vendorData.subscription_expires_at);
+                    if (badge) {
+                        badge.innerText = `Premium s/d ${exp.toLocaleDateString('id-ID', {day:'2-digit', month:'short'})}`;
+                        badge.className = "text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded mt-0.5";
+                        badge.style.display = "inline-block";
+                    }
+                    if (upgradeBtn) upgradeBtn.classList.add('hidden');
+                }
             }
         } catch (e) {}
     }
@@ -438,12 +464,30 @@
             return;
         }
 
+        const btn = document.getElementById('btn-create-submit');
+        const btnSpan = btn.querySelector('span');
+
+        // Check event limit for bonus plan (maximum 1 event/client)
+        if (vendorData && !vendorData.subscription_expires_at) {
+            try {
+                const { count, error: countErr } = await supabase
+                    .from('sortir_events')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('vendor_id', sessionUser.id);
+
+                if (!countErr && count >= 1) {
+                    alert("Batas Maksimal Paket Bonus Tercapai! Anda hanya dapat mengelola maksimal 1 client/event pada paket bonus.\n\nSilakan upgrade ke langganan Premium untuk menambahkan client/project drive folder baru.");
+                    openUpgradeModal();
+                    return;
+                }
+            } catch(err) {
+                console.error(err);
+            }
+        }
+
         const eventName = document.getElementById('event_name').value.trim();
         const driveUrl = document.getElementById('drive_folder_url').value.trim();
         const quota = parseInt(document.getElementById('quota_limit').value) || 50;
-
-        const btn = document.getElementById('btn-create-submit');
-        const btnSpan = btn.querySelector('span');
 
         btn.disabled = true;
         btnSpan.innerHTML = '<span class="spin"></span> Menyimpan...';
@@ -839,6 +883,114 @@ read -p "Tekan ENTER untuk keluar..."`;
         link.click();
         document.body.removeChild(link);
     }
+
+    function openUpgradeModal() {
+        document.getElementById('modal-upgrade').classList.remove('hidden');
+    }
+
+    function closeUpgradeModal() {
+        document.getElementById('modal-upgrade').classList.add('hidden');
+    }
+
+    function toggleUpgradePrice(val) {
+        const priceDisp = document.getElementById('upgrade-price-display');
+        const priceSub = document.getElementById('upgrade-price-sub');
+        if (val === 'yearly') {
+            priceDisp.innerText = "Rp 150.000";
+            priceSub.innerText = "Akses Premium 1 Tahun Aktif";
+        } else {
+            priceDisp.innerText = "Rp 25.000";
+            priceSub.innerText = "Akses Premium 1 Bulan Aktif";
+        }
+    }
+
+    async function handleUpgradeSubmit(e) {
+        e.preventDefault();
+        const cycle = document.getElementById('upgrade_billing_cycle').value;
+        const btn = document.getElementById('btn-upgrade-submit');
+        const btnSpan = btn.querySelector('span');
+
+        btn.disabled = true;
+        btnSpan.innerHTML = '<span class="spin"></span> Menyiapkan Pembayaran...';
+
+        try {
+            // Call create-payment API to get Snap Token
+            const payRes = await fetch('/api/sortir-create-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: vendorData.id,
+                    username: vendorData.username,
+                    vendorName: vendorData.vendor_name,
+                    whatsappAdmin: vendorData.whatsapp_admin,
+                    emailRecovery: vendorData.email_recovery,
+                    billingCycle: cycle
+                })
+            });
+
+            if (!payRes.ok) {
+                const payErr = await payRes.json();
+                throw new Error(payErr.error || "Gagal menginisiasi pembayaran");
+            }
+
+            const paymentData = await payRes.json();
+
+            // Close modal first
+            closeUpgradeModal();
+
+            // Open Midtrans Snap modal
+            snap.pay(paymentData.token, {
+                onSuccess: function(result) {
+                    alert("Pembayaran Berhasil! Halaman akan dimuat ulang.");
+                    window.location.reload();
+                },
+                onPending: function(result) {
+                    alert("Pembayaran Anda sedang diproses. Silakan selesaikan pembayaran Anda.");
+                },
+                onError: function(result) {
+                    alert("Pembayaran gagal. Harap coba lagi.");
+                }
+            });
+
+        } catch (err) {
+            alert("Error: " + err.message);
+        } finally {
+            btn.disabled = false;
+            btnSpan.innerText = "Aktifkan Premium Sekarang";
+        }
+    }
 </script>
+
+<!-- Modal Upgrade Premium -->
+<div id="modal-upgrade" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
+    <div class="sapatamu-card p-8 w-full max-w-md m-4 bg-white relative">
+        <button onclick="closeUpgradeModal()" class="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 font-bold text-2xl">&times;</button>
+        <div class="mb-6 text-center">
+            <span class="text-4xl">⭐</span>
+            <h3 class="font-serif text-xl font-bold text-neutral-800 mt-3">Upgrade ke Premium</h3>
+            <p class="text-xs text-neutral-500 mt-1">Tambahkan client/event folder drive tanpa batasan dengan paket langganan aktif.</p>
+        </div>
+        <form id="upgrade-form" onsubmit="handleUpgradeSubmit(event)" class="space-y-5">
+            <div class="form-group">
+                <label class="block text-xs font-bold text-neutral-500 mb-2 uppercase">Siklus Langganan</label>
+                <select id="upgrade_billing_cycle" class="sapatamu-input text-sm" onchange="toggleUpgradePrice(this.value)">
+                    <option value="monthly">Bulanan — Rp 25.000 / bln</option>
+                    <option value="yearly">Tahunan — Rp 150.000 / thn</option>
+                </select>
+            </div>
+
+            <!-- Price Display -->
+            <div class="price-box bg-[#FAF3EC] border border-[#F0E6DE] rounded-xl p-4 text-center">
+                <div class="text-xs font-bold text-neutral-500 uppercase tracking-wider">Total Pembayaran</div>
+                <div class="text-2xl font-extrabold text-[#E07B7B] my-1" id="upgrade-price-display">Rp 25.000</div>
+                <div class="text-[10px] text-neutral-400" id="upgrade-price-sub">Akses Premium 1 Bulan Aktif</div>
+            </div>
+
+            <button type="submit" id="btn-upgrade-submit" class="w-full btn-primary py-3.5 flex justify-center text-sm font-bold">
+                <span>Aktifkan Premium Sekarang</span>
+            </button>
+        </form>
+    </div>
+</div>
 </body>
 </html>

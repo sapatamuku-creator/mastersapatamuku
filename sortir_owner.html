@@ -113,8 +113,8 @@
         </div>
 
         <!-- Search and Filter -->
-        <div class="sapatamu-card p-6 mb-8 flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div class="relative w-full sm:max-w-xs">
+        <div class="sapatamu-card p-6 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div class="relative w-full md:max-w-xs">
                 <input type="text" id="search-input" placeholder="Cari username / vendor..." oninput="handleSearch(this.value)" class="w-full pl-10 pr-4 py-2.5 border border-[#F0E6DE] rounded-xl bg-white focus:outline-none focus:border-[#E07B7B] text-sm">
                 <div class="absolute left-3 top-3 text-neutral-400">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -122,10 +122,13 @@
                     </svg>
                 </div>
             </div>
-            <div class="flex items-center gap-2 text-xs font-bold text-neutral-500">
-                <button onclick="filterStatus('all')" id="filter-all" class="px-4 py-2 rounded-lg bg-neutral-100 text-[#E07B7B]">Semua</button>
-                <button onclick="filterStatus('active')" id="filter-active" class="px-4 py-2 rounded-lg hover:bg-neutral-50 border border-[#F0E6DE]">Aktif</button>
-                <button onclick="filterStatus('expired')" id="filter-expired" class="px-4 py-2 rounded-lg hover:bg-neutral-50 border border-[#F0E6DE]">Kedaluwarsa</button>
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-2 text-xs font-bold text-neutral-500">
+                    <button onclick="filterStatus('all')" id="filter-all" class="px-4 py-2 rounded-lg bg-neutral-100 text-[#E07B7B]">Semua</button>
+                    <button onclick="filterStatus('active')" id="filter-active" class="px-4 py-2 rounded-lg hover:bg-neutral-50 border border-[#F0E6DE]">Aktif</button>
+                    <button onclick="filterStatus('expired')" id="filter-expired" class="px-4 py-2 rounded-lg hover:bg-neutral-50 border border-[#F0E6DE]">Kedaluwarsa</button>
+                </div>
+                <button onclick="openModal()" class="btn-primary text-xs py-2.5 px-4 flex items-center gap-1.5">+ Vendor Manual (Bonus)</button>
             </div>
         </div>
 
@@ -292,9 +295,12 @@
             const expiry = v.subscription_expires_at ? new Date(v.subscription_expires_at) : null;
             const isExpired = !v.is_active || (expiry && expiry < now);
             
-            const formattedExpiry = expiry 
-                ? expiry.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
-                : 'Belum Terdaftar';
+            let formattedExpiry = 'Belum Terdaftar';
+            if (expiry) {
+                formattedExpiry = expiry.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+            } else if (v.is_active) {
+                formattedExpiry = 'Bonus (Maks. 1 Client)';
+            }
 
             const eventsCount = v.sortir_events ? v.sortir_events.length : 0;
 
@@ -465,6 +471,162 @@
         localStorage.removeItem('sortir_owner_pass');
         window.location.reload();
     }
+
+    let manDriveFolderId = "";
+
+    function openModal() {
+        document.getElementById('modal-register').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('modal-register').classList.add('hidden');
+        document.getElementById('register-manual-form').reset();
+        document.getElementById('man-folder-id-preview').classList.add('hidden');
+        manDriveFolderId = "";
+    }
+
+    function extractManFolderId(url) {
+        const preview = document.getElementById('man-folder-id-preview');
+        const idDisp = document.getElementById('man-detected-folder-id');
+        
+        let folderId = "";
+        const reg1 = /drive\.google\.com\/drive\/folders\/([a-zA-Z0-9-_]+)/;
+        const reg2 = /drive\.google\.com\/open\?id=([a-zA-Z0-9-_]+)/;
+
+        const match1 = url.match(reg1);
+        const match2 = url.match(reg2);
+
+        if (match1) folderId = match1[1];
+        else if (match2) folderId = match2[1];
+
+        if (folderId) {
+            manDriveFolderId = folderId;
+            idDisp.innerText = folderId;
+            preview.classList.remove('hidden');
+        } else {
+            manDriveFolderId = "";
+            preview.classList.add('hidden');
+        }
+    }
+
+    async function submitRegisterManual(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('man-username').value.trim();
+        const vendorName = document.getElementById('man-vendor-name').value.trim();
+        const whatsappAdmin = document.getElementById('man-whatsapp').value.trim();
+        const emailRecovery = document.getElementById('man-email').value.trim();
+        const password = document.getElementById('man-password').value.trim();
+        
+        const clientName = document.getElementById('man-client-name').value.trim();
+        const driveFolderUrl = document.getElementById('man-drive-url').value.trim();
+        const quotaLimit = document.getElementById('man-quota').value;
+
+        const btn = document.getElementById('btn-submit-manual');
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin"></span> Mendaftarkan...';
+
+        try {
+            const res = await fetch('/api/sortir-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pass: ownerPass,
+                    action: 'register_vendor_manual',
+                    username,
+                    vendorName,
+                    whatsappAdmin,
+                    emailRecovery,
+                    password,
+                    clientName: clientName || null,
+                    driveFolderUrl: driveFolderUrl || null,
+                    driveFolderId: manDriveFolderId || null,
+                    quotaLimit: quotaLimit || 50
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || "Gagal mendaftarkan vendor.");
+            }
+
+            showToast("✅ Vendor berhasil didaftarkan manual!", "bg-green-600");
+            closeModal();
+            await fetchVendors();
+
+        } catch (err) {
+            showToast("❌ " + err.message, "bg-red-600");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    }
 </script>
+
+<!-- Modal Register Manual -->
+<div id="modal-register" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
+    <div class="sapatamu-card p-8 w-full max-w-xl max-h-[90vh] overflow-y-auto m-4 bg-white relative">
+        <button onclick="closeModal()" class="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 font-bold text-2xl">&times;</button>
+        <div class="mb-6">
+            <h3 class="font-serif text-xl font-bold text-neutral-800">Daftarkan Vendor Baru (Paket Bonus)</h3>
+            <p class="text-xs text-neutral-500 mt-1">Akun yang dibuat akan berstatus Aktif dengan batasan maksimal 1 client/event (Paket Bonus).</p>
+        </div>
+        <form id="register-manual-form" onsubmit="submitRegisterManual(event)" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-neutral-500 mb-1 uppercase">Username / Subdomain</label>
+                    <input type="text" id="man-username" class="sapatamu-input text-sm" placeholder="contoh: studiofoto" required oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9]/g, '')">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-neutral-500 mb-1 uppercase">Nama Studio / Vendor</label>
+                    <input type="text" id="man-vendor-name" class="sapatamu-input text-sm" placeholder="Golden Hour Studio" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-neutral-500 mb-1 uppercase">WhatsApp Admin</label>
+                    <input type="text" id="man-whatsapp" class="sapatamu-input text-sm" placeholder="contoh: 62812345678" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-neutral-500 mb-1 uppercase">Email Recovery & Login</label>
+                    <input type="email" id="man-email" class="sapatamu-input text-sm" placeholder="email@domain.com" required>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold text-neutral-500 mb-1 uppercase">Password Akun</label>
+                    <input type="password" id="man-password" class="sapatamu-input text-sm" placeholder="Minimal 6 karakter" required minlength="6">
+                </div>
+            </div>
+
+            <!-- Client bonus setup (Optional) -->
+            <div class="border-t border-[#F0E6DE] pt-4 mt-6">
+                <h4 class="font-serif font-bold text-sm text-neutral-800 mb-2">🎁 Pre-Setup Client Bonus (Opsional)</h4>
+                <p class="text-[11px] text-neutral-400 mb-3">Siapkan client pertama langsung dari sini agar siap digunakan oleh vendor.</p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-neutral-500 mb-1 uppercase">Nama Client / Event</label>
+                        <input type="text" id="man-client-name" class="sapatamu-input text-sm" placeholder="Wedding Ryan & Andin">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-neutral-500 mb-1 uppercase">URL Google Drive Folder</label>
+                            <input type="text" id="man-drive-url" class="sapatamu-input text-sm" placeholder="https://drive.google.com/drive/folders/..." oninput="extractManFolderId(this.value)">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-neutral-500 mb-1 uppercase">Kuota Foto Pilihan</label>
+                            <input type="number" id="man-quota" class="sapatamu-input text-sm" value="50" min="1">
+                        </div>
+                    </div>
+                    <div class="hidden" id="man-folder-id-preview">
+                        <span class="text-xs text-green-600 font-bold">✅ Google Folder ID: <span id="man-detected-folder-id"></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-[#F0E6DE]">
+                <button type="button" onclick="closeModal()" class="border border-[#F0E6DE] rounded-xl px-4 py-2.5 text-xs font-bold text-neutral-500 hover:bg-neutral-50">Batal</button>
+                <button type="submit" id="btn-submit-manual" class="btn-primary py-2 text-xs font-bold">Daftarkan Vendor</button>
+            </div>
+        </form>
+    </div>
+</div>
 </body>
 </html>

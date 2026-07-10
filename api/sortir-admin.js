@@ -77,6 +77,101 @@ export default async function handler(req, res) {
       const updated = await dbRes.json();
       return res.status(200).json(updated[0] || null);
 
+    } else if (action === 'register_vendor_manual') {
+      const { username, vendorName, whatsappAdmin, emailRecovery, password, clientName, driveFolderUrl, driveFolderId, quotaLimit } = req.body;
+
+      if (!username || !vendorName || !whatsappAdmin || !emailRecovery || !password) {
+        return res.status(400).json({ error: 'Missing required vendor parameters' });
+      }
+
+      // 1. Create auth user in Supabase
+      const authRes = await fetch(`${SB_URL}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers: {
+          'apikey': SB_KEY,
+          'Authorization': `Bearer ${SB_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: emailRecovery,
+          password: password,
+          email_confirm: true
+        })
+      });
+
+      if (!authRes.ok) {
+        const errText = await authRes.text();
+        console.error('Supabase Auth User creation error:', errText);
+        let errorMsg = 'Failed to create user account';
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.msg) errorMsg = parsed.msg;
+        } catch(e){}
+        return res.status(500).json({ error: errorMsg });
+      }
+
+      const authUser = await authRes.json();
+      const userId = authUser.id;
+
+      // 2. Insert vendor profile (subscription_expires_at = null, is_active = true)
+      const vendorPayload = {
+        id: userId,
+        username: username.toLowerCase().replace(/[^a-z0-9]/g, ''),
+        vendor_name: vendorName,
+        whatsapp_admin: whatsappAdmin,
+        email_recovery: emailRecovery,
+        is_active: true,
+        billing_cycle: 'monthly',
+        subscription_expires_at: null
+      };
+
+      const dbVendorRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors`, {
+        method: 'POST',
+        headers: {
+          'apikey': SB_KEY,
+          'Authorization': `Bearer ${SB_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(vendorPayload)
+      });
+
+      if (!dbVendorRes.ok) {
+        const errText = await dbVendorRes.text();
+        console.error('Supabase Vendor insert error:', errText);
+        return res.status(500).json({ error: 'Vendor account created, but profile setup failed.' });
+      }
+
+      // 3. Optional: Create client/event if provided
+      if (clientName && driveFolderUrl && driveFolderId) {
+        const slug = clientName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.floor(Math.random()*10000);
+        const eventPayload = {
+          vendor_id: userId,
+          event_name: clientName,
+          event_slug: slug,
+          quota_limit: parseInt(quotaLimit) || 50,
+          drive_folder_url: driveFolderUrl,
+          drive_folder_id: driveFolderId
+        };
+
+        const dbEventRes = await fetch(`${SB_URL}/rest/v1/sortir_events`, {
+          method: 'POST',
+          headers: {
+            'apikey': SB_KEY,
+            'Authorization': `Bearer ${SB_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(eventPayload)
+        });
+
+        if (!dbEventRes.ok) {
+          const errText = await dbEventRes.text();
+          console.error('Supabase Event insert error:', errText);
+        }
+      }
+
+      return res.status(200).json({ message: 'Vendor manually registered successfully!', vendorId: userId });
+
     } else {
       return res.status(400).json({ error: 'Invalid action' });
     }
