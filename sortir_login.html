@@ -169,6 +169,7 @@
             // Check if user input is an email, if not, resolve via username API
             if (!identifier.includes('@')) {
                 btnSpan.innerHTML = '<span class="spin"></span> Mencari Username...';
+                showAlert('🔍 [Debug Step 1] Mencari email dari username...', 'alert-warning');
                 const resolveRes = await fetch('/api/sortir-get-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -182,10 +183,12 @@
 
                 const resolveData = await resolveRes.json();
                 email = resolveData.email;
+                showAlert('✅ [Debug Step 1] Email ditemukan: ' + email, 'alert-success');
                 btnSpan.innerHTML = '<span class="spin"></span> Memverifikasi...';
             }
 
             // 1. Sign in with Supabase Auth
+            showAlert('🔍 [Debug Step 2] Mencoba Supabase Auth signIn...', 'alert-warning');
             const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                 email,
                 password
@@ -194,8 +197,10 @@
             if (authError) throw authError;
 
             const userId = authData.user.id;
+            showAlert('✅ [Debug Step 2] Auth OK! User ID: ' + userId, 'alert-success');
 
             // 2. Fetch vendor profile from sortir_vendors
+            showAlert('🔍 [Debug Step 3] Fetching vendor profile...', 'alert-warning');
             const { data: vendors, error: vendorError } = await supabase
                 .from('sortir_vendors')
                 .select('*')
@@ -204,10 +209,12 @@
             if (vendorError) throw vendorError;
 
             if (!vendors || vendors.length === 0) {
+                showAlert('❌ [Debug Step 3] Vendor KOSONG! userId: ' + userId, 'alert-error');
                 throw new Error("Profil vendor tidak ditemukan. Pastikan pendaftaran selesai.");
             }
 
             const vendor = vendors[0];
+            showAlert('✅ [Debug Step 3] Vendor OK! is_active: ' + vendor.is_active + ', expiry: ' + vendor.subscription_expires_at, 'alert-success');
 
             // 3. Verify if active and subscription not expired
             const now = new Date();
@@ -277,7 +284,8 @@
                 });
 
             // 5. Redirect to Dashboard
-            window.location.replace('/sortir_dashboard.html');
+            showAlert('✅ [Debug Step 4] Semua OK, redirecting ke dashboard...', 'alert-success');
+            setTimeout(() => window.location.replace('/sortir_dashboard.html'), 1500);
 
         } catch (err) {
             showAlert("❌ Error: " + err.message, "alert-error");
