@@ -13,6 +13,10 @@ export default async function handler(req, res) {
 
   const { pass, action, vendorId, updates } = req.body;
 
+  if (!SB_KEY) {
+    return res.status(500).json({ error: 'Konfigurasi Vercel Belum Lengkap: Environment Variable SUPABASE_SERVICE_ROLE_KEY belum ditambahkan atau kosong.' });
+  }
+
   if (!pass || !action) {
     return res.status(400).json({ error: 'Missing required parameters' });
   }
