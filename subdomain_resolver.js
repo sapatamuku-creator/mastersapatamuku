@@ -12,14 +12,6 @@ async function resolveSapatamuSubdomain() {
     const parts = hostname.split('.');
     const isMainDomain = (hostname === "sapatamu.id" || hostname === "www.sapatamu.id");
 
-    // ⚡ EARLY EXIT: Subdomain 'sortir' adalah sistem vendor mandiri (SapaTamu Sortir).
-    // Tidak ada resolusi subdomain klien yang diperlukan. Keluar segera.
-    if (parts[0].toLowerCase() === 'sortir') {
-        console.log("[Resolver] sortir subdomain detected — exiting resolver (vendor-only system).");
-        window.IS_SORTIR = true;
-        window.SAPATAMU_RESOLVED = true;
-        return null;
-    }
 
 
     // 0. DETEKSI MODE DEMO DARI URL
@@ -97,7 +89,7 @@ async function resolveSapatamuSubdomain() {
     }
 
     // 1.5. CHECK FOR SORTIR SUBDOMAIN
-    const isSortirSubdomain = (parts.length >= 3 && parts[0].toLowerCase() === 'sortir') || (_urlParams.get('subdomain') === 'sortir');
+    const isSortirSubdomain = (parts.length >= 3 && parts.includes('sortir')) || (_urlParams.get('subdomain') === 'sortir');
     if (isSortirSubdomain) {
         window.IS_SORTIR = true;
         console.log("Sortir subdomain detected");

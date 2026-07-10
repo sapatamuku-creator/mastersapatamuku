@@ -52,9 +52,11 @@ export default async function handler(req, res) {
 
     // 2. Prepare database entry for the vendor (set is_active = false initially)
     // We upsert the vendor info to sortir_vendors table
+    const cleanSubdomain = username.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
     const vendorData = {
       id: userId,
       username: username,
+      subdomain: cleanSubdomain,
       vendor_name: vendorName || username,
       whatsapp_admin: whatsappAdmin || '',
       email_recovery: emailRecovery || '',

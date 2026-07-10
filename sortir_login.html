@@ -7,10 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Domain Guard: sortir_login.html hanya boleh diakses dari sortir.sapatamu.id
+        // Domain Guard: sortir_login.html hanya boleh diakses dari sortir.sapatamu.id atau subdomainnya
         (function() {
             const host = window.location.hostname;
-            if (host !== 'sortir.sapatamu.id' && host !== 'localhost' && !host.startsWith('127.')) {
+            const isValidHost = host === 'sortir.sapatamu.id' || host.endsWith('.sortir.sapatamu.id') || host === 'localhost' || host.startsWith('127.');
+            if (!isValidHost) {
                 window.location.replace('https://sortir.sapatamu.id/sortir_login.html');
             }
         })();
@@ -252,17 +253,19 @@
                 subscription_expires_at: vendor.subscription_expires_at
             }));
 
-            // Update session token on DB (non-blocking)
-            supabase
-                .from('sortir_vendors')
-                .update({ active_session_token: sessionToken })
-                .eq('id', userId)
-                .then(({ error }) => {
-                    if (error) console.warn('Session token update skipped:', error.message);
-                });
+            // Update session token on DB (blocking)
+            try {
+                const { error: tokenErr } = await supabase
+                    .from('sortir_vendors')
+                    .update({ active_session_token: sessionToken })
+                    .eq('id', userId);
+                if (tokenErr) console.warn('Session token update warning:', tokenErr.message);
+            } catch (errToken) {
+                console.error('Session token update failed:', errToken);
+            }
 
             // Step 6: Redirect to Dashboard
-            window.location.replace('https://sortir.sapatamu.id/sortir_dashboard.html');
+            window.location.replace(window.location.origin + '/sortir_dashboard.html');
 
         } catch (err) {
             showAlert("❌ " + err.message, "alert-error");

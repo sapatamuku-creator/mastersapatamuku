@@ -5,6 +5,7 @@
 CREATE TABLE IF NOT EXISTS public.sortir_vendors (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     username VARCHAR(50) UNIQUE NOT NULL,
+    subdomain VARCHAR(100) UNIQUE, -- Subdomain for client access (e.g. studiofoto.sortir.sapatamu.id)
     vendor_name VARCHAR(150) NOT NULL,
     whatsapp_admin VARCHAR(20) NOT NULL,
     email_recovery VARCHAR(255) NOT NULL,

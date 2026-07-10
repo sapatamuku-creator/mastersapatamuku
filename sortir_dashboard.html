@@ -7,10 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Domain Guard: halaman sortir hanya boleh diakses dari sortir.sapatamu.id
+        // Domain Guard: halaman sortir hanya boleh diakses dari sortir.sapatamu.id atau subdomainnya
         (function() {
             const host = window.location.hostname;
-            if (host !== 'sortir.sapatamu.id' && host !== 'localhost' && !host.startsWith('127.')) {
+            const isValidHost = host === 'sortir.sapatamu.id' || host.endsWith('.sortir.sapatamu.id') || host === 'localhost' || host.startsWith('127.');
+            if (!isValidHost) {
                 window.location.replace('https://sortir.sapatamu.id/sortir_dashboard.html');
             }
         })();
@@ -295,7 +296,7 @@
         // Validate session locally
         const rawSession = localStorage.getItem('sortir_vendor_session');
         if (!rawSession) {
-            window.location.replace('https://sortir.sapatamu.id/sortir_login.html');
+            window.location.replace(window.location.origin + '/sortir_login.html');
             return;
         }
 
@@ -425,7 +426,10 @@
 
                 const activeSelections = countErr ? 0 : count;
 
-                const clientUrl = `https://sortir.sapatamu.id/${ev.event_slug}`;
+                const subVal = (window.vendorData && window.vendorData.subdomain) 
+                    ? window.vendorData.subdomain 
+                    : (sessionUser.username || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                const clientUrl = `https://${subVal}.sortir.sapatamu.id/${ev.event_slug}`;
 
                 const card = document.createElement('div');
                 card.className = 'border border-[#F0E6DE] rounded-2xl p-5 bg-white flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-sm transition-all';
