@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Admin Sortir — SapaTamu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #E07B7B; /* Soft Rose */
+            --bg: #FFF9F5;      /* Warm Cream */
+            --card: #FFFFFF;
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --border: #F0E6DE;
+            --input-bg: #FDF8F4;
+            --gold: #C8962E;
+            --success: #10B981;
+        }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+        .sapatamu-card { 
+            background: rgba(255, 255, 255, 0.9); 
+            backdrop-filter: blur(20px); 
+            border-radius: 24px; 
+            box-shadow: 0 15px 50px rgba(224, 123, 123, 0.08); 
+            border: 1px solid var(--border);
+        }
+        .sapatamu-input { 
+            width: 100%; padding: 12px 16px; border: 1.5px solid var(--border); 
+            border-radius: 12px; font-size: 14px; box-sizing: border-box; 
+            transition: all 0.2s; background: var(--input-bg); color: var(--text-main);
+        }
+        .sapatamu-input:focus { outline: none; border-color: var(--primary); background: #fff; }
+
+        .btn-primary {
+            background: var(--primary); color: white;
+            font-weight: 700; padding: 12px 24px; border-radius: 12px;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 12px rgba(224, 123, 123, 0.2);
+        }
+        .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
+
+        .toast-box {
+            position: fixed; bottom: 24px; right: 24px;
+            padding: 16px 24px; border-radius: 16px; font-size: 13px; font-weight: 700;
+            color: white; z-index: 99999; display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .spin { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-bottom-color: white; border-radius: 50%; animation: rotation 0.8s linear infinite; }
+        @keyframes rotation { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<!-- Login Gate -->
+<div id="login-gate" class="min-h-vh flex items-center justify-center p-6 min-h-screen">
+    <div class="sapatamu-card p-10 w-full max-w-sm">
+        <div class="text-center mb-8">
+            <span class="text-4xl">👑</span>
+            <h2 class="font-serif text-2xl font-bold mt-3 text-neutral-800">Super Admin Sortir</h2>
+            <p class="text-xs text-neutral-500 mt-1">Masukkan password owner SapaTamu utama.</p>
+        </div>
+        <form onsubmit="handleLogin(event)">
+            <div class="mb-5">
+                <input type="password" id="owner-pass" class="sapatamu-input text-center font-bold tracking-widest" placeholder="••••••••" required>
+            </div>
+            <button type="submit" id="btn-login" class="w-full btn-primary justify-center">
+                <span>Masuk Dashboard</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Main Admin Panel -->
+<div id="admin-panel" class="hidden">
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-[#F0E6DE] py-4 px-6 sticky top-0 z-50 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl">👑</span>
+            <span class="font-serif text-xl font-bold tracking-tight text-neutral-800">SapaTamu Sortir <span class="text-[#E07B7B]">Super Admin</span></span>
+        </div>
+        <button onclick="handleSignOut()" class="text-xs font-bold text-neutral-500 border border-[#F0E6DE] hover:bg-neutral-50 rounded-xl px-4 py-2 transition-all">Keluar</button>
+    </nav>
+
+    <!-- Metrics and Stats -->
+    <div class="max-w-6xl mx-auto px-6 py-10">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <!-- Stat 1 -->
+            <div class="sapatamu-card p-6 flex flex-col justify-between">
+                <span class="text-xs font-bold text-[#8C7560] uppercase tracking-wider">Total Vendor</span>
+                <span class="text-3xl font-extrabold text-neutral-800 mt-2" id="metric-total">0</span>
+            </div>
+            <!-- Stat 2 -->
+            <div class="sapatamu-card p-6 flex flex-col justify-between">
+                <span class="text-xs font-bold text-[#8C7560] uppercase tracking-wider">Masa Aktif Aktif</span>
+                <span class="text-3xl font-extrabold text-green-600 mt-2" id="metric-active">0</span>
+            </div>
+            <!-- Stat 3 -->
+            <div class="sapatamu-card p-6 flex flex-col justify-between">
+                <span class="text-xs font-bold text-[#8C7560] uppercase tracking-wider">Estimasi MRR</span>
+                <span class="text-2xl font-extrabold text-[#E07B7B] mt-2" id="metric-mrr">Rp 0</span>
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="sapatamu-card p-6 mb-8 flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div class="relative w-full sm:max-w-xs">
+                <input type="text" id="search-input" placeholder="Cari username / vendor..." oninput="handleSearch(this.value)" class="w-full pl-10 pr-4 py-2.5 border border-[#F0E6DE] rounded-xl bg-white focus:outline-none focus:border-[#E07B7B] text-sm">
+                <div class="absolute left-3 top-3 text-neutral-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs font-bold text-neutral-500">
+                <button onclick="filterStatus('all')" id="filter-all" class="px-4 py-2 rounded-lg bg-neutral-100 text-[#E07B7B]">Semua</button>
+                <button onclick="filterStatus('active')" id="filter-active" class="px-4 py-2 rounded-lg hover:bg-neutral-50 border border-[#F0E6DE]">Aktif</button>
+                <button onclick="filterStatus('expired')" id="filter-expired" class="px-4 py-2 rounded-lg hover:bg-neutral-50 border border-[#F0E6DE]">Kedaluwarsa</button>
+            </div>
+        </div>
+
+        <!-- Vendors Table -->
+        <div class="sapatamu-card overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-[#FAF3EC] border-b border-[#F0E6DE] text-xs font-bold uppercase text-[#8C7560]">
+                            <th class="p-4">Vendor / Username</th>
+                            <th class="p-4">WhatsApp & Recovery</th>
+                            <th class="p-4">Siklus Tagihan</th>
+                            <th class="p-4">Masa Berlaku</th>
+                            <th class="p-4">Status</th>
+                            <th class="p-4 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vendors-tbody">
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-neutral-400">Memuat data vendor...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Box -->
+<div id="toast" class="toast-box"></div>
+
+<script>
+    let ownerPass = "";
+    let vendors = [];
+    let searchFilter = "";
+    let statusFilter = "all";
+
+    window.addEventListener('load', () => {
+        const savedPass = localStorage.getItem('sortir_owner_pass');
+        if (savedPass) {
+            ownerPass = savedPass;
+            document.getElementById('login-gate').style.display = 'none';
+            document.getElementById('admin-panel').classList.remove('hidden');
+            fetchVendors();
+        }
+    });
+
+    function showToast(msg, bgClass) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.className = `toast-box ${bgClass}`;
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        const pass = document.getElementById('owner-pass').value.trim();
+        const btn = document.getElementById('btn-login');
+        const btnSpan = btn.querySelector('span');
+
+        btn.disabled = true;
+        btnSpan.innerHTML = '<span class="spin"></span> Memverifikasi...';
+
+        try {
+            const res = await fetch('/api/sortir-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pass, action: 'get_vendors' })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || "Password Salah!");
+            }
+
+            vendors = await res.json();
+            ownerPass = pass;
+            localStorage.setItem('sortir_owner_pass', pass);
+
+            document.getElementById('login-gate').style.display = 'none';
+            document.getElementById('admin-panel').classList.remove('hidden');
+            
+            renderVendors();
+            showToast("✅ Login Super Admin Berhasil!", "bg-green-600");
+
+        } catch (err) {
+            showToast("❌ Error: " + err.message, "bg-red-600");
+        } finally {
+            btn.disabled = false;
+            btnSpan.innerText = "Masuk Dashboard";
+        }
+    }
+
+    async function fetchVendors() {
+        try {
+            const res = await fetch('/api/sortir-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pass: ownerPass, action: 'get_vendors' })
+            });
+
+            if (!res.ok) throw new Error("Gagal mengambil data");
+            vendors = await res.json();
+            renderVendors();
+
+        } catch (err) {
+            showToast("❌ Gagal memuat data vendor.", "bg-red-600");
+        }
+    }
+
+    function renderVendors() {
+        const tbody = document.getElementById('vendors-tbody');
+        tbody.innerHTML = '';
+
+        const now = new Date();
+
+        let filtered = vendors.filter(v => {
+            const matchesSearch = v.username.toLowerCase().includes(searchFilter.toLowerCase()) || 
+                                 v.vendor_name.toLowerCase().includes(searchFilter.toLowerCase());
+            
+            const expiry = v.subscription_expires_at ? new Date(v.subscription_expires_at) : null;
+            const isExpired = !v.is_active || (expiry && expiry < now);
+
+            if (statusFilter === 'active') {
+                return matchesSearch && !isExpired;
+            } else if (statusFilter === 'expired') {
+                return matchesSearch && isExpired;
+            }
+            return matchesSearch;
+        });
+
+        // Update stats
+        let totalCount = vendors.length;
+        let activeCount = vendors.filter(v => {
+            const expiry = v.subscription_expires_at ? new Date(v.subscription_expires_at) : null;
+            return v.is_active && (!expiry || expiry >= now);
+        }).length;
+
+        // MRR calculation
+        let mrrValue = vendors.reduce((acc, v) => {
+            const expiry = v.subscription_expires_at ? new Date(v.subscription_expires_at) : null;
+            const isActive = v.is_active && (!expiry || expiry >= now);
+            if (isActive) {
+                if (v.billing_cycle === 'yearly') {
+                    return acc + (150000 / 12); // Rp 12,500 / month
+                } else {
+                    return acc + 25000; // Rp 25,000 / month
+                }
+            }
+            return acc;
+        }, 0);
+
+        document.getElementById('metric-total').innerText = totalCount;
+        document.getElementById('metric-active').innerText = activeCount;
+        document.getElementById('metric-mrr').innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(mrrValue);
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-neutral-400">Tidak ada vendor yang cocok.</td></tr>`;
+            return;
+        }
+
+        filtered.forEach(v => {
+            const expiry = v.subscription_expires_at ? new Date(v.subscription_expires_at) : null;
+            const isExpired = !v.is_active || (expiry && expiry < now);
+            
+            const formattedExpiry = expiry 
+                ? expiry.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+                : 'Belum Terdaftar';
+
+            const eventsCount = v.sortir_events ? v.sortir_events.length : 0;
+
+            const tr = document.createElement('tr');
+            tr.className = "border-b border-[#F0E6DE] hover:bg-neutral-50/50";
+            tr.innerHTML = `
+                <td class="p-4">
+                    <div class="font-bold text-neutral-800">${v.vendor_name}</div>
+                    <div class="text-xs text-neutral-400">@${v.username} · ${eventsCount} event</div>
+                </td>
+                <td class="p-4 text-xs">
+                    <div><a href="https://wa.me/${v.whatsapp_admin}" target="_blank" class="text-blue-600 hover:underline">💬 ${v.whatsapp_admin}</a></div>
+                    <div class="text-neutral-400">${v.email_recovery}</div>
+                </td>
+                <td class="p-4">
+                    <select onchange="updateBillingCycle('${v.id}', this.value)" class="text-xs border border-[#F0E6DE] bg-white rounded-lg p-1.5 focus:outline-none focus:border-[#E07B7B]">
+                        <option value="monthly" ${v.billing_cycle === 'monthly' ? 'selected' : ''}>Bulanan (Rp 25.000)</option>
+                        <option value="yearly" ${v.billing_cycle === 'yearly' ? 'selected' : ''}>Tahunan (Rp 150.000)</option>
+                    </select>
+                </td>
+                <td class="p-4 text-xs font-semibold text-neutral-600">${formattedExpiry}</td>
+                <td class="p-4">
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isExpired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">
+                        ${isExpired ? 'Kedaluwarsa' : 'Aktif'}
+                    </span>
+                </td>
+                <td class="p-4 text-center flex items-center justify-center gap-2">
+                    <button onclick="toggleVendorActive('${v.id}', ${v.is_active})" class="text-xs font-bold border border-[#F0E6DE] rounded-xl px-3 py-2 hover:bg-neutral-100">
+                        ${v.is_active ? 'Matikan' : 'Aktifkan'}
+                    </button>
+                    <select onchange="extendSubscription('${v.id}', this.value)" class="text-xs border border-[#F0E6DE] bg-neutral-100 hover:bg-neutral-200 rounded-xl p-2 focus:outline-none">
+                        <option value="">+ Perpanjang</option>
+                        <option value="30">+ 30 Hari</option>
+                        <option value="365">+ 1 Tahun</option>
+                        <option value="reset">Matikan (Reset)</option>
+                    </select>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function toggleVendorActive(id, currentStatus) {
+        if (!confirm(`Apakah Anda yakin ingin ${currentStatus ? 'mematikan' : 'mengaktifkan'} vendor ini?`)) return;
+
+        try {
+            const res = await fetch('/api/sortir-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pass: ownerPass,
+                    action: 'update_vendor',
+                    vendorId: id,
+                    updates: { is_active: !currentStatus }
+                })
+            });
+
+            if (!res.ok) throw new Error("Gagal mengupdate status");
+
+            showToast(`✅ Status vendor berhasil diperbarui!`, "bg-green-600");
+            await fetchVendors();
+
+        } catch (err) {
+            showToast("❌ Gagal merubah status vendor.", "bg-red-600");
+        }
+    }
+
+    async function updateBillingCycle(id, cycle) {
+        try {
+            const res = await fetch('/api/sortir-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pass: ownerPass,
+                    action: 'update_vendor',
+                    vendorId: id,
+                    updates: { billing_cycle: cycle }
+                })
+            });
+
+            if (!res.ok) throw new Error("Gagal mengupdate siklus");
+
+            showToast(`✅ Siklus tagihan berhasil diubah!`, "bg-green-600");
+            await fetchVendors();
+
+        } catch (err) {
+            showToast("❌ Gagal merubah siklus tagihan.", "bg-red-600");
+        }
+    }
+
+    async function extendSubscription(id, days) {
+        if (!days) return;
+
+        let updates = {};
+
+        if (days === 'reset') {
+            if (!confirm("Apakah Anda yakin ingin mereset masa aktif vendor ini?")) return;
+            updates = {
+                is_active: false,
+                subscription_expires_at: null
+            };
+        } else {
+            const addition = parseInt(days);
+            let newExpiry = new Date();
+
+            // Find current vendor expiration
+            const vendor = vendors.find(v => v.id === id);
+            if (vendor && vendor.subscription_expires_at) {
+                const currentExpiry = new Date(vendor.subscription_expires_at);
+                if (currentExpiry > newExpiry) {
+                    newExpiry = currentExpiry;
+                }
+            }
+
+            newExpiry.setDate(newExpiry.getDate() + addition);
+            updates = {
+                is_active: true,
+                subscription_expires_at: newExpiry.toISOString()
+            };
+        }
+
+        try {
+            const res = await fetch('/api/sortir-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pass: ownerPass,
+                    action: 'update_vendor',
+                    vendorId: id,
+                    updates
+                })
+            });
+
+            if (!res.ok) throw new Error("Gagal memperpanjang");
+
+            showToast(`✅ Masa aktif vendor berhasil diperbarui!`, "bg-green-600");
+            await fetchVendors();
+
+        } catch (err) {
+            showToast("❌ Gagal memperpanjang masa aktif.", "bg-red-600");
+        }
+    }
+
+    function handleSearch(val) {
+        searchFilter = val;
+        renderVendors();
+    }
+
+    function filterStatus(status) {
+        statusFilter = status;
+        
+        document.getElementById('filter-all').className = "px-4 py-2 rounded-lg border border-[#F0E6DE] hover:bg-neutral-50";
+        document.getElementById('filter-active').className = "px-4 py-2 rounded-lg border border-[#F0E6DE] hover:bg-neutral-50";
+        document.getElementById('filter-expired').className = "px-4 py-2 rounded-lg border border-[#F0E6DE] hover:bg-neutral-50";
+
+        if (status === 'all') {
+            document.getElementById('filter-all').className = "px-4 py-2 rounded-lg bg-neutral-100 text-[#E07B7B] font-bold";
+        } else if (status === 'active') {
+            document.getElementById('filter-active').className = "px-4 py-2 rounded-lg bg-neutral-100 text-[#E07B7B] font-bold";
+        } else {
+            document.getElementById('filter-expired').className = "px-4 py-2 rounded-lg bg-neutral-100 text-[#E07B7B] font-bold";
+        }
+
+        renderVendors();
+    }
+
+    function handleSignOut() {
+        localStorage.removeItem('sortir_owner_pass');
+        window.location.reload();
+    }
+</script>
+</body>
+</html>

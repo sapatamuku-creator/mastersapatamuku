@@ -86,68 +86,6 @@ async function resolveSapatamuSubdomain() {
         }
     }
 
-    // 1.5. CHECK FOR SORTIR SUBDOMAIN
-    const isSortirSubdomain = (parts.length >= 3 && parts[0].toLowerCase() === 'sortir') || (_urlParams.get('subdomain') === 'sortir');
-    if (isSortirSubdomain) {
-        window.IS_SORTIR = true;
-        console.log("Sortir subdomain detected");
-        const path = window.location.pathname.toLowerCase();
-        
-        if (path === '/owner' || path === '/owner.html' || path === '/sortir_owner.html') {
-            if (!window.location.pathname.includes('sortir_owner.html')) {
-                window.location.replace('/sortir_owner.html');
-            }
-            window.SAPATAMU_RESOLVED = true;
-            return null;
-        }
-        
-        if (path === '/login' || path === '/login.html' || path === '/sortir_login.html') {
-            if (!window.location.pathname.includes('sortir_login.html')) {
-                window.location.replace('/sortir_login.html');
-            }
-            window.SAPATAMU_RESOLVED = true;
-            return null;
-        }
-
-        if (path === '/register' || path === '/register.html' || path === '/sortir_register.html') {
-            if (!window.location.pathname.includes('sortir_register.html')) {
-                window.location.replace('/sortir_register.html');
-            }
-            window.SAPATAMU_RESOLVED = true;
-            return null;
-        }
-        
-        if (path === '/dashboard' || path === '/dashboard.html' || path === '/sortir_dashboard.html') {
-            if (!window.location.pathname.includes('sortir_dashboard.html')) {
-                window.location.replace('/sortir_dashboard.html');
-            }
-            window.SAPATAMU_RESOLVED = true;
-            return null;
-        }
-
-        if (path === '/' || path === '/index.html') {
-            const vendorSession = localStorage.getItem('sortir_vendor_session');
-            if (vendorSession) {
-                window.location.replace('/sortir_dashboard.html');
-            } else {
-                window.location.replace('/sortir_login.html');
-            }
-            window.SAPATAMU_RESOLVED = true;
-            return null;
-        }
-
-        // If it's a slug path (e.g. /wedding-ryan-andin)
-        if (!window.location.pathname.includes('sortir_culling.html') && !window.location.pathname.includes('.')) {
-            const slug = window.location.pathname.substring(1);
-            if (slug && slug !== 'favicon.ico') {
-                window.location.replace('/sortir_culling.html?event=' + slug);
-            }
-        }
-        
-        window.SAPATAMU_RESOLVED = true;
-        return null;
-    }
-
     // 2. PROSES SUBDOMAIN
     if (!isMainDomain) {
         // Cek storage lokal subdomain ini

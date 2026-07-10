@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Vendor Sortir — SapaTamu.ku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="subdomain_resolver.js?v=1.6"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://app.midtrans.com/snap/snap.js"></script>
+    <style>
+        :root { 
+            --primary: #E07B7B; /* Soft Rose */
+            --bg: #FFF9F5;      /* Warm Cream */
+            --card: #FFFFFF;
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --border: #F0E6DE;
+            --input-bg: #FDF8F4;
+            --gold: #C8962E;
+            --success: #10B981;
+        }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+        .sapatamu-wrapper { 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; padding: 40px 20px; box-sizing: border-box;
+        }
+        .sapatamu-card { 
+            background: rgba(255, 255, 255, 0.9); 
+            backdrop-filter: blur(20px); 
+            width: 100%; max-width: 500px; 
+            padding: 40px; border-radius: 24px; 
+            box-shadow: 0 15px 50px rgba(224, 123, 123, 0.08); 
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .sapatamu-header { text-align: center; margin-bottom: 28px; }
+        .sapatamu-header h2 { font-family: 'Lora', serif; font-size: 32px; color: var(--text-main); font-weight: 700; }
+        .sapatamu-header p { color: var(--text-muted); font-size: 14px; margin-top: 8px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .sapatamu-input { 
+            width: 100%; padding: 14px 18px; border: 1.5px solid var(--border); 
+            border-radius: 12px; font-size: 15px; box-sizing: border-box; 
+            transition: all 0.2s; background: var(--input-bg); color: var(--text-main);
+        }
+        .sapatamu-input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.15); }
+        
+        .price-box {
+            background: #FAF3EC; border: 1px solid var(--border);
+            border-radius: 14px; padding: 18px; margin-bottom: 24px; text-align: center;
+        }
+        .price-label { font-size: 12px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px; }
+        .price-value { font-size: 28px; font-weight: 800; color: var(--primary); margin: 4px 0; }
+        .price-sub { font-size: 11px; color: var(--text-muted); }
+
+        .sapatamu-btn { 
+            width: 100%; padding: 16px; background: var(--primary); color: white; 
+            border: none; border-radius: 12px; font-weight: 700; font-size: 16px;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; 
+            transition: all 0.2s; box-shadow: 0 4px 15px rgba(224, 123, 123, 0.3);
+        }
+        .sapatamu-btn:hover { opacity: 0.95; transform: translateY(-1px); }
+        .sapatamu-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        
+        .footer-link { text-align: center; margin-top: 24px; font-size: 14px; color: var(--text-muted); }
+        .clickable { color: var(--primary); cursor: pointer !important; font-weight: 700; text-decoration: none; }
+        .clickable:hover { text-decoration: underline; }
+        
+        .badge-status { font-size: 11px; font-weight: 700; margin-top: 5px; display: block; }
+        .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-bottom-color: white; border-radius: 50%; animation: rotation 0.8s linear infinite; }
+        @keyframes rotation { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="sapatamu-wrapper">
+    <div class="sapatamu-card">
+        <div class="sapatamu-header">
+            <h2>Daftar Vendor</h2>
+            <p>Mulai kelola sortir foto klien dengan sistem culling real-time.</p>
+        </div>
+
+        <form id="register-form" onsubmit="handleRegister(event)">
+            <!-- Username -->
+            <div class="form-group">
+                <label>Username / Subdomain</label>
+                <input type="text" id="username" class="sapatamu-input" placeholder="contoh: studiofoto" required oninput="checkUsername(this.value)">
+                <span id="username-status" class="badge-status"></span>
+            </div>
+
+            <!-- Nama Studio / Vendor -->
+            <div class="form-group">
+                <label>Nama Studio / Vendor</label>
+                <input type="text" id="vendor_name" class="sapatamu-input" placeholder="contoh: Golden Hour Studio" required>
+            </div>
+
+            <!-- WhatsApp Admin -->
+            <div class="form-group">
+                <label>WhatsApp Admin (Utama)</label>
+                <input type="text" id="whatsapp_admin" class="sapatamu-input" placeholder="contoh: 62812345678" required>
+            </div>
+
+            <!-- Email Recovery -->
+            <div class="form-group">
+                <label>Email Recovery & Login</label>
+                <input type="email" id="email_recovery" class="sapatamu-input" placeholder="email@domain.com" required>
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+                <label>Password Akun</label>
+                <input type="password" id="password" class="sapatamu-input" placeholder="Minimal 6 karakter" required minlength="6">
+            </div>
+
+            <!-- Billing Cycle -->
+            <div class="form-group">
+                <label>Siklus Langganan</label>
+                <select id="billing_cycle" class="sapatamu-input" onchange="toggleCycle(this.value)">
+                    <option value="monthly">Bulanan — Rp 25.000 / bln</option>
+                    <option value="yearly">Tahunan — Rp 150.000 / thn</option>
+                </select>
+            </div>
+
+            <!-- Referral Code (Only visible if yearly selected) -->
+            <div class="form-group" id="referral-group" style="display:none;">
+                <label>Kode Referral (Opsional)</label>
+                <input type="text" id="referral_code" class="sapatamu-input" placeholder="Username vendor perujuk" oninput="checkReferral(this.value)">
+                <span id="referral-status" class="badge-status"></span>
+            </div>
+
+            <!-- Pricing Box -->
+            <div class="price-box">
+                <div class="price-label">Total Pembayaran</div>
+                <div class="price-value" id="price-display">Rp 25.000</div>
+                <div class="price-sub" id="price-sub-display">Berlangganan Akses 1 Bulan Aktif</div>
+            </div>
+
+            <button type="submit" id="btn-submit" class="sapatamu-btn">
+                <span>Daftar & Bayar Sekarang</span>
+            </button>
+        </form>
+
+        <div class="footer-link">
+            Sudah terdaftar? <a href="/sortir_login.html" class="clickable">Masuk di sini</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+    const supabase = supabase.createClient(SB_URL, SB_KEY);
+
+    let usernameTimer = null;
+    let isUsernameValid = false;
+    let referralTimer = null;
+    let isReferralValid = false;
+    let currentPrice = 25000;
+
+    function toggleCycle(val) {
+        const refGroup = document.getElementById('referral-group');
+        const priceDisp = document.getElementById('price-display');
+        const priceSub = document.getElementById('price-sub-display');
+        
+        if (val === 'yearly') {
+            refGroup.style.display = 'block';
+            currentPrice = isReferralValid ? 100000 : 150000;
+            priceDisp.innerText = `Rp ${currentPrice.toLocaleString('id-ID')}`;
+            priceSub.innerText = isReferralValid ? "Potongan Rp 50.000 Berhasil Diterapkan! (1 Tahun)" : "Berlangganan Akses 1 Tahun Aktif";
+        } else {
+            refGroup.style.display = 'none';
+            currentPrice = 25000;
+            priceDisp.innerText = "Rp 25.000";
+            priceSub.innerText = "Berlangganan Akses 1 Bulan Aktif";
+            // Reset referral state silently
+            document.getElementById('referral_code').value = '';
+            document.getElementById('referral-status').innerText = '';
+            isReferralValid = false;
+        }
+    }
+
+    function checkUsername(val) {
+        val = val.toLowerCase().replace(/[^a-z0-9]/g, '');
+        document.getElementById('username').value = val;
+        const statusEl = document.getElementById('username-status');
+
+        if (!val || val.length < 3) {
+            statusEl.innerText = val.length > 0 ? "⚠️ Minimal 3 karakter alphanumeric" : "";
+            statusEl.style.color = "var(--text-muted)";
+            isUsernameValid = false;
+            return;
+        }
+
+        statusEl.innerText = "⏳ Mengecek ketersediaan...";
+        statusEl.style.color = "var(--text-muted)";
+
+        clearTimeout(usernameTimer);
+        usernameTimer = setTimeout(async () => {
+            try {
+                const { data, error } = await supabase.rpc('check_username_exists', { p_username: val });
+                if (error) throw error;
+
+                if (data === false) {
+                    statusEl.innerText = "✅ Username Tersedia";
+                    statusEl.style.color = "var(--success)";
+                    isUsernameValid = true;
+                } else {
+                    statusEl.innerText = "❌ Username Sudah Terpakai";
+                    statusEl.style.color = "var(--primary)";
+                    isUsernameValid = false;
+                }
+            } catch (err) {
+                statusEl.innerText = "⚠️ Gagal mengecek koneksi";
+                isUsernameValid = false;
+            }
+        }, 500);
+    }
+
+    function checkReferral(val) {
+        val = val.toLowerCase().trim();
+        const statusEl = document.getElementById('referral-status');
+        const priceDisp = document.getElementById('price-display');
+        const priceSub = document.getElementById('price-sub-display');
+
+        if (!val) {
+            statusEl.innerText = "";
+            isReferralValid = false;
+            currentPrice = 150000;
+            priceDisp.innerText = "Rp 150.000";
+            priceSub.innerText = "Berlangganan Akses 1 Tahun Aktif";
+            return;
+        }
+
+        statusEl.innerText = "⏳ Memvalidasi kode...";
+        statusEl.style.color = "var(--text-muted)";
+
+        clearTimeout(referralTimer);
+        referralTimer = setTimeout(async () => {
+            try {
+                const { data, error } = await supabase.rpc('check_active_referral', { p_username: val });
+                if (error) throw error;
+
+                if (data === true) {
+                    statusEl.innerText = "🎉 Kode Referral Valid (Diskon Rp 50.000 diterapkan)";
+                    statusEl.style.color = "var(--success)";
+                    isReferralValid = true;
+                    currentPrice = 100000;
+                    priceDisp.innerText = "Rp 100.000";
+                    priceSub.innerText = "Potongan Rp 50.000 Berhasil Diterapkan! (1 Tahun)";
+                } else {
+                    statusEl.innerText = "❌ Kode Referral Tidak Valid / Tidak Aktif";
+                    statusEl.style.color = "var(--primary)";
+                    isReferralValid = false;
+                    currentPrice = 150000;
+                    priceDisp.innerText = "Rp 150.000";
+                    priceSub.innerText = "Berlangganan Akses 1 Tahun Aktif";
+                }
+            } catch (err) {
+                statusEl.innerText = "⚠️ Gagal memvalidasi koneksi";
+            }
+        }, 600);
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        if (!isUsernameValid) {
+            alert("Harap pilih username yang tersedia.");
+            return;
+        }
+
+        const username = document.getElementById('username').value;
+        const vendorName = document.getElementById('vendor_name').value;
+        const whatsappAdmin = document.getElementById('whatsapp_admin').value;
+        const emailRecovery = document.getElementById('email_recovery').value;
+        const password = document.getElementById('password').value;
+        const billingCycle = document.getElementById('billing_cycle').value;
+        const referralCode = document.getElementById('referral_code').value;
+
+        const btn = document.getElementById('btn-submit');
+        const btnSpan = btn.querySelector('span');
+
+        btn.disabled = true;
+        btnSpan.innerHTML = '<span class="spin"></span> Mendaftarkan...';
+
+        try {
+            // Step 1: Sign up in Supabase Auth
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: emailRecovery,
+                password: password
+            });
+
+            if (authError) throw authError;
+
+            const userId = authData.user.id;
+
+            // Step 2: Request Midtrans payment token
+            const paymentRes = await fetch('/api/sortir-create-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId,
+                    username,
+                    vendorName,
+                    whatsappAdmin,
+                    emailRecovery,
+                    billingCycle,
+                    referralCode: isReferralValid ? referralCode : null
+                })
+            });
+
+            if (!paymentRes.ok) {
+                const payErr = await paymentRes.json();
+                throw new Error(payErr.error || "Gagal menginisiasi pembayaran");
+            }
+
+            const paymentData = await paymentRes.json();
+
+            // Step 3: Launch Midtrans Snap Modal
+            snap.pay(paymentData.token, {
+                onSuccess: function(result) {
+                    window.location.replace('/sortir_login.html?checkout=success');
+                },
+                onPending: function(result) {
+                    alert("Pembayaran Anda sedang diproses. Silakan selesaikan pembayaran Anda.");
+                    window.location.replace('/sortir_login.html?checkout=pending');
+                },
+                onError: function(result) {
+                    alert("Pembayaran gagal. Harap coba lagi.");
+                    btn.disabled = false;
+                    btnSpan.innerText = "Daftar & Bayar Sekarang";
+                },
+                onClose: function() {
+                    alert("Anda menutup jendela pembayaran sebelum selesai.");
+                    window.location.replace('/sortir_login.html?checkout=cancel');
+                }
+            });
+
+        } catch (err) {
+            alert("Error: " + err.message);
+            btn.disabled = false;
+            btnSpan.innerText = "Daftar & Bayar Sekarang";
+        }
+    }
+</script>
+</body>
+</html>
