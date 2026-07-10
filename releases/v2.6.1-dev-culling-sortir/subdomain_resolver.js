@@ -95,44 +95,18 @@ async function resolveSapatamuSubdomain() {
         console.log("Sortir subdomain detected");
         const path = window.location.pathname.toLowerCase();
         
-        if (path === '/owner' || path === '/owner.html' || path === '/sortir_owner.html') {
-            if (!window.location.pathname.includes('sortir_owner.html')) {
-                window.location.replace('/sortir_owner.html');
-            }
-            window.SAPATAMU_RESOLVED = true;
-            return null;
-        }
+        // Redirect all admin/login/register paths to the public dashboard
+        const dashboardPaths = [
+            '/', '/index.html', 
+            '/login', '/login.html', '/sortir_login.html',
+            '/register', '/register.html', '/sortir_register.html',
+            '/dashboard', '/dashboard.html', '/sortir_dashboard.html',
+            '/owner', '/owner.html', '/sortir_owner.html'
+        ];
         
-        if (path === '/login' || path === '/login.html' || path === '/sortir_login.html') {
-            if (!window.location.pathname.includes('sortir_login.html')) {
-                window.location.replace('/sortir_login.html');
-            }
-            window.SAPATAMU_RESOLVED = true;
-            return null;
-        }
-
-        if (path === '/register' || path === '/register.html' || path === '/sortir_register.html') {
-            if (!window.location.pathname.includes('sortir_register.html')) {
-                window.location.replace('/sortir_register.html');
-            }
-            window.SAPATAMU_RESOLVED = true;
-            return null;
-        }
-        
-        if (path === '/dashboard' || path === '/dashboard.html' || path === '/sortir_dashboard.html') {
+        if (dashboardPaths.includes(path)) {
             if (!window.location.pathname.includes('sortir_dashboard.html')) {
                 window.location.replace('/sortir_dashboard.html');
-            }
-            window.SAPATAMU_RESOLVED = true;
-            return null;
-        }
-
-        if (path === '/' || path === '/index.html') {
-            const vendorSession = localStorage.getItem('sortir_vendor_session');
-            if (vendorSession) {
-                window.location.replace('/sortir_dashboard.html');
-            } else {
-                window.location.replace('/sortir_login.html');
             }
             window.SAPATAMU_RESOLVED = true;
             return null;
