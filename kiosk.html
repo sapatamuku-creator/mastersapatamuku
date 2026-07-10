@@ -1367,6 +1367,85 @@
                 }
             });
         }
+
+        function processGlobalHIDBarcode(codeToCheck) {
+            const idleState = document.getElementById('kiosk-idle-state');
+            if (idleState && idleState.style.opacity !== '0') {
+                idleState.style.opacity = '0';
+                idleState.style.pointerEvents = 'none';
+            }
+
+            const matchedGuest = masterData.find(g => String(g.kode).trim().toUpperCase() === codeToCheck);
+            if (matchedGuest) {
+                const isAlreadyCheckedIn = matchedGuest.jamDatang && matchedGuest.jamDatang !== "-";
+                if (isAlreadyCheckedIn) {
+                    showToast(`Tamu ${matchedGuest.nama} sudah check-in!`);
+                } else {
+                    closeSearchModal();
+                    openConfirm(matchedGuest);
+                }
+            } else {
+                showToast(`Kode unik "${codeToCheck}" tidak terdaftar!`);
+            }
+        }
+
+        (function() {
+            let globalKeyTimes = [];
+            let globalBuffer = "";
+            let lastScannedCode = "";
+            let lastScanTime = 0;
+
+            document.addEventListener('keydown', (e) => {
+                const isHIDEnabled = localStorage.getItem('hid_barcode_on') === '1';
+                if (!isHIDEnabled) return;
+
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    return;
+                }
+
+                if (e.key.length > 1 && e.key !== 'Enter') {
+                    return;
+                }
+
+                const now = Date.now();
+                
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                } else {
+                    globalBuffer += e.key;
+                    globalKeyTimes.push(now);
+                }
+
+                if (globalBuffer.length > 9) {
+                    globalBuffer = globalBuffer.slice(-9);
+                }
+                if (globalKeyTimes.length > 9) {
+                    globalKeyTimes = globalKeyTimes.slice(-9);
+                }
+
+                if (globalBuffer.length === 9) {
+                    const isPattern = globalBuffer.charAt(3) === '-';
+                    const duration = globalKeyTimes.length === 9 ? (globalKeyTimes[8] - globalKeyTimes[0]) : Infinity;
+                    const isFast = duration < 250;
+
+                    if (isPattern && isFast) {
+                        const codeToCheck = globalBuffer.toUpperCase();
+                        if (codeToCheck === lastScannedCode && (now - lastScanTime < 1500)) {
+                            globalBuffer = "";
+                            globalKeyTimes = [];
+                            return;
+                        }
+
+                        processGlobalHIDBarcode(codeToCheck);
+                        
+                        lastScannedCode = codeToCheck;
+                        lastScanTime = now;
+                        globalBuffer = "";
+                        globalKeyTimes = [];
+                    }
+                }
+            });
+        })();
     </script>
 </body>
 </html>
