@@ -166,10 +166,9 @@
         try {
             let email = identifier;
 
-            // Check if user input is an email, if not, resolve via username API
+            // Resolve username to email if input is not an email address
             if (!identifier.includes('@')) {
                 btnSpan.innerHTML = '<span class="spin"></span> Mencari Username...';
-                showAlert('🔍 [Debug Step 1] Mencari email dari username...', 'alert-warning');
                 const resolveRes = await fetch('/api/sortir-get-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -183,24 +182,19 @@
 
                 const resolveData = await resolveRes.json();
                 email = resolveData.email;
-                showAlert('✅ [Debug Step 1] Email ditemukan: ' + email, 'alert-success');
                 btnSpan.innerHTML = '<span class="spin"></span> Memverifikasi...';
             }
 
-            // 1. Sign in with Supabase Auth
-            showAlert('🔍 [Debug Step 2] Mencoba Supabase Auth signIn...', 'alert-warning');
+            // Step 1: Sign in with Supabase Auth
             const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                 email,
                 password
             });
 
             if (authError) throw authError;
-
             const userId = authData.user.id;
-            showAlert('✅ [Debug Step 2] Auth OK! User ID: ' + userId, 'alert-success');
 
-            // 2. Fetch vendor profile from sortir_vendors
-            showAlert('🔍 [Debug Step 3] Fetching vendor profile...', 'alert-warning');
+            // Step 2: Fetch vendor profile from sortir_vendors
             const { data: vendors, error: vendorError } = await supabase
                 .from('sortir_vendors')
                 .select('*')
@@ -209,86 +203,61 @@
             if (vendorError) throw vendorError;
 
             if (!vendors || vendors.length === 0) {
-                showAlert('❌ [Debug Step 3] Vendor KOSONG! userId: ' + userId, 'alert-error');
-                throw new Error("Profil vendor tidak ditemukan. Pastikan pendaftaran selesai.");
+                throw new Error("Profil vendor tidak ditemukan. Hubungi administrator.");
             }
 
             const vendor = vendors[0];
-            showAlert('✅ [Debug Step 3] Vendor OK! is_active: ' + vendor.is_active + ', expiry: ' + vendor.subscription_expires_at, 'alert-success');
 
-            // 3. Verify if active and subscription not expired
+            // Step 3: Check activation status
+            // - is_active = false → belum diaktifkan super admin
+            if (!vendor.is_active) {
+                throw new Error("Akun Anda belum diaktifkan. Silakan hubungi administrator SapaTamu.");
+            }
+
+            // Step 4: Determine plan type
+            // - subscription_expires_at = null  → Paket Bonus (boleh masuk, 1 event saja)
+            // - subscription_expires_at = valid  → Paket Premium aktif
+            // - subscription_expires_at = expired → perlu perpanjang
             const now = new Date();
             const expiry = vendor.subscription_expires_at ? new Date(vendor.subscription_expires_at) : null;
+            const isExpired = expiry && expiry < now;
+            const isBonus = !expiry;                 // null = Paket Bonus
+            const isPremium = expiry && !isExpired;  // ada & belum expired
 
-            if (!vendor.is_active || (expiry && expiry < now)) {
-                // If inactive, trigger Midtrans SNAP transaction again to allow renewal/activation
-                showAlert("⚠️ Akun Anda belum aktif / masa aktif langganan habis. Menyiapkan invoice...", "alert-warning");
-                
-                // Call create-payment API to get a new Snap Token
-                const payRes = await fetch('/api/sortir-create-payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: vendor.id,
-                        username: vendor.username,
-                        vendorName: vendor.vendor_name,
-                        whatsappAdmin: vendor.whatsapp_admin,
-                        emailRecovery: vendor.email_recovery,
-                        billingCycle: vendor.billing_cycle || 'monthly'
-                    })
-                });
-
-                if (!payRes.ok) {
-                    const payErr = await payRes.json();
-                    throw new Error(payErr.error || "Gagal menginisiasi pembayaran ulang");
-                }
-
-                const paymentData = await payRes.json();
-
-                // Open Midtrans Snap modal
-                snap.pay(paymentData.token, {
-                    onSuccess: function(result) {
-                        window.location.replace('/sortir_login.html?checkout=success');
-                    },
-                    onPending: function(result) {
-                        window.location.replace('/sortir_login.html?checkout=pending');
-                    },
-                    onError: function(result) {
-                        showAlert("❌ Pembayaran gagal. Harap coba kembali.", "alert-error");
-                        btn.disabled = false;
-                        btnSpan.innerText = "Masuk Sekarang";
-                    }
-                });
+            if (isExpired) {
+                // Subscription expired — force renewal
+                showAlert("⚠️ Masa aktif langganan Anda telah berakhir. Silakan perpanjang untuk melanjutkan.", "alert-warning");
+                btn.disabled = false;
+                btnSpan.innerText = "Masuk Sekarang";
                 return;
             }
 
-            // 4. Update session token for concurrent tab protection
+            // Step 5: Save session to localStorage
             const sessionToken = generateUUID();
             localStorage.setItem('sortir_session_token', sessionToken);
-            
-            // Save vendor info in localStorage
             localStorage.setItem('sortir_vendor_session', JSON.stringify({
                 id: vendor.id,
                 username: vendor.username,
                 vendor_name: vendor.vendor_name,
-                email: email
+                email: email,
+                plan: isBonus ? 'bonus' : 'premium',
+                subscription_expires_at: vendor.subscription_expires_at
             }));
 
-            // Update session token on DB (non-blocking — don't fail login if this fails)
+            // Update session token on DB (non-blocking)
             supabase
                 .from('sortir_vendors')
                 .update({ active_session_token: sessionToken })
                 .eq('id', userId)
                 .then(({ error }) => {
-                    if (error) console.warn('Session token update failed (non-critical):', error.message);
+                    if (error) console.warn('Session token update skipped:', error.message);
                 });
 
-            // 5. Redirect to Dashboard
-            showAlert('✅ [Debug Step 4] Semua OK, redirecting ke dashboard...', 'alert-success');
-            setTimeout(() => window.location.replace('/sortir_dashboard.html'), 1500);
+            // Step 6: Redirect to Dashboard
+            window.location.replace('/sortir_dashboard.html');
 
         } catch (err) {
-            showAlert("❌ Error: " + err.message, "alert-error");
+            showAlert("❌ " + err.message, "alert-error");
             btn.disabled = false;
             btnSpan.innerText = "Masuk Sekarang";
         }

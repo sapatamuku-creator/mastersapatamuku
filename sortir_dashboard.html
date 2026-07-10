@@ -383,6 +383,24 @@
 
             if (error) throw error;
 
+            // Show Bonus plan banner if applicable
+            const isBonusPlan = sessionUser && sessionUser.plan === 'bonus';
+            const existingBanner = document.getElementById('bonus-plan-banner');
+            if (existingBanner) existingBanner.remove();
+            if (isBonusPlan) {
+                const banner = document.createElement('div');
+                banner.id = 'bonus-plan-banner';
+                banner.className = 'mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-4';
+                banner.innerHTML = `
+                    <div>
+                        <div class="text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">⭐ Paket Bonus Aktif</div>
+                        <p class="text-xs text-amber-600">Anda dapat mengelola <strong>1 event/project</strong> saja. Upgrade ke Premium untuk menambahkan lebih banyak klien.</p>
+                    </div>
+                    <button onclick="openUpgradeModal()" class="text-xs font-bold bg-amber-500 text-white px-4 py-2 rounded-xl hover:bg-amber-600 whitespace-nowrap">Upgrade Premium</button>
+                `;
+                container.parentNode.insertBefore(banner, container);
+            }
+
             if (!events || events.length === 0) {
                 emptyEl.classList.remove('hidden');
                 return;
