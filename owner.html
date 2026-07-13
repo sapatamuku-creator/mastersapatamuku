@@ -6,6 +6,7 @@
     <title>Owner Dashboard — SapaTamu.ku</title>
     <script src="subdomain_resolver.js?v=3.5"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
     <style>
         :root {
             --primary: #E07B7B;
@@ -37,15 +38,16 @@
         .input-dark {
             width: 100%; padding: 14px 18px; background: var(--surface2); border: 1.5px solid var(--border);
             border-radius: 12px; color: var(--text); font-size: 15px; font-family: inherit;
-            margin-bottom: 12px; transition: border 0.2s;
+            margin-bottom: 12px; transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
         }
-        .input-dark:focus { outline: none; border-color: var(--primary); }
+        .input-dark:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.15); }
         .btn-primary {
             width: 100%; padding: 16px; background: var(--primary); color: white;
             border: none; border-radius: 12px; font-weight: 700; font-size: 15px;
-            cursor: pointer; font-family: inherit; transition: all 0.2s;
+            cursor: pointer; font-family: inherit; transition: background-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) ease;
         }
-        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(1px) scale(0.97); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
         /* MAIN DASHBOARD */
@@ -59,8 +61,9 @@
         .top-actions { display: flex; gap: 10px; align-items: center; }
         .btn-sm {
             padding: 8px 16px; border-radius: 10px; font-size: 12px; font-weight: 700;
-            cursor: pointer; border: none; font-family: inherit; transition: all 0.2s;
+            cursor: pointer; border: none; font-family: inherit; transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out), opacity var(--duration-fast) ease;
         }
+        .btn-sm:active { transform: scale(0.95); }
         .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--muted); }
         .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
         .btn-green { background: var(--green); color: white; }
@@ -76,11 +79,12 @@
             border: 1.5px solid var(--border); border-radius: 10px; color: var(--text);
             font-size: 13px; font-family: inherit;
         }
-        .search-input:focus { outline: none; border-color: var(--primary); }
+        .search-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.1); }
         .filter-select {
             padding: 10px 14px; background: var(--surface2); border: 1.5px solid var(--border);
-            border-radius: 10px; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer;
+            border-radius: 10px; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; transition: border-color var(--duration-fast) ease;
         }
+        .filter-select:focus { outline: none; border-color: var(--primary); }
 
         /* STATS */
         .stats-row {
@@ -89,7 +93,12 @@
         }
         .stat-card {
             background: var(--surface2); border: 1px solid var(--border); border-radius: 16px;
-            padding: 16px 24px; min-width: 140px; flex: 1;
+            padding: 16px 24px; min-width: 140px; flex: 1; transition: transform var(--duration-normal) var(--ease-out), border-color var(--duration-normal) ease, box-shadow var(--duration-normal) ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
         .stat-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
         .stat-value { font-size: 26px; font-weight: 800; }
@@ -106,7 +115,7 @@
             background: var(--surface2); border-bottom: 1px solid var(--border);
             white-space: nowrap; position: sticky; top: 0;
         }
-        tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+        tbody tr { border-bottom: 1px solid var(--border); transition: background-color var(--duration-fast) ease; }
         tbody tr:hover { background: var(--surface2); }
 
         /* EDITABLE CELL */
@@ -115,18 +124,18 @@
             white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis;
         }
         td[contenteditable="true"] {
-            cursor: text; border-radius: 6px; transition: all 0.15s;
+            cursor: text; border-radius: 6px; transition: background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
             outline: none; min-width: 80px;
         }
         td[contenteditable="true"]:focus {
-            background: rgba(224, 123, 123, 0.1);
+            background: rgba(224, 123, 123, 0.15);
             box-shadow: inset 0 0 0 1.5px var(--primary);
             overflow: visible; white-space: normal; z-index: 10; position: relative;
         }
 
         /* STATUS BADGE */
         .badge {
-            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            display: inline-block; padding: 3px 10px; border-radius: 20px; transition: background-color var(--duration-fast) ease, color var(--duration-fast) ease;
             font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
         }
         .badge-active { background: rgba(16,185,129,0.15); color: var(--green); }
@@ -137,9 +146,10 @@
         .save-row-btn {
             padding: 5px 12px; background: var(--green); border: none; border-radius: 8px;
             color: white; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit;
-            white-space: nowrap; transition: all 0.15s; display: none;
+            white-space: nowrap; transition: background-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out); display: none;
         }
-        .save-row-btn:hover { opacity: 0.85; }
+        .save-row-btn:hover { opacity: 0.9; }
+        .save-row-btn:active { transform: scale(0.95); }
         tr.dirty .save-row-btn { display: inline-block; }
 
         /* TOAST */
@@ -148,7 +158,7 @@
             border: 1px solid var(--border); padding: 14px 22px; border-radius: 14px;
             font-size: 13px; font-weight: 600; display: none;
             box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 9999;
-            animation: slideIn 0.3s ease;
+            animation: slideIn var(--duration-normal) var(--ease-modal);
         }
         @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
@@ -163,25 +173,32 @@
             width: 100%; max-width: 500px; border: 1px solid var(--border);
             box-shadow: 0 20px 40px rgba(0,0,0,0.5);
             max-height: 90vh; overflow-y: auto;
+            animation: modalPop var(--duration-normal) var(--ease-modal);
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.95) translateY(15px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
         }
         .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; color: var(--gold); }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; }
         .form-control {
             width: 100%; background: var(--bg); border: 1px solid var(--border);
-            color: white; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-family: inherit;
+            color: white; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-family: inherit; transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
         }
-        .form-control:focus { outline: none; border-color: var(--primary); }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.1); }
         .btn-action {
             width: 100%; padding: 12px; background: var(--gold); color: var(--bg);
-            border: none; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer;
+            border: none; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer; transition: background-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out);
             margin-top: 10px;
         }
+        .btn-action:active { transform: scale(0.97); }
         .btn-cancel {
             width: 100%; padding: 12px; background: transparent; color: var(--muted);
-            border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer;
+            border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer; transition: border-color var(--duration-fast) ease, color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out);
             margin-top: 10px;
         }
+        .btn-cancel:active { transform: scale(0.97); }
         
         /* HIGHLIGHT EXPIRED */
         .row-expired {
@@ -193,9 +210,10 @@
         .btn-delete {
             padding: 5px 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4);
             border-radius: 8px; color: var(--red); font-size: 11px; font-weight: 700; cursor: pointer;
-            margin-left: 8px;
+            margin-left: 8px; transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out);
         }
         .btn-delete:hover { background: var(--red); color: white; }
+        .btn-delete:active { transform: scale(0.95); }
         .btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* LOADER */

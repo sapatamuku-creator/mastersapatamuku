@@ -12,6 +12,7 @@
         href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap"
         rel="stylesheet">
     <script src="subdomain_resolver.js?v=3.3"></script>
+    <link rel="stylesheet" href="animations.css">
     <style>
         :root {
             --gold: #D4AF37;
@@ -58,7 +59,7 @@
             padding-left: 30px;
             margin-bottom: 3vh;
             opacity: 0.2;
-            transition: all 0.8s ease;
+            transition: all var(--duration-slow) var(--ease-out);
             color: var(--pure-white);
         }
 
@@ -250,8 +251,16 @@
             border-radius: 50%;
             cursor: pointer;
             opacity: 0;
-            transition: 0.5s;
+            transition: opacity var(--duration-normal) ease, transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
             visibility: hidden;
+        }
+        #fs-btn:hover {
+            background: var(--gold);
+            color: #000;
+            transform: scale(1.05);
+        }
+        #fs-btn:active {
+            transform: scale(0.95);
         }
 
         .show-btn {
@@ -638,79 +647,94 @@
         }
 
         // ================================================================
-        // SUPABASE DIRECT CONFIG — untuk deteksi tamu terbaru secara cepat
+        // SUPABASE DIRECT CONFIG
         // ================================================================
         const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
         const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
 
-        // Metadata (couple name, rundown, dll) hanya perlu diambil sekali
-        // dan diperbarui setiap 5 menit — tidak perlu setiap polling.
         let metadataLoaded = false;
         let metadataTimer = null;
 
-        // ────────────────────────────────────────────────────────────
-        // syncMetadata() — Ambil dari GAS (lambat, tapi jarang berubah)
-        //   Dipanggil sekali saat load, lalu setiap 5 menit.
-        //   Mengisi: couple name, tanggal, rundown, slideshow, teks sambutan.
-        // ────────────────────────────────────────────────────────────
         async function syncMetadata() {
             if (!ssId) return;
+            let loaded = false;
+
             try {
-                const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`;
-                const response = await fetch(fetchUrl);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                if (data.status === "error" || data.error) throw new Error(data.message || data.error);
-
-                // Update konten statis (couple name, tanggal, dsb)
-                document.getElementById('couple-name').innerHTML = (data.weddingName || "SapaTamu.Ku").replace(" & ", " &amp; ");
-                document.getElementById('wedding-date').innerText = data.weddingDate;
-                if (data.teksSambutan1) document.getElementById('welcome-teks-1').innerText = data.teksSambutan1;
-                if (data.teksSambutan2) document.getElementById('welcome-teks-2').innerText = data.teksSambutan2;
-                if (data.urlFoto) {
-                    const photoUrls = data.urlFoto.split(",").map(u => u.trim()).filter(u => u !== "");
-                    initSlideshow(photoUrls);
-                } else {
-                    initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
+                const sbRes = await fetch(
+                    `${SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data&limit=1`,
+                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                );
+                if (sbRes.ok) {
+                    const rows = await sbRes.json();
+                    if (rows && rows.length > 0 && rows[0].data) {
+                        console.log("✅ Welcome metadata loaded from Supabase (fast path)");
+                        applyWelcomeData(rows[0].data);
+                        loaded = true;
+                    }
                 }
-
-                // Update Rundown
-                const now = new Date();
-                const nowVal = (now.getHours() * 100) + now.getMinutes();
-                let rundownHtml = "";
-                (data.rundown || []).forEach((item, i, arr) => {
-                    const startVal = convertToTimeValue(item.syncTime);
-                    const nextItem = arr[i + 1];
-                    const active = nextItem
-                        ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime))
-                        : (nowVal >= startVal);
-                    rundownHtml += `
-                    <div class="rundown-item ${active ? 'active-event' : ''}">
-                        <div class="event-time">${item.displayTime}</div>
-                        <div class="event-name">${item.eventName}</div>
-                    </div>`;
-                });
-                document.getElementById('rundown-list').innerHTML = rundownHtml;
-
-                // Update Vendors data
-                if (data.vendors) {
-                    localVendors = data.vendors;
-                }
-                
-                // Start rotation loop
-                startRotationLoop();
-
-                metadataLoaded = true;
             } catch (e) {
-                console.warn("Metadata sync error:", e);
-                if (!metadataLoaded) {
-                    // Tampilkan pesan fallback hanya jika belum pernah load sama sekali
-                    document.getElementById('couple-name').innerText = "Memuat...";
+                console.warn("Supabase welcome config fetch failed, trying GAS fallback:", e.message);
+            }
+
+            if (!loaded) {
+                try {
+                    const fetchUrl = `${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`;
+                    const response = await fetch(fetchUrl);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    if (data.status === "error" || data.error) throw new Error(data.message || data.error);
+
+                    console.log("⚡ Welcome metadata loaded from GAS (fallback)");
+                    applyWelcomeData(data);
+                    loaded = true;
+                } catch (e) {
+                    console.warn("GAS welcome metadata sync error:", e);
+                    if (!metadataLoaded) {
+                        document.getElementById('couple-name').innerText = "Memuat...";
+                    }
                 }
             }
-            // Jadwalkan refresh metadata berikutnya dalam 5 menit
+
+            metadataLoaded = loaded;
             clearTimeout(metadataTimer);
             metadataTimer = setTimeout(syncMetadata, 5 * 60 * 1000);
+        }
+
+        function applyWelcomeData(data) {
+            if (!data) return;
+            document.getElementById('couple-name').innerHTML = (data.weddingName || "SapaTamu.Ku").replace(" & ", " &amp; ");
+            document.getElementById('wedding-date').innerText = data.weddingDate;
+            if (data.teksSambutan1) document.getElementById('welcome-teks-1').innerText = data.teksSambutan1;
+            if (data.teksSambutan2) document.getElementById('welcome-teks-2').innerText = data.teksSambutan2;
+            if (data.urlFoto) {
+                const photoUrls = data.urlFoto.split(",").map(u => u.trim()).filter(u => u !== "");
+                initSlideshow(photoUrls);
+            } else {
+                initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
+            }
+
+            const now = new Date();
+            const nowVal = (now.getHours() * 100) + now.getMinutes();
+            let rundownHtml = "";
+            (data.rundown || []).forEach((item, i, arr) => {
+                const startVal = convertToTimeValue(item.syncTime);
+                const nextItem = arr[i + 1];
+                const active = nextItem
+                    ? (nowVal >= startVal && nowVal < convertToTimeValue(nextItem.syncTime))
+                    : (nowVal >= startVal);
+                rundownHtml += `
+                <div class="rundown-item ${active ? 'active-event' : ''}">
+                    <div class="event-time">${item.displayTime}</div>
+                    <div class="event-name">${item.eventName}</div>
+                </div>`;
+            });
+            document.getElementById('rundown-list').innerHTML = rundownHtml;
+
+            if (data.vendors) {
+                localVendors = data.vendors;
+            }
+            
+            startRotationLoop();
         }
 
         let supabaseClient = null;

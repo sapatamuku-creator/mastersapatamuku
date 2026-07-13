@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="subdomain_resolver.js?v=3.3"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
     <style>
         :root { 
             --primary: #E07B7B; /* Rose */
@@ -45,32 +46,37 @@
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px; }
         .sapatamu-input { 
-            width: 100%; padding: 14px 18px; border: 1.5px solid var(--border-color); 
-            border-radius: 12px; font-size: 16px; box-sizing: border-box; transition: border 0.2s;
+            width: 100%; padding: 14px 18px; border: 1.5px solid var(--border); 
+            border-radius: 12px; font-size: 16px; box-sizing: border-box; transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
         }
-        .sapatamu-input:focus { outline: none; border-color: var(--primary); }
+        .sapatamu-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.1); }
         .readonly-input { background: #f1f5f9; cursor: not-allowed; }
         .small-font { font-size: 12px; }
         
         .sapatamu-btn { 
             width: 100%; padding: 16px; background: var(--primary); color: white; 
             border: none; border-radius: 12px; font-weight: 700; font-size: 16px;
-            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; 
+            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px;
+            transition: background-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) ease;
+        }
+        .sapatamu-btn:active {
+            transform: scale(0.97);
         }
         .sapatamu-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-        .gen-btn { padding: 0 15px; border-radius: 12px; border: none; background: #fbbf24; cursor: pointer; font-weight: bold; white-space: nowrap; }
+        .gen-btn { padding: 0 15px; border-radius: 12px; border: none; background: #fbbf24; cursor: pointer; font-weight: bold; white-space: nowrap; transition: transform var(--duration-fast) var(--ease-out); }
+        .gen-btn:active { transform: scale(0.95); }
         .success-btn { background: #059669; }
         .primary-btn { background: #6366f1; }
 
         .footer-link { text-align: center; margin-top: 24px; font-size: 14px; color: #64748b; }
-        .clickable { color: var(--primary); cursor: pointer !important; font-weight: 700; display: inline-block; }
+        .clickable { color: var(--primary); cursor: pointer !important; font-weight: 700; display: inline-block; transition: color var(--duration-fast) ease; }
         .clickable:hover { text-decoration: underline; }
 
         .inject-box { background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px dashed #cbd5e1; }
         .inject-title { font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 10px; text-transform: uppercase; }
 
         .meter-bg { height: 4px; background: #e2e8f0; margin-top: 8px; border-radius: 2px; overflow: hidden; }
-        .meter-bar { height: 100%; width: 0%; transition: 0.3s; }
+        .meter-bar { height: 100%; width: 0%; transition: width var(--duration-normal) ease, background-color var(--duration-normal) ease; }
         .meter-text { font-size: 11px; margin-top: 4px; display: block; font-weight: bold; }
 
         .loader { 
@@ -82,13 +88,13 @@
 
         /* CUSTOM NOTIFICATION MODAL */
         #sapa-notify-modal { position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999; }
-        .sapa-modal-content { background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .sapa-modal-content { background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop var(--duration-normal) var(--ease-modal); }
         .sapa-modal-title { font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px; }
         .sapa-modal-msg { font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px; }
         
         @keyframes modalPop {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+            from { transform: scale(0.95) translateY(15px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
         }
 
         /* -------------------------------------
@@ -288,22 +294,6 @@
     </div>
 </div>
 
-    <!-- CUSTOM NOTIFICATION MODAL -->
-    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
-        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
-            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
-            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Pesan</h2>
-            <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
-            <button onclick="closeSapaModal()" class="sapatamu-btn" style="padding: 15px; border-radius: 15px; font-size: 11px; margin-top: 0;">MENGERTI</button>
-        </div>
-    </div>
-
-    <style>
-        @keyframes modalPop {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-    </style>
 
 <script>
     window.togglePasswordVisibility = function(inputId, buttonEl) {

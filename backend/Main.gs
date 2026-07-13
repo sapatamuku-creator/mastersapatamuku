@@ -1484,6 +1484,13 @@ function saveWelcomePhotos(ssId, urlFoto, teks1, teks2) {
       configSheet.getRange("B8").setValue(teks2);
     }
     
+    // Sync to Supabase config_welcome
+    try {
+      mirrorWelcomeConfigToSupabase(ssId);
+    } catch (err) {
+      console.error("Gagal mirror welcome config ke Supabase: " + err.toString());
+    }
+    
     return { status: "success", message: "Konfigurasi Welcome Sign berhasil diperbarui" };
   } catch (e) { return { status: "error", message: e.toString() }; }
 }
@@ -1833,6 +1840,56 @@ function mirrorInvConfigToSupabase(ssId, invitationData) {
     }
   } catch (e) {
     console.error("mirrorInvConfigToSupabase exception: " + e.toString());
+    return { status: "error", message: e.toString() };
+  }
+}
+
+/**
+ * Mirror welcome configuration data to the config_welcome table in Supabase.
+ */
+function mirrorWelcomeConfigToSupabase(ssId) {
+  try {
+    if (!SUPABASE_URL || SUPABASE_URL === "YOUR_SUPABASE_PROJECT_URL") return { status: "skip" };
+    if (!ssId) return { status: "error", message: "ssId kosong" };
+
+    const welcomeData = getWelcomeData(ssId);
+    if (welcomeData.status === "error") {
+      return welcomeData;
+    }
+
+    // Remove temporary/realtime fields that don't belong to static config
+    delete welcomeData.status;
+    delete welcomeData.latestGuest;
+    delete welcomeData.log;
+
+    const url = SUPABASE_URL + "/rest/v1/config_welcome?on_conflict=ssid";
+    const body = JSON.stringify({
+      ssid: ssId,
+      data: welcomeData,
+      updated_at: new Date().toISOString()
+    });
+
+    const response = supabaseFetch(url, {
+      method: "post",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+      },
+      payload: body,
+      muteHttpExceptions: true
+    });
+
+    const code = response.getResponseCode();
+    if (code >= 200 && code < 300) {
+      return { status: "success" };
+    } else {
+      console.error("Mirror WelcomeConfig to Supabase failed: " + response.getContentText());
+      return { status: "error", code: code };
+    }
+  } catch (e) {
+    console.error("mirrorWelcomeConfigToSupabase exception: " + e.toString());
     return { status: "error", message: e.toString() };
   }
 }
@@ -2228,7 +2285,20 @@ function handleSpreadsheetEdit(e) {
   try {
     const range = e.range;
     const sheet = range.getSheet();
-    if (sheet.getName() !== SHEET_DATA) return;
+    const sheetName = sheet.getName();
+    const ss = e.source;
+    const ssId = ss.getId();
+    
+    if (sheetName === "Rundown" || sheetName === "Config" || sheetName === "CONFIG") {
+      try {
+        mirrorWelcomeConfigToSupabase(ssId);
+      } catch(err) {
+        console.error("Gagal mirror welcome config pada edit spreadsheet: " + err.toString());
+      }
+      return;
+    }
+    
+    if (sheetName !== SHEET_DATA) return;
     
     const row = range.getRow();
     const col = range.getColumn();
@@ -2236,8 +2306,12 @@ function handleSpreadsheetEdit(e) {
     // Jika edit terjadi pada area Metadata (Baris 1 s/d 6, Kolom B s/d C ATAU E s/d G)
     if (row <= 6) {
       if ((col >= 2 && col <= 3) || (col >= 5 && col <= 7)) {
-        const ss = e.source;
-        syncMetadataClientToSupabase(ss.getId(), sheet);
+        syncMetadataClientToSupabase(ssId, sheet);
+        try {
+          mirrorWelcomeConfigToSupabase(ssId);
+        } catch(err) {
+          console.error("Gagal mirror welcome config pada metadata edit: " + err.toString());
+        }
       }
       return;
     }
@@ -2247,9 +2321,6 @@ function handleSpreadsheetEdit(e) {
     // Monitor kolom penting: Nama (3), Whatsapp (4), Status Hadir (9), Souvenir (11), Pihak (12), Alamat (13), Real Hadir (14), Jenis Gift (15), WA Send API (16), Lucky Draw (17), Sesi (19)
     const monitoredCols = [3, 4, 5, 9, 11, 12, 13, 14, 15, 16, 17, 19];
     if (monitoredCols.indexOf(col) === -1) return;
-    
-    const ss = e.source;
-    const ssId = ss.getId();
     
     // Sync baris ini ke Supabase
     syncRowToSupabase(ss, row, ssId);
