@@ -24,6 +24,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Alice&family=Montserrat:wght@200;400;600;700&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
 
     <script>
         // Init wishes when ready
@@ -58,19 +59,19 @@
         .reveal {
             opacity: 0;
             transform: translateY(30px);
-            transition: all 1s cubic-bezier(0.2, 1, 0.3, 1);
+            transition: transform 800ms var(--ease-out), opacity 800ms var(--ease-out);
         }
 
         .reveal-left {
             opacity: 0;
             transform: translateX(-30px);
-            transition: all 1s cubic-bezier(0.2, 1, 0.3, 1);
+            transition: transform 800ms var(--ease-out), opacity 800ms var(--ease-out);
         }
 
         .reveal-right {
             opacity: 0;
             transform: translateX(30px);
-            transition: all 1s cubic-bezier(0.2, 1, 0.3, 1);
+            transition: transform 800ms var(--ease-out), opacity 800ms var(--ease-out);
         }
 
         .reveal.active,
@@ -132,8 +133,11 @@
             text-transform: uppercase;
             letter-spacing: 0.25em;
             padding: 18px 50px;
-            transition: all 0.3s ease;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary:active {
+            transform: scale(0.97);
         }
 
 
@@ -238,11 +242,7 @@
             margin-bottom: 20px;
             border: 1px solid #f0f0f0;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-            transition: transform 0.3s ease;
-        }
-
-        .gift-card:hover {
-            transform: translateY(-5px);
+            transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) ease;
         }
 
         .custom-scrollbar::-webkit-scrollbar {
@@ -269,7 +269,7 @@
             font-weight: bold;
             z-index: 200;
             opacity: 0;
-            transition: 0.3s;
+            transition: opacity var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
         }
 
         /* Shortcut Tab */
@@ -294,16 +294,13 @@
             writing-mode: vertical-rl;
             text-orientation: mixed;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: padding var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out);
             display: flex;
             align-items: center;
             justify-content: center;
         }
-
-        .tab-item:hover {
-            padding-right: 20px;
-            background: #fafafa;
-            color: var(--gold);
+        .tab-item:active {
+            transform: scale(0.95);
         }
 
         .tab-label {
@@ -319,6 +316,94 @@
             margin-bottom: 8px;
             transform: rotate(90deg);
             color: var(--gold);
+        }
+
+        #cover {
+            transition: transform var(--duration-slow) var(--ease-drawer) !important;
+        }
+        #content {
+            transition: opacity var(--duration-slow) var(--ease-out) !important;
+        }
+        #music-btn button {
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+        }
+        #music-btn button:active {
+            transform: scale(0.92);
+        }
+        #btn-wish {
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-normal) var(--ease-out);
+        }
+        #btn-wish:active {
+            transform: scale(0.97);
+        }
+
+        /* ─── CUSTOM NOTIFICATION MODAL REFRACTOR ─── */
+        #sapa-notify-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(74, 63, 53, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999999;
+            opacity: 0;
+            transition: opacity var(--duration-slow) var(--ease-out), display var(--duration-slow) var(--ease-out) allow-discrete;
+        }
+        #sapa-notify-modal[style*="display: flex"] {
+            display: flex !important;
+            opacity: 1;
+        }
+        @starting-style {
+            #sapa-notify-modal[style*="display: flex"] {
+                opacity: 0;
+            }
+        }
+        
+        #sapa-notify-modal > div {
+            background: #fff;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 35px;
+            padding: 50px 40px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2);
+            border: 1px solid #F0E6DE;
+            transform: scale(0.95);
+            transition: transform var(--duration-slow) var(--ease-modal);
+        }
+        #sapa-notify-modal[style*="display: flex"] > div {
+            transform: scale(1);
+        }
+        @starting-style {
+            #sapa-notify-modal[style*="display: flex"] > div {
+                transform: scale(0.95);
+            }
+        }
+
+        /* ─── HOVER PROTECTION MEDIA QUERY ────────────────────────── */
+        @media (hover: hover) and (pointer: fine) {
+            .btn-primary:hover {
+                background: #333333;
+                box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+            }
+            .gift-card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            }
+            .tab-item:hover {
+                padding-right: 20px;
+                background: #fafafa;
+                color: var(--gold);
+            }
+            #music-btn button:hover {
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            }
+            #btn-wish:hover {
+                background: #333333;
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            }
         }
     </style>
     <link rel="icon" type="image/png" href="assets/favicon.png">

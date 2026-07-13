@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
     
     <style>
         :root { 
@@ -39,7 +40,7 @@
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
         
         /* FULLSCREEN WRAPPER */
-        #sapatamu-master-wrapper { background: var(--bg); min-height: 100vh; transition: opacity 0.3s ease; }
+        #sapatamu-master-wrapper { background: var(--bg); min-height: 100vh; transition: opacity var(--duration-normal) var(--ease-out); }
         body.is-fullscreen #sapatamu-master-wrapper {
             width: 100vw; height: 100vh; overflow-y: auto;
         }
@@ -56,6 +57,17 @@
             justify-content: center;
             z-index: 999999;
             padding: 20px;
+            opacity: 0;
+            transition: opacity var(--duration-slow) var(--ease-out), display var(--duration-slow) var(--ease-out) allow-discrete;
+        }
+        #editModalOverlay[style*="display: flex"] {
+            display: flex !important;
+            opacity: 1;
+        }
+        @starting-style {
+            #editModalOverlay[style*="display: flex"] {
+                opacity: 0;
+            }
         }
 
         .modal-content {
@@ -69,6 +81,16 @@
             border: 1px solid var(--border);
             max-height: 90vh;
             overflow-y: auto;
+            transform: scale(0.95);
+            transition: transform var(--duration-slow) var(--ease-modal);
+        }
+        #editModalOverlay[style*="display: flex"] .modal-content {
+            transform: scale(1);
+        }
+        @starting-style {
+            #editModalOverlay[style*="display: flex"] .modal-content {
+                transform: scale(0.95);
+            }
         }
 
         .close-modal {
@@ -79,9 +101,8 @@
             cursor: pointer;
             color: var(--text-main);
             opacity: 0.5;
-            transition: 0.3s;
+            transition: opacity var(--duration-fast) ease;
         }
-        .close-modal:hover { opacity: 1; }
 
         .modal-content .sapatamu-input {
             background: var(--input-bg);
@@ -140,14 +161,15 @@
         label { display: block; font-size: 10px; font-weight: 800; color: var(--text-muted); letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px; }
         input, select { width: 100%; border: none; background: transparent; padding: 10px 0; font-size: 16px; font-weight: 700; color: var(--text-main); outline: none; }
         
-        .btn-save { width: 100%; background: var(--text-main); color: #FFF; border: none; border-radius: 20px; padding: 22px; font-size: 12px; font-weight: 800; letter-spacing: 2px; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.15); }
-        .btn-save:active { transform: scale(0.96); }
+        .btn-save { width: 100%; background: var(--text-main); color: #FFF; border: none; border-radius: 20px; padding: 22px; font-size: 12px; font-weight: 800; letter-spacing: 2px; cursor: pointer; transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.15); }
+        .btn-save:active { transform: scale(0.97); }
 
         .qty-control { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
-        .qty-btn { width: 40px; height: 40px; border-radius: 14px; border: 1.5px solid var(--border); background: #FFF; font-weight: 800; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .qty-btn:active { background: var(--input-bg); transform: scale(0.9); }
+        .qty-btn { width: 40px; height: 40px; border-radius: 14px; border: 1.5px solid var(--border); background: #FFF; font-weight: 800; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease; }
+        .qty-btn:active { background: var(--input-bg); transform: scale(0.95); }
         
-        #fs-toggle { position: fixed; bottom: 25px; right: 25px; z-index: 2147483645; background: #fff; color: var(--text-main); width: 50px; height: 50px; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(140, 117, 96, 0.15); }
+        #fs-toggle { position: fixed; bottom: 25px; right: 25px; z-index: 2147483645; background: #fff; color: var(--text-main); width: 50px; height: 50px; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(140, 117, 96, 0.15); transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease; }
+        #fs-toggle:active { transform: scale(0.95); }
 
         #v3-draft-list-container { max-height: 75vh; overflow-y: auto; margin-top: 15px; padding-right: 5px; transition: all 0.3s ease; }
         #v3-draft-list-container::-webkit-scrollbar { width: 4px; }
@@ -175,15 +197,11 @@
             font-size: 10px;
             font-weight: 800;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-normal) var(--ease-out), border-color var(--duration-fast) ease;
             letter-spacing: 0.3px;
             white-space: nowrap;
         }
-        #btn-dup-filter:hover {
-            background: rgba(254, 243, 199, 0.9);
-            border-color: rgba(217, 119, 6, 0.5);
-            box-shadow: 0 3px 10px rgba(217, 119, 6, 0.15);
-        }
+        #btn-dup-filter:active { transform: scale(0.96); }
         #btn-dup-filter.active {
             background: #D97706;
             border-color: #D97706;
@@ -255,10 +273,11 @@
             font-size: 10px;
             font-weight: 800;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-normal) var(--ease-out), border-color var(--duration-fast) ease;
             letter-spacing: 0.3px;
             white-space: nowrap;
         }
+        #btn-manage-dup:active { transform: scale(0.96); }
         .gas-sync-live-dot {
             width: 7px; height: 7px; border-radius: 50%;
             background: #10B981; flex-shrink: 0;
@@ -288,6 +307,17 @@
             -webkit-backdrop-filter: blur(18px);
             display: none; align-items: center; justify-content: center;
             z-index: 9999998; padding: 20px;
+            opacity: 0;
+            transition: opacity var(--duration-slow) var(--ease-out), display var(--duration-slow) var(--ease-out) allow-discrete;
+        }
+        #manageDupModalOverlay[style*="display: flex"] {
+            display: flex !important;
+            opacity: 1;
+        }
+        @starting-style {
+            #manageDupModalOverlay[style*="display: flex"] {
+                opacity: 0;
+            }
         }
         #manageDupModalBox {
             background: #fff;
@@ -300,6 +330,16 @@
             max-height: 90vh;
             display: flex; flex-direction: column;
             overflow: hidden;
+            transform: scale(0.95);
+            transition: transform var(--duration-slow) var(--ease-modal);
+        }
+        #manageDupModalOverlay[style*="display: flex"] #manageDupModalBox {
+            transform: scale(1);
+        }
+        @starting-style {
+            #manageDupModalOverlay[style*="display: flex"] #manageDupModalBox {
+                transform: scale(0.95);
+            }
         }
         #manageDupModalHeader {
             padding: 30px 35px 20px;
@@ -346,11 +386,10 @@
             padding: 15px 18px;
             border-right: 1px solid var(--border);
             cursor: pointer;
-            transition: background 0.2s ease;
+            transition: background var(--duration-fast) ease;
             position: relative;
         }
         .dup-card-item:last-child { border-right: none; }
-        .dup-card-item:hover { background: #FFF9F5; }
         .dup-card-item.marked-delete {
             background: #FEF2F2;
             opacity: 0.75;
@@ -389,9 +428,9 @@
             border: none; border-radius: 18px;
             padding: 14px 28px; font-size: 11px; font-weight: 900;
             cursor: pointer; letter-spacing: 1px;
-            transition: 0.3s; display: flex; align-items: center; gap: 8px;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-normal) var(--ease-out); display: flex; align-items: center; gap: 8px;
         }
-        #btn-confirm-bulk-delete:hover { background: #DC2626; box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3); }
+        #btn-confirm-bulk-delete:active { transform: scale(0.96); }
         #btn-confirm-bulk-delete:disabled { opacity: 0.4; cursor: not-allowed; }
         #dup-delete-counter {
             font-size: 11px; font-weight: 800; color: #EF4444;
@@ -410,14 +449,12 @@
             justify-content: center;
             font-size: 10px;
             cursor: pointer;
-            transition: 0.3s;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, color var(--duration-fast) ease;
             border: none;
             z-index: 20;
         }
-        .delete-guest-btn:hover {
-            background: #ff4d4d;
-            color: white;
-            transform: scale(1.1);
+        .delete-guest-btn:active {
+            transform: scale(0.95);
         }
         .sync-indicator {
             position: absolute;
@@ -431,7 +468,7 @@
         .sync-spin {
             animation: spin 1s linear infinite;
         }
-        .guest-item-card { position: relative; transition: all 0.3s ease; }
+        .guest-item-card { position: relative; transition: opacity var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out); }
 
         .static-edit-box {
             border: 1.5px solid var(--gold);
@@ -442,10 +479,10 @@
             align-items: center;
             justify-content: space-between;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
             background: rgba(212, 175, 55, 0.05);
         }
-        .static-edit-box:active { transform: scale(0.98); background: rgba(212, 175, 55, 0.1); }
+        .static-edit-box:active { transform: scale(0.97); background: rgba(212, 175, 55, 0.1); }
         .static-edit-box span { font-size: 10px; font-weight: 900; letter-spacing: 1px; color: #1a1a1a; text-transform: uppercase; }
         .static-edit-box .icon { font-size: 16px; color: var(--gold); }
 
@@ -513,7 +550,7 @@
             border: 1px solid var(--border);
             overflow: hidden;
             width: 180px;
-            transition: width 0.55s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.4s ease;
+            transition: width var(--duration-slow) var(--ease-drawer), box-shadow var(--duration-normal) ease-out;
             cursor: pointer;
         }
         .nav-outer-wrapper.di-expanded {
@@ -552,17 +589,41 @@
         .nav-fade-left { left: 0; background: linear-gradient(to right, #FFFDFB 20%, transparent); }
         .nav-fade-right { right: 0; background: linear-gradient(to left, #FFFDFB 20%, transparent); }
         .nav-fade.visible { opacity: 1; }
-
+ 
         .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; font-size: 10px; color: var(--text-muted); opacity: 0.5; pointer-events: none; transition: 0.3s; }
         .nav-arrow-left { left: 8px; }
         .nav-arrow-right { right: 8px; }
-
+ 
         .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: 0.3s; display: flex; align-items: center; white-space: nowrap; }
-        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: color var(--duration-fast) ease, background-color var(--duration-fast) ease; display: flex; align-items: center; white-space: nowrap; }
         .nav-link.active { background: var(--primary); color: white !important; }
         .nav-link.sign-out { color: #E07B7B !important; }
         .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
+
+        /* ─── HOVER PROTECTION MEDIA QUERY ────────────────────────── */
+        @media (hover: hover) and (pointer: fine) {
+            .close-modal:hover { opacity: 1; }
+            .btn-save:hover { opacity: 0.95; }
+            .qty-btn:hover { background: var(--input-bg); border-color: var(--primary); }
+            #btn-dup-filter:hover {
+                background: rgba(254, 243, 199, 0.9);
+                border-color: rgba(217, 119, 6, 0.5);
+                box-shadow: 0 3px 10px rgba(217, 119, 6, 0.15);
+            }
+            #btn-manage-dup:hover {
+                background: rgba(254, 226, 226, 0.9);
+                border-color: rgba(239, 68, 68, 0.5);
+                box-shadow: 0 3px 10px rgba(239, 68, 68, 0.15);
+            }
+            .dup-card-item:hover { background: #FFF9F5; }
+            #btn-confirm-bulk-delete:hover { background: #DC2626; box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3); }
+            .delete-guest-btn:hover {
+                background: #ff4d4d;
+                color: white;
+                transform: scale(1.1);
+            }
+            .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+        }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">

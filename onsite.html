@@ -9,6 +9,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
@@ -28,11 +29,11 @@
         .cam-toggle input { opacity:0; width:0; height:0; }
         .cam-toggle-slider {
           position:absolute; cursor:pointer; inset:0;
-          background:#ddd; border-radius:18px; transition:0.3s;
+          background:#ddd; border-radius:18px; transition: background-color var(--duration-fast) ease;
         }
         .cam-toggle-slider:before {
           content:''; position:absolute; width:12px; height:12px;
-          left:3px; bottom:3px; background:white; border-radius:50%; transition:0.3s;
+          left:3px; bottom:3px; background:white; border-radius:50%; transition: transform var(--duration-fast) var(--ease-out);
         }
         .cam-toggle input:checked + .cam-toggle-slider { background:#10B981; }
         .cam-toggle input:checked + .cam-toggle-slider:before { transform:translateX(14px); }
@@ -127,8 +128,11 @@
             border-radius: 10px;
             cursor: pointer;
             color: var(--text-muted);
-            transition: 0.3s;
+            transition: color var(--duration-fast) ease, background-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out);
             text-transform: uppercase;
+        }
+        .tab-btn:active {
+            transform: scale(0.97);
         }
 
         .tab-btn.active {
@@ -249,7 +253,7 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            transition: 0.3s;
+            transition: border-color var(--duration-normal) ease, background-color var(--duration-normal) ease, transform var(--duration-normal) var(--ease-out);
             border-top: 4px solid var(--border);
         }
 
@@ -257,11 +261,6 @@
             background: #fdf8f4;
             border-color: var(--success);
             opacity: 0.7;
-        }
-
-        .guest-item:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
         }
 
         .guest-header {
@@ -368,7 +367,7 @@
             font-size: 13px;
             font-weight: 600;
             outline: none;
-            transition: 0.3s;
+            transition: border-color var(--duration-fast) ease, background-color var(--duration-fast) ease;
         }
 
         .form-group input:focus,
@@ -400,6 +399,10 @@
             box-shadow: 0 10px 25px rgba(224, 123, 123, 0.3);
             cursor: pointer;
             margin-top: 10px;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+        }
+        .btn-submit:active {
+            transform: scale(0.97);
         }
 
         /* MODAL STYLES */
@@ -413,6 +416,17 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            opacity: 0;
+            transition: opacity var(--duration-slow) var(--ease-out), display var(--duration-slow) var(--ease-out) allow-discrete;
+        }
+        .modal-overlay[style*="display: flex"] {
+            display: flex !important;
+            opacity: 1;
+        }
+        @starting-style {
+            .modal-overlay[style*="display: flex"] {
+                opacity: 0;
+            }
         }
 
         .modal-card {
@@ -424,6 +438,16 @@
             text-align: center;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            transform: scale(0.95);
+            transition: transform var(--duration-slow) var(--ease-modal);
+        }
+        .modal-overlay[style*="display: flex"] .modal-card {
+            transform: scale(1);
+        }
+        @starting-style {
+            .modal-overlay[style*="display: flex"] .modal-card {
+                transform: scale(0.95);
+            }
         }
 
         .modal-video-box {
@@ -577,7 +601,10 @@
             justify-content: center;
             z-index: 1000;
             cursor: pointer;
-            transition: opacity 0.5s ease, background 0.3s ease;
+            transition: opacity 0.5s ease, background 0.3s ease, transform var(--duration-fast) var(--ease-out);
+        }
+        .fab-fullscreen:active {
+            transform: scale(0.92);
         }
 
         .spinner {
@@ -610,6 +637,17 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            opacity: 0;
+            transition: opacity var(--duration-slow) var(--ease-out), display var(--duration-slow) var(--ease-out) allow-discrete;
+        }
+        .st-modal-overlay[style*="display: flex"] {
+            display: flex !important;
+            opacity: 1;
+        }
+        @starting-style {
+            .st-modal-overlay[style*="display: flex"] {
+                opacity: 0;
+            }
         }
 
         .st-modal-content {
@@ -621,18 +659,15 @@
             text-align: center;
             box-shadow: 0 20px 60px rgba(74, 63, 53, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.8);
-            animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: scale(0.95);
+            transition: transform var(--duration-slow) var(--ease-modal);
         }
-
-        @keyframes modalIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
+        .st-modal-overlay[style*="display: flex"] .st-modal-content {
+            transform: scale(1);
+        }
+        @starting-style {
+            .st-modal-overlay[style*="display: flex"] .st-modal-content {
+                transform: scale(0.95);
             }
         }
 
@@ -659,7 +694,10 @@
             font-size: 11px;
             letter-spacing: 1px;
             cursor: pointer;
-            transition: 0.3s;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+        }
+        .st-btn:active {
+            transform: scale(0.97);
         }
 
         .btn-dark {
@@ -698,7 +736,7 @@
             border: 1px solid var(--border);
             overflow: hidden;
             width: 180px;
-            transition: width 0.55s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.4s ease;
+            transition: width var(--duration-slow) var(--ease-drawer), box-shadow var(--duration-normal) ease-out;
             cursor: pointer;
         }
         .nav-outer-wrapper.di-expanded {
@@ -801,7 +839,7 @@
             color: var(--text-muted);
             padding: 10px 18px;
             border-radius: 30px;
-            transition: 0.3s;
+            transition: color var(--duration-fast) ease, background-color var(--duration-fast) ease;
             display: flex;
             align-items: center;
             white-space: nowrap;
@@ -822,6 +860,33 @@
             background: #EEE0D5;
             margin: 0 8px;
             flex-shrink: 0;
+        }
+
+        /* ─── HOVER PROTECTION MEDIA QUERY ────────────────────────── */
+        @media (hover: hover) and (pointer: fine) {
+            .tab-btn:hover {
+                color: var(--primary);
+                background: rgba(224, 123, 123, 0.05);
+            }
+            .guest-item:hover {
+                border-color: var(--primary);
+                transform: translateY(-2px);
+            }
+            .btn-submit:hover {
+                opacity: 0.95;
+                box-shadow: 0 12px 28px rgba(224, 123, 123, 0.35);
+            }
+            .fab-fullscreen:hover {
+                background: rgba(26,26,26,1);
+                border-color: var(--primary);
+            }
+            .st-btn:hover {
+                opacity: 0.95;
+            }
+            .nav-link:hover {
+                color: var(--primary);
+                background: rgba(224, 123, 123, 0.05);
+            }
         }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
