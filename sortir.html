@@ -542,6 +542,78 @@
         }
 
 
+        /* Local Culling & Lightroom Export */
+        .local-drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            background: var(--input-bg);
+        }
+        .local-drop-zone:hover {
+            border-color: var(--primary);
+            background: rgba(224,123,123,0.04);
+        }
+        .local-drop-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(224,123,123,0.08);
+        }
+        .local-export-panel {
+            background: rgba(255,255,255,0.6);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            margin-top: 16px;
+            backdrop-filter: blur(8px);
+        }
+        .local-export-panel h4 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+        .guide-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(74,63,53,0.5);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+        }
+        .guide-content {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            max-width: 560px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+        .guide-step {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 16px;
+            align-items: flex-start;
+        }
+        .guide-step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 13px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
     </style>
 </head>
 <body>
@@ -612,6 +684,52 @@
                         <!-- Populate dynamic items or empty state -->
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Local Culling & Lightroom Integration Card -->
+        <div id="local-culling-section" style="margin-top: 32px;">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+                    <div>
+                        <h3 style="font-size: 22px; color: var(--primary);">Local Culling & Lightroom</h3>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Sortir foto lokal di PC, ekspor langsung ke Adobe Lightroom Classic.</p>
+                    </div>
+                    <span style="background: rgba(200,150,46,0.1); color: var(--gold); font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 10px;">VENDOR MODE</span>
+                </div>
+
+                <!-- Drop Zone -->
+                <div id="local-drop-zone" class="local-drop-zone" onclick="document.getElementById('local-folder-input').click()">
+                    <input type="file" id="local-folder-input" webkitdirectory multiple style="display:none" onchange="handleLocalFolderSelect(event)">
+                    <div style="font-size: 40px; margin-bottom: 12px;">📂</div>
+                    <p style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Buka Folder Foto Lokal</p>
+                    <p style="font-size: 12px; color: var(--text-muted);">Klik untuk memilih folder, atau seret & lepas folder ke sini</p>
+                </div>
+
+                <!-- Local Gallery Stats & Export Panel -->
+                <div id="local-export-panel" class="local-export-panel" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                        <div>
+                            <span style="font-size: 13px; color: var(--text-muted);">Foto Terpilih:</span>
+                            <strong id="local-selection-count" style="color: var(--primary); font-size: 16px; margin-left: 6px;">0 / 0</strong>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="localCopyFilterText()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;">
+                                📋 Salin Teks Filter
+                            </button>
+                            <button onclick="localShowGuide()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;">
+                                💡 Panduan Lightroom
+                            </button>
+                            <button onclick="localExportFiles()" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;">
+                                📁 Ekspor File ke Folder
+                            </button>
+                        </div>
+                    </div>
+                    <div style="background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-family: monospace; font-size: 11px; max-height: 100px; overflow-y: auto; white-space: pre-wrap; color: var(--text-muted);" id="local-file-list-preview">Belum ada foto yang dipilih.</div>
+                </div>
+
+                <!-- Local Pinterest Gallery -->
+                <div id="local-gallery" class="grid-pinterest" style="display: none; margin-top: 16px;"></div>
             </div>
         </div>
 
@@ -900,6 +1018,44 @@
         <h3 id="alert-modal-title" style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Pemberitahuan</h3>
         <p id="alert-modal-msg" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5;"></p>
         <button onclick="closeAlertModal()" class="btn btn-primary" style="width: 100%; box-shadow: none;">Mengerti</button>
+    </div>
+</div>
+
+<!-- Lightroom Guide Modal -->
+<div id="lr-guide-modal" class="guide-modal" onclick="closeLRGuide()">
+    <div class="guide-content" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="font-size: 20px; font-weight: 700; color: var(--text-main);">Panduan Filter di Lightroom Classic</h3>
+            <button onclick="closeLRGuide()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+        <div style="background: rgba(200,150,46,0.08); border: 1px solid rgba(200,150,46,0.25); border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; font-size: 12px; color: var(--gold);">
+            <strong>Teks filter sudah disalin ke clipboard!</strong> Ikuti langkah di bawah untuk menggunakannya.
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">1</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Buka <strong>Adobe Lightroom Classic</strong> dan masuk ke folder/katalog produksi foto Anda.</p>
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">2</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Tekan tombol <kbd style="background: var(--input-bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: 700;">\</kbd> (Backslash) untuk memunculkan panel <strong>Library Filter</strong> di bagian atas grid foto.</p>
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">3</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Pada panel tersebut, pilih tab <strong>Text</strong>.</p>
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">4</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Ubah dropdown pertama menjadi <strong>Filename</strong> dan dropdown kedua menjadi <strong>Contains</strong>.</p>
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">5</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Tempel/Paste (<kbd style="background: var(--input-bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: 700;">Ctrl+V</kbd>) kode yang sudah disalin ke kolom pencarian.</p>
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">6</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Lightroom akan langsung menyaring dan hanya menampilkan <strong>foto-foto pilihan Anda</strong> secara instan!</p>
+        </div>
+        <button onclick="closeLRGuide()" class="btn btn-primary" style="width: 100%; margin-top: 12px; box-shadow: none;">Mengerti</button>
     </div>
 </div>
 
@@ -1804,6 +1960,182 @@ read -p "Tekan Enter untuk keluar..."`;
             a.download = `sortir_manual_${sub}.command`;
             a.click();
         }
+    };
+
+    // ============================================================
+    // LOCAL CULLING & LIGHTROOM INTEGRATION
+    // ============================================================
+    const localStore = {
+        files: [],
+        selections: new Set(),
+        directoryHandle: null
+    };
+
+    const IMAGE_EXTS = new Set(['jpg','jpeg','png','webp','tiff','tif','heic','bmp']);
+
+    window.handleLocalFolderSelect = async function(event) {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+        processLocalFiles(files);
+    };
+
+    // Drag & drop support
+    const dropZone = document.getElementById('local-drop-zone');
+    if (dropZone) {
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', async e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const items = e.dataTransfer.items;
+            if (items) {
+                const allFiles = [];
+                for (const item of items) {
+                    if (item.kind === 'file') {
+                        const entry = item.webkitGetAsEntry?.() || item.getAsEntry?.();
+                        if (entry) {
+                            await traverseEntry(entry, allFiles);
+                        }
+                    }
+                }
+                if (allFiles.length > 0) processLocalFiles(allFiles);
+            }
+        });
+    }
+
+    async function traverseEntry(entry, results) {
+        if (entry.isFile) {
+            const file = await new Promise(resolve => entry.file(resolve));
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (IMAGE_EXTS.has(ext)) results.push(file);
+        } else if (entry.isDirectory) {
+            const reader = entry.createReader();
+            const entries = await new Promise(resolve => reader.readEntries(resolve));
+            for (const e of entries) await traverseEntry(e, results);
+        }
+    }
+
+    function processLocalFiles(files) {
+        const imageFiles = files.filter(f => {
+            const ext = f.name.split('.').pop().toLowerCase();
+            return IMAGE_EXTS.has(ext);
+        });
+
+        localStore.files = imageFiles.map(f => ({
+            id: Math.random().toString(36).substring(2, 10),
+            name: f.name,
+            file: f,
+            url: URL.createObjectURL(f)
+        }));
+        localStore.selections.clear();
+
+        document.getElementById('local-drop-zone').style.display = 'none';
+        document.getElementById('local-export-panel').style.display = 'block';
+        document.getElementById('local-gallery').style.display = 'flex';
+
+        updateLocalSelectionUI();
+        renderLocalGallery();
+    }
+
+    function renderLocalGallery() {
+        const grid = document.getElementById('local-gallery');
+        grid.innerHTML = '';
+
+        localStore.files.forEach(f => {
+            const isSelected = localStore.selections.has(f.id);
+            const pin = document.createElement('div');
+            pin.className = `pin-card ${isSelected ? 'selected' : ''}`;
+            pin.id = `local-card-${f.id}`;
+            pin.onclick = () => toggleLocalSelection(f.id, f.name);
+
+            pin.innerHTML = `
+                <img src="${f.url}" loading="lazy" alt="${f.name}">
+                <div class="pin-check-badge">✓</div>
+            `;
+            grid.appendChild(pin);
+        });
+    }
+
+    window.toggleLocalSelection = function(id, name) {
+        if (localStore.selections.has(id)) {
+            localStore.selections.delete(id);
+        } else {
+            localStore.selections.add(id);
+        }
+        const card = document.getElementById(`local-card-${id}`);
+        if (card) card.classList.toggle('selected', localStore.selections.has(id));
+        updateLocalSelectionUI();
+    };
+
+    function updateLocalSelectionUI() {
+        const count = localStore.selections.size;
+        const total = localStore.files.length;
+        document.getElementById('local-selection-count').innerText = `${count} / ${total}`;
+
+        const selectedNames = localStore.files
+            .filter(f => localStore.selections.has(f.id))
+            .map(f => f.name.split('.').slice(0, -1).join('.'));
+
+        document.getElementById('local-file-list-preview').textContent =
+            selectedNames.length > 0 ? selectedNames.join(', ') : 'Belum ada foto yang dipilih.';
+    }
+
+    // Export Option A: Copy filter text
+    window.localCopyFilterText = function() {
+        const selectedNames = localStore.files
+            .filter(f => localStore.selections.has(f.id))
+            .map(f => f.name.split('.').slice(0, -1).join('.'));
+
+        if (selectedNames.length === 0) {
+            showAlert('Peringatan', 'Belum ada foto yang dipilih untuk diekspor.', '⚠️');
+            return;
+        }
+
+        const filterText = selectedNames.join(' ');
+        navigator.clipboard.writeText(filterText).then(() => {
+            showAlert('Tersalin!', `${selectedNames.length} nama file berhasil disalin ke clipboard.`, '✅');
+        }).catch(() => {
+            showAlert('Error', 'Gagal menyalin ke clipboard.', '❌');
+        });
+    };
+
+    // Export Option B: Copy files to new folder
+    window.localExportFiles = async function() {
+        const selected = localStore.files.filter(f => localStore.selections.has(f.id));
+        if (selected.length === 0) {
+            showAlert('Peringatan', 'Belum ada foto yang dipilih untuk diekspor.', '⚠️');
+            return;
+        }
+
+        if (!('showDirectoryPicker' in window)) {
+            showAlert('Tidak Didukung', 'Browser Anda tidak mendukung File System Access API. Gunakan Chrome/Edge terbaru.', '⚠️');
+            return;
+        }
+
+        try {
+            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            let copied = 0;
+            for (const f of selected) {
+                const fileHandle = await dirHandle.getFileHandle(f.name, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(f.file);
+                await writable.close();
+                copied++;
+            }
+            showAlert('Sukses', `${copied} foto berhasil disalin ke folder yang dipilih.`, '✅');
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                showAlert('Error', `Gagal mengekspor file: ${e.message}`, '❌');
+            }
+        }
+    };
+
+    // Lightroom Guide Modal
+    window.localShowGuide = function() {
+        document.getElementById('lr-guide-modal').style.display = 'flex';
+    };
+    window.closeLRGuide = function() {
+        document.getElementById('lr-guide-modal').style.display = 'none';
     };
 
 </script>
