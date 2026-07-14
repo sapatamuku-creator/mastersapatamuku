@@ -617,42 +617,75 @@
             background: var(--success);
         }
 
-        /* ---- View Mode: Drive (uniform square grid) ---- */
+        /* ---- View Mode: Drive (uniform square grid, with filename) ---- */
         .grid-drive {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 14px;
             margin-top: 20px;
         }
-        .grid-drive .photo-card {
-            border-radius: 16px;
-        }
-        .grid-drive .photo-image-container {
-            aspect-ratio: 1 / 1;
-        }
+        .grid-drive .photo-card { border-radius: 16px; }
+        .grid-drive .photo-image-container { aspect-ratio: 1 / 1; }
 
-        /* ---- View Mode: Pinterest / Justified (natural ratio) ---- */
+        /* ---- View Mode: Pinterest — full clean image, tap to select ---- */
         .grid-pinterest {
-            columns: 4 220px;
-            column-gap: 16px;
+            columns: 5 140px;
+            column-gap: 4px;
             margin-top: 20px;
         }
-        @media (max-width: 900px) { .grid-pinterest { columns: 3 180px; } }
-        @media (max-width: 600px) { .grid-pinterest { columns: 2 140px; } }
-        .grid-pinterest .photo-card {
+        @media (max-width: 900px) { .grid-pinterest { columns: 4 120px; } }
+        @media (max-width: 600px) { .grid-pinterest { columns: 3 100px; } }
+
+        /* Pin card — no border-radius, no shadow, no footer */
+        .pin-card {
             break-inside: avoid;
-            margin-bottom: 16px;
-            border-radius: 16px;
+            margin-bottom: 4px;
+            position: relative;
             display: block;
+            cursor: pointer;
+            overflow: hidden;
         }
-        .grid-pinterest .photo-image-container {
-            aspect-ratio: unset;
-            height: auto;
-        }
-        .grid-pinterest .photo-image {
+        .pin-card img {
             width: 100%;
             height: auto;
             display: block;
+            transition: filter 0.2s ease;
+        }
+        .pin-card.selected img {
+            filter: brightness(0.72);
+        }
+        /* Checkmark badge — only visible when selected */
+        .pin-check-badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 14px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.6);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .pin-card.selected .pin-check-badge {
+            opacity: 1;
+            transform: scale(1);
+        }
+        /* Quota ring indicator top-left when selected */
+        .pin-card.selected::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 3px solid var(--primary);
+            pointer-events: none;
         }
 
         /* View Mode toggle button */
@@ -1582,37 +1615,46 @@ read -p "Tekan Enter untuk keluar..."`;
         }
 
         const isPinterest = store.viewMode === 'pinterest';
-        const thumbW = isPinterest ? 600 : 400;
 
         filtered.forEach(file => {
             const isSelected = store.cullingSelections.has(file.id);
-            const card = document.createElement('div');
-            card.className = `photo-card ${isSelected ? 'selected' : ''}`;
-            card.id = `card-${file.id}`;
 
-            const cdnUrl = `https://lh3.googleusercontent.com/d/${file.id}=w${thumbW}`;
+            if (isPinterest) {
+                // ── PIN CARD: full clean image, tap = select ──────────────
+                const pin = document.createElement('div');
+                pin.className = `pin-card ${isSelected ? 'selected' : ''}`;
+                pin.id = `card-${file.id}`;
+                pin.onclick = () => toggleClientSelection(file.id, file.name);
 
-            // In Pinterest mode, image height is natural (no fixed container)
-            const imgContainerStyle = isPinterest
-                ? 'position:relative; overflow:hidden;'
-                : '';
+                const cdnUrl = `https://lh3.googleusercontent.com/d/${file.id}=w600`;
+                pin.innerHTML = `
+                    <img src="${cdnUrl}" loading="lazy" alt="${file.name}">
+                    <div class="pin-check-badge">✓</div>
+                `;
+                grid.appendChild(pin);
+            } else {
+                // ── DRIVE CARD: square with filename + checkbox ───────────
+                const card = document.createElement('div');
+                card.className = `photo-card ${isSelected ? 'selected' : ''}`;
+                card.id = `card-${file.id}`;
 
-            card.innerHTML = `
-                <div class="photo-image-container" style="${imgContainerStyle}">
-                    <img src="${cdnUrl}" class="photo-image" loading="lazy" alt="${file.name}"
-                        ${isPinterest ? 'style="width:100%;height:auto;display:block;"' : ''}>
-                    <div class="zoom-overlay" onclick="zoomPhoto('${file.id}', '${file.name}')">
-                        <span class="zoom-btn">🔎 Perbesar</span>
+                const cdnUrl = `https://lh3.googleusercontent.com/d/${file.id}=w400`;
+                card.innerHTML = `
+                    <div class="photo-image-container">
+                        <img src="${cdnUrl}" class="photo-image" loading="lazy" alt="${file.name}">
+                        <div class="zoom-overlay" onclick="zoomPhoto('${file.id}', '${file.name}')">
+                            <span class="zoom-btn">🔎 Perbesar</span>
+                        </div>
                     </div>
-                </div>
-                <div class="photo-details">
-                    <span class="photo-title" title="${file.name}">${file.name}</span>
-                    <div id="check-${file.id}" class="checkbox-custom ${isSelected ? 'checked' : ''}" onclick="toggleClientSelection('${file.id}', '${file.name}')">
-                        ${isSelected ? '✓' : ''}
+                    <div class="photo-details">
+                        <span class="photo-title" title="${file.name}">${file.name}</span>
+                        <div id="check-${file.id}" class="checkbox-custom ${isSelected ? 'checked' : ''}" onclick="toggleClientSelection('${file.id}', '${file.name}')">
+                            ${isSelected ? '✓' : ''}
+                        </div>
                     </div>
-                </div>
-            `;
-            grid.appendChild(card);
+                `;
+                grid.appendChild(card);
+            }
         });
     }
 
@@ -1645,22 +1687,16 @@ read -p "Tekan Enter untuk keluar..."`;
 
         updateClientQuotaUI();
 
-        // Instant UI update
+        // Instant UI update — works for both drive cards and pin cards
         const card = document.getElementById(`card-${id}`);
-        const check = document.getElementById(`check-${id}`);
+        const check = document.getElementById(`check-${id}`); // only in drive mode
 
         if (store.cullingSelections.has(id)) {
             if (card) card.classList.add('selected');
-            if (check) {
-                check.classList.add('checked');
-                check.innerText = '✓';
-            }
+            if (check) { check.classList.add('checked'); check.innerText = '✓'; }
         } else {
             if (card) card.classList.remove('selected');
-            if (check) {
-                check.classList.remove('checked');
-                check.innerText = '';
-            }
+            if (check) { check.classList.remove('checked'); check.innerText = ''; }
         }
 
         // Sync to Supabase
