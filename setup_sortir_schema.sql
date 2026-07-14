@@ -79,3 +79,14 @@ BEGIN
         EXECUTE 'CREATE POLICY "Allow public delete for events" ON public.sortir_events FOR DELETE USING (true)';
     END IF;
 END $$;
+
+-- ============================================================
+-- CLEANUP: Hapus kolom warisan dari skema versi SaaS/berbayar
+-- Kolom ini menyebabkan NOT NULL constraint error jika masih ada.
+-- Aman dijalankan berulang kali (IF EXISTS mencegah error).
+-- ============================================================
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS vendor_id;
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS billing_status;
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS subscription_plan;
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS owner_id;
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS is_paid;
