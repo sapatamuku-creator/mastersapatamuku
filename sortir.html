@@ -563,6 +563,59 @@
             color: var(--text-main);
             margin-bottom: 8px;
         }
+
+        /* ---- Wizard Step Indicator ---- */
+        .wizard-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ws-num {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--border);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .ws-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+        .wizard-step.active .ws-num {
+            background: var(--primary);
+            color: white;
+        }
+        .wizard-step.active .ws-label {
+            color: var(--primary);
+        }
+        .wizard-step.done .ws-num {
+            background: var(--success);
+            color: white;
+        }
+        .wizard-step.done .ws-label {
+            color: var(--success);
+        }
+        .wizard-line {
+            flex: 1;
+            height: 2px;
+            background: var(--border);
+            margin: 0 12px;
+            transition: background 0.3s ease;
+            min-width: 24px;
+        }
+        .wizard-line.done {
+            background: var(--success);
+        }
     </style>
 </head>
 <body>
@@ -679,6 +732,122 @@
                                 🍎 Unduh Script macOS (.command)
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Index Translator Card -->
+        <!-- Manual Index Translator — 3-Step Wizard -->
+        <div class="card" style="margin-top: 32px;">
+            <h3 style="font-size: 22px; margin-bottom: 4px; color: var(--primary);">📋 Penerjemah Indeks Manual</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 28px;">
+                Tiga langkah: ekstrak daftar foto dari teks WhatsApp → tentukan folder sumber RAW → siapkan folder output → unduh script.
+            </p>
+
+            <!-- Step indicator bar -->
+            <div style="display: flex; align-items: center; gap: 0; margin-bottom: 32px;">
+                <div class="wizard-step active" id="wstep-1">
+                    <span class="ws-num">1</span><span class="ws-label">Teks Klien</span>
+                </div>
+                <div class="wizard-line" id="wline-12"></div>
+                <div class="wizard-step" id="wstep-2">
+                    <span class="ws-num">2</span><span class="ws-label">Folder Sumber</span>
+                </div>
+                <div class="wizard-line" id="wline-23"></div>
+                <div class="wizard-step" id="wstep-3">
+                    <span class="ws-num">3</span><span class="ws-label">Lokasi Simpan</span>
+                </div>
+            </div>
+
+            <!-- STEP 1 -->
+            <div id="wizard-panel-1">
+                <label class="form-label">Tempel Teks Daftar Foto dari WhatsApp / Email Klien</label>
+                <textarea id="manual-index-textarea" class="form-control"
+                    style="min-height: 160px; font-family: monospace; font-size: 12px; resize: vertical;"
+                    placeholder="Contoh:&#10;Halo kak! Berikut daftar foto pilihan saya:&#10;1. DSC_1002.JPG&#10;2. DSC_1045.NEF&#10;3. IMG_2026&#10;...&#10;&#10;Terima kasih 🙏"></textarea>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+                    <div style="font-size: 13px; color: var(--text-muted);">
+                        Terdeteksi: <strong id="manual-parsed-count" style="color: var(--primary);">0</strong> file foto
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button onclick="clearManualIndex()" class="btn btn-secondary" style="padding: 10px 18px;">Reset</button>
+                        <button onclick="parseManualIndex()" class="btn btn-primary" style="padding: 10px 24px;">Proses & Lanjut →</button>
+                    </div>
+                </div>
+
+                <!-- Preview hasil parsing -->
+                <div id="manual-parse-result" style="display: none; margin-top: 16px;">
+                    <label class="form-label">Daftar File Terdeteksi</label>
+                    <div class="code-block" id="manual-parsed-preview"
+                        style="max-height: 130px; font-size: 11px; white-space: pre-wrap; overflow-y: auto;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div id="wizard-panel-2" style="display:none;">
+                <div style="background: rgba(200,150,46,0.08); border: 1px solid rgba(200,150,46,0.25); border-radius: 16px; padding: 16px 20px; margin-bottom: 24px; font-size: 13px; color: var(--gold);">
+                    ✅ <strong id="s2-count">0</strong> nama file berhasil diekstrak. Sekarang tentukan <strong>folder lokal</strong> tempat semua file RAW/JPG Anda tersimpan.
+                </div>
+
+                <label class="form-label">📁 Path Folder Sumber File RAW / JPG</label>
+                <input type="text" id="manual-source-path" class="form-control"
+                    placeholder="Contoh Windows: D:\Foto\2024\Rian-Andini-Wedding"
+                    style="font-family: monospace; font-size: 13px; margin-bottom: 8px;">
+                <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 20px;">
+                    Paste path folder tempat semua file foto RAW/JPG event ini berada di komputer Anda.
+                </p>
+
+                <label class="form-label">🔍 Preview Contoh Path File</label>
+                <div class="code-block" id="s2-path-preview" style="font-size: 12px; white-space: pre-wrap; margin-bottom: 24px;">— Isi path di atas untuk melihat preview —</div>
+
+                <div style="display: flex; justify-content: space-between;">
+                    <button onclick="wizardGo(1)" class="btn btn-secondary" style="padding: 10px 20px;">← Kembali</button>
+                    <button onclick="wizardGo(3)" class="btn btn-primary" style="padding: 10px 24px;">Lanjut →</button>
+                </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div id="wizard-panel-3" style="display:none;">
+                <div style="background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.25); border-radius: 16px; padding: 16px 20px; margin-bottom: 24px; font-size: 13px; color: #0d9488;">
+                    ✅ Folder sumber: <strong id="s3-source-display" style="font-family: monospace;"></strong>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px;">
+                    <div>
+                        <label class="form-label">📂 Folder Output / Tujuan</label>
+                        <input type="text" id="manual-dest-path" class="form-control"
+                            placeholder="Biarkan kosong = sama dengan folder sumber"
+                            style="font-family: monospace; font-size: 13px;">
+                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                            Kosongkan agar output dibuat di dalam folder sumber.
+                        </p>
+                    </div>
+                    <div>
+                        <label class="form-label">📁 Nama Sub-Folder Otomatis</label>
+                        <input type="text" id="manual-subfolder-name" class="form-control"
+                            value="Selected_by_Client"
+                            style="font-family: monospace; font-size: 13px;">
+                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                            Sub-folder ini dibuat otomatis oleh script saat dijalankan.
+                        </p>
+                    </div>
+                </div>
+
+                <label class="form-label">📄 Preview Struktur Output</label>
+                <div class="code-block" id="s3-output-preview" style="font-size: 12px; white-space: pre; margin-bottom: 24px; line-height: 1.7;"></div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <button onclick="wizardGo(2)" class="btn btn-secondary" style="padding: 10px 20px;">← Kembali</button>
+                    <div style="display: flex; gap: 12px;">
+                        <button onclick="downloadManualScript('windows')" id="btn-download-manual-win" class="btn btn-primary" style="background: #4A3F35; box-shadow: none;">
+                            💻 Script Windows (.bat)
+                        </button>
+                        <button onclick="downloadManualScript('mac')" id="btn-download-manual-mac" class="btn btn-secondary">
+                            🍎 Script macOS (.command)
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1525,6 +1694,178 @@ read -p "Tekan Enter untuk keluar..."`;
 
         showAlert('Sukses', 'Event berhasil didelete dari sistem!', '✅');
         initOwnerView();
+    };
+
+    // ============================================================
+    // MANUAL INDEX TRANSLATOR — 3-STEP WIZARD
+    // ============================================================
+    const wizard = { step: 1, files: [], sourcePath: '', destPath: '', subfolder: 'Selected_by_Client' };
+
+    // --- Step indicator update ---
+    function wizardUpdateIndicator(step) {
+        [1, 2, 3].forEach(n => {
+            const el = document.getElementById(`wstep-${n}`);
+            if (!el) return;
+            el.classList.remove('active', 'done');
+            if (n < step) el.classList.add('done');
+            else if (n === step) el.classList.add('active');
+        });
+        [['wline-12', 2], ['wline-23', 3]].forEach(([id, threshold]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.toggle('done', step >= threshold);
+        });
+    }
+
+    // --- Navigate between panels ---
+    window.wizardGo = function(targetStep) {
+        // Validate before advancing
+        if (targetStep === 3) {
+            wizard.sourcePath = (document.getElementById('manual-source-path')?.value || '').trim();
+            if (!wizard.sourcePath) {
+                showAlert('Path Kosong', 'Harap isi path folder sumber tempat file RAW/JPG Anda berada.', '📁');
+                return;
+            }
+            // Populate step 3
+            document.getElementById('s3-source-display').textContent = wizard.sourcePath;
+            updateStep3Preview();
+        }
+        if (targetStep === 2) {
+            const src = document.getElementById('manual-source-path')?.value.trim();
+            const sep = src && src.includes('/') ? '/' : '\\';
+            if (wizard.files.length > 0 && src) {
+                document.getElementById('s2-path-preview').textContent =
+                    wizard.files.slice(0, 3).map(f => `${src}${sep}${f}`).join('\n') +
+                    (wizard.files.length > 3 ? `\n... dan ${wizard.files.length - 3} file lainnya` : '');
+            }
+        }
+
+        wizard.step = targetStep;
+        [1, 2, 3].forEach(n => {
+            const panel = document.getElementById(`wizard-panel-${n}`);
+            if (panel) panel.style.display = n === targetStep ? 'block' : 'none';
+        });
+        wizardUpdateIndicator(targetStep);
+    };
+
+    // --- Source path live preview ---
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('manual-source-path')?.addEventListener('input', function() {
+            const src = this.value.trim();
+            const sep = src.includes('/') ? '/' : '\\';
+            const preview = document.getElementById('s2-path-preview');
+            if (!src) { preview.textContent = '— Isi path di atas untuk melihat preview —'; return; }
+            preview.textContent = wizard.files.slice(0, 3).map(f => `${src}${sep}${f}`).join('\n') +
+                (wizard.files.length > 3 ? `\n... dan ${wizard.files.length - 3} file lainnya` : '');
+        });
+
+        document.getElementById('manual-dest-path')?.addEventListener('input', updateStep3Preview);
+        document.getElementById('manual-subfolder-name')?.addEventListener('input', updateStep3Preview);
+    });
+
+    function updateStep3Preview() {
+        const src  = (document.getElementById('manual-source-path')?.value || '').trim();
+        const dest = (document.getElementById('manual-dest-path')?.value || '').trim();
+        const sub  = (document.getElementById('manual-subfolder-name')?.value || 'Selected_by_Client').trim();
+        wizard.subfolder = sub;
+        const sep  = src.includes('/') ? '/' : '\\';
+        const base = dest || src;
+        const outputDir = `${base}${sep}${sub}`;
+        let preview = `📂 ${src}\n`;
+        wizard.files.slice(0, 5).forEach(f => { preview += `    📄 ${f}\n`; });
+        if (wizard.files.length > 5) preview += `    ... ${wizard.files.length - 5} file lainnya\n`;
+        preview += `\n📂 ${outputDir}   ← Sub-folder baru (dibuat otomatis)\n`;
+        wizard.files.slice(0, 3).forEach(f => { preview += `    📄 ${f}  (salinan)\n`; });
+        if (wizard.files.length > 3) preview += `    ... dan ${wizard.files.length - 3} salinan lainnya\n`;
+        document.getElementById('s3-output-preview').textContent = preview;
+    }
+
+    // --- STEP 1: Parse filenames from pasted text ---
+    window.parseManualIndex = function() {
+        const raw = document.getElementById('manual-index-textarea').value;
+        if (!raw.trim()) {
+            showAlert('Teks Kosong', 'Tempel dulu teks daftar foto dari klien Anda.', '📋');
+            return;
+        }
+
+        // Regex: match filenames with common photo extensions (case-insensitive)
+        const regex = /\b([\w\s\-()]+\.(jpg|jpeg|png|cr2|cr3|nef|arw|dng|raf|rw2|orf|raw|tif|tiff|heic))\b/gi;
+        const found = [...new Set([...raw.matchAll(regex)].map(m => m[1].trim()))];
+
+        wizard.files = found;
+        document.getElementById('manual-parsed-count').textContent = found.length;
+        document.getElementById('s2-count').textContent = found.length;
+
+        if (found.length === 0) {
+            showAlert('Tidak Terdeteksi', 'Tidak ada nama file foto yang terdeteksi. Pastikan teks mengandung ekstensi seperti .JPG, .NEF, .CR2, dll.', '🔍');
+            return;
+        }
+
+        const preview = document.getElementById('manual-parsed-preview');
+        preview.textContent = found.map((f, i) => `${i + 1}. ${f}`).join('\n');
+        document.getElementById('manual-parse-result').style.display = 'block';
+
+        // Advance to step 2
+        setTimeout(() => wizardGo(2), 400);
+    };
+
+    // --- Reset wizard ---
+    window.clearManualIndex = function() {
+        wizard.files = [];
+        wizard.step = 1;
+        wizard.sourcePath = '';
+        document.getElementById('manual-index-textarea').value = '';
+        document.getElementById('manual-parsed-count').textContent = '0';
+        document.getElementById('manual-parse-result').style.display = 'none';
+        document.getElementById('manual-parsed-preview').textContent = '';
+        if (document.getElementById('manual-source-path')) document.getElementById('manual-source-path').value = '';
+        if (document.getElementById('manual-dest-path')) document.getElementById('manual-dest-path').value = '';
+        if (document.getElementById('manual-subfolder-name')) document.getElementById('manual-subfolder-name').value = 'Selected_by_Client';
+        [1, 2, 3].forEach(n => {
+            const p = document.getElementById(`wizard-panel-${n}`);
+            if (p) p.style.display = n === 1 ? 'block' : 'none';
+        });
+        wizardUpdateIndicator(1);
+    };
+
+    // --- STEP 3: Download script ---
+    window.downloadManualScript = function(platform) {
+        const src  = (document.getElementById('manual-source-path')?.value || '').trim();
+        const dest = (document.getElementById('manual-dest-path')?.value || '').trim();
+        const sub  = (document.getElementById('manual-subfolder-name')?.value || 'Selected_by_Client').trim();
+        const outputBase = dest || src;
+
+        if (!src) { showAlert('Path Kosong', 'Harap isi path folder sumber terlebih dahulu.', '📁'); return; }
+        if (wizard.files.length === 0) { showAlert('Tidak Ada File', 'Proses dulu daftar indeks klien di Langkah 1.', '📋'); return; }
+
+        const fileList = wizard.files;
+
+        if (platform === 'windows') {
+            const sep  = '\\';
+            const outDir = `${outputBase}${sep}${sub}`;
+            let bat = `@echo off\r\nchcp 65001 > nul\r\necho ============================================\r\necho  SapaTamu Sortir — Script Penyalinan Foto\r\necho ============================================\r\necho.\r\n\r\nset "SOURCE=${src}"\r\nset "DEST=${outDir}"\r\n\r\nif not exist "%DEST%" (\r\n    mkdir "%DEST%"\r\n    echo [OK] Folder output dibuat: %DEST%\r\n) else (\r\n    echo [INFO] Folder output sudah ada.\r\n)\r\necho.\r\necho Menyalin ${fileList.length} file pilihan klien...\r\necho.\r\n\r\n`;
+            fileList.forEach(f => {
+                bat += `if exist "%SOURCE%\\${f}" (\r\n    copy /Y "%SOURCE%\\${f}" "%DEST%\\${f}" > nul\r\n    echo [COPIED] ${f}\r\n) else (\r\n    echo [SKIP]   ${f} tidak ditemukan\r\n)\r\n`;
+            });
+            bat += `\r\necho.\r\necho Selesai! ${fileList.length} file diproses.\r\necho Output: %DEST%\r\npause\r\n`;
+            const blob = new Blob([bat], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `sortir_manual_${sub}.bat`;
+            a.click();
+        } else {
+            const outDir = `${outputBase}/${sub}`;
+            let cmd = `#!/bin/bash\n# SapaTamu Sortir — Script Penyalinan Foto (macOS)\n\nSOURCE="${src}"\nDEST="${outDir}"\n\nmkdir -p "$DEST"\necho "✅ Folder output: $DEST"\necho ""\necho "Menyalin ${fileList.length} file pilihan klien..."\necho ""\n\n`;
+            fileList.forEach(f => {
+                cmd += `if [ -f "$SOURCE/${f}" ]; then\n  cp -n "$SOURCE/${f}" "$DEST/${f}" && echo "✅ ${f}" || echo "❌ Gagal: ${f}"\nelse\n  echo "⚠️  Tidak ditemukan: ${f}"\nfi\n`;
+            });
+            cmd += `\necho ""\necho "Selesai! Output di: $DEST"\n`;
+            const blob = new Blob([cmd], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `sortir_manual_${sub}.command`;
+            a.click();
+        }
     };
 
 </script>
