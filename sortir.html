@@ -627,34 +627,33 @@
         .grid-drive .photo-card { border-radius: 16px; }
         .grid-drive .photo-image-container { aspect-ratio: 1 / 1; }
 
-        /* ---- View Mode: Pinterest — tight masonry, tap to select ---- */
+        /* ---- View Mode: Pinterest — justified flex gallery ---- */
         .grid-pinterest {
-            column-count: 5;
-            column-gap: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
             margin-top: 20px;
             width: 100vw;
             margin-left: calc(-50vw + 50%);
             padding: 0 calc(50vw - 50%);
         }
-        @media (min-width: 1600px) { .grid-pinterest { column-count: 6; } }
-        @media (max-width: 1200px) { .grid-pinterest { column-count: 4; } }
-        @media (max-width: 900px) { .grid-pinterest { column-count: 3; } }
-        @media (max-width: 600px) { .grid-pinterest { column-count: 2; } }
 
-        /* Pin card — no border-radius, no shadow, no footer */
+        /* Pin card — justified item, fixed height, natural width */
         .pin-card {
-            break-inside: avoid;
-            margin-bottom: 4px;
             position: relative;
             display: block;
             cursor: pointer;
             overflow: hidden;
+            height: 280px;
+            flex: 1 1 200px;
+            min-width: 200px;
+            max-width: 320px;
         }
         .pin-card img {
-            width: 100%;
-            max-width: 320px;
-            height: auto;
+            width: auto;
+            height: 100%;
             display: block;
+            object-fit: contain;
             transition: filter 0.2s ease;
         }
         .pin-card.selected img {
@@ -1559,9 +1558,9 @@ read -p "Tekan Enter untuk keluar..."`;
             if (store.cullingFiles.length === 0) {
                 document.getElementById('culling-empty-state').style.display = 'block';
             } else {
-                // Drive mode needs display:grid; Pinterest column-count needs display:block
+                // Drive mode needs display:grid; Pinterest flex-wrap needs display:flex
                 const photoGrid = document.getElementById('culling-photos-grid');
-                photoGrid.style.display = store.viewMode === 'pinterest' ? 'block' : 'grid';
+                photoGrid.style.display = store.viewMode === 'pinterest' ? 'flex' : 'grid';
                 renderClientPhotosGrid();
             }
         } catch (e) {
