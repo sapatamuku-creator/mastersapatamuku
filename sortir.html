@@ -1788,16 +1788,40 @@ read -p "Tekan Enter untuk keluar..."`;
             return;
         }
 
-        // Regex: match filenames with common photo extensions (case-insensitive)
-        const regex = /\b([\w\s\-()]+\.(jpg|jpeg|png|cr2|cr3|nef|arw|dng|raf|rw2|orf|raw|tif|tiff|heic))\b/gi;
-        const found = [...new Set([...raw.matchAll(regex)].map(m => m[1].trim()))];
+        let found = [];
+
+        // Pass 1: filenames WITH known photo extensions (DSC_1002.JPG, foto.NEF, dll.)
+        const regexExt = /\b([\w\s\-()+]+\.(jpg|jpeg|png|cr2|cr3|nef|arw|dng|raf|rw2|orf|raw|tif|tiff|heic))\b/gi;
+        const withExt = [...raw.matchAll(regexExt)].map(m => m[1].trim());
+        found = [...new Set(withExt)];
+
+        // Pass 2: fallback — bare camera codes WITHOUT extension
+        // Matches patterns like: GSC8846, DSC_1002, IMG_20240101, _MG1234, R0001234, A7R_0001
+        // Strategy: look for items in numbered/bulleted lists, or standalone code-like tokens
+        if (found.length === 0) {
+            // numbered list: "1. GSC8846" or "1) GSC8846" or "- GSC8846"
+            const regexList = /(?:^|\n)\s*(?:\d+[.)]\s*|[-•*]\s*)([A-Z_][A-Z\d_\-]{2,})/gim;
+            const listItems = [...raw.matchAll(regexList)].map(m => m[1].trim());
+            found = [...new Set(listItems)];
+        }
+
+        // Pass 3: last resort — any uppercase alphanumeric code ≥5 chars on its own line
+        if (found.length === 0) {
+            const lines = raw.split('\n');
+            const regexBare = /^[A-Z][A-Z\d_\-]{4,}$/;
+            lines.forEach(line => {
+                const token = line.replace(/^\s*[\d]+[.)]\s*/, '').trim();
+                if (regexBare.test(token)) found.push(token);
+            });
+            found = [...new Set(found)];
+        }
 
         wizard.files = found;
         document.getElementById('manual-parsed-count').textContent = found.length;
         document.getElementById('s2-count').textContent = found.length;
 
         if (found.length === 0) {
-            showAlert('Tidak Terdeteksi', 'Tidak ada nama file foto yang terdeteksi. Pastikan teks mengandung ekstensi seperti .JPG, .NEF, .CR2, dll.', '🔍');
+            showAlert('Tidak Terdeteksi', 'Tidak ada nama file yang terdeteksi.\n\nTips: Pastikan format berupa daftar bernomor (1. GSC8846) atau nama file lengkap dengan ekstensi (.JPG, .NEF, dll.).', '🔍');
             return;
         }
 
