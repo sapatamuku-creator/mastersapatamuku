@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu Sortir — Galeri Culling & Seleksi Foto</title>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #E07B7B; /* Soft Rose */
+            --primary-hover: #D06F6F;
+            --bg: #FFF9F5;      /* Warm Cream Neutral */
+            --card: #FFFFFF;
+            --text-main: #4A3F35; /* Charcoal Deep Coffee */
+            --text-muted: #8C7560; /* Earthy Muted Brown */
+            --border: #F0E6DE;   /* Soft border */
+            --input-bg: #FDF8F4;
+            --gold: #C8962E;
+            --success: #10B981;
+            --shadow-sm: 0 4px 12px rgba(74, 63, 53, 0.03);
+            --shadow-md: 0 8px 24px rgba(74, 63, 53, 0.06);
+            --shadow-lg: 0 16px 36px rgba(74, 63, 53, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4, h5, h6, .font-serif {
+            font-family: 'Lora', serif;
+        }
+
+        /* Container Layouts */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header Styles */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 249, 245, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 0;
+            transition: all 0.3s ease;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-main);
+        }
+
+        .logo-badge {
+            background: var(--primary);
+            color: white;
+            font-weight: 800;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .logo-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        /* Buttons styling */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 12px 24px;
+            border-radius: 14px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 6px 20px rgba(224, 123, 123, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(224, 123, 123, 0.35);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-secondary:hover {
+            background: var(--input-bg);
+            border-color: var(--text-muted);
+            transform: translateY(-2px);
+        }
+
+        /* Form Inputs */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--input-bg);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.15);
+        }
+
+        /* Cards and Sections */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 32px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-top: 32px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        /* Event Item Row */
+        .event-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 450px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .event-item {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .event-item:hover {
+            border-color: var(--primary);
+            background: white;
+            transform: translateX(4px);
+        }
+
+        .event-item.active {
+            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        /* Photos Grid Layout */
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .photo-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .photo-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .photo-card.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        .photo-image-container {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            background: #f5ede6;
+            overflow: hidden;
+        }
+
+        .photo-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .photo-card:hover .photo-image {
+            transform: scale(1.05);
+        }
+
+        .zoom-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(74, 63, 53, 0.45);
+            opacity: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.25s ease;
+            cursor: zoom-in;
+        }
+
+        .photo-card:hover .zoom-overlay {
+            opacity: 1;
+        }
+
+        .zoom-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text-main);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            backdrop-filter: blur(4px);
+        }
+
+        .photo-details {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .photo-title {
+            font-size: 13px;
+            font-weight: 700;
+            font-family: monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .checkbox-custom {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+            flex-shrink: 0;
+        }
+
+        .checkbox-custom.checked {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* Filter Controls */
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 18px;
+            margin-top: 24px;
+            backdrop-filter: blur(8px);
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+            max-width: 320px;
+        }
+
+        .search-wrapper input {
+            width: 100%;
+            padding: 10px 16px 10px 38px;
+            font-size: 13px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            outline: none;
+            background: white;
+        }
+
+        .search-wrapper input:focus {
+            border-color: var(--primary);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-tab {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-tab.active {
+            background: white;
+            border-color: var(--border);
+            color: var(--primary);
+            font-weight: 700;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Enlarge Modal */
+        .modal-zoom {
+            position: fixed;
+            inset: 0;
+            background: rgba(30, 26, 22, 0.95);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+
+        .modal-zoom-content {
+            max-width: 90vw;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .modal-zoom-img {
+            max-width: 100%;
+            max-height: 75vh;
+            object-fit: contain;
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-zoom-title {
+            color: white;
+            font-size: 14px;
+            margin-top: 16px;
+            font-family: monospace;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+        }
+
+        /* Custom alert notification modal */
+        .notification-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(74, 63, 53, 0.5);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+        }
+
+        .notification-content {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 32px;
+            width: 90%;
+            max-width: 360px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Quota stats */
+        .quota-box {
+            background: white;
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Active Event Control Section */
+        .active-event-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .code-block {
+            background: #2D241E;
+            color: #E6DFD9;
+            padding: 16px;
+            border-radius: 14px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin: 8px 0;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border: 3px solid rgba(224, 123, 123, 0.2);
+            border-bottom-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #F0E6DE 25%, #E6DAD0 50%, #F0E6DE 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Badge selection count */
+        .selection-count-badge {
+            background: var(--primary);
+            color: white;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-title {
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Global Header -->
+<header>
+    <div class="container header-content">
+        <a href="sortir.html" class="logo-group" onclick="event.preventDefault(); window.history.pushState({}, '', 'sortir.html'); router();">
+            <span class="logo-badge">SORTIR</span>
+            <span class="logo-title">SapaTamu</span>
+        </a>
+        <div id="header-actions" class="flex gap-12">
+            <!-- Dynamic Actions populated by JS -->
+        </div>
+    </div>
+</header>
+
+<!-- Main Wrapper -->
+<main class="container" style="padding-top: 32px; padding-bottom: 64px;">
+
+    <!-- ================= VIEW 1: PHOTOGRAPHER DASHBOARD ================= -->
+    <div id="view-dashboard" style="display: none;">
+        <h2 style="font-size: 32px; margin-bottom: 8px;">Culling Dashboard</h2>
+        <p style="color: var(--text-muted); margin-bottom: 32px;">Buat tautan pemilihan foto untuk klien Anda tanpa ribet.</p>
+
+        <div class="dashboard-grid">
+            <!-- Event Generator Form -->
+            <div>
+                <div class="card">
+                    <h3 style="font-size: 22px; margin-bottom: 20px; color: var(--primary);">Buat Tautan Event Baru</h3>
+                    
+                    <form id="create-event-form" onsubmit="handleCreateEvent(event)">
+                        <div class="form-group">
+                            <label class="form-label">Nama Event / Pernikahan</label>
+                            <input type="text" id="event-name-input" class="form-control" placeholder="Contoh: Rian & Andini Wedding" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Link Folder Google Drive (Publik)</label>
+                            <input type="url" id="drive-url-input" class="form-control" placeholder="https://drive.google.com/drive/folders/..." required>
+                            <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Pastikan folder disetel publik ("Siapa saja yang memiliki link dapat melihat").</p>
+                        </div>
+
+                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <label class="form-label">Kuota Foto Klien</label>
+                                <input type="number" id="quota-input" class="form-control" value="50" min="1" required>
+                            </div>
+                            <div>
+                                <label class="form-label">No. WA Terima Hasil</label>
+                                <input type="tel" id="wa-input" class="form-control" placeholder="Contoh: 62812345678" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px; margin-top: 10px;">
+                            Buat Event Culling
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Events List & Management -->
+            <div>
+                <div class="card" style="min-height: 480px; display: flex; flex-direction: column;">
+                    <h3 style="font-size: 22px; margin-bottom: 20px; color: var(--text-main);">Daftar Event Saya</h3>
+                    
+                    <div id="my-events-list" class="event-list" style="flex: 1;">
+                        <!-- Populate dynamic items or empty state -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Event Details (Appears when an event is selected) -->
+        <div id="active-event-card" class="card" style="display: none; margin-top: 32px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 24px;">
+                <div>
+                    <h3 id="active-event-title" style="font-size: 26px; color: var(--text-main);">Nama Event</h3>
+                    <p id="active-event-meta" style="color: var(--text-muted); font-size: 13px; margin-top: 4px;"></p>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <a id="active-event-client-link" href="#" target="_blank" class="btn btn-secondary">Buka Halaman Klien ↗</a>
+                    <button onclick="deleteActiveEvent()" class="btn btn-secondary" style="color: #E07B7B; border-color: rgba(224, 123, 123, 0.3);">Hapus Event</button>
+                </div>
+            </div>
+
+            <div class="active-event-controls">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 32px;">
+                    <!-- Selections Panel -->
+                    <div>
+                        <h4 style="font-size: 16px; margin-bottom: 12px; font-weight: 750;">Hasil Sortir Klien (Real-Time)</h4>
+                        <div id="active-selections-stat" style="font-size: 14px; font-weight: bold; margin-bottom: 12px;">
+                            Pilihan: <span id="active-selections-count" class="selection-count-badge">0 / 0</span>
+                        </div>
+                        
+                        <label class="form-label">Daftar Indeks File Terpilih (Kopi Teks)</label>
+                        <div class="code-block" id="active-selections-text" style="min-height: 120px; max-height: 220px; white-space: pre-wrap;">Belum ada pilihan foto dari klien.</div>
+                        
+                        <button onclick="copySelectionsText()" class="btn btn-secondary" style="margin-top: 8px;">Salin Daftar Indeks</button>
+                    </div>
+
+                    <!-- Scripts download panel -->
+                    <div style="border-left: 1px solid var(--border); padding-left: 32px;">
+                        <h4 style="font-size: 16px; margin-bottom: 12px; font-weight: 750;">PnP Copy Script (Lokal)</h4>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+                            Unduh skrip otomatis yang akan menyalin seluruh berkas foto pilihan klien (RAW/JPG) dari direktori lokal Anda ke dalam subfolder `/Selected_by_Client/` secara instan.
+                        </p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <button onclick="downloadCopyScript('windows')" class="btn btn-primary" style="background: #4A3F35; box-shadow: none;">
+                                💻 Unduh Script Windows (.bat)
+                            </button>
+                            <button onclick="downloadCopyScript('mac')" class="btn btn-secondary">
+                                🍎 Unduh Script macOS (.command)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= VIEW 2: CLIENT CULLING VIEW ================= -->
+    <div id="view-culling" style="display: none;">
+        <!-- Header area inside view for client context -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 24px; flex-wrap: wrap; gap: 20px;">
+            <div>
+                <h2 id="client-event-title" style="font-size: 32px; font-weight: 700;">Event Culling</h2>
+                <p id="client-event-desc" style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">Pilihlah foto-foto terbaik Anda di bawah ini.</p>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="quota-box">
+                    <div style="font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Foto Terpilih</div>
+                    <div id="client-quota-counter" style="font-size: 18px; font-weight: 800; color: var(--primary);">0 / 0</div>
+                </div>
+                <button onclick="submitClientSelection()" class="btn btn-primary" style="padding: 16px 28px;">
+                    Kirim Hasil Sortir
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter container -->
+        <div class="filter-container">
+            <div class="search-wrapper">
+                <span class="search-icon">🔎</span>
+                <input type="text" id="client-search-input" placeholder="Cari nama foto..." oninput="handleClientSearch(this.value)">
+            </div>
+            <div class="filter-tabs">
+                <button id="tab-filter-all" class="filter-tab active" onclick="handleClientFilter('all')">Semua</button>
+                <button id="tab-filter-selected" class="filter-tab" onclick="handleClientFilter('selected')">Terpilih</button>
+                <button id="tab-filter-unselected" class="filter-tab" onclick="handleClientFilter('unselected')">Belum Terpilih</button>
+            </div>
+        </div>
+
+        <!-- Skeleton grid while loading -->
+        <div id="culling-loading-grid" class="photos-grid">
+            <!-- 8 skeletons -->
+            <div class="photo-card" style="height: 260px; display: flex; flex-direction: column;">
+                <div class="skeleton" style="flex: 1;"></div>
+                <div style="height: 56px; padding: 12px; background: white;" class="skeleton"></div>
+            </div>
+            <div class="photo-card" style="height: 260px; display: flex; flex-direction: column;">
+                <div class="skeleton" style="flex: 1;"></div>
+                <div style="height: 56px; padding: 12px; background: white;" class="skeleton"></div>
+            </div>
+            <div class="photo-card" style="height: 260px; display: flex; flex-direction: column;">
+                <div class="skeleton" style="flex: 1;"></div>
+                <div style="height: 56px; padding: 12px; background: white;" class="skeleton"></div>
+            </div>
+            <div class="photo-card" style="height: 260px; display: flex; flex-direction: column;">
+                <div class="skeleton" style="flex: 1;"></div>
+                <div style="height: 56px; padding: 12px; background: white;" class="skeleton"></div>
+            </div>
+        </div>
+
+        <!-- Photo Grid Container -->
+        <div id="culling-photos-grid" class="photos-grid" style="display: none;"></div>
+        
+        <!-- Empty / Error handlers -->
+        <div id="culling-empty-state" class="card empty-state" style="display: none;">
+            <div class="empty-icon">📷</div>
+            <h4 class="empty-title">Folder Foto Kosong</h4>
+            <p>Tidak ada foto yang terdeteksi di dalam folder Google Drive yang ditautkan.</p>
+        </div>
+        
+        <div id="culling-error-state" class="card empty-state" style="display: none; border-color: rgba(224, 123, 123, 0.4);">
+            <div class="empty-icon" style="color: #E07B7B;">⚠️</div>
+            <h4 class="empty-title" style="color: #E07B7B;">Event Tidak Ditemukan</h4>
+            <p>Tautan tidak valid, atau event ini telah dihapus. Silakan hubungi fotografer Anda.</p>
+        </div>
+    </div>
+
+    <!-- ================= VIEW 3: SUPER ADMIN / OWNER EVENT EXPLORER ================= -->
+    <div id="view-owner" style="display: none;">
+        <h2 style="font-size: 32px; margin-bottom: 8px;">Event Explorer (Super Admin)</h2>
+        <p style="color: var(--text-muted); margin-bottom: 32px;">Pantau seluruh event culling yang terdaftar di dalam platform SapaTamu Sortir.</p>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+                <h3 style="font-size: 20px;">Daftar Semua Event Sistem</h3>
+                <div class="search-wrapper" style="max-width: 280px; width: 100%;">
+                    <span class="search-icon">🔎</span>
+                    <input type="text" id="owner-search-input" placeholder="Cari nama event..." oninput="handleOwnerSearch(this.value)">
+                </div>
+            </div>
+
+            <div id="owner-loading" style="text-align: center; padding: 48px 0;">
+                <div class="spinner"></div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">Memuat data event...</p>
+            </div>
+
+            <table id="owner-events-table" style="width: 100%; border-collapse: collapse; display: none; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                        <th style="padding: 12px 16px;">Nama Event</th>
+                        <th style="padding: 12px 16px;">Drive Folder ID</th>
+                        <th style="padding: 12px 16px;">No. WhatsApp Admin</th>
+                        <th style="padding: 12px 16px;">Tanggal Dibuat</th>
+                        <th style="padding: 12px 16px; text-align: right;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="owner-events-tbody" style="font-size: 14px;">
+                    <!-- populated dynamically -->
+                </tbody>
+            </table>
+            
+            <div id="owner-empty-state" class="empty-state" style="display: none;">
+                <div class="empty-icon">📂</div>
+                <h4 class="empty-title">Tidak Ada Event</h4>
+                <p>Belum ada event culling yang dibuat di platform ini.</p>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<!-- Photo Enlarge Modal -->
+<div id="zoom-modal" class="modal-zoom" onclick="closeZoomModal()">
+    <button class="modal-close-btn">&times;</button>
+    <div class="modal-zoom-content" onclick="event.stopPropagation()">
+        <img id="zoom-modal-img" class="modal-zoom-img" src="" alt="Pratinjau Foto">
+        <p id="zoom-modal-title" class="modal-zoom-title"></p>
+    </div>
+</div>
+
+<!-- Custom alert notification modal -->
+<div id="alert-modal" class="notification-modal">
+    <div class="notification-content">
+        <div id="alert-modal-icon" style="font-size: 40px; margin-bottom: 12px;">✨</div>
+        <h3 id="alert-modal-title" style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Pemberitahuan</h3>
+        <p id="alert-modal-msg" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5;"></p>
+        <button onclick="closeAlertModal()" class="btn btn-primary" style="width: 100%; box-shadow: none;">Mengerti</button>
+    </div>
+</div>
+
+<script type="module">
+    // Supabase credentials
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+    const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+
+    // Global Store State
+    const store = {
+        myEvents: [], // Events tracked locally on this device
+        activeEvent: null, // Selected event for details
+        activeSelections: [], // Real-time selections from activeEvent
+        cullingEvent: null, // Event being culled by client
+        cullingFiles: [], // Files list in client culling
+        cullingSelections: new Set(), // Set of selected photo_ids
+        clientFilter: 'all',
+        clientSearch: '',
+        ownerEvents: [], // All events for admin/owner
+        ownerSearch: ''
+    };
+
+    // SPA Router
+    function router() {
+        const params = new URLSearchParams(window.location.search);
+        const eventSlug = params.get('event');
+        const action = params.get('action');
+
+        // Hide all views
+        document.getElementById('view-dashboard').style.display = 'none';
+        document.getElementById('view-culling').style.display = 'none';
+        document.getElementById('view-owner').style.display = 'none';
+
+        // Clear dynamic headers
+        const headerActions = document.getElementById('header-actions');
+        headerActions.innerHTML = '';
+
+        if (eventSlug) {
+            initCullingView(eventSlug);
+        } else if (action === 'owner' || action === 'admin') {
+            initOwnerView();
+        } else {
+            initDashboardView();
+        }
+    }
+
+    // Initialize SPA
+    window.addEventListener('load', () => {
+        router();
+        // Listen to navigation events
+        window.addEventListener('popstate', router);
+    });
+
+    // Helper alerts
+    function showAlert(title, message, icon = "✨") {
+        document.getElementById('alert-modal-title').innerText = title;
+        document.getElementById('alert-modal-msg').innerText = message;
+        document.getElementById('alert-modal-icon').innerText = icon;
+        document.getElementById('alert-modal').style.display = 'flex';
+    }
+
+    window.closeAlertModal = function() {
+        document.getElementById('alert-modal').style.display = 'none';
+    };
+
+    // ----------------------------------------------------
+    // VIEW 1: PHOTOGRAPHER DASHBOARD LOGIC
+    // ----------------------------------------------------
+    async function initDashboardView() {
+        document.getElementById('view-dashboard').style.display = 'block';
+        document.title = "Dashboard Culling — SapaTamu Sortir";
+
+        // Setup dashboard header buttons
+        const headerActions = document.getElementById('header-actions');
+        headerActions.innerHTML = `
+            <a href="?action=owner" class="btn btn-secondary" onclick="event.preventDefault(); window.history.pushState({}, '', '?action=owner'); router();">
+                👑 Admin Panel
+            </a>
+        `;
+
+        // Load local tracking events
+        let trackedSlugs = [];
+        try {
+            trackedSlugs = JSON.parse(localStorage.getItem('sortir_created_events') || '[]');
+        } catch (e) {
+            trackedSlugs = [];
+        }
+
+        if (trackedSlugs.length > 0) {
+            // Fetch tracked events details
+            const { data, error } = await supabase
+                .from('sortir_events')
+                .select('*')
+                .in('event_slug', trackedSlugs);
+            
+            if (!error && data) {
+                store.myEvents = data;
+            }
+        } else {
+            store.myEvents = [];
+        }
+
+        renderMyEventsList();
+    }
+
+    function renderMyEventsList() {
+        const listContainer = document.getElementById('my-events-list');
+        listContainer.innerHTML = '';
+
+        if (store.myEvents.length === 0) {
+            listContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📅</div>
+                    <h4 class="empty-title">Belum Ada Event</h4>
+                    <p style="font-size: 13px;">Buat event culling baru menggunakan form di sebelah kiri.</p>
+                </div>
+            `;
+            return;
+        }
+
+        store.myEvents.forEach(evt => {
+            const isActive = store.activeEvent && store.activeEvent.id === evt.id;
+            const item = document.createElement('div');
+            item.className = `event-item ${isActive ? 'active' : ''}`;
+            item.innerHTML = `
+                <div>
+                    <h4 style="font-size: 15px; font-weight: 700; color: var(--text-main);">${evt.event_name}</h4>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Slug: ?event=${evt.event_slug}</p>
+                </div>
+                <span style="font-size: 16px;">👉</span>
+            `;
+            item.addEventListener('click', () => selectActiveEvent(evt));
+            listContainer.appendChild(item);
+        });
+    }
+
+    async function selectActiveEvent(evt) {
+        store.activeEvent = evt;
+        renderMyEventsList(); // Update highlights
+
+        const card = document.getElementById('active-event-card');
+        card.style.display = 'block';
+
+        document.getElementById('active-event-title').innerText = evt.event_name;
+        document.getElementById('active-event-meta').innerText = `Folder Drive: ${evt.drive_folder_id} | Quota: ${evt.quota_limit} Foto | No. WA: +${evt.whatsapp_admin}`;
+
+        const clientUrl = `${window.location.origin}${window.location.pathname}?event=${evt.event_slug}`;
+        document.getElementById('active-event-client-link').href = clientUrl;
+
+        // Fetch selections
+        document.getElementById('active-selections-count').innerText = `Loading...`;
+        document.getElementById('active-selections-text').innerText = `Memuat data pilihan klien...`;
+
+        // Fetch Selections list
+        const { data, error } = await supabase
+            .from('sortir_selections')
+            .select('*')
+            .eq('event_id', evt.id)
+            .eq('is_selected', true)
+            .order('photo_name', { ascending: true });
+
+        if (error) {
+            document.getElementById('active-selections-text').innerText = `Gagal memuat seleksi: ${error.message}`;
+            return;
+        }
+
+        store.activeSelections = data || [];
+        updateActiveSelectionsUI();
+
+        // Subscribe to real-time selections updates
+        supabase
+            .channel(`public:sortir_selections:event_id=eq.${evt.id}`)
+            .on('postgres_changes', { event: '*', filter: `event_id=eq.${evt.id}`, schema: 'public', table: 'sortir_selections' }, async () => {
+                // Re-fetch selections on real-time update
+                const { data: updatedData } = await supabase
+                    .from('sortir_selections')
+                    .select('*')
+                    .eq('event_id', evt.id)
+                    .eq('is_selected', true)
+                    .order('photo_name', { ascending: true });
+                store.activeSelections = updatedData || [];
+                updateActiveSelectionsUI();
+            })
+            .subscribe();
+    }
+
+    function updateActiveSelectionsUI() {
+        if (!store.activeEvent) return;
+
+        const countEl = document.getElementById('active-selections-count');
+        countEl.innerText = `${store.activeSelections.length} / ${store.activeEvent.quota_limit}`;
+
+        const textEl = document.getElementById('active-selections-text');
+        if (store.activeSelections.length === 0) {
+            textEl.innerText = `Belum ada pilihan foto dari klien.`;
+            return;
+        }
+
+        // Generate names array
+        const names = store.activeSelections.map(s => {
+            // strip extension
+            return s.photo_name.split('.').slice(0, -1).join('.');
+        });
+        
+        textEl.innerText = names.join(', ');
+    }
+
+    window.copySelectionsText = function() {
+        const text = document.getElementById('active-selections-text').innerText;
+        if (text === 'Belum ada pilihan foto dari klien.' || !text) {
+            showAlert('Peringatan', 'Tidak ada daftar indeks foto untuk disalin.', '⚠️');
+            return;
+        }
+        navigator.clipboard.writeText(text)
+            .then(() => showAlert('Sukses', 'Daftar indeks foto terpilih berhasil disalin ke clipboard!', '✅'))
+            .catch(() => showAlert('Error', 'Gagal menyalin teks.', '❌'));
+    };
+
+    window.deleteActiveEvent = async function() {
+        if (!store.activeEvent) return;
+        if (!confirm(`Apakah Anda yakin ingin menghapus event "${store.activeEvent.event_name}" dari sistem? Tindakan ini tidak dapat dibatalkan.`)) {
+            return;
+        }
+
+        const { error } = await supabase
+            .from('sortir_events')
+            .delete()
+            .eq('id', store.activeEvent.id);
+
+        if (error) {
+            showAlert('Error', `Gagal menghapus event: ${error.message}`, '❌');
+            return;
+        }
+
+        // Remove from local tracking list
+        let tracked = JSON.parse(localStorage.getItem('sortir_created_events') || '[]');
+        tracked = tracked.filter(slug => slug !== store.activeEvent.event_slug);
+        localStorage.setItem('sortir_created_events', JSON.stringify(tracked));
+
+        showAlert('Sukses', 'Event berhasil dihapus!', '✅');
+        
+        store.activeEvent = null;
+        document.getElementById('active-event-card').style.display = 'none';
+        initDashboardView();
+    };
+
+    window.handleCreateEvent = async function(event) {
+        event.preventDefault();
+        const name = document.getElementById('event-name-input').value.trim();
+        const driveUrl = document.getElementById('drive-url-input').value.trim();
+        const quota = parseInt(document.getElementById('quota-input').value);
+        let wa = document.getElementById('wa-input').value.trim();
+
+        // Validate Google Drive Folder ID
+        const folderIdRegex = /[-\w]{25,}/;
+        const match = driveUrl.match(folderIdRegex);
+        if (!match) {
+            showAlert('Error', 'Format URL Google Drive tidak valid! Pastikan mengandung Folder ID yang benar.', '⚠️');
+            return;
+        }
+        const folderId = match[0];
+
+        // Format WA
+        wa = wa.replace(/[^\d]/g, ''); // strip formatting
+        if (wa.startsWith('0')) {
+            wa = '62' + wa.substring(1);
+        }
+
+        // Generate unique slug
+        const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').trim('-');
+        const randomString = Math.random().toString(36).substring(2, 7);
+        const slug = `${cleanName}-${randomString}`;
+
+        // Insert into database
+        const { data, error } = await supabase
+            .from('sortir_events')
+            .insert({
+                event_name: name,
+                event_slug: slug,
+                quota_limit: quota,
+                drive_folder_url: driveUrl,
+                drive_folder_id: folderId,
+                whatsapp_admin: wa
+            })
+            .select();
+
+        if (error) {
+            showAlert('Error', `Gagal menyimpan event: ${error.message}`, '❌');
+            return;
+        }
+
+        // Save reference in LocalStorage
+        const trackedSlugs = JSON.parse(localStorage.getItem('sortir_created_events') || '[]');
+        trackedSlugs.push(slug);
+        localStorage.setItem('sortir_created_events', JSON.stringify(trackedSlugs));
+
+        showAlert('Sukses', 'Event culling berhasil dibuat!', '✅');
+        document.getElementById('create-event-form').reset();
+        
+        // Refresh and select
+        await initDashboardView();
+        if (data && data.length > 0) {
+            selectActiveEvent(data[0]);
+        }
+    };
+
+    // PNP Copy Script Generator
+    window.downloadCopyScript = function(platform) {
+        if (!store.activeEvent || store.activeSelections.length === 0) {
+            showAlert('Peringatan', 'Belum ada foto pilihan klien yang dapat diekspor.', '⚠️');
+            return;
+        }
+
+        // Extract clean names without extension
+        const cleanNames = store.activeSelections.map(s => {
+            return s.photo_name.split('.').slice(0, -1).join('.');
+        });
+
+        let scriptContent = '';
+        let filename = '';
+
+        if (platform === 'windows') {
+            filename = `cull_photos_${store.activeEvent.event_slug}.bat`;
+            const fileListFormatted = cleanNames.map(name => `"${name}"`).join(',\n  ');
+            
+            scriptContent = `@echo off
+echo Menjalankan skrip ini berarti menyetujui instalasi pembantu penyalinan file foto di komputer Anda. Lanjutkan? (Y/N)
+set /p choice=
+if /i "%choice%" neq "Y" exit
+
+powershell -Command "
+$sourceDir = Read-Host 'Masukkan path folder sumber foto (RAW/JPG)';
+$destDir = Join-Path $sourceDir 'Selected_by_Client';
+if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir | Out-Null };
+$files = @(
+  ${fileListFormatted}
+);
+$success = 0;
+Get-ChildItem -Path $sourceDir -File | ForEach-Object {
+  $base = $_.BaseName;
+  if ($files -contains $base) {
+    $target = Join-Path $destDir $_.Name;
+    Copy-Item -Path $_.FullName -Destination $target -Force;
+    $success++;
+  }
+};
+Write-Host 'Berhasil menyalin '$success' file ke '$destDir -ForegroundColor Green;
+pause;
+"`;
+        } else {
+            filename = `cull_photos_${store.activeEvent.event_slug}.command`;
+            const fileListFormatted = cleanNames.map(name => `  "${name}"`).join('\n');
+            
+            scriptContent = `#!/bin/bash
+cd "$(dirname "$0")"
+echo "Menjalankan skrip ini berarti menyetujui instalasi pembantu penyalinan file foto di komputer Anda. Lanjutkan? (Y/N)"
+read -r choice
+if [ "$choice" != "Y" ] && [ "$choice" != "y" ]; then
+    exit 0
+fi
+
+echo "Masukkan path folder sumber foto (RAW/JPG):"
+read -r sourceDir
+destDir="$sourceDir/Selected_by_Client"
+mkdir -p "$destDir"
+
+files=(
+${fileListFormatted}
+)
+
+success=0
+for file in "$sourceDir"/*; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+        basename="\${filename%.*}"
+        for target in "\${files[@]}"; do
+            if [ "$basename" == "$target" ]; then
+                cp "$file" "$destDir/"
+                success=$((success + 1))
+                break
+            fi
+        done
+    fi
+done
+echo "Berhasil menyalin $success file ke $destDir"
+read -p "Tekan Enter untuk keluar..."`;
+        }
+
+        const blob = new Blob([scriptContent], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    };
+
+    // ----------------------------------------------------
+    // VIEW 2: CLIENT CULLING VIEW LOGIC
+    // ----------------------------------------------------
+    async function initCullingView(slug) {
+        document.getElementById('view-culling').style.display = 'block';
+        
+        // Hide loaders/errors
+        document.getElementById('culling-loading-grid').style.display = 'grid';
+        document.getElementById('culling-photos-grid').style.display = 'none';
+        document.getElementById('culling-empty-state').style.display = 'none';
+        document.getElementById('culling-error-state').style.display = 'none';
+
+        // Fetch Event Details
+        const { data, error } = await supabase
+            .from('sortir_events')
+            .select('*')
+            .eq('event_slug', slug);
+
+        if (error || !data || data.length === 0) {
+            document.getElementById('culling-loading-grid').style.display = 'none';
+            document.getElementById('culling-error-state').style.display = 'block';
+            document.getElementById('client-event-title').innerText = 'Event Tidak Ditemukan';
+            return;
+        }
+
+        const event = data[0];
+        store.cullingEvent = event;
+        document.title = `Pilih Foto: ${event.event_name} — SapaTamu Sortir`;
+        document.getElementById('client-event-title').innerText = event.event_name;
+        document.getElementById('client-event-desc').innerText = `Silakan centang hingga maksimal ${event.quota_limit} foto pilihan terbaik Anda. Pilihan tersimpan secara otomatis.`;
+
+        // Fetch current selections
+        const { data: currentSels } = await supabase
+            .from('sortir_selections')
+            .select('photo_id')
+            .eq('event_id', event.id)
+            .eq('is_selected', true);
+        
+        store.cullingSelections.clear();
+        if (currentSels) {
+            currentSels.forEach(s => store.cullingSelections.add(s.photo_id));
+        }
+
+        updateClientQuotaUI();
+
+        // Fetch Google Drive content using proxy
+        try {
+            const res = await fetch(`api/sortir-list-drive?folderId=${event.drive_folder_id}`);
+            if (!res.ok) throw new Error("Gagal memuat isi Google Drive");
+            store.cullingFiles = await res.json();
+            
+            document.getElementById('culling-loading-grid').style.display = 'none';
+            
+            if (store.cullingFiles.length === 0) {
+                document.getElementById('culling-empty-state').style.display = 'block';
+            } else {
+                document.getElementById('culling-photos-grid').style.display = 'grid';
+                renderClientPhotosGrid();
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('culling-loading-grid').style.display = 'none';
+            document.getElementById('culling-empty-state').style.display = 'block';
+            document.getElementById('culling-empty-state').querySelector('p').innerText = "Gagal memuat foto. Pastikan folder Google Drive bersifat publik dan dapat diakses.";
+        }
+    }
+
+    function updateClientQuotaUI() {
+        const count = store.cullingSelections.size;
+        const limit = store.cullingEvent ? store.cullingEvent.quota_limit : 0;
+        document.getElementById('client-quota-counter').innerText = `${count} / ${limit}`;
+    }
+
+    function renderClientPhotosGrid() {
+        const grid = document.getElementById('culling-photos-grid');
+        grid.innerHTML = '';
+
+        const filtered = store.cullingFiles.filter(f => {
+            const matchesSearch = f.name.toLowerCase().includes(store.clientSearch.toLowerCase());
+            const isSelected = store.cullingSelections.has(f.id);
+
+            if (store.clientFilter === 'selected') return matchesSearch && isSelected;
+            if (store.clientFilter === 'unselected') return matchesSearch && !isSelected;
+            return matchesSearch;
+        });
+
+        if (filtered.length === 0) {
+            grid.innerHTML = `<div class="col-span-full" style="text-align: center; padding: 48px; color: var(--text-muted);">Tidak ada foto yang sesuai dengan filter/pencarian.</div>`;
+            return;
+        }
+
+        filtered.forEach(file => {
+            const isSelected = store.cullingSelections.has(file.id);
+            const card = document.createElement('div');
+            card.className = `photo-card ${isSelected ? 'selected' : ''}`;
+            card.id = `card-${file.id}`;
+
+            const cdnUrl = `https://lh3.googleusercontent.com/d/${file.id}=w400`;
+
+            card.innerHTML = `
+                <div class="photo-image-container">
+                    <img src="${cdnUrl}" class="photo-image" loading="lazy" alt="${file.name}">
+                    <div class="zoom-overlay" onclick="zoomPhoto('${file.id}', '${file.name}')">
+                        <span class="zoom-btn">🔎 Perbesar</span>
+                    </div>
+                </div>
+                <div class="photo-details">
+                    <span class="photo-title" title="${file.name}">${file.name}</span>
+                    <div id="check-${file.id}" class="checkbox-custom ${isSelected ? 'checked' : ''}" onclick="toggleClientSelection('${file.id}', '${file.name}')">
+                        ${isSelected ? '✓' : ''}
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    window.zoomPhoto = function(id, name) {
+        const modal = document.getElementById('zoom-modal');
+        const img = document.getElementById('zoom-modal-img');
+        const title = document.getElementById('zoom-modal-title');
+        
+        img.src = `https://lh3.googleusercontent.com/d/${id}=w1200`;
+        title.innerText = name;
+        modal.style.display = 'flex';
+    };
+
+    window.closeZoomModal = function() {
+        document.getElementById('zoom-modal').style.display = 'none';
+    };
+
+    window.toggleClientSelection = async function(id, name) {
+        const isSelected = store.cullingSelections.has(id);
+
+        if (!isSelected) {
+            if (store.cullingSelections.size >= store.cullingEvent.quota_limit) {
+                showAlert("Limit Kuota Penuh", `Batas maksimal pilihan Anda untuk event ini adalah ${store.cullingEvent.quota_limit} foto. Silakan hapus pilihan pada foto lain terlebih dahulu.`, "⚠️");
+                return;
+            }
+            store.cullingSelections.add(id);
+        } else {
+            store.cullingSelections.delete(id);
+        }
+
+        updateClientQuotaUI();
+
+        // Instant UI update
+        const card = document.getElementById(`card-${id}`);
+        const check = document.getElementById(`check-${id}`);
+
+        if (store.cullingSelections.has(id)) {
+            if (card) card.classList.add('selected');
+            if (check) {
+                check.classList.add('checked');
+                check.innerText = '✓';
+            }
+        } else {
+            if (card) card.classList.remove('selected');
+            if (check) {
+                check.classList.remove('checked');
+                check.innerText = '';
+            }
+        }
+
+        // Sync to Supabase
+        const isNowSelected = store.cullingSelections.has(id);
+        try {
+            await supabase
+                .from('sortir_selections')
+                .upsert({
+                    event_id: store.cullingEvent.id,
+                    photo_id: id,
+                    photo_name: name,
+                    is_selected: isNowSelected,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'event_id,photo_id' });
+        } catch (e) {
+            console.error("Gagal sinkronisasi data seleksi:", e);
+        }
+
+        // If filtered view, refresh grid
+        if (store.clientFilter !== 'all') {
+            setTimeout(renderClientPhotosGrid, 300);
+        }
+    };
+
+    window.handleClientSearch = function(val) {
+        store.clientSearch = val;
+        renderClientPhotosGrid();
+    };
+
+    window.handleClientFilter = function(type) {
+        store.clientFilter = type;
+        document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+        document.getElementById(`tab-filter-${type}`).classList.add('active');
+        renderClientPhotosGrid();
+    };
+
+    window.submitClientSelection = function() {
+        if (store.cullingSelections.size === 0) {
+            showAlert("Belum Ada Pilihan", "Anda belum memilih satu foto pun.", "📷");
+            return;
+        }
+
+        // Compile selections names
+        const selectedNames = [];
+        store.cullingFiles.forEach(f => {
+            if (store.cullingSelections.has(f.id)) {
+                selectedNames.push(f.name);
+            }
+        });
+
+        const fileListText = selectedNames.map((name, idx) => `${idx + 1}. ${name}`).join('\n');
+        const message = `Halo Kak! Saya telah selesai menyortir foto untuk event *${store.cullingEvent.event_name}*.\n\nBerikut daftar foto pilihan saya (*${store.cullingSelections.size} / ${store.cullingEvent.quota_limit}*):\n\n${fileListText}\n\nTerima kasih!`;
+
+        const waUrl = `https://wa.me/${store.cullingEvent.whatsapp_admin}?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, '_blank');
+    };
+
+    // ----------------------------------------------------
+    // VIEW 3: SUPER ADMIN / OWNER VIEW LOGIC
+    // ----------------------------------------------------
+    async function initOwnerView() {
+        document.getElementById('view-owner').style.display = 'block';
+        document.title = "Event Explorer — SapaTamu Admin";
+
+        // Setup admin back button
+        const headerActions = document.getElementById('header-actions');
+        headerActions.innerHTML = `
+            <a href="sortir.html" class="btn btn-secondary" onclick="event.preventDefault(); window.history.pushState({}, '', 'sortir.html'); router();">
+                ⬅ Kembali ke Dashboard
+            </a>
+        `;
+
+        document.getElementById('owner-loading').style.display = 'block';
+        document.getElementById('owner-events-table').style.display = 'none';
+        document.getElementById('owner-empty-state').style.display = 'none';
+
+        // Load all events in database
+        const { data, error } = await supabase
+            .from('sortir_events')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        document.getElementById('owner-loading').style.display = 'none';
+
+        if (error || !data || data.length === 0) {
+            document.getElementById('owner-empty-state').style.display = 'block';
+            return;
+        }
+
+        store.ownerEvents = data;
+        renderOwnerEventsTable();
+    }
+
+    function renderOwnerEventsTable() {
+        const tbody = document.getElementById('owner-events-tbody');
+        tbody.innerHTML = '';
+
+        const filtered = store.ownerEvents.filter(evt => {
+            return evt.event_name.toLowerCase().includes(store.ownerSearch.toLowerCase()) || 
+                   evt.event_slug.toLowerCase().includes(store.ownerSearch.toLowerCase());
+        });
+
+        if (filtered.length === 0) {
+            document.getElementById('owner-events-table').style.display = 'none';
+            document.getElementById('owner-empty-state').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('owner-events-table').style.display = 'table';
+        document.getElementById('owner-empty-state').style.display = 'none';
+
+        filtered.forEach(evt => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--border)';
+            tr.innerHTML = `
+                <td style="padding: 14px 16px; font-weight: bold; color: var(--text-main);">${evt.event_name}</td>
+                <td style="padding: 14px 16px; font-family: monospace; font-size: 12px; color: var(--text-muted);">${evt.drive_folder_id}</td>
+                <td style="padding: 14px 16px; color: var(--text-main);">+${evt.whatsapp_admin}</td>
+                <td style="padding: 14px 16px; color: var(--text-muted); font-size: 13px;">${new Date(evt.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})}</td>
+                <td style="padding: 14px 16px; text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
+                    <a href="?event=${evt.event_slug}" target="_blank" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px;">Buka ↗</a>
+                    <button onclick="deleteEventByAdmin('${evt.id}', '${evt.event_name}')" class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #E07B7B; box-shadow: none;">Hapus</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.handleOwnerSearch = function(val) {
+        store.ownerSearch = val;
+        renderOwnerEventsTable();
+    };
+
+    window.deleteEventByAdmin = async function(id, name) {
+        if (!confirm(`ADMIN: Apakah Anda yakin ingin menghapus event "${name}" dari seluruh database?`)) {
+            return;
+        }
+
+        const { error } = await supabase
+            .from('sortir_events')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            showAlert('Error', `Gagal menghapus event: ${error.message}`, '❌');
+            return;
+        }
+
+        showAlert('Sukses', 'Event berhasil didelete dari sistem!', '✅');
+        initOwnerView();
+    };
+
+</script>
+
+</body>
+</html>
