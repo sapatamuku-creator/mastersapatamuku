@@ -41,12 +41,13 @@ ALTER TABLE public.sortir_selections ENABLE ROW LEVEL SECURITY;
 -- ────────────────────────────────────────────────────────────
 
 -- 2a. Hapus kolom warisan versi SaaS/berbayar (penyebab NOT NULL error)
-ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS vendor_id;
-ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS billing_status;
-ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS subscription_plan;
-ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS owner_id;
-ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS is_paid;
-ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS referral_code;
+-- CASCADE otomatis menghapus RLS policy lama yang bergantung pada kolom ini
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS vendor_id CASCADE;
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS billing_status CASCADE;
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS subscription_plan CASCADE;
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS owner_id CASCADE;
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS is_paid CASCADE;
+ALTER TABLE public.sortir_events DROP COLUMN IF EXISTS referral_code CASCADE;
 
 -- 2b. Pastikan semua kolom open-source sudah ada
 ALTER TABLE public.sortir_events ADD COLUMN IF NOT EXISTS whatsapp_admin   VARCHAR(20)  NOT NULL DEFAULT '';
