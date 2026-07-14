@@ -836,6 +836,15 @@
                     </div>
                 </div>
 
+                <!-- Wildcard mode info banner -->
+                <div style="background: rgba(224,123,123,0.07); border: 1px solid rgba(224,123,123,0.3); border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; font-size: 12px; color: var(--text-main); display: flex; align-items: flex-start; gap: 12px;">
+                    <span style="font-size: 20px; flex-shrink:0;">🔍</span>
+                    <div>
+                        <strong>Mode Pencarian: Wildcard Otomatis</strong><br>
+                        Script akan mencari file menggunakan pola <code style="background:#f0e6de;padding:1px 5px;border-radius:4px;">*NAMAFILE*</code> sehingga otomatis menemukan <code style="background:#f0e6de;padding:1px 5px;border-radius:4px;">_GSC8846.NEF</code>, <code style="background:#f0e6de;padding:1px 5px;border-radius:4px;">_GSC8846.JPG</code>, dll. dari indeks <strong>GSC8846</strong> — tanpa perlu mengetikkan prefix underscore atau ekstensi.
+                    </div>
+                </div>
+
                 <label class="form-label">📄 Preview Struktur Output</label>
                 <div class="code-block" id="s3-output-preview" style="font-size: 12px; white-space: pre; margin-bottom: 24px; line-height: 1.7;"></div>
 
@@ -1852,7 +1861,7 @@ read -p "Tekan Enter untuk keluar..."`;
         wizardUpdateIndicator(1);
     };
 
-    // --- STEP 3: Download script ---
+    // --- STEP 3: Download script (wildcard mode) ---
     window.downloadManualScript = function(platform) {
         const src  = (document.getElementById('manual-source-path')?.value || '').trim();
         const dest = (document.getElementById('manual-dest-path')?.value || '').trim();
@@ -1865,25 +1874,52 @@ read -p "Tekan Enter untuk keluar..."`;
         const fileList = wizard.files;
 
         if (platform === 'windows') {
-            const sep  = '\\';
-            const outDir = `${outputBase}${sep}${sub}`;
-            let bat = `@echo off\r\nchcp 65001 > nul\r\necho ============================================\r\necho  SapaTamu Sortir — Script Penyalinan Foto\r\necho ============================================\r\necho.\r\n\r\nset "SOURCE=${src}"\r\nset "DEST=${outDir}"\r\n\r\nif not exist "%DEST%" (\r\n    mkdir "%DEST%"\r\n    echo [OK] Folder output dibuat: %DEST%\r\n) else (\r\n    echo [INFO] Folder output sudah ada.\r\n)\r\necho.\r\necho Menyalin ${fileList.length} file pilihan klien...\r\necho.\r\n\r\n`;
+            const outDir = `${outputBase}\\${sub}`;
+            // Use wildcard search: for /r finds *FILENAME* regardless of prefix _ or extension
+            let bat = `@echo off\r\nchcp 65001 > nul\r\necho ============================================\r\necho  SapaTamu Sortir - Script Penyalinan Foto\r\necho  Mode: Wildcard (prefix _ dan ekstensi otomatis)\r\necho ============================================\r\necho.\r\n\r\nset "SOURCE=${src}"\r\nset "DEST=${outDir}"\r\nset COPIED=0\r\nset SKIPPED=0\r\n\r\nif not exist "%DEST%" (\r\n    mkdir "%DEST%"\r\n    echo [OK] Folder output dibuat: %DEST%\r\n) else (\r\n    echo [INFO] Folder output sudah ada.\r\n)\r\necho.\r\necho Mencari dan menyalin ${fileList.length} indeks file...\r\necho.\r\n\r\n`;
+
             fileList.forEach(f => {
-                bat += `if exist "%SOURCE%\\${f}" (\r\n    copy /Y "%SOURCE%\\${f}" "%DEST%\\${f}" > nul\r\n    echo [COPIED] ${f}\r\n) else (\r\n    echo [SKIP]   ${f} tidak ditemukan\r\n)\r\n`;
+                // for /r loops through all matching files (catches _GSC8846.NEF, _GSC8846.JPG, etc.)
+                bat += `set "FOUND_${f}=0"\r\n`;
+                bat += `for /r "%SOURCE%" %%F in (*${f}*) do (\r\n`;
+                bat += `    copy /Y "%%F" "%DEST%\\%%~nxF" > nul\r\n`;
+                bat += `    echo [COPIED] %%~nxF\r\n`;
+                bat += `    set "FOUND_${f}=1"\r\n`;
+                bat += `    set /a COPIED+=1\r\n`;
+                bat += `)\r\n`;
+                bat += `if "%FOUND_${f}%"=="0" (\r\n    echo [SKIP]   *${f}* tidak ditemukan\r\n    set /a SKIPPED+=1\r\n)\r\n\r\n`;
             });
-            bat += `\r\necho.\r\necho Selesai! ${fileList.length} file diproses.\r\necho Output: %DEST%\r\npause\r\n`;
+
+            bat += `\r\necho.\r\necho ============================================\r\necho  Selesai! Disalin: %COPIED% file, Tidak ditemukan: %SKIPPED%\r\necho  Output: %DEST%\r\necho ============================================\r\npause\r\n`;
+
             const blob = new Blob([bat], { type: 'text/plain' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = `sortir_manual_${sub}.bat`;
             a.click();
+
         } else {
             const outDir = `${outputBase}/${sub}`;
-            let cmd = `#!/bin/bash\n# SapaTamu Sortir — Script Penyalinan Foto (macOS)\n\nSOURCE="${src}"\nDEST="${outDir}"\n\nmkdir -p "$DEST"\necho "✅ Folder output: $DEST"\necho ""\necho "Menyalin ${fileList.length} file pilihan klien..."\necho ""\n\n`;
+            // macOS: use find -name "*FILENAME*" to catch _GSC8846.NEF etc.
+            let cmd = `#!/bin/bash\n# SapaTamu Sortir - Script Penyalinan Foto (macOS)\n# Mode: Wildcard (*FILENAME*) — menangkap prefix _ dan semua ekstensi\n\nSOURCE="${src}"\nDEST="${outDir}"\nCOPIED=0\nSKIPPED=0\n\nmkdir -p "$DEST"\necho "✅ Folder output: $DEST"\necho ""\necho "Mencari dan menyalin ${fileList.length} indeks file..."\necho ""\n\n`;
+
             fileList.forEach(f => {
-                cmd += `if [ -f "$SOURCE/${f}" ]; then\n  cp -n "$SOURCE/${f}" "$DEST/${f}" && echo "✅ ${f}" || echo "❌ Gagal: ${f}"\nelse\n  echo "⚠️  Tidak ditemukan: ${f}"\nfi\n`;
+                cmd += `# --- ${f} ---\n`;
+                cmd += `MATCHES=$(find "$SOURCE" -maxdepth 1 -name "*${f}*" 2>/dev/null)\n`;
+                cmd += `if [ -n "$MATCHES" ]; then\n`;
+                cmd += `  while IFS= read -r FILE; do\n`;
+                cmd += `    FNAME=$(basename "$FILE")\n`;
+                cmd += `    cp -n "$FILE" "$DEST/$FNAME" && echo "✅ $FNAME" || echo "❌ Gagal: $FNAME"\n`;
+                cmd += `    COPIED=$((COPIED+1))\n`;
+                cmd += `  done <<< "$MATCHES"\n`;
+                cmd += `else\n`;
+                cmd += `  echo "⚠️  Tidak ditemukan: *${f}*"\n`;
+                cmd += `  SKIPPED=$((SKIPPED+1))\n`;
+                cmd += `fi\n\n`;
             });
-            cmd += `\necho ""\necho "Selesai! Output di: $DEST"\n`;
+
+            cmd += `\necho ""\necho "============================================"\necho "Selesai! Disalin: $COPIED file, Tidak ditemukan: $SKIPPED"\necho "Output: $DEST"\necho "============================================"\n`;
+
             const blob = new Blob([cmd], { type: 'text/plain' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
