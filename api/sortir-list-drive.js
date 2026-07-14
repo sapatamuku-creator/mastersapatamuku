@@ -1,7 +1,51 @@
 // api/sortir-list-drive.js
-// Vercel serverless function to list files from a public Google Drive folder securely.
+// Vercel serverless function — lists files recursively from all subfolders
+// of a public Google Drive folder, so structures like:
+//   Root/
+//     Kamera 1/  → file1.jpg, file2.nef
+//     Kamera 3/  → file3.jpg
+// are all returned as a flat list.
 
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || process.env.MIDTRANS_SERVER_KEY; // Fallback or direct key
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+
+// Helper: fetch one page of Drive files with given query
+async function driveList(q, pageToken = null) {
+  const fields = 'nextPageToken,files(id,name,mimeType,parents)';
+  let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&key=${GOOGLE_API_KEY}&fields=${encodeURIComponent(fields)}&pageSize=1000&orderBy=name`;
+  if (pageToken) url += `&pageToken=${pageToken}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Drive API error: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+// Recursively collect all image file IDs from a folder and its subfolders
+async function collectFiles(folderId, depth = 0) {
+  if (depth > 5) return []; // safety guard against infinite nesting
+
+  const results = [];
+  let pageToken = null;
+
+  // 1. Get all items (files + subfolders) directly inside this folder
+  do {
+    const data = await driveList(`'${folderId}' in parents and trashed = false`, pageToken);
+    const items = data.files || [];
+
+    for (const item of items) {
+      if (item.mimeType === 'application/vnd.google-apps.folder') {
+        // Recurse into subfolder
+        const subFiles = await collectFiles(item.id, depth + 1);
+        results.push(...subFiles);
+      } else {
+        // It's a file — include it
+        results.push(item);
+      }
+    }
+
+    pageToken = data.nextPageToken || null;
+  } while (pageToken);
+
+  return results;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -14,26 +58,24 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing folderId parameter' });
   }
 
-  // We check if GOOGLE_API_KEY is configured. If not, we can warn.
-  // We will call Google Drive API files.list endpoint.
-  // It fetches files that are in the parent folder, not trashed, and are images/folders.
-  const fields = "files(id,name,mimeType,thumbnailLink,size,createdTime)";
-  const q = `'${folderId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`;
-  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&key=${GOOGLE_API_KEY}&fields=${encodeURIComponent(fields)}&pageSize=1000&orderBy=name`;
+  if (!GOOGLE_API_KEY) {
+    return res.status(500).json({ error: 'Server misconfiguration: GOOGLE_API_KEY not set' });
+  }
 
   try {
-    const driveRes = await fetch(url);
-    if (!driveRes.ok) {
-      const errText = await driveRes.text();
-      console.error('Google Drive API Error Response:', errText);
-      return res.status(driveRes.status).json({ error: 'Failed to fetch files from Google Drive. Ensure the folder is public and shared.' });
-    }
+    const files = await collectFiles(folderId);
 
-    const data = await driveRes.json();
-    return res.status(200).json(data.files || []);
+    // Return only image-like files (filter out docs, spreadsheets, etc.)
+    const imageExts = /\.(jpg|jpeg|png|gif|webp|heic|tif|tiff|cr2|cr3|nef|arw|dng|raf|rw2|orf|raw)$/i;
+    const imageFiles = files.filter(f =>
+      imageExts.test(f.name) ||
+      (f.mimeType && f.mimeType.startsWith('image/'))
+    );
+
+    return res.status(200).json(imageFiles);
 
   } catch (error) {
-    console.error('List Drive error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    console.error('List Drive recursive error:', error);
+    return res.status(500).json({ error: error.message || 'Internal Server Error' });
   }
 }
