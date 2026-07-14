@@ -60,3 +60,22 @@ CREATE POLICY "Allow public delete for selections"
     ON public.sortir_selections FOR DELETE 
     USING (true);
 
+-- ============================================================
+-- MIGRATION: Patch kolom yang hilang pada tabel yang sudah ada
+-- Aman dijalankan berulang kali (IF NOT EXISTS mencegah error duplikat)
+-- ============================================================
+ALTER TABLE public.sortir_events ADD COLUMN IF NOT EXISTS whatsapp_admin VARCHAR(20) NOT NULL DEFAULT '';
+ALTER TABLE public.sortir_events ADD COLUMN IF NOT EXISTS drive_folder_id VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE public.sortir_events ADD COLUMN IF NOT EXISTS drive_folder_url TEXT;
+ALTER TABLE public.sortir_events ADD COLUMN IF NOT EXISTS quota_limit INTEGER NOT NULL DEFAULT 50;
+
+-- RLS delete policy untuk sortir_events (jika belum ada)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'sortir_events' AND policyname = 'Allow public delete for events'
+    ) THEN
+        EXECUTE 'CREATE POLICY "Allow public delete for events" ON public.sortir_events FOR DELETE USING (true)';
+    END IF;
+END $$;
