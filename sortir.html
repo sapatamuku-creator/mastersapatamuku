@@ -616,6 +616,70 @@
         .wizard-line.done {
             background: var(--success);
         }
+
+        /* ---- View Mode: Drive (uniform square grid) ---- */
+        .grid-drive {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .grid-drive .photo-card {
+            border-radius: 16px;
+        }
+        .grid-drive .photo-image-container {
+            aspect-ratio: 1 / 1;
+        }
+
+        /* ---- View Mode: Pinterest / Justified (natural ratio) ---- */
+        .grid-pinterest {
+            columns: 4 220px;
+            column-gap: 16px;
+            margin-top: 20px;
+        }
+        @media (max-width: 900px) { .grid-pinterest { columns: 3 180px; } }
+        @media (max-width: 600px) { .grid-pinterest { columns: 2 140px; } }
+        .grid-pinterest .photo-card {
+            break-inside: avoid;
+            margin-bottom: 16px;
+            border-radius: 16px;
+            display: block;
+        }
+        .grid-pinterest .photo-image-container {
+            aspect-ratio: unset;
+            height: auto;
+        }
+        .grid-pinterest .photo-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* View Mode toggle button */
+        .view-mode-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1.5px solid var(--border);
+            background: white;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .view-mode-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        .view-mode-btn:hover:not(.active) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
     </style>
 </head>
 <body>
@@ -894,6 +958,15 @@
                 <button id="tab-filter-selected" class="filter-tab" onclick="handleClientFilter('selected')">Terpilih</button>
                 <button id="tab-filter-unselected" class="filter-tab" onclick="handleClientFilter('unselected')">Belum Terpilih</button>
             </div>
+            <!-- View Mode Toggle -->
+            <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                <button id="viewbtn-drive" class="view-mode-btn active" onclick="setViewMode('drive')" title="Drive Mode (Kotak Seragam)">
+                    ⊞
+                </button>
+                <button id="viewbtn-pinterest" class="view-mode-btn" onclick="setViewMode('pinterest')" title="Pinterest Mode (Rasio Asli Foto)">
+                    ⫿
+                </button>
+            </div>
         </div>
 
         <!-- Skeleton grid while loading -->
@@ -918,7 +991,7 @@
         </div>
 
         <!-- Photo Grid Container -->
-        <div id="culling-photos-grid" class="photos-grid" style="display: none;"></div>
+        <div id="culling-photos-grid" class="grid-drive" style="display: none;"></div>
         
         <!-- Empty / Error handlers -->
         <div id="culling-empty-state" class="card empty-state" style="display: none;">
@@ -1464,9 +1537,35 @@ read -p "Tekan Enter untuk keluar..."`;
         document.getElementById('client-quota-counter').innerText = `${count} / ${limit}`;
     }
 
+    // View mode state (persisted per browser)
+    store.viewMode = localStorage.getItem('sortir_view_mode') || 'drive';
+
+    window.setViewMode = function(mode) {
+        store.viewMode = mode;
+        localStorage.setItem('sortir_view_mode', mode);
+        const grid = document.getElementById('culling-photos-grid');
+        grid.className = mode === 'pinterest' ? 'grid-pinterest' : 'grid-drive';
+        // Update button states
+        document.getElementById('viewbtn-drive').classList.toggle('active', mode === 'drive');
+        document.getElementById('viewbtn-pinterest').classList.toggle('active', mode === 'pinterest');
+        renderClientPhotosGrid();
+    };
+
+    // Apply saved mode on load
+    function applyViewMode() {
+        const mode = store.viewMode;
+        const grid = document.getElementById('culling-photos-grid');
+        if (grid) grid.className = mode === 'pinterest' ? 'grid-pinterest' : 'grid-drive';
+        const db = document.getElementById('viewbtn-drive');
+        const pb = document.getElementById('viewbtn-pinterest');
+        if (db) db.classList.toggle('active', mode === 'drive');
+        if (pb) pb.classList.toggle('active', mode === 'pinterest');
+    }
+
     function renderClientPhotosGrid() {
         const grid = document.getElementById('culling-photos-grid');
         grid.innerHTML = '';
+        applyViewMode();
 
         const filtered = store.cullingFiles.filter(f => {
             const matchesSearch = f.name.toLowerCase().includes(store.clientSearch.toLowerCase());
@@ -1478,9 +1577,12 @@ read -p "Tekan Enter untuk keluar..."`;
         });
 
         if (filtered.length === 0) {
-            grid.innerHTML = `<div class="col-span-full" style="text-align: center; padding: 48px; color: var(--text-muted);">Tidak ada foto yang sesuai dengan filter/pencarian.</div>`;
+            grid.innerHTML = `<div style="text-align: center; padding: 48px; color: var(--text-muted); grid-column: 1/-1;">Tidak ada foto yang sesuai dengan filter/pencarian.</div>`;
             return;
         }
+
+        const isPinterest = store.viewMode === 'pinterest';
+        const thumbW = isPinterest ? 600 : 400;
 
         filtered.forEach(file => {
             const isSelected = store.cullingSelections.has(file.id);
@@ -1488,11 +1590,17 @@ read -p "Tekan Enter untuk keluar..."`;
             card.className = `photo-card ${isSelected ? 'selected' : ''}`;
             card.id = `card-${file.id}`;
 
-            const cdnUrl = `https://lh3.googleusercontent.com/d/${file.id}=w400`;
+            const cdnUrl = `https://lh3.googleusercontent.com/d/${file.id}=w${thumbW}`;
+
+            // In Pinterest mode, image height is natural (no fixed container)
+            const imgContainerStyle = isPinterest
+                ? 'position:relative; overflow:hidden;'
+                : '';
 
             card.innerHTML = `
-                <div class="photo-image-container">
-                    <img src="${cdnUrl}" class="photo-image" loading="lazy" alt="${file.name}">
+                <div class="photo-image-container" style="${imgContainerStyle}">
+                    <img src="${cdnUrl}" class="photo-image" loading="lazy" alt="${file.name}"
+                        ${isPinterest ? 'style="width:100%;height:auto;display:block;"' : ''}>
                     <div class="zoom-overlay" onclick="zoomPhoto('${file.id}', '${file.name}')">
                         <span class="zoom-btn">🔎 Perbesar</span>
                     </div>
