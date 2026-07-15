@@ -618,6 +618,31 @@
             flex-shrink: 0;
         }
 
+        /* Infinite scroll loading indicator */
+        .local-scroll-sentinel {
+            width: 100%;
+            height: 1px;
+        }
+        .local-load-more-indicator {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .local-load-more-indicator .spinner {
+            width: 20px;
+            height: 20px;
+            margin: 0 auto 8px;
+        }
+        .local-buffer-status {
+            text-align: center;
+            padding: 8px;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
     </style>
 </head>
 <body>
@@ -734,6 +759,12 @@
 
                 <!-- Local Pinterest Gallery -->
                 <div id="local-gallery" class="grid-pinterest" style="display: none; margin-top: 16px;"></div>
+                <div id="local-scroll-sentinel" class="local-scroll-sentinel"></div>
+                <div id="local-load-more" class="local-load-more-indicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>Memuat foto berikutnya...</span>
+                </div>
+                <div id="local-buffer-status" class="local-buffer-status"></div>
             </div>
         </div>
 
@@ -1972,7 +2003,13 @@ read -p "Tekan Enter untuk keluar..."`;
     const localStore = {
         files: [],
         selections: new Set(),
-        directoryHandle: null
+        directoryHandle: null,
+        // Buffer / Infinite Scroll state
+        renderIndex: 0,
+        chunkSize: 50,
+        isLoadingChunk: false,
+        allRendered: false,
+        observer: null
     };
 
     const IMAGE_EXTS = new Set(['jpg','jpeg','png','webp','tiff','tif','heic','bmp']);
@@ -2019,7 +2056,33 @@ read -p "Tekan Enter untuk keluar..."`;
         }
     }
 
+    function cleanupLocalBuffer() {
+        // Revoke all object URLs to free memory
+        localStore.files.forEach(f => {
+            if (f.url) {
+                URL.revokeObjectURL(f.url);
+                f.url = null;
+            }
+        });
+        // Disconnect observer
+        if (localStore.observer) {
+            localStore.observer.disconnect();
+            localStore.observer = null;
+        }
+        // Clear gallery DOM
+        const grid = document.getElementById('local-gallery');
+        if (grid) grid.innerHTML = '';
+        // Hide load-more indicator
+        const loadMore = document.getElementById('local-load-more');
+        if (loadMore) loadMore.style.display = 'none';
+        const statusEl = document.getElementById('local-buffer-status');
+        if (statusEl) statusEl.textContent = '';
+    }
+
     function processLocalFiles(files) {
+        // Cleanup previous session if any
+        cleanupLocalBuffer();
+
         const imageFiles = files.filter(f => {
             const ext = f.name.split('.').pop().toLowerCase();
             return IMAGE_EXTS.has(ext);
@@ -2033,31 +2096,104 @@ read -p "Tekan Enter untuk keluar..."`;
         }));
         localStore.selections.clear();
 
+        // Reset buffer state
+        localStore.renderIndex = 0;
+        localStore.allRendered = false;
+        localStore.isLoadingChunk = false;
+
         document.getElementById('local-drop-zone').style.display = 'none';
         document.getElementById('local-export-panel').style.display = 'block';
         document.getElementById('local-gallery').style.display = 'flex';
 
         updateLocalSelectionUI();
-        renderLocalGallery();
+        renderLocalGalleryChunk();
+        setupLocalScrollObserver();
     }
 
-    function renderLocalGallery() {
-        const grid = document.getElementById('local-gallery');
-        grid.innerHTML = '';
+    function renderLocalGalleryChunk() {
+        if (localStore.isLoadingChunk || localStore.allRendered) return;
+        localStore.isLoadingChunk = true;
 
-        localStore.files.forEach(f => {
+        const grid = document.getElementById('local-gallery');
+        const total = localStore.files.length;
+        const start = localStore.renderIndex;
+        const end = Math.min(start + localStore.chunkSize, total);
+
+        if (start >= total) {
+            localStore.allRendered = true;
+            localStore.isLoadingChunk = false;
+            updateLocalBufferStatus();
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        for (let i = start; i < end; i++) {
+            const f = localStore.files[i];
             const isSelected = localStore.selections.has(f.id);
             const pin = document.createElement('div');
             pin.className = `pin-card ${isSelected ? 'selected' : ''}`;
             pin.id = `local-card-${f.id}`;
             pin.onclick = () => toggleLocalSelection(f.id, f.name);
-
             pin.innerHTML = `
                 <img src="${f.url}" loading="lazy" alt="${f.name}">
                 <div class="pin-check-badge">✓</div>
             `;
-            grid.appendChild(pin);
+            fragment.appendChild(pin);
+        }
+        grid.appendChild(fragment);
+
+        localStore.renderIndex = end;
+        localStore.isLoadingChunk = false;
+
+        if (end >= total) {
+            localStore.allRendered = true;
+        }
+
+        updateLocalBufferStatus();
+    }
+
+    function updateLocalBufferStatus() {
+        const total = localStore.files.length;
+        const rendered = localStore.renderIndex;
+        const statusEl = document.getElementById('local-buffer-status');
+        if (!statusEl) return;
+
+        if (localStore.allRendered) {
+            statusEl.textContent = `Semua ${total} foto telah dimuat.`;
+        } else {
+            statusEl.textContent = `Menampilkan ${rendered} dari ${total} foto — scroll ke bawah untuk memuat lebih banyak.`;
+        }
+    }
+
+    function setupLocalScrollObserver() {
+        // Disconnect previous observer
+        if (localStore.observer) {
+            localStore.observer.disconnect();
+        }
+
+        const sentinel = document.getElementById('local-scroll-sentinel');
+        const loadMoreEl = document.getElementById('local-load-more');
+        if (!sentinel) return;
+
+        localStore.observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !localStore.allRendered && !localStore.isLoadingChunk) {
+                    // Show loading indicator
+                    if (loadMoreEl) loadMoreEl.style.display = 'block';
+                    // Use requestAnimationFrame to avoid blocking UI
+                    requestAnimationFrame(() => {
+                        renderLocalGalleryChunk();
+                        if (loadMoreEl) loadMoreEl.style.display = 'none';
+                    });
+                }
+            });
+        }, {
+            root: null,
+            rootMargin: '0px 0px 400px 0px',
+            threshold: 0
         });
+
+        localStore.observer.observe(sentinel);
     }
 
     window.toggleLocalSelection = function(id, name) {
