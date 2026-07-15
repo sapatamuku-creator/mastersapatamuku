@@ -643,6 +643,99 @@
             font-weight: 600;
         }
 
+        /* Desktop Mode Switcher Modal */
+        .desktop-mode-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(74, 63, 53, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999999;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        .desktop-mode-modal.fadeout {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .desktop-mode-content {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 36px 32px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            transform: scale(1);
+            transition: transform 0.5s ease;
+        }
+        .desktop-mode-modal.fadeout .desktop-mode-content {
+            transform: scale(0.92);
+        }
+        .desktop-mode-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: rgba(224, 123, 123, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin: 0 auto 16px;
+        }
+        .desktop-mode-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+        .desktop-mode-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .btn-desktop-activate {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            background: var(--primary);
+            color: white;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 6px 20px rgba(224, 123, 123, 0.3);
+            margin-bottom: 10px;
+        }
+        .btn-desktop-activate:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(224, 123, 123, 0.4);
+        }
+        .btn-desktop-skip {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 14px;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .btn-desktop-skip:hover {
+            color: var(--text-main);
+        }
+
     </style>
 </head>
 <body>
@@ -1056,6 +1149,23 @@
     </div>
 </div>
 
+<!-- Desktop Mode Switcher Modal (Mobile Only) -->
+<div id="desktop-mode-modal" class="desktop-mode-modal">
+    <div class="desktop-mode-content">
+        <div class="desktop-mode-icon">🖥️</div>
+        <h3 class="desktop-mode-title">Aktifkan Mode Desktop?</h3>
+        <p class="desktop-mode-desc">
+            Rekomendasi: Aktifkan Mode Desktop agar sortir foto lebih mudah dan estetik seperti di komputer.
+        </p>
+        <button onclick="activateDesktopMode()" class="btn-desktop-activate">
+            Aktifkan Mode Desktop
+        </button>
+        <button onclick="dismissDesktopMode()" class="btn-desktop-skip">
+            Gunakan Mode Mobile saja
+        </button>
+    </div>
+</div>
+
 <!-- Lightroom Guide Modal -->
 <div id="lr-guide-modal" class="guide-modal" onclick="closeLRGuide()">
     <div class="guide-content" onclick="event.stopPropagation()">
@@ -1156,6 +1266,68 @@
     window.closeAlertModal = function() {
         document.getElementById('alert-modal').style.display = 'none';
     };
+
+    // ============================================================
+    // DESKTOP MODE SWITCHER (Mobile Detection)
+    // ============================================================
+    function isMobileDevice() {
+        return window.innerWidth < 768;
+    }
+
+    function applyDesktopViewport() {
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.setAttribute('content', 'width=1280, initial-scale=0.3, maximum-scale=1.0, user-scalable=yes');
+        }
+    }
+
+    function applyMobileViewport() {
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+        }
+    }
+
+    window.activateDesktopMode = function() {
+        localStorage.setItem('sortir_desktop_mode', 'on');
+        applyDesktopViewport();
+        closeModalWithFade('desktop-mode-modal');
+    };
+
+    window.dismissDesktopMode = function() {
+        localStorage.setItem('sortir_desktop_mode', 'off');
+        closeModalWithFade('desktop-mode-modal');
+    };
+
+    function closeModalWithFade(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.add('fadeout');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.remove('fadeout');
+        }, 500);
+    }
+
+    function checkDesktopModePrompt() {
+        if (!isMobileDevice()) return;
+
+        const pref = localStorage.getItem('sortir_desktop_mode');
+        if (pref === 'on') {
+            applyDesktopViewport();
+            return;
+        }
+        if (pref === 'off') return;
+
+        // First visit — show modal
+        setTimeout(() => {
+            const modal = document.getElementById('desktop-mode-modal');
+            if (modal) modal.style.display = 'flex';
+        }, 800);
+    }
+
+    // Run on page load
+    checkDesktopModePrompt();
 
     // ----------------------------------------------------
     // VIEW 1: PHOTOGRAPHER DASHBOARD LOGIC
