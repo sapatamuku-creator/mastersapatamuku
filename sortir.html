@@ -895,12 +895,22 @@
                         <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
                             Unduh skrip otomatis yang akan menyalin seluruh berkas foto pilihan klien (RAW/JPG) dari direktori lokal Anda ke dalam subfolder `/Selected_by_Client/` secara instan.
                         </p>
+
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label">📁 Path Folder Sumber RAW / JPG</label>
+                            <input type="text" id="pnp-source-path" class="form-control"
+                                placeholder="Contoh: D:\Foto\Rian-Andini-Wedding"
+                                style="font-family: monospace; font-size: 12px; padding: 10px 14px;">
+                            <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                                Path folder lokal tempat file RAW/JPG tersimpan. Otomatis terisi jika sudah diisi di panel Penerjemah Indeks.
+                            </p>
+                        </div>
                         
                         <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <button onclick="downloadCopyScript('windows')" class="btn btn-primary" style="background: #4A3F35; box-shadow: none;">
+                            <button onclick="downloadCopyScript('windows')" id="btn-pnp-win" class="btn btn-primary" style="background: #4A3F35; box-shadow: none;">
                                 💻 Unduh Script Windows (.bat)
                             </button>
-                            <button onclick="downloadCopyScript('mac')" class="btn btn-secondary">
+                            <button onclick="downloadCopyScript('mac')" id="btn-pnp-mac" class="btn btn-secondary">
                                 🍎 Unduh Script macOS (.command)
                             </button>
                         </div>
@@ -1253,6 +1263,17 @@
         router();
         // Listen to navigation events
         window.addEventListener('popstate', router);
+
+        // Sync: Manual Index source path → PnP Copy Script source path
+        const manualSourceInput = document.getElementById('manual-source-path');
+        if (manualSourceInput) {
+            manualSourceInput.addEventListener('input', function() {
+                const pnpInput = document.getElementById('pnp-source-path');
+                if (pnpInput && this.value.trim()) {
+                    pnpInput.value = this.value.trim();
+                }
+            });
+        }
     });
 
     // Helper alerts
@@ -1577,6 +1598,13 @@
             return;
         }
 
+        // Read source path from PnP panel input
+        const sourcePath = (document.getElementById('pnp-source-path')?.value || '').trim();
+        if (!sourcePath) {
+            showAlert('Path Kosong', 'Harap isi path folder sumber RAW/JPG terlebih dahulu.', '📁');
+            return;
+        }
+
         // Extract clean names without extension
         const cleanNames = store.activeSelections.map(s => {
             return s.photo_name.split('.').slice(0, -1).join('.');
@@ -1587,69 +1615,45 @@
 
         if (platform === 'windows') {
             filename = `cull_photos_${store.activeEvent.event_slug}.bat`;
-            const fileListFormatted = cleanNames.map(name => `"${name}"`).join(',\n  ');
+            const destPath = sourcePath.replace(/\\/g, '\\\\') + '\\\\Selected_by_Client';
+            const fileListFormatted = cleanNames.map(name => `    "${name}"`).join('\n');
             
-            scriptContent = `@echo off
-echo Menjalankan skrip ini berarti menyetujui instalasi pembantu penyalinan file foto di komputer Anda. Lanjutkan? (Y/N)
-set /p choice=
-if /i "%choice%" neq "Y" exit
+            scriptContent = `@echo off\r\nchcp 65001 > nul\r\necho ============================================\r\necho  SapaTamu Sortir - Script Penyalinan Foto\r\necho  Mode: Wildcard (prefix _ dan ekstensi otomatis)\r\necho ============================================\r\necho.\r\n\r\nset "SOURCE=${sourcePath}"\r\nset "DEST=%SOURCE%\\Selected_by_Client"\r\nset COPIED=0\r\nset SKIPPED=0\r\n\r\nif not exist "%DEST%" (\r\n    mkdir "%DEST%"\r\n    echo [OK] Folder output dibuat: %DEST%\r\n) else (\r\n    echo [INFO] Folder output sudah ada.\r\n)\r\necho.\r\necho Mencari dan menyalin ${cleanNames.length} file foto...\r\necho.\r\n\r\n`;
 
-powershell -Command "
-$sourceDir = Read-Host 'Masukkan path folder sumber foto (RAW/JPG)';
-$destDir = Join-Path $sourceDir 'Selected_by_Client';
-if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir | Out-Null };
-$files = @(
-  ${fileListFormatted}
-);
-$success = 0;
-Get-ChildItem -Path $sourceDir -File | ForEach-Object {
-  $base = $_.BaseName;
-  if ($files -contains $base) {
-    $target = Join-Path $destDir $_.Name;
-    Copy-Item -Path $_.FullName -Destination $target -Force;
-    $success++;
-  }
-};
-Write-Host 'Berhasil menyalin '$success' file ke '$destDir -ForegroundColor Green;
-pause;
-"`;
+            cleanNames.forEach(name => {
+                scriptContent += `set "FOUND_${name}=0"\r\n`;
+                scriptContent += `for /r "%SOURCE%" %%F in (*${name}*) do (\r\n`;
+                scriptContent += `    copy /Y "%%F" "%DEST%\\%%~nxF" > nul\r\n`;
+                scriptContent += `    echo [COPIED] %%~nxF\r\n`;
+                scriptContent += `    set "FOUND_${name}=1"\r\n`;
+                scriptContent += `    set /a COPIED+=1\r\n`;
+                scriptContent += `)\r\n`;
+                scriptContent += `if "%FOUND_${name}%"=="0" (\r\n    echo [SKIP]   *${name}* tidak ditemukan\r\n    set /a SKIPPED+=1\r\n)\r\n\r\n`;
+            });
+
+            scriptContent += `\r\necho.\r\necho ============================================\r\necho  Selesai! Disalin: %COPIED% file, Tidak ditemukan: %SKIPPED%\r\necho  Output: %DEST%\r\necho ============================================\r\npause\r\n`;
         } else {
             filename = `cull_photos_${store.activeEvent.event_slug}.command`;
             const fileListFormatted = cleanNames.map(name => `  "${name}"`).join('\n');
             
-            scriptContent = `#!/bin/bash
-cd "$(dirname "$0")"
-echo "Menjalankan skrip ini berarti menyetujui instalasi pembantu penyalinan file foto di komputer Anda. Lanjutkan? (Y/N)"
-read -r choice
-if [ "$choice" != "Y" ] && [ "$choice" != "y" ]; then
-    exit 0
-fi
+            scriptContent = `#!/bin/bash\n# SapaTamu Sortir - Script Penyalinan Foto (macOS)\n# Mode: Wildcard (*FILENAME*) — menangkap prefix _ dan semua ekstensi\n\nSOURCE="${sourcePath}"\nDEST="$SOURCE/Selected_by_Client"\nCOPIED=0\nSKIPPED=0\n\nmkdir -p "$DEST"\necho "✅ Folder output: $DEST"\necho ""\necho "Mencari dan menyalin ${cleanNames.length} file foto..."\necho ""\n\n`;
 
-echo "Masukkan path folder sumber foto (RAW/JPG):"
-read -r sourceDir
-destDir="$sourceDir/Selected_by_Client"
-mkdir -p "$destDir"
+            cleanNames.forEach(name => {
+                scriptContent += `# --- ${name} ---\n`;
+                scriptContent += `MATCHES=$(find "$SOURCE" -maxdepth 1 -name "*${name}*" 2>/dev/null)\n`;
+                scriptContent += `if [ -n "$MATCHES" ]; then\n`;
+                scriptContent += `  while IFS= read -r FILE; do\n`;
+                scriptContent += `    FNAME=$(basename "$FILE")\n`;
+                scriptContent += `    cp -n "$FILE" "$DEST/$FNAME" && echo "✅ $FNAME" || echo "❌ Gagal: $FNAME"\n`;
+                scriptContent += `    COPIED=$((COPIED+1))\n`;
+                scriptContent += `  done <<< "$MATCHES"\n`;
+                scriptContent += `else\n`;
+                scriptContent += `  echo "⚠️  Tidak ditemukan: *${name}*"\n`;
+                scriptContent += `  SKIPPED=$((SKIPPED+1))\n`;
+                scriptContent += `fi\n\n`;
+            });
 
-files=(
-${fileListFormatted}
-)
-
-success=0
-for file in "$sourceDir"/*; do
-    if [ -f "$file" ]; then
-        filename=$(basename "$file")
-        basename="\${filename%.*}"
-        for target in "\${files[@]}"; do
-            if [ "$basename" == "$target" ]; then
-                cp "$file" "$destDir/"
-                success=$((success + 1))
-                break
-            fi
-        done
-    fi
-done
-echo "Berhasil menyalin $success file ke $destDir"
-read -p "Tekan Enter untuk keluar..."`;
+            scriptContent += `\necho ""\necho "============================================"\necho "Selesai! Disalin: $COPIED file, Tidak ditemukan: $SKIPPED"\necho "Output: $DEST"\necho "============================================"\n`;
         }
 
         const blob = new Blob([scriptContent], { type: 'text/plain;charset=utf-8' });
