@@ -1610,50 +1610,58 @@
             return s.photo_name.split('.').slice(0, -1).join('.');
         });
 
+        const fileList = cleanNames;
+        const src = sourcePath;
+        const outDir = src + '\\Selected_by_Client';
+        const outDirMac = src + '/Selected_by_Client';
+
         let scriptContent = '';
         let filename = '';
 
         if (platform === 'windows') {
             filename = `cull_photos_${store.activeEvent.event_slug}.bat`;
-            const destPath = sourcePath.replace(/\\/g, '\\\\') + '\\\\Selected_by_Client';
-            const fileListFormatted = cleanNames.map(name => `    "${name}"`).join('\n');
-            
-            scriptContent = `@echo off\r\nchcp 65001 > nul\r\necho ============================================\r\necho  SapaTamu Sortir - Script Penyalinan Foto\r\necho  Mode: Wildcard (prefix _ dan ekstensi otomatis)\r\necho ============================================\r\necho.\r\n\r\nset "SOURCE=${sourcePath}"\r\nset "DEST=%SOURCE%\\Selected_by_Client"\r\nset COPIED=0\r\nset SKIPPED=0\r\n\r\nif not exist "%DEST%" (\r\n    mkdir "%DEST%"\r\n    echo [OK] Folder output dibuat: %DEST%\r\n) else (\r\n    echo [INFO] Folder output sudah ada.\r\n)\r\necho.\r\necho Mencari dan menyalin ${cleanNames.length} file foto...\r\necho.\r\n\r\n`;
+            // Use wildcard search: for /r finds *FILENAME* regardless of prefix _ or extension
+            let bat = `@echo off\r\nchcp 65001 > nul\r\necho ============================================\r\necho  SapaTamu Sortir - Script Penyalinan Foto\r\necho  Mode: Wildcard (prefix _ dan ekstensi otomatis)\r\necho ============================================\r\necho.\r\n\r\nset "SOURCE=${src}"\r\nset "DEST=${outDir}"\r\nset COPIED=0\r\nset SKIPPED=0\r\n\r\nif not exist "%DEST%" (\r\n    mkdir "%DEST%"\r\n    echo [OK] Folder output dibuat: %DEST%\r\n) else (\r\n    echo [INFO] Folder output sudah ada.\r\n)\r\necho.\r\necho Mencari dan menyalin ${fileList.length} indeks file...\r\necho.\r\n\r\n`;
 
-            cleanNames.forEach(name => {
-                scriptContent += `set "FOUND_${name}=0"\r\n`;
-                scriptContent += `for /r "%SOURCE%" %%F in (*${name}*) do (\r\n`;
-                scriptContent += `    copy /Y "%%F" "%DEST%\\%%~nxF" > nul\r\n`;
-                scriptContent += `    echo [COPIED] %%~nxF\r\n`;
-                scriptContent += `    set "FOUND_${name}=1"\r\n`;
-                scriptContent += `    set /a COPIED+=1\r\n`;
-                scriptContent += `)\r\n`;
-                scriptContent += `if "%FOUND_${name}%"=="0" (\r\n    echo [SKIP]   *${name}* tidak ditemukan\r\n    set /a SKIPPED+=1\r\n)\r\n\r\n`;
+            fileList.forEach(f => {
+                // for /r loops through all matching files (catches _GSC8846.NEF, _GSC8846.JPG, etc.)
+                bat += `set "FOUND_${f}=0"\r\n`;
+                bat += `for /r "%SOURCE%" %%F in (*${f}*) do (\r\n`;
+                bat += `    copy /Y "%%F" "%DEST%\\%%~nxF" > nul\r\n`;
+                bat += `    echo [COPIED] %%~nxF\r\n`;
+                bat += `    set "FOUND_${f}=1"\r\n`;
+                bat += `    set /a COPIED+=1\r\n`;
+                bat += `)\r\n`;
+                bat += `if "%FOUND_${f}%"=="0" (\r\n    echo [SKIP]   *${f}* tidak ditemukan\r\n    set /a SKIPPED+=1\r\n)\r\n\r\n`;
             });
 
-            scriptContent += `\r\necho.\r\necho ============================================\r\necho  Selesai! Disalin: %COPIED% file, Tidak ditemukan: %SKIPPED%\r\necho  Output: %DEST%\r\necho ============================================\r\npause\r\n`;
+            bat += `\r\necho.\r\necho ============================================\r\necho  Selesai! Disalin: %COPIED% file, Tidak ditemukan: %SKIPPED%\r\necho  Output: %DEST%\r\necho ============================================\r\npause\r\n`;
+
+            scriptContent = bat;
+
         } else {
             filename = `cull_photos_${store.activeEvent.event_slug}.command`;
-            const fileListFormatted = cleanNames.map(name => `  "${name}"`).join('\n');
-            
-            scriptContent = `#!/bin/bash\n# SapaTamu Sortir - Script Penyalinan Foto (macOS)\n# Mode: Wildcard (*FILENAME*) — menangkap prefix _ dan semua ekstensi\n\nSOURCE="${sourcePath}"\nDEST="$SOURCE/Selected_by_Client"\nCOPIED=0\nSKIPPED=0\n\nmkdir -p "$DEST"\necho "✅ Folder output: $DEST"\necho ""\necho "Mencari dan menyalin ${cleanNames.length} file foto..."\necho ""\n\n`;
+            // macOS: use find -name "*FILENAME*" to catch _GSC8846.NEF etc.
+            let cmd = `#!/bin/bash\n# SapaTamu Sortir - Script Penyalinan Foto (macOS)\n# Mode: Wildcard (*FILENAME*) — menangkap prefix _ dan semua ekstensi\n\nSOURCE="${src}"\nDEST="${outDirMac}"\nCOPIED=0\nSKIPPED=0\n\nmkdir -p "$DEST"\necho "✅ Folder output: $DEST"\necho ""\necho "Mencari dan menyalin ${fileList.length} indeks file..."\necho ""\n\n`;
 
-            cleanNames.forEach(name => {
-                scriptContent += `# --- ${name} ---\n`;
-                scriptContent += `MATCHES=$(find "$SOURCE" -maxdepth 1 -name "*${name}*" 2>/dev/null)\n`;
-                scriptContent += `if [ -n "$MATCHES" ]; then\n`;
-                scriptContent += `  while IFS= read -r FILE; do\n`;
-                scriptContent += `    FNAME=$(basename "$FILE")\n`;
-                scriptContent += `    cp -n "$FILE" "$DEST/$FNAME" && echo "✅ $FNAME" || echo "❌ Gagal: $FNAME"\n`;
-                scriptContent += `    COPIED=$((COPIED+1))\n`;
-                scriptContent += `  done <<< "$MATCHES"\n`;
-                scriptContent += `else\n`;
-                scriptContent += `  echo "⚠️  Tidak ditemukan: *${name}*"\n`;
-                scriptContent += `  SKIPPED=$((SKIPPED+1))\n`;
-                scriptContent += `fi\n\n`;
+            fileList.forEach(f => {
+                cmd += `# --- ${f} ---\n`;
+                cmd += `MATCHES=$(find "$SOURCE" -maxdepth 1 -name "*${f}*" 2>/dev/null)\n`;
+                cmd += `if [ -n "$MATCHES" ]; then\n`;
+                cmd += `  while IFS= read -r FILE; do\n`;
+                cmd += `    FNAME=$(basename "$FILE")\n`;
+                cmd += `    cp -n "$FILE" "$DEST/$FNAME" && echo "✅ $FNAME" || echo "❌ Gagal: $FNAME"\n`;
+                cmd += `    COPIED=$((COPIED+1))\n`;
+                cmd += `  done <<< "$MATCHES"\n`;
+                cmd += `else\n`;
+                cmd += `  echo "⚠️  Tidak ditemukan: *${f}*"\n`;
+                cmd += `  SKIPPED=$((SKIPPED+1))\n`;
+                cmd += `fi\n\n`;
             });
 
-            scriptContent += `\necho ""\necho "============================================"\necho "Selesai! Disalin: $COPIED file, Tidak ditemukan: $SKIPPED"\necho "Output: $DEST"\necho "============================================"\n`;
+            cmd += `\necho ""\necho "============================================"\necho "Selesai! Disalin: $COPIED file, Tidak ditemukan: $SKIPPED"\necho "Output: $DEST"\necho "============================================"\n`;
+
+            scriptContent = cmd;
         }
 
         const blob = new Blob([scriptContent], { type: 'text/plain;charset=utf-8' });
