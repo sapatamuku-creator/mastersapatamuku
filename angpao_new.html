@@ -2,6 +2,9 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>sapatamu.ku | DYNAMIC SCAN V6.9.1</title>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -259,7 +262,7 @@
 
     <div id="st-modal" class="st-modal-overlay">
         <div id="modal-container" class="st-modal-content">
-            <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️</span>
+            <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️ </span>
             <div id="st-modal-title" class="st-modal-title">Notifikasi</div>
             <div id="st-modal-msg" class="st-modal-msg">Pesan akan muncul di sini.</div>
             <div id="modal-actions" style="display: flex; gap: 10px; margin-top: 30px;">
@@ -373,7 +376,7 @@
         document.body.style.cursor = isStart ? 'wait' : 'default';
     }
 
-    window.showAlert = function(title, msg, icon = "⚠️") {
+    window.showAlert = function(title, msg, icon = "⚠️ ") {
         return new Promise(resolve => {
             document.getElementById('st-modal-icon').innerText = icon;
             document.getElementById('st-modal-title').innerText = title;
@@ -889,3 +892,16 @@
         document.addEventListener('DOMContentLoaded', initDynamicIslandNav);
     } else { initDynamicIslandNav(); }
 </script>
+<script src="offline-db.js"></script>
+<script src="sync-engine.js"></script>
+<script>
+(function(){
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+    window.addEventListener('online',function(){document.body.classList.remove('is-offline');});
+    window.addEventListener('offline',function(){document.body.classList.add('is-offline');});
+})();
+</script>
+<style>
+.is-offline::before{content:'⚠️ OFFLINE — Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
+@media(min-width:1024px){.is-offline::before{display:none;}}
+</style>

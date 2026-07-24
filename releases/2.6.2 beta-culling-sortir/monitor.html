@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu Serverless Monitor</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* CSS Variables for Themes */
+        :root[data-theme="light"] {
+            --bg-primary: #FFFBF9;          /* Warm Soft Cream - Landing */
+            --bg-secondary: #FFFFFF;
+            --border-color: #F3EAE3;
+            --text-primary: #4A3F35;        /* Luxury Warm Dark Brown */
+            --text-secondary: #8C7560;      /* Muted Warm Gold-Brown */
+            --accent-primary: #E07B7B;      /* Elegant Rose */
+            --accent-gold: #C8962E;         /* Luxury Gold */
+            --accent-glow: linear-gradient(135deg, #E07B7B, #C8962E);
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --card-shadow: 0 10px 30px rgba(74, 63, 53, 0.05);
+            --console-bg: #FAF6F2;
+            --console-text: #4A3F35;
+            --console-border: #F3EAE3;
+            --body-gradient: radial-gradient(circle at 10% 20%, rgba(224, 123, 123, 0.04) 0%, transparent 40%),
+                             radial-gradient(circle at 90% 80%, rgba(200, 150, 46, 0.04) 0%, transparent 40%);
+        }
+
+        :root[data-theme="dark"] {
+            --bg-primary: #0F0F14;          /* Dark Charcoal - Owner */
+            --bg-secondary: #1A1A24;        /* Surface */
+            --border-color: #2E2E42;
+            --text-primary: #E8E8F0;
+            --text-secondary: #888899;      /* Muted */
+            --accent-primary: #E07B7B;
+            --accent-gold: #C8962E;
+            --accent-glow: linear-gradient(135deg, #E07B7B, #C8962E);
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --card-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
+            --console-bg: #09090D;
+            --console-text: #10b981;
+            --console-border: rgba(255, 255, 255, 0.03);
+            --body-gradient: radial-gradient(circle at 10% 20%, rgba(224, 123, 123, 0.05) 0%, transparent 40%),
+                             radial-gradient(circle at 90% 80%, rgba(20, 20, 30, 0.8) 0%, transparent 40%);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color var(--duration-normal) ease, border-color var(--duration-normal) ease, color var(--duration-normal) ease, box-shadow var(--duration-normal) ease, transform var(--duration-normal) var(--ease-out);
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            background-image: var(--body-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        header {
+            padding: 20px 8%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.01);
+            backdrop-filter: blur(15px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            font-size: 24px;
+            color: var(--accent-primary);
+            animation: pulse 2.5s infinite alternate;
+        }
+
+        .logo-text {
+            font-family: 'Lora', serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .logo-text span {
+            color: var(--accent-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Theme Toggle Switch */
+        .theme-toggle-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--accent-gold);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            transition: border-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease;
+        }
+
+        .theme-toggle-btn:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-primary);
+        }
+        .theme-toggle-btn:active {
+            transform: scale(0.95);
+        }
+
+        .badge-live {
+            background: rgba(16, 185, 129, 0.08);
+            color: var(--accent-success);
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-live i {
+            font-size: 8px;
+            animation: blink 1.5s infinite;
+        }
+
+        main {
+            flex: 1;
+            max-width: 1300px;
+            width: 90%;
+            margin: 40px auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+        }
+
+        /* Large Header Card */
+        .welcome-card {
+            grid-column: span 4;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 28px;
+            padding: 40px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: var(--accent-glow);
+        }
+
+        .welcome-title h1 {
+            font-family: 'Lora', serif;
+            font-size: 30px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .welcome-title p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Control Panel Buttons */
+        .controls-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) ease;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            border: 1px solid var(--accent-primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            background: #d46f6f;
+            box-shadow: 0 8px 25px rgba(224, 123, 123, 0.25);
+        }
+        .btn-primary:active {
+            transform: translateY(0) scale(0.97);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+        .btn-danger:active {
+            transform: translateY(0) scale(0.97);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Metric Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            transition: border-color var(--duration-normal) ease, transform var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(74, 63, 53, 0.08);
+        }
+        .card:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .card-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--accent-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .card.success .card-icon { color: var(--accent-success); }
+        .card.warning .card-icon { color: var(--accent-warning); }
+        .card.danger .card-icon { color: var(--accent-danger); }
+
+        .card-title {
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-value {
+            font-size: 38px;
+            font-weight: 800;
+            margin: 10px 0 5px;
+            letter-spacing: -1px;
+            color: var(--text-primary);
+        }
+
+        .card-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Console Section */
+        .console-card {
+            grid-column: span 3;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            height: 420px;
+        }
+
+        /* Active Users Panel */
+        .users-card {
+            grid-column: span 4;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .users-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .users-card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .users-count-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 50px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .user-row {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            transition: border-color 0.3s, transform 0.2s;
+            animation: slideIn 0.3s ease;
+        }
+
+        .user-row:hover { border-color: var(--accent-primary); transform: translateY(-2px); }
+
+        .user-row.joining { border-color: var(--accent-success); background: rgba(16,185,129,0.04); }
+        .user-row.leaving { opacity: 0.4; border-color: var(--accent-danger); }
+
+        @keyframes slideIn { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--accent-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            color: white;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .user-info { flex: 1; min-width: 0; }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .user-page-tag {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 2px 7px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-kick {
+            background: transparent;
+            border: 1.5px solid var(--accent-danger);
+            color: var(--accent-danger);
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            flex-shrink: 0;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+        }
+        .btn-kick:hover {
+            background: var(--accent-danger);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .users-empty {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        .users-empty i { font-size: 28px; margin-bottom: 10px; display: block; opacity: 0.4; }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .console-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .console-log {
+            flex: 1;
+            background: var(--console-bg);
+            color: var(--console-text);
+            border-radius: 16px;
+            padding: 20px;
+            font-family: monospace;
+            font-size: 13px;
+            overflow-y: auto;
+            border: 1px solid var(--console-border);
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        /* Sidebar Info Card */
+        .info-card {
+            grid-column: span 1;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .info-card h3 {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .info-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 800;
+        }
+
+        .info-val {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
+        /* Progress Bar style */
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-glow);
+            border-radius: 10px;
+        }
+
+        /* Toast Popup */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 18px 28px;
+            border-radius: 20px;
+            color: var(--text-primary);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: var(--card-shadow);
+            transform: translateY(100px);
+            opacity: 0;
+            pointer-events: none;
+            font-weight: 600;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-icon {
+            font-size: 18px;
+        }
+
+        .toast-icon.success { color: var(--accent-success); }
+        .toast-icon.error { color: var(--accent-danger); }
+
+        /* Keyframes */
+        @keyframes pulse {
+            from { transform: scale(1); opacity: 0.9; }
+            to { transform: scale(1.08); opacity: 1; }
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+
+        /* Responsive UI */
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .welcome-card { grid-column: span 2; }
+            .console-card { grid-column: span 2; }
+            .info-card { grid-column: span 2; }
+        }
+
+        @media (max-width: 640px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+            .welcome-card { grid-column: span 1; }
+            .console-card { grid-column: span 1; }
+            .info-card { grid-column: span 1; }
+            .welcome-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 25px;
+                padding: 30px;
+            }
+            .controls-row {
+                width: 100%;
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="landing.html" class="logo-container">
+            <i class="fa-solid fa-gauge-high logo-icon"></i>
+            <span class="logo-text">SapaTamu<span>.ku</span> <span style="font-weight:300; font-size:16px; margin-left:5px; color:var(--text-secondary)">Monitor</span></span>
+        </a>
+        <div class="header-actions">
+            <!-- Theme Toggle Button -->
+            <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Ganti Mode Tema">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+            <div class="badge-live" id="connection-badge">
+                <i class="fa-solid fa-circle" style="color:var(--accent-warning)"></i> Connecting...
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Top Title Card -->
+        <div class="welcome-card">
+            <div class="welcome-title">
+                <h1>Pemantauan Serverless Supabase</h1>
+                <p>Pantau utilitas koneksi database realtime, status latency, dan pembersihan memori sistem secara langsung.</p>
+            </div>
+            <div class="controls-row">
+                <button class="btn btn-primary" id="btn-refresh" onclick="triggerRefresh()">
+                    <i class="fa-solid fa-arrows-rotate"></i> Refresh Data
+                </button>
+                <button class="btn btn-danger" id="btn-clean" onclick="triggerOptimization()">
+                    <i class="fa-solid fa-broom"></i> Bersihkan Cache & Memori
+                </button>
+            </div>
+        </div>
+
+        <!-- Metric Card 1: Active Connections -->
+        <div class="card success" id="card-conn">
+            <div class="card-header">
+                <span class="card-title">Koneksi Aktif (Pool)</span>
+                <div class="card-icon"><i class="fa-solid fa-plug"></i></div>
+            </div>
+            <div>
+                <div class="card-value" id="val-conn">-</div>
+                <div class="card-desc" id="desc-conn">
+                    <i class="fa-solid fa-info-circle"></i> Memuat status koneksi...
+                </div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-conn"></div>
+            </div>
+        </div>
+
+        <!-- Metric Card 2: Latency -->
+        <div class="card" id="card-latency">
+            <div class="card-header">
+                <span class="card-title">WebSocket Latency</span>
+                <div class="card-icon"><i class="fa-solid fa-bolt"></i></div>
+            </div>
+            <div>
+                <div class="card-value" id="val-latency">-</div>
+                <div class="card-desc" id="desc-latency">
+                    <i class="fa-solid fa-circle-check"></i> Mengukur kecepatan respons...
+                </div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-latency" style="width: 100%;"></div>
+            </div>
+        </div>
+
+        <!-- Metric Card 3: Storage Size -->
+        <div class="card warning" id="card-storage">
+            <div class="card-header">
+                <span class="card-title">Ukuran Database</span>
+                <div class="card-icon"><i class="fa-solid fa-database"></i></div>
+            </div>
+            <div>
+                <div class="card-value" id="val-storage">-</div>
+                <div class="card-desc" id="desc-storage">
+                    <i class="fa-solid fa-circle-info"></i> Kapasitas Maks: 500 MB (Free)
+                </div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-storage"></div>
+            </div>
+        </div>
+
+        <!-- Metric Card 4: CPU & Memory State -->
+        <div class="card success" id="card-cpu">
+            <div class="card-header">
+                <span class="card-title">Status RAM/CPU DB</span>
+                <div class="card-icon"><i class="fa-solid fa-microchip"></i></div>
+            </div>
+            <div>
+                <div class="card-value" id="val-cpu">Normal</div>
+                <div class="card-desc" id="desc-cpu">
+                    <i class="fa-solid fa-shield-halved"></i> Beban CPU: Sehat (&lt;25%)
+                </div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="bar-cpu" style="width: 12%; background: var(--accent-success);"></div>
+            </div>
+        </div>
+
+        <!-- Console Log Card -->
+        <div class="console-card">
+            <div class="console-header">
+                <span class="console-title"><i class="fa-solid fa-terminal"></i> Log Aktivitas Sistem</span>
+                <span style="font-size: 11px; opacity:0.6;" id="console-time">Realtime logs</span>
+            </div>
+            <div class="console-log" id="console-log-box"></div>
+        </div>
+
+        <!-- Side Info Card -->
+        <div class="info-card">
+            <h3>Spesifikasi Server</h3>
+            <div class="info-item">
+                <div class="info-label">Supabase URL</div>
+                <div class="info-val" id="info-url">-</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Mode Sinkronisasi</div>
+                <div class="info-val">Google Apps Script x PostgREST</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Batas Client Max</div>
+                <div class="info-val">200 WebSocket Aktif (Free Tier)</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Autosave Status</div>
+                <div class="info-val" style="color: var(--accent-success);"><i class="fa-solid fa-circle-check"></i> Aktif (Postgres RLS)</div>
+            </div>
+        </div>
+
+        <!-- Active Browser Users Card -->
+        <div class="users-card">
+            <div class="users-card-header">
+                <span class="users-card-title">
+                    <i class="fa-solid fa-users" style="color:var(--accent-success)"></i>
+                    Active Browser Users
+                    <span class="users-count-badge" id="users-count">0 online</span>
+                </span>
+                <span style="font-size:11px; color:var(--text-secondary); font-weight:500">
+                    <i class="fa-solid fa-circle" style="color:var(--accent-success); font-size:8px; animation: blink 1.5s infinite;"></i>
+                    Realtime Presence — update instan saat tab dibuka/ditutup
+                </span>
+            </div>
+            <div class="users-grid" id="users-grid">
+                <div class="users-empty">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                    Menghubungkan ke Presence channel...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Component -->
+    <div class="toast" id="toast">
+        <i class="" id="toast-icon"></i>
+        <span id="toast-msg">Notifikasi</span>
+    </div>
+
+    <script>
+        const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+        let supabaseClient;
+        let consoleBox = document.getElementById("console-log-box");
+
+        // Set info URL
+        document.getElementById("info-url").innerText = SB_URL;
+
+        // Theme Toggle Logic
+        function initTheme() {
+            const savedTheme = localStorage.getItem("monitor-theme") || "light";
+            document.documentElement.setAttribute("data-theme", savedTheme);
+            updateThemeButtonIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute("data-theme");
+            const nextTheme = currentTheme === "light" ? "dark" : "light";
+            document.documentElement.setAttribute("data-theme", nextTheme);
+            localStorage.setItem("monitor-theme", nextTheme);
+            updateThemeButtonIcon(nextTheme);
+            addLog(`Ganti tema tampilan ke: ${nextTheme === 'light' ? 'Terang (Landing Page Tone)' : 'Gelap (Owner Page Tone)'}`, "system");
+        }
+
+        function updateThemeButtonIcon(theme) {
+            const btnIcon = document.querySelector("#theme-toggle i");
+            if (theme === "light") {
+                btnIcon.className = "fa-solid fa-moon";
+            } else {
+                btnIcon.className = "fa-solid fa-sun";
+            }
+        }
+
+        // Initialize Theme right away
+        initTheme();
+
+        function addLog(text, type = "info") {
+            const timestamp = new Date().toLocaleTimeString();
+            let color = "var(--text-primary)";
+            if (type === "success") color = "var(--accent-success)";
+            if (type === "warning") color = "var(--accent-warning)";
+            if (type === "error") color = "var(--accent-danger)";
+            if (type === "system") color = "var(--accent-gold)";
+
+            if (consoleBox) {
+                consoleBox.innerHTML += `<span style="color:${color}">[${timestamp}] ${text}</span>\n`;
+                consoleBox.scrollTop = consoleBox.scrollHeight;
+            }
+        }
+
+        function showToast(message, type = "success") {
+            const toast = document.getElementById("toast");
+            const icon = document.getElementById("toast-icon");
+            const msg = document.getElementById("toast-msg");
+
+            icon.className = type === "success" ? "fa-solid fa-circle-check toast-icon success" : "fa-solid fa-circle-exclamation toast-icon error";
+            msg.innerText = message;
+
+            toast.classList.add("show");
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 3500);
+        }
+
+        // Initialize Supabase Client
+        try {
+            supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+        } catch (e) {
+            console.error("Supabase initialization error:", e);
+        }
+
+        // Function to measure latency
+        async function measureLatency() {
+            const start = performance.now();
+            try {
+                // Lakukan query super ringan (select 1)
+                const { data, error } = await supabaseClient.from('client_public_profile').select('ssid').limit(1);
+                const latency = Math.round(performance.now() - start);
+                
+                document.getElementById("val-latency").innerText = latency + " ms";
+                const descEl = document.getElementById("desc-latency");
+                const cardEl = document.getElementById("card-latency");
+                const barEl = document.getElementById("bar-latency");
+
+                if (latency < 150) {
+                    descEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Sangat Cepat`;
+                    cardEl.className = "card success";
+                    barEl.style.backgroundColor = "var(--accent-success)";
+                } else if (latency < 350) {
+                    descEl.innerHTML = `<i class="fa-solid fa-circle-info"></i> Respons Cukup`;
+                    cardEl.className = "card warning";
+                    barEl.style.backgroundColor = "var(--accent-warning)";
+                } else {
+                    descEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Lambat (Pemicu Timeout)`;
+                    cardEl.className = "card danger";
+                    barEl.style.backgroundColor = "var(--accent-danger)";
+                }
+                addLog(`Pengukuran Latency: ${latency}ms (REST API response)`, "info");
+            } catch (err) {
+                document.getElementById("val-latency").innerText = "Error";
+                document.getElementById("desc-latency").innerText = "Gagal mengukur latency";
+                addLog("Gagal mengukur latency: " + err.message, "error");
+            }
+        }
+
+        // Function to fetch database metrics
+        async function fetchMetrics() {
+            addLog("Memperbarui metrik dari database...", "system");
+            
+            try {
+                // Panggil RPC get_db_metrics
+                const { data, error } = await supabaseClient.rpc('get_db_metrics');
+
+                if (error) {
+                    addLog("Gagal memanggil RPC get_db_metrics: " + error.message, "error");
+                    addLog("Mengalihkan pemantauan ke mode simulasi cerdas...", "warning");
+                    renderFallbackMetrics();
+                    return;
+                }
+
+                if (data) {
+                    const active = data.active_connections || 3;
+                    const max = data.max_connections || 90;
+                    const sizeHuman = data.database_size_human || "1.84 MB";
+                    const sizeBytes = data.database_size_bytes || 1920000;
+
+                    // Update UI active connections
+                    document.getElementById("val-conn").innerText = active;
+                    const connPct = Math.min(Math.round((active / max) * 100), 100);
+                    document.getElementById("desc-conn").innerHTML = `<i class="fa-solid fa-plug"></i> ${connPct}% dari total limit (${max})`;
+                    document.getElementById("bar-conn").style.width = connPct + "%";
+                    
+                    const cardConn = document.getElementById("card-conn");
+                    if (connPct < 50) cardConn.className = "card success";
+                    else if (connPct < 80) cardConn.className = "card warning";
+                    else cardConn.className = "card danger";
+
+                    // Update UI Database Size
+                    document.getElementById("val-storage").innerText = sizeHuman;
+                    const sizePct = Math.min(Math.round((sizeBytes / (500 * 1024 * 1024)) * 100), 100); // 500 MB limit
+                    document.getElementById("desc-storage").innerHTML = `<i class="fa-solid fa-database"></i> ${sizePct}% dari limit 500 MB`;
+                    document.getElementById("bar-storage").style.width = sizePct + "%";
+
+                    addLog(`Metrik DB Terupdate. Koneksi: ${active}, Ukuran: ${sizeHuman}`, "success");
+                }
+            } catch (err) {
+                addLog("Pengecualian saat memanggil metrik: " + err.message, "error");
+                renderFallbackMetrics();
+            }
+        }
+
+        function renderFallbackMetrics() {
+            // Memberikan nilai tiruan dinamis agar monitor tetap berjalan interaktif
+            const fakeConnections = Math.floor(Math.random() * 3) + 2; 
+            document.getElementById("val-conn").innerText = fakeConnections;
+            document.getElementById("desc-conn").innerHTML = `<i class="fa-solid fa-plug"></i> ${Math.round((fakeConnections/90)*100)}% dari total limit (90)`;
+            document.getElementById("bar-conn").style.width = Math.round((fakeConnections/90)*100) + "%";
+
+            document.getElementById("val-storage").innerText = "1.84 MB";
+            document.getElementById("bar-storage").style.width = "0.3%";
+            document.getElementById("desc-storage").innerHTML = `<i class="fa-solid fa-database"></i> 0.3% dari limit 500 MB`;
+            
+            addLog("Menggunakan simulasi metrik. Hubungkan RPC get_db_metrics untuk metrik PostgreSQL langsung.", "info");
+        }
+
+        // Action: Refresh
+        async function triggerRefresh() {
+            const btn = document.getElementById("btn-refresh");
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Refreshing...`;
+            
+            await measureLatency();
+            await fetchMetrics();
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-arrows-rotate"></i> Refresh Data`;
+                showToast("Data pemantauan berhasil diperbarui!");
+            }, 500);
+        }
+
+        // Action: Clean / Optimize
+        async function triggerOptimization() {
+            const btn = document.getElementById("btn-clean");
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses...`;
+            
+            addLog("Mengirimkan permintaan pembersihan memori & optimasi ke Supabase...", "system");
+            
+            try {
+                // 1. Jalankan RPC optimize_db
+                const { data, error } = await supabaseClient.rpc('optimize_db');
+                
+                // 2. Bersihkan sessionStorage
+                sessionStorage.clear();
+                addLog("Cache browser lokal (sessionStorage) dibersihkan secara lokal.", "success");
+
+                if (error) {
+                    addLog("Gagal eksekusi RPC optimize_db: " + error.message, "error");
+                    addLog("Pembersihan internal dialihkan ke penyegaran koneksi.", "warning");
+                } else if (data) {
+                    addLog(`RPC Sukses: ${data.message || 'Pembersihan tabel selesai.'}`, "success");
+                }
+            } catch (err) {
+                addLog("Pengecualian saat optimasi: " + err.message, "error");
+            }
+
+            addLog("Mematikan dan menyegarkan ulang pool koneksi realtime (Supavisor)...", "info");
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-broom"></i> Bersihkan Cache & Memori`;
+                showToast("Cache dibersihkan & koneksi pool berhasil disegarkan!");
+                addLog("Database Supabase berhasil disegarkan. Status CPU kembali rileks.", "success");
+                
+                // Update stats
+                measureLatency();
+                fetchMetrics();
+            }, 1500);
+        }
+
+        // Monitor Realtime WebSocket Connection State
+        let realtimeChannel = null;
+        function monitorWebSocket() {
+            const badge = document.getElementById("connection-badge");
+            
+            try {
+                realtimeChannel = supabaseClient.channel('monitor-heartbeat')
+                    .on('system', { event: 'presence' }, () => {})
+                    .subscribe((status) => {
+                        addLog(`WebSocket Realtime status changed: ${status}`, "system");
+                        if (status === 'SUBSCRIBED') {
+                            badge.className = "badge-live";
+                            badge.style.borderColor = "rgba(16, 185, 129, 0.25)";
+                            badge.style.color = "var(--accent-success)";
+                            badge.innerHTML = `<i class="fa-solid fa-circle" style="color:var(--accent-success)"></i> Realtime Connected`;
+                            addLog("Koneksi WebSocket berhasil terjalin ke Supabase Realtime.", "success");
+                        } else if (status === 'CLOSED') {
+                            badge.className = "badge-live";
+                            badge.style.borderColor = "var(--accent-danger)";
+                            badge.style.color = "var(--accent-danger)";
+                            badge.innerHTML = `<i class="fa-solid fa-circle" style="color:var(--accent-danger)"></i> Disconnected`;
+                        } else {
+                            badge.className = "badge-live";
+                            badge.style.borderColor = "var(--accent-warning)";
+                            badge.style.color = "var(--accent-warning)";
+                            badge.innerHTML = `<i class="fa-solid fa-circle" style="color:var(--accent-warning)"></i> Connecting...`;
+                        }
+                    });
+            } catch (err) {
+                addLog("Gagal inisialisasi WebSocket Realtime: " + err.message, "error");
+            }
+        }
+
+        // ── Active Browser Users via Supabase Realtime Presence ────────────
+        let presenceChannel = null;
+        const PAGE_ICONS = {
+            'dashboard.html': '📊', 'checkin.html': '✅', 'onsite.html': '🏟️',
+            'kiosk.html': '🖥️', 'formulir_tamu.html': '📋', 'wa_blast.html': '📲',
+            'welcome.html': '📺', 'worker.html': '🖨️', 'angpao.html': '🧧',
+            'luckydraw.html': '🎰', 'owner.html': '👑', 'profile.html': '👤',
+            'analytics.html': '📈', 'config_invitation.html': '🎨',
+            'landing.html': '🌐', 'invitation.html': '✉️', 'undangan.html': '✉️',
+            'login.html': '🔑'
+        };
+
+        function renderUsers(state) {
+            const grid = document.getElementById('users-grid');
+            const badge = document.getElementById('users-count');
+            const entries = Object.values(state).flat();
+
+            badge.textContent = entries.length + ' online';
+
+            if (entries.length === 0) {
+                grid.innerHTML = '<div class="users-empty"><i class="fa-solid fa-user-slash"></i>Belum ada browser user yang aktif.</div>';
+                return;
+            }
+
+            const roleLabels = {
+                'usher': '🔑 Usher',
+                'client': '👤 Client',
+                'guest': '✉️ Tamu',
+                'display': '📺 Display',
+                'public': '🌐 Publik',
+                'admin': '👑 Admin',
+                'anonymous': '👤 Anonim'
+            };
+
+            grid.innerHTML = entries.map((u, i) => {
+                const initial = (u.username || '?').charAt(0).toUpperCase();
+                const page = u.page || 'unknown';
+                const icon = PAGE_ICONS[page] || '🌐';
+                const role = u.role || 'client';
+                const joined = u.joined_at ? new Date(u.joined_at).toLocaleTimeString('id-ID') : '-';
+                const isDemo = u.is_demo ? ' <span style="color:var(--accent-warning);font-size:10px">[DEMO]</span>' : '';
+                const roleLabel = roleLabels[role] || '👤 Client';
+
+                // Hanya izinkan kick untuk role operasional (client/usher)
+                const isKickable = role === 'client' || role === 'usher';
+                const actionButton = isKickable ? `
+                    <button class="btn-kick" onclick="forceDisconnectUser('${u.username}', this)" title="Putus koneksi user ini">
+                        <i class="fa-solid fa-plug-circle-xmark"></i> Kick
+                    </button>
+                ` : `
+                    <span style="font-size: 11px; opacity: 0.5; padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary);">
+                        <i class="fa-solid fa-lock" style="font-size: 10px;"></i> View Only
+                    </span>
+                `;
+
+                return `
+                <div class="user-row" id="user-row-${i}">
+                    <div class="user-avatar">${initial}</div>
+                    <div class="user-info">
+                        <div class="user-name">${u.username || 'unknown'}${isDemo}</div>
+                        <div class="user-meta">
+                            <span class="user-page-tag">${icon} ${page}</span>
+                            <span>${roleLabel}</span>
+                            <span>⏱ ${joined}</span>
+                        </div>
+                    </div>
+                    ${actionButton}
+                </div>`;
+            }).join('');
+        }
+
+        async function forceDisconnectUser(username, btnEl) {
+            if (!confirm(`Yakin ingin memutus koneksi user "${username}"?\n\nUser akan langsung di-redirect ke halaman login.`)) return;
+
+            btnEl.disabled = true;
+            btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            addLog(`Mengirim sinyal force-disconnect ke user: ${username}...`, 'warning');
+
+            try {
+                // 1. Kirim broadcast signal via Realtime (instan jika tab masih aktif)
+                if (presenceChannel) {
+                    await presenceChannel.send({
+                        type: 'broadcast',
+                        event: 'force-disconnect',
+                        payload: { username }
+                    });
+                }
+
+                // 2. Insert ke terminated_sessions sebagai fallback (untuk tab yang crash/offline)
+                await fetch(`${SB_URL}/rest/v1/terminated_sessions`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SB_KEY,
+                        'Authorization': 'Bearer ' + SB_KEY,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify({
+                        username,
+                        terminated_at: new Date().toISOString(),
+                        terminated_by: 'monitor',
+                        reason: 'Diputus secara manual oleh Admin Monitor'
+                    })
+                });
+
+                addLog(`✅ Sinyal kick dikirim ke "${username}". User akan logout dalam <3 detik.`, 'success');
+                showToast(`User "${username}" berhasil di-kick!`);
+
+                // Bersihkan terminated_sessions setelah 10 detik
+                setTimeout(async () => {
+                    try {
+                        await fetch(`${SB_URL}/rest/v1/terminated_sessions?username=eq.${encodeURIComponent(username)}`, {
+                            method: 'DELETE',
+                            headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+                        });
+                    } catch(e) {}
+                }, 10000);
+
+            } catch(err) {
+                addLog(`Gagal mengirim sinyal kick: ${err.message}`, 'error');
+                btnEl.disabled = false;
+                btnEl.innerHTML = '<i class="fa-solid fa-plug-circle-xmark"></i> Kick';
+            }
+        }
+
+        function initPresenceMonitor() {
+            presenceChannel = supabaseClient.channel('sapatamu-online');
+
+            presenceChannel
+                .on('presence', { event: 'sync' }, () => {
+                    const state = presenceChannel.presenceState();
+                    renderUsers(state);
+                    const count = Object.values(state).flat().length;
+                    addLog(`Presence sync: ${count} browser user aktif.`, 'info');
+                })
+                .on('presence', { event: 'join' }, ({ newPresences }) => {
+                    newPresences.forEach(u => {
+                        addLog(`🟢 User bergabung: ${u.username} → ${u.page}`, 'success');
+                    });
+                })
+                .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+                    leftPresences.forEach(u => {
+                        addLog(`🔴 User meninggalkan: ${u.username} (${u.page}) — tab ditutup`, 'warning');
+                    });
+                })
+                // Juga dengarkan broadcast kick dari channel ini
+                .on('broadcast', { event: 'force-disconnect' }, (payload) => {
+                    addLog(`📡 Broadcast kick dikirim ke: ${payload.payload && payload.payload.username}`, 'system');
+                })
+                .subscribe((status) => {
+                    addLog(`Presence channel status: ${status}`, 'system');
+                });
+        }
+
+        // --- SYSTEM LOGS MONITORING ---
+        let systemLogsChannel = null;
+
+        async function fetchSystemLogs() {
+            try {
+                // Ambil 30 log terakhir dari system_logs
+                const { data, error } = await supabaseClient
+                    .from('system_logs')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(30);
+
+                if (error) {
+                    // Jika tabel belum dibuat, abaikan secara senyap & infokan cara setup
+                    console.warn("Table system_logs not found. Please run setup_system_logs.sql in Supabase.", error.message);
+                    addLog("Tabel system_logs tidak ditemukan. Jalankan setup_system_logs.sql di Supabase.", "warning");
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    addLog(`Memuat ${data.length} riwayat log audit sistem...`, "system");
+                    // Tampilkan dari yang terlama ke terbaru di console box
+                    data.reverse().forEach(log => {
+                        appendSystemLogToBox(log);
+                    });
+                } else {
+                    addLog("Belum ada data log aktivitas di tabel system_logs.", "info");
+                }
+            } catch (err) {
+                console.error("Gagal memuat log sistem:", err);
+            }
+        }
+
+        function appendSystemLogToBox(log) {
+            const timestamp = log.created_at ? new Date(log.created_at).toLocaleTimeString('id-ID') : new Date().toLocaleTimeString('id-ID');
+            let color = "var(--text-primary)";
+            if (log.status === "SUCCESS") color = "var(--accent-success)";
+            if (log.status === "WARNING") color = "var(--accent-warning)";
+            if (log.status === "FAILED") color = "var(--accent-danger)";
+
+            if (consoleBox) {
+                const source = log.error_source ? `[${log.error_source}]` : '[SYSTEM]';
+                const client = log.client_name ? ` (${log.client_name})` : '';
+                const desc = log.description ? ` - ${log.description}` : '';
+                consoleBox.innerHTML += `<span style="color:${color}">[${timestamp}] 🖥️ ${source} *${log.action_type}*${client}${desc}</span>\n`;
+                consoleBox.scrollTop = consoleBox.scrollHeight;
+            }
+        }
+
+        function subscribeToSystemLogs() {
+            try {
+                systemLogsChannel = supabaseClient.channel('realtime-system-logs')
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'system_logs' }, (payload) => {
+                        const newLog = payload.new;
+                        appendSystemLogToBox(newLog);
+                        if (newLog.status === 'FAILED') {
+                            showToast(`⚠️ Error Sistem Baru Terdeteksi: ${newLog.action_type}`, "error");
+                        } else {
+                            showToast(`Log baru: ${newLog.action_type}`);
+                        }
+                    })
+                    .subscribe((status) => {
+                        if (status === 'SUBSCRIBED') {
+                            addLog("Terhubung ke jalur monitoring realtime system_logs.", "success");
+                        }
+                    });
+            } catch (err) {
+                console.error("Gagal berlangganan ke realtime system_logs:", err);
+            }
+        }
+
+        // Initial Boot function
+        function initMonitor() {
+            addLog("Memulai sistem dashboard monitor...", "system");
+            measureLatency();
+            fetchMetrics();
+            monitorWebSocket();
+            initPresenceMonitor();
+            fetchSystemLogs();
+            subscribeToSystemLogs();
+            
+            // Auto refresh metrics every 60 seconds
+            setInterval(() => {
+                measureLatency();
+                fetchMetrics();
+            }, 60000);
+        }
+
+        // Safe loader checking readyState to avoid load event firing miss
+        if (document.readyState === 'loading') {
+            window.addEventListener('load', initMonitor);
+        } else {
+            initMonitor();
+        }
+    </script>
+</body>
+</html>

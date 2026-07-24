@@ -2,6 +2,9 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu - Self Check-in Kiosk</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1455,6 +1458,19 @@
         })();
     </script>
 </body>
+<script src="offline-db.js"></script>
+<script src="sync-engine.js"></script>
+<script>
+(function(){
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+    window.addEventListener('online',function(){document.body.classList.remove('is-offline');});
+    window.addEventListener('offline',function(){document.body.classList.add('is-offline');});
+})();
+</script>
+<style>
+.is-offline::before{content:'⚠️ OFFLINE — Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
+@media(min-width:1024px){.is-offline::before{display:none;}}
+</style>
 </html>
 
 

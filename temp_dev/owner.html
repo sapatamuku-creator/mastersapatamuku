@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Dashboard — SapaTamu.ku</title>
+    <script src="subdomain_resolver.js?v=3.5"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
+    <style>
+        :root {
+            --primary: #E07B7B;
+            --bg: #0F0F14;
+            --surface: #1A1A24;
+            --surface2: #222232;
+            --border: #2E2E42;
+            --text: #E8E8F0;
+            --muted: #888899;
+            --gold: #C8962E;
+            --green: #10B981;
+            --red: #EF4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* LOGIN GATE */
+        #login-gate {
+            display: flex; align-items: center; justify-content: center; 
+            min-height: 100vh; padding: 20px;
+        }
+        .login-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 24px; padding: 48px 40px; width: 100%; max-width: 400px;
+            text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+        }
+        .login-card h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+        .login-card p { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+        .input-dark {
+            width: 100%; padding: 14px 18px; background: var(--surface2); border: 1.5px solid var(--border);
+            border-radius: 12px; color: var(--text); font-size: 15px; font-family: inherit;
+            margin-bottom: 12px; transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+        }
+        .input-dark:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.15); }
+        .btn-primary {
+            width: 100%; padding: 16px; background: var(--primary); color: white;
+            border: none; border-radius: 12px; font-weight: 700; font-size: 15px;
+            cursor: pointer; font-family: inherit; transition: background-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) ease;
+        }
+        .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(1px) scale(0.97); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* MAIN DASHBOARD */
+        #dashboard { display: none; }
+        .top-bar {
+            background: var(--surface); border-bottom: 1px solid var(--border);
+            padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .top-bar h1 { font-size: 18px; font-weight: 800; }
+        .top-bar span { color: var(--muted); font-size: 13px; }
+        .top-actions { display: flex; gap: 10px; align-items: center; }
+        .btn-sm {
+            padding: 8px 16px; border-radius: 10px; font-size: 12px; font-weight: 700;
+            cursor: pointer; border: none; font-family: inherit; transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out), opacity var(--duration-fast) ease;
+        }
+        .btn-sm:active { transform: scale(0.95); }
+        .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--muted); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-green { background: var(--green); color: white; }
+        .btn-green:hover { opacity: 0.85; }
+
+        /* SEARCH & FILTER */
+        .toolbar {
+            padding: 16px 28px; display: flex; gap: 12px; align-items: center;
+            flex-wrap: wrap; border-bottom: 1px solid var(--border);
+        }
+        .search-input {
+            flex: 1; min-width: 220px; padding: 10px 16px; background: var(--surface2);
+            border: 1.5px solid var(--border); border-radius: 10px; color: var(--text);
+            font-size: 13px; font-family: inherit;
+        }
+        .search-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.1); }
+        .filter-select {
+            padding: 10px 14px; background: var(--surface2); border: 1.5px solid var(--border);
+            border-radius: 10px; color: var(--text); font-size: 12px; font-family: inherit; cursor: pointer; transition: border-color var(--duration-fast) ease;
+        }
+        .filter-select:focus { outline: none; border-color: var(--primary); }
+
+        /* STATS */
+        .stats-row {
+            padding: 20px 28px; display: flex; gap: 16px; flex-wrap: wrap;
+            border-bottom: 1px solid var(--border);
+        }
+        .stat-card {
+            background: var(--surface2); border: 1px solid var(--border); border-radius: 16px;
+            padding: 16px 24px; min-width: 140px; flex: 1; transition: transform var(--duration-normal) var(--ease-out), border-color var(--duration-normal) ease, box-shadow var(--duration-normal) ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .stat-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .stat-value { font-size: 26px; font-weight: 800; }
+        .stat-value.green { color: var(--green); }
+        .stat-value.red { color: var(--red); }
+        .stat-value.gold { color: var(--gold); }
+
+        /* TABLE */
+        .table-wrapper { overflow-x: auto; padding: 20px 28px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+        thead th {
+            padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700;
+            color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+            background: var(--surface2); border-bottom: 1px solid var(--border);
+            white-space: nowrap; position: sticky; top: 0;
+        }
+        tbody tr { border-bottom: 1px solid var(--border); transition: background-color var(--duration-fast) ease; }
+        tbody tr:hover { background: var(--surface2); }
+
+        /* EDITABLE CELL */
+        td {
+            padding: 10px 14px; font-size: 13px; vertical-align: middle;
+            white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+        }
+        td[contenteditable="true"] {
+            cursor: text; border-radius: 6px; transition: background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+            outline: none; min-width: 80px;
+        }
+        td[contenteditable="true"]:focus {
+            background: rgba(224, 123, 123, 0.15);
+            box-shadow: inset 0 0 0 1.5px var(--primary);
+            overflow: visible; white-space: normal; z-index: 10; position: relative;
+        }
+
+        /* STATUS BADGE */
+        .badge {
+            display: inline-block; padding: 3px 10px; border-radius: 20px; transition: background-color var(--duration-fast) ease, color var(--duration-fast) ease;
+            font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .badge-active { background: rgba(16,185,129,0.15); color: var(--green); }
+        .badge-pending { background: rgba(200,150,46,0.15); color: var(--gold); }
+        .badge-inactive { background: rgba(239,68,68,0.15); color: var(--red); }
+
+        /* SAVE ROW BUTTON */
+        .save-row-btn {
+            padding: 5px 12px; background: var(--green); border: none; border-radius: 8px;
+            color: white; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit;
+            white-space: nowrap; transition: background-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out); display: none;
+        }
+        .save-row-btn:hover { opacity: 0.9; }
+        .save-row-btn:active { transform: scale(0.95); }
+        tr.dirty .save-row-btn { display: inline-block; }
+
+        /* TOAST */
+        #toast {
+            position: fixed; bottom: 24px; right: 24px; background: var(--surface);
+            border: 1px solid var(--border); padding: 14px 22px; border-radius: 14px;
+            font-size: 13px; font-weight: 600; display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 9999;
+            animation: slideIn var(--duration-normal) var(--ease-modal);
+        }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(14, 10, 10, 0.85); backdrop-filter: blur(5px);
+            z-index: 2000; display: none; justify-content: center; align-items: center;
+        }
+        .modal-box {
+            background: var(--surface); padding: 30px; border-radius: 20px;
+            width: 100%; max-width: 500px; border: 1px solid var(--border);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            max-height: 90vh; overflow-y: auto;
+            animation: modalPop var(--duration-normal) var(--ease-modal);
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.95) translateY(15px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; color: var(--gold); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; }
+        .form-control {
+            width: 100%; background: var(--bg); border: 1px solid var(--border);
+            color: white; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-family: inherit; transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+        }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.1); }
+        .btn-action {
+            width: 100%; padding: 12px; background: var(--gold); color: var(--bg);
+            border: none; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer; transition: background-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out);
+            margin-top: 10px;
+        }
+        .btn-action:active { transform: scale(0.97); }
+        .btn-cancel {
+            width: 100%; padding: 12px; background: transparent; color: var(--muted);
+            border: 1px solid var(--border); border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer; transition: border-color var(--duration-fast) ease, color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out);
+            margin-top: 10px;
+        }
+        .btn-cancel:active { transform: scale(0.97); }
+        
+        /* HIGHLIGHT EXPIRED */
+        .row-expired {
+            background: rgba(224, 123, 123, 0.08) !important;
+        }
+        .row-expired td {
+            color: #d69898 !important;
+        }
+        .btn-delete {
+            padding: 5px 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 8px; color: var(--red); font-size: 11px; font-weight: 700; cursor: pointer;
+            margin-left: 8px; transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out);
+        }
+        .btn-delete:hover { background: var(--red); color: white; }
+        .btn-delete:active { transform: scale(0.95); }
+        .btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* LOADER */
+        .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-bottom-color: white; border-radius: 50%; animation: rotation 0.8s linear infinite; }
+        @keyframes rotation { to { transform: rotate(360deg); } }
+    </style>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth_guard.js"></script>
+</head>
+<body>
+
+<!-- LOGIN GATE -->
+<div id="login-gate">
+    <div class="login-card">
+        <div style="font-size: 48px; margin-bottom: 16px;">🛡️</div>
+        <h1>Owner Access</h1>
+        <p>Masukkan password admin untuk mengakses dashboard pengelolaan klien.</p>
+        <input type="password" id="admin-pass-input" class="input-dark" placeholder="Password Admin">
+        <button class="btn-primary" id="btn-login" onclick="doLogin()">Masuk Dashboard</button>
+    </div>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div id="dashboard">
+    <div class="top-bar">
+        <div>
+            <h1>🛡️ Owner Dashboard — SapaTamu.ku</h1>
+            <span id="last-sync-info">Belum disinkronkan</span>
+        </div>
+        <div class="top-actions">
+            <button class="btn-sm btn-outline" onclick="loadClients()">🔄 Refresh Data</button>
+            <button class="btn-sm btn-green" onclick="syncAllPending()">⚡ Sync Semua ke Spreadsheet</button>
+            <button class="btn-sm btn-outline" style="color:#60A5FA; border-color:#60A5FA;" onclick="syncAllToSupabase()">⬆️ Push Semua ke Supabase</button>
+            <button class="btn-sm btn-primary" style="background:var(--gold); border:none;" onclick="openAddClientModal()">➕ Tambah Klien Vendor</button>
+            <button class="btn-sm btn-outline" style="color:var(--red); border-color:var(--red);" onclick="doLogout()">Keluar</button>
+        </div>
+    </div>
+
+    <div class="stats-row" id="stats-row">
+        <div class="stat-card"><div class="stat-label">Total Klien</div><div class="stat-value" id="stat-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Aktif</div><div class="stat-value green" id="stat-active">—</div></div>
+        <div class="stat-card"><div class="stat-label">Pending Aktivasi</div><div class="stat-value gold" id="stat-pending">—</div></div>
+        <div class="stat-card"><div class="stat-label">Non-aktif</div><div class="stat-value red" id="stat-inactive">—</div></div>
+    </div>
+
+    <div class="toolbar">
+        <input type="text" id="search-input" class="search-input" placeholder="🔍  Cari nama, subdomain, email, WA..." oninput="filterTable()">
+        <select id="filter-status" class="filter-select" onchange="filterTable()">
+            <option value="">Semua Status</option>
+            <option value="Active">Active</option>
+            <option value="PendingActivation">Pending Aktivasi</option>
+            <option value="Inactive">Inactive</option>
+        </select>
+        <select id="filter-category" class="filter-select" onchange="filterTable()">
+            <option value="">Semua Kategori</option>
+            <option value="wedding">Wedding</option>
+            <option value="birthday">Birthday</option>
+            <option value="corporate">Corporate</option>
+            <option value="gathering">Gathering</option>
+        </select>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="clients-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nama Klien</th>
+                    <th>Subdomain</th>
+                    <th>Paket</th>
+                    <th>Tanggal Acara</th>
+                    <th>Kategori</th>
+                    <th>WhatsApp</th>
+                    <th>Email</th>
+                    <th>Password</th>
+                    <th>Status</th>
+                    <th>SSID Spreadsheet</th>
+                    <th>Dibuat</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="clients-tbody">
+                <tr><td colspan="13" style="text-align:center; padding:40px; color:var(--muted);">Memuat data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ADD CLIENT VENDOR MODAL -->
+<div id="modal-add-client" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-title">➕ Tambah Klien Vendor</div>
+        <p style="font-size:12px; color:var(--muted); margin-bottom:20px;">Klien akan langsung aktif, spreadsheet dibuat otomatis tanpa Midtrans.</p>
+        
+        <div class="form-group">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <label style="margin-bottom: 0;">Subdomain (username)</label>
+                <span id="sub-status" style="font-size: 10px; font-weight: 800;"></span>
+            </div>
+            <input type="text" id="add-subdomain" class="form-control" placeholder="cth: ryanandin" oninput="handleSubdomainInput(this.value)">
+        </div>
+        <div class="form-group">
+            <label>Nama Klien / Pengantin</label>
+            <input type="text" id="add-clientname" class="form-control" placeholder="cth: Ryan & Andin">
+        </div>
+        <div class="form-group">
+            <label>Tanggal Acara</label>
+            <input type="date" id="add-date" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>Kategori Acara</label>
+            <select id="add-category" class="form-control">
+                <option value="wedding">Wedding (Pernikahan)</option>
+                <option value="birthday">Birthday (Ulang Tahun)</option>
+                <option value="anniversary">Anniversary (Hari Jadi)</option>
+                <option value="corporate">Corporate (Formal / Meeting)</option>
+                <option value="gathering">Gathering (Reuni / Komunitas)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Paket Layanan</label>
+            <select id="add-package" class="form-control">
+                <optgroup label="B2B Vendor">
+                    <option value="B2B E-Inv Standard">B2B E-Inv Standard</option>
+                    <option value="B2B E-Inv Premium">B2B E-Inv Premium</option>
+                    <option value="B2B Guestbook Silver">B2B Guestbook Silver</option>
+                    <option value="B2B Guestbook Gold">B2B Guestbook Gold</option>
+                    <option value="B2B All-in Collaboration">B2B All-in Collaboration</option>
+                </optgroup>
+                <optgroup label="B2C Reguler">
+                    <option value="E-Inv Standard">E-Inv Standard</option>
+                    <option value="E-Inv Premium">E-Inv Premium</option>
+                    <option value="Bronze Guestbook">Bronze Guestbook</option>
+                    <option value="Silver Guestbook">Silver Guestbook</option>
+                    <option value="Gold Guestbook">Gold Guestbook</option>
+                    <option value="Exclusive Collaboration">Exclusive Collaboration</option>
+                    <option value="Platinum Collaboration">Platinum Collaboration</option>
+                    <option value="Deluxe Collaboration">Deluxe Collaboration (Legacy)</option>
+                </optgroup>
+            </select>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <div class="form-group" style="flex:1;">
+                <label>WhatsApp</label>
+                <input type="text" id="add-wa" class="form-control" placeholder="628...">
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>Email (Opsional)</label>
+                <input type="email" id="add-email" class="form-control" placeholder="email@...">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Password Akun</label>
+            <input type="text" id="add-pass" class="form-control" placeholder="Password acak / custom">
+        </div>
+
+        <button class="btn-action" id="btn-submit-add" onclick="submitAddClient()">🚀 Buat & Aktifkan Klien</button>
+        <button class="btn-cancel" onclick="closeAddClientModal()">Batal</button>
+    </div>
+</div>
+
+<!-- DELETE CONFIRMATION MODAL -->
+<div id="modal-delete-client" class="modal-overlay">
+    <div class="modal-box" style="border-color: rgba(239, 68, 68, 0.4);">
+        <div class="modal-title" style="color: var(--red);">⚠️ Hapus Permanen Klien</div>
+        <p style="font-size:12px; color:var(--muted); margin-bottom:10px;">
+            Tindakan ini akan menghapus data klien dari <b>Master Sheet</b>, membuang <b>File Spreadsheet</b> ke tempat sampah (Trash), dan menghapus row dari <b>Supabase</b>.
+        </p>
+        <p style="font-size:12px; color:var(--gold); margin-bottom:20px; font-weight:bold;">
+            Hanya klien dengan status <span style="color:var(--red)">Selain Active</span> yang bisa dihapus.
+        </p>
+        
+        <div class="form-group">
+            <label>Subdomain yang akan dihapus</label>
+            <input type="text" id="del-subdomain" class="form-control" disabled style="background: rgba(0,0,0,0.2); color: var(--red); font-weight:bold;">
+        </div>
+        <div class="form-group">
+            <label>Masukkan Password Admin untuk Konfirmasi</label>
+            <input type="password" id="del-admin-pass" class="form-control" placeholder="Password Admin">
+        </div>
+
+        <button class="btn-action" style="background: var(--red); color: white;" id="btn-submit-del" onclick="submitDeleteClient()">🗑️ Ya, Hapus Permanen!</button>
+        <button class="btn-cancel" onclick="closeDeleteModal()">Batal</button>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_HEADERS = {
+        "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
+        "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    };
+    const GAS_SYNC_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+
+    let adminPassword = "";
+    let allClients = [];
+
+    async function doLogin() {
+        const pass = document.getElementById('admin-pass-input').value.trim();
+        if (!pass) return;
+        const btn = document.getElementById('btn-login');
+
+        btn.innerHTML = '<span class="spin"></span>';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(GAS_SYNC_URL + '?action=verifyOwnerPass&pass=' + encodeURIComponent(pass));
+            const result = await res.json();
+
+            if (result.status === 'success') {
+                adminPassword = pass;
+                document.getElementById('login-gate').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                loadClients();
+            } else {
+                showToast("❌ Akses Ditolak: Password Salah!", "red");
+            }
+        } catch (e) {
+            showToast("❌ Error Koneksi: " + e.toString(), "red");
+        }
+        btn.innerHTML = 'Masuk Dashboard';
+        btn.disabled = false;
+    }
+
+    async function loadClients() {
+        const tbody = document.getElementById('clients-tbody');
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:40px;"><span class="spin" style="border-color:var(--gold); width:24px; height:24px;"></span></td></tr>';
+        try {
+            const res = await fetch(GAS_SYNC_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "getOwnerClients", adminPassword: adminPassword })
+            });
+            const out = await res.json();
+            if (out.status !== 'success') throw new Error(out.message || "Gagal mengambil data dari database");
+            
+            allClients = out.data;
+            updateStats(allClients);
+            renderTable(allClients);
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="13" style="text-align:center; color:var(--red); padding:40px;">❌ Error: ${e.message}</td></tr>`;
+        }
+    }
+
+    function esc(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function renderTable(clients) {
+        const tbody = document.getElementById('clients-tbody');
+        if (!clients || clients.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:40px; color:var(--muted);">Tidak ada klien ditemukan.</td></tr>';
+            return;
+        }
+        
+        // Helper to parse Indonesian date format 'Minggu, 25 Agustus 2026' or ISO format
+        const parseIndonesianDate = (str) => {
+            if (!str) return null;
+            const months = {'Januari':0, 'Februari':1, 'Maret':2, 'April':3, 'Mei':4, 'Juni':5, 'Juli':6, 'Agustus':7, 'September':8, 'Oktober':9, 'November':10, 'Desember':11};
+            const parts = str.replace(',', '').split(' ');
+            if (parts.length >= 3 && months[parts[2]] !== undefined) {
+                return new Date(parseInt(parts[3]), months[parts[2]], parseInt(parts[1]));
+            }
+            const isoParsed = new Date(str);
+            return isNaN(isoParsed) ? null : isoParsed;
+        };
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        tbody.innerHTML = clients.map((c, i) => {
+            const st = c.status || 'Inactive';
+            let badgeCls = 'badge-inactive';
+            if (st === 'Active') badgeCls = 'badge-active';
+            else if (st === 'PendingActivation') badgeCls = 'badge-pending';
+
+            const rawDate = c.created_at ? new Date(c.created_at) : null;
+            const dateStr = rawDate ? rawDate.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) : '-';
+
+            const ssIdHtml = c.ssid ? `<a href="https://docs.google.com/spreadsheets/d/${esc(c.ssid)}/edit" target="_blank" style="color:var(--gold); text-decoration:none;">🔗 Buka Sheet</a>` : `<span style="color:var(--muted)">Belum Dibuat</span>`;
+
+            // Highlight Logic
+            const eventDate = parseIndonesianDate(c.wedding_date);
+            let rowClass = '';
+            if (eventDate && eventDate < today) {
+                rowClass = 'row-expired';
+            }
+
+            // Delete Button Logic (Disabled if active)
+            const disableDelete = (st === 'Active') ? 'disabled title="Ubah status selain Active untuk menghapus"' : '';
+
+            let displayWeddingDate = c.wedding_date || '-';
+            if (displayWeddingDate && typeof displayWeddingDate === 'string' && displayWeddingDate.includes("GMT")) {
+                displayWeddingDate = formatIndonesianDate(displayWeddingDate);
+            }
+
+            return `<tr id="row-${i}" data-username="${esc(c.username)}" class="${rowClass}">
+                <td style="color:var(--muted)">${i + 1}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.client_name)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.subdomain)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.package)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(displayWeddingDate)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.category)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.whatsapp)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.email)}</td>
+                <td contenteditable="true" oninput="markDirty(${i})">${esc(c.password)}</td>
+                <td style="cursor:pointer;" onclick="toggleStatus(${i})">
+                    <span id="badge-${i}" class="badge ${badgeCls}" data-status="${st}">${st}</span>
+                </td>
+                <td>${ssIdHtml}</td>
+                <td style="color:var(--muted); font-size:11px;">${dateStr}</td>
+                <td style="white-space:nowrap;">
+                    <button class="save-row-btn" onclick="saveRow(${i})">💾 Simpan</button>
+                    <button class="btn-outline btn-sm" style="padding:4px 8px; font-size:10px; margin-left:4px;" title="Push data tamu & ucapan ke Supabase" onclick="pushSingleToSupabase('${esc(c.username)}', '${esc(c.ssid)}')">⬆️ DB</button>
+                    <button class="btn-delete" ${disableDelete} onclick="openDeleteModal('${esc(c.username)}')">🗑️</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function markDirty(i) { document.getElementById('row-' + i).classList.add('dirty'); }
+
+    function toggleStatus(i) {
+        const badge = document.getElementById('badge-' + i);
+        let current = badge.getAttribute('data-status');
+        let next = 'Active';
+        if (current === 'Active') next = 'PendingActivation';
+        else if (current === 'PendingActivation') next = 'Inactive';
+        badge.setAttribute('data-status', next);
+        badge.innerText = next;
+        badge.className = 'badge';
+        if (next === 'Active') badge.classList.add('badge-active');
+        else if (next === 'PendingActivation') badge.classList.add('badge-pending');
+        else badge.classList.add('badge-inactive');
+        markDirty(i);
+    }
+
+    async function saveRow(i) {
+        const row = document.getElementById('row-' + i);
+        const cells = row.querySelectorAll('td[contenteditable="true"]');
+        const username = row.getAttribute('data-username');
+        const badge = document.getElementById('badge-' + i);
+
+        const payload = {
+            client_name: cells[0].innerText.trim(),
+            subdomain: cells[1].innerText.trim(),
+            package: cells[2].innerText.trim(),
+            wedding_date: cells[3].innerText.trim(),
+            category: cells[4].innerText.trim(),
+            whatsapp: cells[5].innerText.trim(),
+            email: cells[6].innerText.trim(),
+            password: cells[7].innerText.trim(),
+            status: badge.getAttribute('data-status')
+        };
+
+        const btn = row.querySelector('.save-row-btn');
+        btn.innerText = '⏳...'; btn.disabled = true;
+
+        try {
+            const res = await fetch(GAS_SYNC_URL, {
+                method: "POST",
+                body: JSON.stringify({ 
+                    action: "updateOwnerClient", 
+                    adminPassword: adminPassword,
+                    originalUsername: username,
+                    clientData: payload
+                })
+            });
+            const out = await res.json();
+            if (out.status !== 'success') throw new Error(out.message || "Gagal update di Backend");
+            
+            const targetIdx = allClients.findIndex(c => c.username === username);
+            if (targetIdx !== -1) {
+                allClients[targetIdx] = { ...allClients[targetIdx], ...payload };
+            }
+            if (payload.subdomain) row.setAttribute('data-username', payload.subdomain);
+            row.classList.remove('dirty');
+            showToast("✅ Tersimpan di Supabase & Spreadsheet!", "green");
+        } catch (e) {
+            showToast("❌ Error: " + e.message, "red");
+        }
+        btn.innerText = '💾 Simpan'; btn.disabled = false;
+    }
+
+    function triggerGasSyncBackground(username, payload) {
+        fetch(GAS_SYNC_URL, {
+            method: "POST", mode: "no-cors",
+            body: JSON.stringify({ action: "syncFromSupabase", username, data: payload })
+        }).catch(() => {});
+    }
+
+    async function syncAllPending() {
+        showToast("⏳ Meminta sinkronisasi massal Supabase -> Spreadsheet...", "gold");
+        try {
+            fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncAllClients" }) });
+            setTimeout(() => showToast("✅ Permintaan sync dikirim ke GAS!", "green"), 1000);
+        } catch (e) {
+            showToast("❌ Gagal kirim sync: " + e.message, "red");
+        }
+    }
+
+    async function syncAllToSupabase() {
+        if (!confirm("⚠️ PERINGATAN: Ini akan memaksa push data dari Spreadsheet ke Supabase untuk SEMUA klien aktif secara berurutan. Proses ini mungkin memakan waktu agak lama. Yakin lanjutkan?")) return;
+        
+        const activeClients = allClients.filter(c => c.status === 'Active' && c.ssid);
+        if (activeClients.length === 0) return showToast("Tidak ada klien aktif dengan SSID.", "gold");
+        
+        let successCount = 0;
+        for (let i = 0; i < activeClients.length; i++) {
+            const client = activeClients[i];
+            showToast(`⬆️ Pushing (${i+1}/${activeClients.length}): ${client.client_name}...`, "gold");
+            try {
+                await fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncSheetToSupabase", ssId: client.ssid }) });
+                await fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncWishesToSupabase", ssId: client.ssid }) });
+                successCount++;
+                // Beri jeda 500ms agar GAS tidak kena rate limit
+                await new Promise(r => setTimeout(r, 500));
+            } catch (e) {
+                console.error(`Gagal push ${client.subdomain}:`, e);
+            }
+        }
+        showToast(`✅ Selesai! ${successCount} klien berhasil dipush ke Supabase.`, "green");
+    }
+
+    async function pushSingleToSupabase(username, ssId) {
+        if (!ssId) return showToast("SSID belum tersedia", "red");
+        showToast(`⬆️ Mempush data untuk ${username}...`, "gold");
+        try {
+            await fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncSheetToSupabase", ssId: ssId }) });
+            await fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncWishesToSupabase", ssId: ssId }) });
+            setTimeout(() => showToast(`✅ Data ${username} berhasil dipush!`, "green"), 1500);
+        } catch (e) {
+            showToast("❌ Gagal push: " + e.message, "red");
+        }
+    }
+
+    function updateStats(clients) {
+        document.getElementById('stat-total').innerText = clients.length;
+        document.getElementById('stat-active').innerText = clients.filter(c => c.status === 'Active').length;
+        document.getElementById('stat-pending').innerText = clients.filter(c => c.status === 'PendingActivation').length;
+        document.getElementById('stat-inactive').innerText = clients.filter(c => c.status !== 'Active' && c.status !== 'PendingActivation').length;
+    }
+
+    function filterTable() {
+        const q = document.getElementById('search-input').value.toLowerCase();
+        const status = document.getElementById('filter-status').value;
+        const cat = document.getElementById('filter-category').value;
+        const filtered = allClients.filter(c => {
+            const matchQ = !q || (c.client_name || '').toLowerCase().includes(q) || (c.subdomain || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q) || (c.whatsapp || '').toLowerCase().includes(q);
+            const matchStatus = !status || c.status === status;
+            const matchCat = !cat || (c.category || '').toLowerCase() === cat;
+            return matchQ && matchStatus && matchCat;
+        });
+        renderTable(filtered);
+    }
+
+    function showToast(msg, type = 'green') {
+        const toast = document.getElementById('toast');
+        const colors = { green: '#10B981', red: '#EF4444', gold: '#C8962E' };
+        toast.innerText = msg; toast.style.borderColor = colors[type] || '#E07B7B';
+        toast.style.display = 'block'; clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    }
+
+    // --- ADD CLIENT VENDOR LOGIC ---
+    let subTimer = null;
+    let isValidSubdomain = false;
+    let lastCheckedSub = '';
+
+    function handleSubdomainInput(val) {
+        val = val.toLowerCase().replace(/[^a-z0-9]/g, '');
+        document.getElementById('add-subdomain').value = val;
+        const statusEl = document.getElementById('sub-status');
+
+        if (!val || val.length < 3) {
+            statusEl.innerText = val.length > 0 ? '⚠️ Min. 3 karakter' : '';
+            statusEl.style.color = 'var(--gold)';
+            isValidSubdomain = false;
+            clearTimeout(subTimer);
+            return;
+        }
+
+        statusEl.innerText = '⏳ Mengecek...';
+        statusEl.style.color = 'var(--muted)';
+        clearTimeout(subTimer);
+        subTimer = setTimeout(() => checkSubdomainSupabase(val), 600);
+    }
+
+    async function checkSubdomainSupabase(slug) {
+        const statusEl = document.getElementById('sub-status');
+        if (slug === lastCheckedSub && isValidSubdomain) {
+            statusEl.innerText = '✅ TERSEDIA';
+            statusEl.style.color = 'var(--green)';
+            return;
+        }
+
+        try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/client_public_profile?subdomain=eq.${encodeURIComponent(slug)}&select=subdomain`, {
+                headers: SB_HEADERS
+            });
+            const data = await res.json();
+            lastCheckedSub = slug;
+
+            if (data.length === 0) {
+                statusEl.innerText = '✅ TERSEDIA';
+                statusEl.style.color = 'var(--green)';
+                isValidSubdomain = true;
+            } else {
+                statusEl.innerText = '❌ SUDAH DIPAKAI';
+                statusEl.style.color = '#E07B7B';
+                isValidSubdomain = false;
+            }
+        } catch (e) {
+            statusEl.innerText = '⚠️ Gagal cek koneksi';
+            statusEl.style.color = 'var(--gold)';
+            isValidSubdomain = false;
+        }
+    }
+
+    function openAddClientModal() {
+        document.getElementById('modal-add-client').style.display = 'flex';
+        // reset form
+        isValidSubdomain = false;
+        lastCheckedSub = '';
+        document.getElementById('sub-status').innerText = '';
+        document.getElementById('add-subdomain').value = '';
+        document.getElementById('add-clientname').value = '';
+        document.getElementById('add-date').value = '';
+        document.getElementById('add-wa').value = '';
+        document.getElementById('add-email').value = '';
+        document.getElementById('add-pass').value = Math.random().toString(36).substring(2,8);
+    }
+    function closeAddClientModal() { document.getElementById('modal-add-client').style.display = 'none'; }
+    
+    function formatIndonesianDate(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d)) return dateStr;
+        const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+        const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+        return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    async function submitAddClient() {
+        const subdomain = document.getElementById('add-subdomain').value.trim();
+        const clientName = document.getElementById('add-clientname').value.trim();
+        const rawDate = document.getElementById('add-date').value;
+        const category = document.getElementById('add-category').value;
+        const pkg = document.getElementById('add-package').value;
+        const wa = document.getElementById('add-wa').value.trim();
+        const email = document.getElementById('add-email').value.trim();
+        const pass = document.getElementById('add-pass').value.trim();
+
+        if (!subdomain || !clientName || !rawDate) {
+            return showToast("❌ Subdomain, Nama Klien, dan Tanggal wajib diisi!", "red");
+        }
+
+        if (!isValidSubdomain) {
+            return showToast("❌ Subdomain tidak valid atau sudah dipakai!", "red");
+        }
+
+        const btn = document.getElementById('btn-submit-add');
+        btn.innerHTML = '⏳ Memproses & Membuat Sheet...'; btn.disabled = true;
+
+        const payload = {
+            action: 'registerAndActivate',
+            subdomain: subdomain,
+            password: pass,
+            whatsapp: wa,
+            email: email,
+            category: category,
+            clientName: clientName,
+            weddingDate: formatIndonesianDate(rawDate),
+            package: pkg,
+            address: ""
+        };
+
+        try {
+            const res = await fetch(GAS_SYNC_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            const out = await res.json();
+            if (out.status === 'success') {
+                showToast("✅ Klien berhasil ditambahkan dan diaktifkan!", "green");
+                closeAddClientModal();
+                loadClients();
+            } else {
+                showToast("❌ Gagal: " + out.message, "red");
+            }
+        } catch(e) {
+            showToast("❌ Error: " + e.message, "red");
+        }
+        btn.innerHTML = '🚀 Buat & Aktifkan Klien'; btn.disabled = false;
+    }
+
+    // --- DELETE CLIENT LOGIC ---
+    function openDeleteModal(username) {
+        document.getElementById('modal-delete-client').style.display = 'flex';
+        document.getElementById('del-subdomain').value = username;
+        document.getElementById('del-admin-pass').value = '';
+    }
+    function closeDeleteModal() { document.getElementById('modal-delete-client').style.display = 'none'; }
+
+    async function submitDeleteClient() {
+        const username = document.getElementById('del-subdomain').value;
+        const pass = document.getElementById('del-admin-pass').value.trim();
+        if (!pass) return showToast("❌ Password admin wajib diisi!", "red");
+        
+        const btn = document.getElementById('btn-submit-del');
+        btn.innerHTML = '🗑️ Menghapus...'; btn.disabled = true;
+
+        try {
+            const payload = {
+                action: 'deleteOwnerClient',
+                adminPassword: pass,
+                username: username
+            };
+            const res = await fetch(GAS_SYNC_URL, { method: "POST", body: JSON.stringify(payload) });
+            const out = await res.json();
+            if (out.status === 'success') {
+                showToast("✅ " + out.message, "green");
+                closeDeleteModal();
+                loadClients();
+            } else {
+                showToast("❌ " + out.message, "red");
+            }
+        } catch(e) {
+            showToast("❌ Error: " + e.message, "red");
+        }
+        btn.innerHTML = '🗑️ Ya, Hapus Permanen!'; btn.disabled = false;
+    }
+
+    document.getElementById('admin-pass-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+<script src="offline-db.js"></script>
+<script src="sync-engine.js"></script>
+<script>
+(function(){
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+    window.addEventListener('online',function(){document.body.classList.remove('is-offline');});
+    window.addEventListener('offline',function(){document.body.classList.add('is-offline');});
+})();
+</script>
+<style>
+.is-offline::before{content:'⚠️ OFFLINE — Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
+@media(min-width:1024px){.is-offline::before{display:none;}}
+</style>
+</body>
+</html>

@@ -3,11 +3,13 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SapaTamu.ku - Welcome Sign V7.2 (Multi-Client Support)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="auth_guard.js"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap"
         rel="stylesheet">
@@ -1038,14 +1040,93 @@
                 document.querySelector('.master-container').style.gridTemplateColumns = '1fr';
             }
 
+                                    window.dispatchEvent(new Event('sapa-activity')); // Reset timer idle
+                                }
+                            }
+                        )
+                        .subscribe();
+                }
+            } catch (e) {
+                console.error("Gagal inisialisasi Realtime wishes_queue:", e);
+            }
+        }
+
+        let currentPhotos = [];
+        let slideIdx = 0;
+        let slideInterval;
+
+        function initSlideshow(urls) {
+            // Auto-fix Google Drive links to direct thumbnail links for reliability
+            urls = urls.map(url => {
+                const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+                const match = url.match(driveRegex);
+                if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file"))) {
+                    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1920`;
+                }
+                return url;
+            });
+
+            // Only re-init if the photo list actually changed
+            const newStr = urls.join(",");
+            if (newStr === currentPhotos.join(",")) return;
+            currentPhotos = urls;
+
+            console.log("Slideshow initialized with:", urls);
+
+            const container = document.getElementById('slideshow-container');
+            container.innerHTML = "";
+            clearInterval(slideInterval);
+
+            urls.forEach((url, i) => {
+                const div = document.createElement('div');
+                div.className = `slide ${i === 0 ? 'active' : ''}`;
+                div.style.backgroundImage = `url('${url}')`;
+                container.appendChild(div);
+            });
+
+            if (urls.length > 1) {
+                slideIdx = 0;
+                slideInterval = setInterval(() => {
+                    const slides = document.querySelectorAll('.slide');
+                    if (slides.length < 2) return;
+                    slides[slideIdx].classList.remove('active');
+                    slideIdx = (slideIdx + 1) % slides.length;
+                    slides[slideIdx].classList.add('active');
+                }, 11000);
+            }
+        }
+
+        window.toggleFS = function () {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('mode') === 'kiosk') {
+                document.getElementById('timeline-panel').style.display = 'none';
+                document.querySelector('.master-container').style.gridTemplateColumns = '1fr';
+            }
+
             handleUIVisibility();
             syncData();
             updateInternalLinks();
             setTimeout(updateInternalLinks, 1500);
         });
     </script>
+<script src="offline-db.js"></script>
+<script src="sync-engine.js"></script>
+<script>
+(function(){
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+    window.addEventListener('online',function(){document.body.classList.remove('is-offline');});
+    window.addEventListener('offline',function(){document.body.classList.add('is-offline');});
+})();
+</script>
+<style>
+.is-offline::before{content:'⚠️ OFFLINE — Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
+@media(min-width:1024px){.is-offline::before{display:none;}}
+</style>
 </body>
 
 </html>
-
-

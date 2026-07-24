@@ -1,0 +1,2800 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>sapatamu.ku | ONSITE SCAN & REG</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script src="subdomain_resolver.js?v=3.3"></script>
+    <script src="printer_widget.js"></script>
+    <script src="sync_queue.js"></script>
+
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        /* Toggle switch camera */
+        .cam-toggle-wrap { display:flex; align-items:center; gap:5px; }
+        .cam-toggle-label { font-size:8px; font-weight:800; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em; white-space:nowrap; }
+        .cam-toggle { position:relative; width:32px; height:18px; flex-shrink:0; }
+        .cam-toggle input { opacity:0; width:0; height:0; }
+        .cam-toggle-slider {
+          position:absolute; cursor:pointer; inset:0;
+          background:#ddd; border-radius:18px; transition: background-color var(--duration-fast) ease;
+        }
+        .cam-toggle-slider:before {
+          content:''; position:absolute; width:12px; height:12px;
+          left:3px; bottom:3px; background:white; border-radius:50%; transition: transform var(--duration-fast) var(--ease-out);
+        }
+        .cam-toggle input:checked + .cam-toggle-slider { background:#10B981; }
+        .cam-toggle input:checked + .cam-toggle-slider:before { transform:translateX(14px); }
+        :root {
+            --primary: #E07B7B;
+            --bg: #FFF9F5;
+            --card: #FFFFFF;
+            --text-main: #4A3F35;
+            --text-muted: #8C7560;
+            --border: #F0E6DE;
+            --input-bg: #FDF8F4;
+            --gold: #C8962E;
+            --success: #10B981;
+        }
+
+        html,
+        body {
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        #app-root {
+            display: flex;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            flex-direction: column;
+            z-index: 10;
+            color: var(--text-main);
+        }
+
+        .header {
+            text-align: center;
+            padding: 80px 20px 10px;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+            color: var(--text-main);
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .header h1 span {
+            color: var(--primary);
+        }
+
+        .header p {
+            font-size: 8px;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        /* TABS (ONSITE SPECIFIC) */
+        .onsite-tabs {
+            display: flex;
+            background: white;
+            border-radius: 15px;
+            padding: 5px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 800;
+            border-radius: 10px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color var(--duration-fast) ease, background-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out);
+            text-transform: uppercase;
+        }
+        .tab-btn:active {
+            transform: scale(0.97);
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        #scanner-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 250px;
+            margin: 0 auto;
+            aspect-ratio: 1 / 1;
+            background: #000;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 4px solid white;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        #reader {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        #reader video {
+            object-fit: cover !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        #reader.mirror-mode video {
+            transform: scaleX(-1) !important;
+        }
+
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .scan-frame {
+            width: 70%;
+            height: 70%;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
+            transition: all 0.25s ease;
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+
+        .scan-frame.qr-detected {
+            border-color: var(--gold);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4), 0 0 0 1000px rgba(0, 0, 0, 0.2);
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .scan-frame.qr-success {
+            border-color: var(--success) !important;
+            box-shadow: 0 0 30px var(--success), 0 0 0 1000px rgba(0, 0, 0, 0.1) !important;
+            transform: scale(1.05);
+        }
+
+        .bottom-section {
+            flex: 1;
+            background: white;
+            border-radius: 25px 25px 0 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .search-container {
+            padding: 12px;
+            border-bottom: 1px solid #f2f2f2;
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 14px;
+            border: 1px solid #eee;
+            background: #f8f9f9;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .list-wrapper {
+            flex: 1;
+            padding: 5px 12px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+            align-content: start;
+        }
+
+        .guest-item {
+            padding: 16px;
+            border-radius: 18px;
+            background: #fff;
+            border: 1px solid #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: border-color var(--duration-normal) ease, background-color var(--duration-normal) ease, transform var(--duration-normal) var(--ease-out);
+            border-top: 4px solid var(--border);
+        }
+
+        .guest-item.checked-in {
+            background: #fdf8f4;
+            border-color: var(--success);
+            opacity: 0.7;
+        }
+
+        .guest-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #f0e6de;
+            padding-bottom: 8px;
+        }
+
+        .guest-name {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+
+        .guest-wa {
+            font-size: 9px;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .guest-details {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .detail-item {
+            font-size: 9px;
+            color: var(--text-muted);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .detail-item span {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        .guest-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+
+        .guest-cat {
+            font-size: 8px;
+            background: #fdf8f4;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 800;
+            color: var(--gold);
+            border: 1px solid #f0e6de;
+        }
+
+        .guest-status {
+            font-size: 8px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* REGISTRATION FORM STYLES */
+        .reg-pane {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            display: none;
+            max-width: 650px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 15px;
+            border-radius: 14px;
+            border: 1.5px solid var(--border);
+            background: #fafafa;
+            font-size: 13px;
+            font-weight: 600;
+            outline: none;
+            transition: border-color var(--duration-fast) ease, background-color var(--duration-fast) ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 5px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 15px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 18px;
+            font-weight: 800;
+            font-size: 14px;
+            box-shadow: 0 10px 25px rgba(224, 123, 123, 0.3);
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+        }
+        .btn-submit:active {
+            transform: scale(0.97);
+        }
+
+        /* MODAL STYLES */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 100000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity var(--duration-slow) var(--ease-out), display var(--duration-slow) var(--ease-out) allow-discrete;
+        }
+        .modal-overlay[style*="display: flex"] {
+            display: flex !important;
+            opacity: 1;
+        }
+        @starting-style {
+            .modal-overlay[style*="display: flex"] {
+                opacity: 0;
+            }
+        }
+
+        .modal-card {
+            background: white;
+            width: 100%;
+            max-width: 350px;
+            border-radius: 30px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transform: scale(0.95);
+            transition: transform var(--duration-slow) var(--ease-modal);
+        }
+        .modal-overlay[style*="display: flex"] .modal-card {
+            transform: scale(1);
+        }
+        @starting-style {
+            .modal-overlay[style*="display: flex"] .modal-card {
+                transform: scale(0.95);
+            }
+        }
+
+        .modal-video-box {
+            width: 100%;
+            aspect-ratio: 1/1;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 15px 0;
+            border: 3px solid #f0f0f0;
+            position: relative;
+        }
+
+        #camera-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-cancel {
+            background: #eee;
+            color: #666;
+            border: none;
+            flex: 1;
+            padding: 14px;
+            border-radius: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .btn-confirm {
+            background: var(--gold);
+            color: white;
+            border: none;
+            flex: 2;
+            padding: 14px;
+            border-radius: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .pax-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            background: #fafafa;
+            padding: 10px 15px;
+            border-radius: 15px;
+            border: 1px solid #eee;
+        }
+
+        .counter-wrapper {
+            display: flex;
+            align-items: center;
+            background: #f0f0f0;
+            border-radius: 12px;
+            padding: 2px;
+            height: 38px;
+            width: 100px;
+        }
+
+        .btn-step {
+            width: 35px;
+            height: 100%;
+            border: none;
+            background: white;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        .counter-value {
+            flex: 1;
+            text-align: center;
+            font-weight: 800;
+            font-size: 13px;
+            color: var(--text-main);
+        }
+
+        .tag-row {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .tag-item {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            background: #f5f5f5;
+            border: 1px solid #eee;
+            font-size: 9px;
+            font-weight: 800;
+            text-align: center;
+            cursor: pointer;
+            color: #888;
+            transition: 0.3s;
+        }
+
+        .tag-item.active {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            z-index: 200000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: var(--primary);
+            gap: 15px;
+        }
+
+        .loading-overlay span {
+            font-size: 14px;
+            letter-spacing: 2px;
+            color: var(--text-main);
+        }
+
+        .fab-fullscreen {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 45px;
+            height: 45px;
+            background: rgba(26,26,26,0.9);
+            color: white;
+            border-radius: 50%;
+            border: 1px solid var(--gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            cursor: pointer;
+            transition: opacity 0.5s ease, background 0.3s ease, transform var(--duration-fast) var(--ease-out);
+        }
+        .fab-fullscreen:active {
+            transform: scale(0.92);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(224, 123, 123, 0.1);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .st-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            z-index: 2147483647;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity var(--duration-slow) var(--ease-out), display var(--duration-slow) var(--ease-out) allow-discrete;
+        }
+        .st-modal-overlay[style*="display: flex"] {
+            display: flex !important;
+            opacity: 1;
+        }
+        @starting-style {
+            .st-modal-overlay[style*="display: flex"] {
+                opacity: 0;
+            }
+        }
+
+        .st-modal-content {
+            background: white;
+            width: 100%;
+            max-width: 320px;
+            border-radius: 35px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(74, 63, 53, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            transform: scale(0.95);
+            transition: transform var(--duration-slow) var(--ease-modal);
+        }
+        .st-modal-overlay[style*="display: flex"] .st-modal-content {
+            transform: scale(1);
+        }
+        @starting-style {
+            .st-modal-overlay[style*="display: flex"] .st-modal-content {
+                transform: scale(0.95);
+            }
+        }
+
+        .st-modal-title {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 10px;
+        }
+
+        .st-modal-msg {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        .st-btn {
+            border: none;
+            padding: 14px 25px;
+            border-radius: 18px;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+        }
+        .st-btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-dark {
+            background: var(--text-main);
+            color: white;
+            box-shadow: 0 10px 20px rgba(74, 63, 53, 0.2);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        /* ADVANCED NAVBAR STYLES (CLONE FROM CHECKIN) */
+        .sapatamu-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 15px 5px;
+            display: flex;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        
+        /* Dynamic Island wrapper */
+        .nav-outer-wrapper {
+            position: relative;
+            display: flex; align-items: center;
+            background: rgba(255, 253, 251, 0.92);
+            backdrop-filter: blur(20px);
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.10);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            width: 180px;
+            transition: width var(--duration-slow) var(--ease-drawer), box-shadow var(--duration-normal) ease-out;
+            cursor: pointer;
+        }
+        .nav-outer-wrapper.di-expanded {
+            width: min(960px, 96vw);
+            cursor: default;
+            box-shadow: 0 14px 40px rgba(74, 63, 53, 0.13);
+        }
+        .di-collapsed-label {
+            position: absolute; left: 0; right: 0;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 22px; font-size: 11px; font-weight: 800;
+            color: var(--text-main); white-space: nowrap;
+            opacity: 1; transition: opacity 0.25s ease;
+            pointer-events: none; z-index: 5;
+        }
+        .di-collapsed-label .di-dot {
+            width: 7px; height: 7px; background: var(--primary);
+            border-radius: 50%; flex-shrink: 0; animation: diPulse 2s infinite;
+        }
+        @keyframes diPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.7); }
+        }
+        .nav-outer-wrapper.di-expanded .di-collapsed-label { opacity: 0; pointer-events: none; }
+        .nav-outer-wrapper:not(.di-expanded) .nav-scroll-container { opacity: 0; pointer-events: none; }
+        .nav-outer-wrapper.di-expanded .nav-scroll-container { opacity: 1; pointer-events: auto; }
+
+        .nav-scroll-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 15px;
+            overflow-x: auto;
+            white-space: nowrap;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .nav-scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-fade {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 40px;
+            pointer-events: none;
+            z-index: 2;
+            transition: opacity 0.3s;
+            opacity: 0;
+        }
+
+        .nav-fade-left {
+            left: 0;
+            background: linear-gradient(to right, #FFFDFB 20%, transparent);
+        }
+
+        .nav-fade-right {
+            right: 0;
+            background: linear-gradient(to left, #FFFDFB 20%, transparent);
+        }
+
+        .nav-fade.visible {
+            opacity: 1;
+        }
+
+        .nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 3;
+            font-size: 10px;
+            color: var(--text-muted);
+            opacity: 0.5;
+            pointer-events: none;
+            transition: 0.3s;
+        }
+
+        .nav-arrow-left {
+            left: 8px;
+        }
+
+        .nav-arrow-right {
+            right: 8px;
+        }
+
+        .nav-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            padding: 10px 18px;
+            border-radius: 30px;
+            transition: color var(--duration-fast) ease, background-color var(--duration-fast) ease;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        .nav-link.active {
+            background: var(--primary);
+            color: white !important;
+        }
+
+        .nav-link.sign-out {
+            color: #E07B7B !important;
+        }
+
+        .nav-divider {
+            width: 1px;
+            height: 18px;
+            background: #EEE0D5;
+            margin: 0 8px;
+            flex-shrink: 0;
+        }
+
+        /* ─── HOVER PROTECTION MEDIA QUERY ────────────────────────── */
+        @media (hover: hover) and (pointer: fine) {
+            .tab-btn:hover {
+                color: var(--primary);
+                background: rgba(224, 123, 123, 0.05);
+            }
+            .guest-item:hover {
+                border-color: var(--primary);
+                transform: translateY(-2px);
+            }
+            .btn-submit:hover {
+                opacity: 0.95;
+                box-shadow: 0 12px 28px rgba(224, 123, 123, 0.35);
+            }
+            .fab-fullscreen:hover {
+                background: rgba(26,26,26,1);
+                border-color: var(--primary);
+            }
+            .st-btn:hover {
+                opacity: 0.95;
+            }
+            .nav-link:hover {
+                color: var(--primary);
+                background: rgba(224, 123, 123, 0.05);
+            }
+        }
+    </style>
+    <script src="auth_guard.js?v=1.0"></script>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+
+<body onload="initApp()">
+
+    <div id="app-root">
+        <nav class="sapatamu-navbar">
+            <div class="nav-outer-wrapper di-expanded" id="nav-island">
+        <!-- Dynamic Island collapsed label -->
+        <div class="di-collapsed-label" id="di-label">
+            <span class="di-dot"></span>
+            <span id="di-label-text">Menu</span>
+        </div>
+                <div class="nav-fade nav-fade-left" id="fade-left"></div>
+                <div class="nav-arrow nav-arrow-left">‹</div>
+
+                <div class="nav-scroll-container" id="nav-scroll">
+                    <div class="nav-group">
+                        <a href="dashboard.html" class="nav-link">Dashboard</a>
+                        <div class="nav-divider"></div>
+                        <a href="formulir_tamu.html" class="nav-link">Buku Tamu</a>
+                        <a href="wa_blast.html" class="nav-link">WA Blast</a>
+                        <a href="undangan.html" class="nav-link">Undangan</a>
+                    </div>
+                    <div class="nav-divider"></div>
+                    <div class="nav-group">
+                        <a href="checkin.html" class="nav-link">Check-in</a>
+                        <a href="onsite.html" class="nav-link active">On-Site</a>
+                        <a href="analytics.html" class="nav-link">Analytics</a>
+                        <a href="luckydraw.html" class="nav-link">Lucky Draw</a>
+                        <a href="angpao.html" class="nav-link">Angpao</a>
+                        <a href="worker.html" class="nav-link">Worker</a>
+                        <a href="welcome.html" class="nav-link">Welcome</a>
+                        <div class="nav-divider"></div>
+
+
+                    </div>
+                    <div class="nav-divider"></div>
+                    <a href="logout.html" class="nav-link sign-out">Sign Out</a>
+                </div>
+
+                <div class="nav-arrow nav-arrow-right">›</div>
+                <div class="nav-fade nav-fade-right" id="fade-right"></div>
+            </div>
+        </nav>
+
+        <div class="header" style="position: relative;">
+            <!-- JALUR SELECTOR -->
+            <div
+                style="position: absolute; top: 60px; left: 15px; z-index: 200; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <span
+                    style="font-size: 8px; color: var(--text-muted); font-weight: 800; margin-right: 5px; text-transform: uppercase;">JALUR:</span>
+                <select id="jalur-selector"
+                    style="background: transparent; border: none; color: var(--text-main); font-size: 9px; font-weight: 800; text-transform: uppercase; outline: none; cursor: pointer;">
+                    <option value="ALL">ALL JALUR</option>
+                    <option value="1">JALUR 1</option>
+                    <option value="2">JALUR 2</option>
+                    <option value="3">JALUR 3</option>
+                    <option value="4">JALUR 4</option>
+                </select>
+                <span id="realtime-status" style="font-size: 8px; font-weight: 800; margin-left: 4px; padding: 2px 6px; border-radius: 10px; background: #fee2e2; color: #ef4444; transition: 0.3s;">Realtime Off</span>
+                <!-- Toggle Kamera -->
+                <div class="cam-toggle-wrap">
+                    <span class="cam-toggle-label">CAM</span>
+                    <label class="cam-toggle">
+                        <input type="checkbox" id="cam-toggle-onsite" onchange="toggleScanner(this.checked)">
+                        <span class="cam-toggle-slider"></span>
+                    </label>
+                </div>
+                <!-- Toggle Frontcam Mode -->
+                <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                    <span class="cam-toggle-label">FC</span>
+                    <label class="cam-toggle">
+                        <input type="checkbox" id="frontcam-toggle" onchange="toggleFrontcamMode(this.checked)">
+                        <span class="cam-toggle-slider"></span>
+                    </label>
+                </div>
+                <!-- Toggle Countdown -->
+                <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                    <span class="cam-toggle-label">CD</span>
+                    <label class="cam-toggle">
+                        <input type="checkbox" id="countdown-toggle" checked>
+                        <span class="cam-toggle-slider"></span>
+                    </label>
+                </div>
+                <!-- Toggle Quick Check In -->
+                <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                    <span class="cam-toggle-label">QUICK</span>
+                    <label class="cam-toggle">
+                        <input type="checkbox" id="quick-checkin-toggle" onchange="localStorage.setItem('quick_checkin_on', this.checked ? '1' : '0')">
+                        <span class="cam-toggle-slider"></span>
+                    </label>
+                </div>
+                <!-- pw-btn injected by PrinterWidget.init() -->
+            </div>
+
+            <h1>sapa<span>tamu</span>.ku</h1>
+            <p>ONSITE SCAN & REGISTRATION</p>
+        </div>
+
+        <div class="main-content">
+            <div class="onsite-tabs">
+                <div id="tab-scan-btn" class="tab-btn active" onclick="switchTab('scan')">SCAN CHECK-IN</div>
+                <div id="tab-reg-btn" class="tab-btn" onclick="switchTab('reg')">TAMU BARU (ON-SITE)</div>
+            </div>
+
+            <!-- PANE SCAN (CLONE FROM CHECKIN) -->
+            <div id="pane-scan" style="display: flex; flex-direction: column; gap: 10px; flex: 1; overflow: hidden;">
+                <div id="scanner-wrapper">
+                    <div id="reader"></div>
+                    <div class="scan-overlay">
+                        <div class="scan-frame" id="target-frame"></div>
+                    </div>
+                </div>
+                <div class="bottom-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 15px 0;">
+                        <span style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Status Kehadiran</span>
+                        <div style="display: flex; gap: 8px;">
+                            <span id="checkedin-guests" style="background: var(--gold); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 GUESTS</span>
+                            <span id="checkedin-pax" style="background: var(--primary); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 PAX</span>
+                        </div>
+                    </div>
+                    <div class="search-container" style="display: flex; align-items: center; gap: 8px;">
+                        <input type="text" id="search-box" class="search-input" placeholder="Cari nama atau kode..." oninput="renderUI()" style="flex: 1;">
+                        <div class="cam-toggle-wrap" style="flex-shrink: 0; background: #FFF9F5; border: 1px solid var(--border); padding: 6px 10px; border-radius: 12px; height: 38px;">
+                            <span class="cam-toggle-label">HID</span>
+                            <label class="cam-toggle">
+                                <input type="checkbox" id="hid-barcode-toggle" onchange="localStorage.setItem('hid_barcode_on', this.checked ? '1' : '0')">
+                                <span class="cam-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <button id="bulk-btn" style="display:none; background: var(--gold); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 800; font-size: 11px; margin-left: 10px; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 10px rgba(212,175,55,0.3);" onclick="openConfirmModal()">KONFIRMASI (<span id="selected-count">0</span>)</button>
+                    </div>
+                    <div id="guest-list" class="list-wrapper"></div>
+                </div>
+            </div>
+
+            <!-- PANE REGISTRATION -->
+            <div id="pane-reg" class="reg-pane">
+                <div class="form-group">
+                    <label>Nama Lengkap</label>
+                    <input type="text" id="reg-nama" placeholder="Masukkan nama tamu...">
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1; margin-bottom: 15px;">
+                        <label>WhatsApp / Instagram</label>
+                        <input type="text" id="reg-wa" placeholder="08... atau @username_ig">
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 15px;">
+                        <label>Category</label>
+                        <select id="reg-kategori">
+                            <option>Umum</option>
+                            <option>VIP</option>
+                            <option>VVIP</option>
+                            <option>Keluarga</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1; margin-bottom: 15px;">
+                        <label>Inviter Side</label>
+                        <select id="reg-host">
+                            <option value="PENGANTIN PRIA">Pengantin Pria</option>
+                            <option value="PENGANTIN WANITA">Pengantin Wanita</option>
+                            <option value="KELUARGA AYAH PENGANTIN PRIA">Keluarga Ayah CPP</option>
+                            <option value="KELUARGA IBU PENGANTIN PRIA">Keluarga Ibu CPP</option>
+                            <option value="KELUARGA AYAH PENGANTIN WANITA">Keluarga Ayah CPW</option>
+                            <option value="KELUARGA IBU PENGANTIN WANITA">Keluarga Ibu CPW</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 15px;">
+                        <label>Souvenir</label>
+                        <select id="reg-souvenir">
+                            <option value="ya">Ya</option>
+                            <option value="tidak">Tidak</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row" style="margin-bottom: 15px;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Sesi Undangan</label>
+                        <select id="reg-sesi"></select>
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Alamat / Instansi</label>
+                        <input type="text" id="reg-alamat" placeholder="Kota atau Instansi...">
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Jumlah Pax</label>
+                    <div style="display: flex; gap: 15px; width: 100%;">
+                        <div class="pax-row" style="flex: 1; margin: 0; padding: 12px 15px;">
+                            <span style="font-size: 11px; font-weight: 700; color: var(--text-main);">Dewasa</span>
+                            <div class="counter-wrapper" style="width: 100px; height: 36px;">
+                                <button type="button" class="btn-step" onclick="updateRegPax('adult', -1)">-</button>
+                                <div id="reg-pax-adult" class="counter-value" style="font-size: 12px;">1</div>
+                                <button type="button" class="btn-step" onclick="updateRegPax('adult', 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="pax-row" style="flex: 1; margin: 0; padding: 12px 15px;">
+                            <span style="font-size: 11px; font-weight: 700; color: var(--text-main);">Anak</span>
+                            <div class="counter-wrapper" style="width: 100px; height: 36px;">
+                                <button type="button" class="btn-step" onclick="updateRegPax('child', -1)">-</button>
+                                <div id="reg-pax-child" class="counter-value" style="font-size: 12px;">0</div>
+                                <button type="button" class="btn-step" onclick="updateRegPax('child', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 25px;">
+                    <label>Pemberian (Angpao / Kado)</label>
+                    <div class="tag-row" style="margin: 0; display: flex; gap: 15px; width: 100%;">
+                        <div class="tag-item" id="reg-tag-angpao" onclick="this.classList.toggle('active')"
+                            style="flex: 1; padding: 15px; font-size: 11px; border-radius: 14px; text-align: center;">
+                            ANGPAO</div>
+                        <div class="tag-item" id="reg-tag-kado" onclick="this.classList.toggle('active')"
+                            style="flex: 1; padding: 15px; font-size: 11px; border-radius: 14px; text-align: center;">
+                            KADO</div>
+                    </div>
+                </div>
+
+                <!-- SELFIE OPTION FOR REGISTRATION -->
+                <div id="reg-selfie-box" style="margin-bottom: 20px; text-align: center;">
+                    <div id="reg-preview-container"
+                        style="display:none; width:100%; aspect-ratio:1/1; background:#000; border-radius:15px; overflow:hidden; margin-bottom:10px; border:2px solid var(--border); position:relative;">
+                        <video id="reg-video" autoplay playsinline muted
+                            style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
+                        <img id="reg-photo-preview"
+                            style="display:none; width:100%; height:100%; object-fit:cover; transform:scaleX(-1);" />
+                        <div id="reg-countdown-overlay" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); color:white; font-size:100px; font-weight:800; align-items:center; justify-content:center; z-index:10;"></div>
+                    </div>
+                    <button id="btn-reg-snap" onclick="toggleRegSelfie()"
+                        style="background: white; border: 1px solid var(--gold); color: var(--gold); padding: 10px 20px; border-radius: 30px; font-size: 11px; font-weight: 800; cursor: pointer; width:100%;">📸
+                        AMBIL SELFIE (OPSIONAL)</button>
+                    <canvas id="reg-canvas" style="display:none;"></canvas>
+                </div>
+
+                <button class="btn-submit" onclick="submitOnsite()">DAFTARKAN & CHECK-IN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRM (FULL CLONE FROM CHECKIN) -->
+    <div id="modalConfirm" class="modal-overlay">
+        <div class="modal-card">
+            <h3 id="m-nama"
+                style="margin: 0; color: var(--text-main); font-size: 15px; font-weight: 800; text-align: center; text-transform: uppercase;">
+                Konfirmasi</h3>
+            <p id="m-info" style="font-size: 10px; color: var(--text-muted); margin: 5px 0 15px;">Pilih Pax & Ambil Foto
+                (Opsional)</p>
+
+            <div id="guest-info-card"
+                style="background: #fafafa; padding: 12px; border-radius: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee;">
+                <div id="m-card-nama" style="font-size: 12px; font-weight: 700; color: var(--text-main);">Nama Tamu
+                </div>
+                <div id="m-card-cat"
+                    style="font-size: 9px; font-weight: 800; color: var(--gold); text-transform: uppercase;">Kategori
+                </div>
+            </div>
+
+            <div class="modal-video-box">
+                <video id="camera-preview" autoplay playsinline muted></video>
+                <img id="camera-photo-preview"
+                    style="display:none; width:100%; height:100%; object-fit:cover; transform:scaleX(-1);" />
+                <canvas id="capture-canvas" style="display:none;"></canvas>
+                <div id="countdown-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; display:none; align-items:center; justify-content:center; font-size: 100px; color: white; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; text-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10; background: rgba(0,0,0,0.2);"></div>
+            </div>
+            <button id="btn-snap" onclick="takeSelfie()"
+                style="background: none; border: 1px solid var(--gold); color: var(--gold); padding: 8px 20px; border-radius: 30px; font-size: 10px; font-weight: 800; cursor: pointer; margin-bottom: 15px;">AMBIL
+                FOTO</button>
+
+            <div style="display: flex; gap: 15px; text-align: left;">
+                <div style="flex: 1.2;">
+                    <label style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">KEHADIRAN
+                        PAX</label>
+                    <div class="pax-row" style="margin: 8px 0;">
+                        <span class="pax-label" style="font-size: 10px; font-weight: 700;">DEWASA</span>
+                        <div class="counter-wrapper" style="width: 80px; height: 32px;">
+                            <button type="button" class="btn-step" onclick="updatePax('adult', -1)">-</button>
+                            <div id="m-pax-adult" class="counter-value" style="font-size: 11px;">1</div>
+                            <button type="button" class="btn-step" onclick="updatePax('adult', 1)">+</button>
+                        </div>
+                    </div>
+                    <div class="pax-row" style="margin: 8px 0;">
+                        <span class="pax-label" style="font-size: 10px; font-weight: 700;">ANAK</span>
+                        <div class="counter-wrapper" style="width: 80px; height: 32px;">
+                            <button type="button" class="btn-step" onclick="updatePax('child', -1)">-</button>
+                            <div id="m-pax-child" class="counter-value" style="font-size: 11px;">0</div>
+                            <button type="button" class="btn-step" onclick="updatePax('child', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="flex: 0.8;">
+                    <label
+                        style="font-size: 8px; font-weight: 900; color: #aaa; text-transform: uppercase;">PEMBERIAN</label>
+                    <div class="tag-row" style="flex-direction: column;">
+                        <div class="tag-item" id="tag-angpao" onclick="this.classList.toggle('active')">ANGPAO</div>
+                        <div class="tag-item" id="tag-kado" onclick="this.classList.toggle('active')">KADO</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="m-pax-total-label"
+                style="font-size:9px; font-weight:800; color:var(--gold); text-align:center; margin-top:10px; text-transform:uppercase;">
+                TOTAL: <span id="m-pax-total">1</span> PAX</div>
+
+            <div class="btn-group">
+                <button class="btn-cancel" onclick="closeModal()">BATAL</button>
+                <button class="btn-confirm" id="btn-final-confirm" onclick="executeCheckin()">CHECK-IN SEKARANG</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <span>[ DATA DIPROSES ]</span>
+    </div>
+
+    <div class="fab-fullscreen" id="btn-fs">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+    </div>
+
+    <div id="st-modal" class="st-modal-overlay">
+        <div id="modal-container" class="st-modal-content">
+            <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️</span>
+            <div id="st-modal-title" class="st-modal-title">Notifikasi</div>
+            <div id="st-modal-msg" class="st-modal-msg">Pesan akan muncul di sini.</div>
+            <div id="modal-actions" style="display: flex; gap: 10px; margin-top: 30px;">
+                <button id="modal-cancel-btn" class="st-btn btn-outline" style="flex:1; display:none;">BATAL</button>
+                <button id="modal-ok-btn" class="st-btn btn-dark" style="flex:1;">MENGERTI</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+
+        let CURRENT_SS_ID = null;
+        let masterData = [];
+        let html5QrCode;
+        let selectedIDs = new Set();
+        let scannerEnabled = false; // default OFF - hemat baterai
+
+        function toggleScanner(enabled) {
+            scannerEnabled = enabled;
+            localStorage.setItem('onsite_cam_on', enabled ? '1' : '0');
+            if (enabled) {
+                initScanner();
+            } else {
+                if (html5QrCode) {
+                    html5QrCode.stop().catch(() => {});
+                    html5QrCode = null;
+                }
+            }
+        }
+        
+        window.toggleSelect = function(id) {
+            if (selectedIDs.has(id)) selectedIDs.delete(id);
+            else selectedIDs.add(id);
+            document.getElementById('selected-count').innerText = selectedIDs.size;
+            document.getElementById('bulk-btn').style.display = selectedIDs.size > 0 ? 'block' : 'none';
+            renderUI();
+        };
+
+        window.openConfirmModal = function() {
+            const selectedList = Array.from(selectedIDs).map(id => masterData.find(r => r.kode === id));
+            if (selectedList.length === 0) return;
+            if (selectedList.length > 1) {
+                showAlert("Perhatian", "Pilih 1 tamu saja. Fitur On-Site Check-in khusus untuk melayani registrasi, foto & angpao/kado secara perorangan.", "⚠️");
+                return;
+            }
+            openConfirm(selectedList[0]);
+        };
+
+        let currentStream = null;
+        let capturedBase64 = null;
+        let regStream = null;
+        let selectedGuest = null;
+        let JALUR_ID = "ALL";
+
+        const SB_URL  = "https://llrapesaaoliyjrrrsjh.supabase.co";
+        const SB_KEY  = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
+        let supabaseClient = null;
+        let realtimeChannel = null;
+        let EVENT_DATE = null;
+
+        function initSupabaseRealtimeTamu() {
+            if (!CURRENT_SS_ID) return;
+            try {
+                if (window.supabase) {
+                    supabaseClient = window.supabase.createClient(SB_URL, SB_KEY);
+                    console.log("Menghubungkan ke Supabase Realtime (Tamu)...");
+                    
+                    realtimeChannel = supabaseClient
+                        .channel('tamu_changes_channel')
+                        .on(
+                            'postgres_changes',
+                            {
+                                event: '*',
+                                schema: 'public',
+                                table: 'tamu',
+                                filter: `ssid=eq.${CURRENT_SS_ID}`
+                            },
+                            (payload) => {
+                                console.log("Realtime event (Tamu):", payload);
+                                const eventType = payload.eventType;
+                                
+                                if (eventType === 'INSERT') {
+                                    const item = payload.new;
+                                    const newItem = {
+                                        row: item.row,
+                                        nama: item.nama,
+                                        whatsapp: item.whatsapp,
+                                        kategori: item.kategori,
+                                        kode: item.kode,
+                                        barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
+                                        rencanaHadir: item.rencana_hadir,
+                                        statusHadir: String(item.status_hadir),
+                                        jamDatang: item.jam_datang,
+                                        souvenir: item.souvenir,
+                                        pihakPengundang: item.pihak_pengundang,
+                                        alamat: item.alamat,
+                                        realHadir: item.real_hadir,
+                                        statusWA: item.status_wa,
+                                        statusHadiah: item.status_hadiah,
+                                        tandaKasih: item.tanda_kasih,
+                                        sesi: item.sesi
+                                    };
+                                    const existingIdx = masterData.findIndex(g => g.kode === newItem.kode);
+                                    if (existingIdx !== -1) {
+                                        masterData[existingIdx].row = newItem.row;
+                                        masterData[existingIdx].statusWA = newItem.statusWA;
+                                        console.log("Updated optimistic onsite guest row number:", newItem.row);
+                                    } else {
+                                        masterData.unshift(newItem);
+                                    }
+                                    renderUI();
+                                } else if (eventType === 'UPDATE') {
+                                    const item = payload.new;
+                                    const idx = masterData.findIndex(g => g.kode === item.kode || g.row === item.row);
+                                    if (idx !== -1) {
+                                        masterData[idx] = {
+                                            ...masterData[idx],
+                                            nama: item.nama,
+                                            whatsapp: item.whatsapp,
+                                            kategori: item.kategori,
+                                            rencanaHadir: item.rencana_hadir,
+                                            statusHadir: String(item.status_hadir),
+                                            jamDatang: item.jam_datang,
+                                            souvenir: item.souvenir,
+                                            pihakPengundang: item.pihak_pengundang,
+                                            alamat: item.alamat,
+                                            realHadir: item.real_hadir,
+                                            statusWA: item.status_wa,
+                                            statusHadiah: item.status_hadiah,
+                                            tandaKasih: item.tanda_kasih,
+                                            sesi: item.sesi
+                                        };
+                                        renderUI();
+                                    }
+                                } else if (eventType === 'DELETE') {
+                                    const item = payload.old;
+                                    masterData = masterData.filter(g => g.kode !== item.kode && g.row !== item.row);
+                                    renderUI();
+                                }
+                            }
+                        )
+                        .subscribe((status) => {
+                            console.log(`Status Realtime Tamu: ${status}`);
+                            const indicator = document.getElementById('realtime-status');
+                            if (indicator) {
+                                if (status === 'SUBSCRIBED') {
+                                    indicator.innerText = "Realtime On";
+                                    indicator.style.background = "#d1fae5";
+                                    indicator.style.color = "#059669";
+                                } else {
+                                    indicator.innerText = "Realtime Off";
+                                    indicator.style.background = "#fee2e2";
+                                    indicator.style.color = "#ef4444";
+                                }
+                            }
+                        });
+                } else {
+                    console.warn("Supabase library tidak termuat.");
+                }
+            } catch (e) {
+                console.error("Gagal inisialisasi Realtime Tamu:", e);
+            }
+        }
+
+        window.showAlert = function (title, msg, icon = "⚠️") {
+            return new Promise(resolve => {
+                document.getElementById('st-modal-icon').innerText = icon;
+                document.getElementById('st-modal-title').innerText = title;
+                document.getElementById('st-modal-msg').innerText = msg;
+                document.getElementById('modal-cancel-btn').style.display = 'none';
+                const okBtn = document.getElementById('modal-ok-btn');
+                okBtn.innerText = "TUTUP";
+                okBtn.onclick = () => {
+                    document.getElementById('st-modal').style.display = 'none';
+                    resolve(true);
+                };
+                document.getElementById('st-modal').style.display = 'flex';
+            });
+        };
+
+        window.showConfirm = function (title, msg, icon = "🚀") {
+            return new Promise(resolve => {
+                document.getElementById('st-modal-icon').innerText = icon;
+                document.getElementById('st-modal-title').innerText = title;
+                document.getElementById('st-modal-msg').innerText = msg;
+                document.getElementById('modal-cancel-btn').style.display = 'block';
+                document.getElementById('modal-ok-btn').innerText = "LANJUTKAN";
+                document.getElementById('modal-ok-btn').onclick = () => {
+                    document.getElementById('st-modal').style.display = 'none';
+                    resolve(true);
+                };
+                document.getElementById('modal-cancel-btn').onclick = () => {
+                    document.getElementById('st-modal').style.display = 'none';
+                    resolve(false);
+                };
+                document.getElementById('st-modal').style.display = 'flex';
+            });
+        };
+
+        async function initApp() {
+            SapaGuard.apply('field'); // RBAC Guard
+            if (!window.SAPATAMU_RESOLVED) {
+                setTimeout(initApp, 100);
+                return;
+            }
+
+            const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+            CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
+
+            if (!CURRENT_SS_ID) { window.location.href = "login.html"; return; }
+
+            const savedJalur = localStorage.getItem('onsite_jalur_id');
+            if (savedJalur) {
+                JALUR_ID = savedJalur;
+                document.getElementById('jalur-selector').value = savedJalur;
+            }
+
+            document.getElementById('jalur-selector').addEventListener('change', (e) => {
+                JALUR_ID = e.target.value;
+                localStorage.setItem('onsite_jalur_id', JALUR_ID);
+            });
+
+            // Init Bluetooth Printer Widget
+            PrinterWidget.init({
+                sourceId: 'ONSITE',
+                jalurSelectorId: 'jalur-selector',
+                jalurKey: 'onsite_jalur_id'
+            });
+
+            fetchData();
+            syncMetadataOptions();
+            initSupabaseRealtimeTamu();
+
+            const savedCam = localStorage.getItem('onsite_cam_on');
+            scannerEnabled = savedCam === '1';
+            const toggleEl = document.getElementById('cam-toggle-onsite');
+            if (toggleEl) toggleEl.checked = scannerEnabled;
+            if (scannerEnabled) initScanner();
+
+            const savedCD = localStorage.getItem('selfie_countdown_on');
+            const cdEnabled = savedCD !== '0';
+            const cdToggle = document.getElementById('countdown-toggle');
+            if (cdToggle) {
+                cdToggle.checked = cdEnabled;
+                cdToggle.addEventListener('change', (e) => {
+                    localStorage.setItem('selfie_countdown_on', e.target.checked ? '1' : '0');
+                });
+            }
+
+            const savedQuick = localStorage.getItem('quick_checkin_on');
+            const quickEnabled = savedQuick === '1';
+            const quickToggle = document.getElementById('quick-checkin-toggle');
+            if (quickToggle) {
+                quickToggle.checked = quickEnabled;
+            }
+
+            // Restore HID Barcode toggle state
+            const savedHID = localStorage.getItem('hid_barcode_on');
+            const hidEnabled = savedHID === '1';
+            const hidToggle = document.getElementById('hid-barcode-toggle');
+            if (hidToggle) {
+                hidToggle.checked = hidEnabled;
+            }
+            setupHIDBarcodeListener();
+
+            // Restore Frontcam toggle state
+            const savedFrontcam = localStorage.getItem('force_frontcam_on');
+            const frontcamEnabled = savedFrontcam === '1';
+            const frontcamToggle = document.getElementById('frontcam-toggle');
+            if (frontcamToggle) {
+                frontcamToggle.checked = frontcamEnabled;
+            }
+            document.getElementById('reader')?.classList.toggle('mirror-mode', frontcamEnabled);
+
+            initNavScroll();
+            setupFullscreen();
+        }
+
+        function syncMetadataOptions() {
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "getMasterData", ssId: CURRENT_SS_ID })
+            })
+            .then(r => r.json())
+            .then(result => {
+                if (result.status === "error") {
+                    console.error("GAS Metadata sync error:", result.message);
+                    return;
+                }
+
+                // Update Dynamic Dropdown "Inviter Side"
+                if (result.dropdownOptions && result.dropdownOptions.length > 0) {
+                    const select = document.getElementById('reg-host');
+                    if (select) {
+                        const map = {
+                            'PENGANTIN PRIA': 'Pengantin Pria',
+                            'PENGANTIN WANITA': 'Pengantin Wanita',
+                            'KELUARGA AYAH PENGANTIN PRIA': 'Keluarga Ayah CPP',
+                            'KELUARGA IBU PENGANTIN PRIA': 'Keluarga Ibu CPP',
+                            'KELUARGA AYAH PENGANTIN WANITA': 'Keluarga Ayah CPW',
+                            'KELUARGA IBU PENGANTIN WANITA': 'Keluarga Ibu CPW'
+                        };
+                        select.innerHTML = "";
+                        result.dropdownOptions.forEach(opt => {
+                            const valUpper = opt.toUpperCase().trim();
+                            const label = map[valUpper] || opt;
+                            const el = document.createElement('option');
+                            el.value = valUpper;
+                            el.innerText = label;
+                            select.appendChild(el);
+                        });
+                    }
+                }
+
+                // Update Dynamic Dropdown "Sesi"
+                if (result.eventMeta && result.eventMeta.sesiOptions && result.eventMeta.sesiOptions.length > 0) {
+                    const sesiSelect = document.getElementById('reg-sesi');
+                    if (sesiSelect) {
+                        sesiSelect.innerHTML = '<option value="">Pilih Sesi</option>' + result.eventMeta.sesiOptions.map((val, index) => {
+                            return `<option value="${val}">Sesi ${index + 1} (${val})</option>`;
+                        }).join('');
+                    }
+                }
+            })
+            .catch(e => console.error("Error syncing metadata options:", e));
+        }
+
+        function initNavScroll() {
+            const container = document.getElementById('nav-scroll');
+            const fLeft = document.getElementById('fade-left');
+            const fRight = document.getElementById('fade-right');
+
+            const updateFades = () => {
+                const scrollLeft = container.scrollLeft;
+                const maxScroll = container.scrollWidth - container.clientWidth;
+                fLeft.classList.toggle('visible', scrollLeft > 10);
+                fRight.classList.toggle('visible', scrollLeft < maxScroll - 10);
+            };
+
+            container.addEventListener('scroll', updateFades);
+            window.addEventListener('resize', updateFades);
+            setTimeout(updateFades, 500);
+
+            // Auto-scroll to active link
+            const active = container.querySelector('.nav-link.active');
+            if (active) {
+                container.scrollLeft = active.offsetLeft - (container.clientWidth / 2) + (active.clientWidth / 2);
+            }
+        }
+
+        function setupFullscreen() {
+            const btn = document.getElementById('btn-fs');
+            btn.addEventListener('click', function() {
+                const doc = document.documentElement;
+                if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
+                    if (doc.requestFullscreen) doc.requestFullscreen();
+                    else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                }
+            });
+
+            const handleFsChange = () => {
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    btn.style.opacity = '0';
+                    btn.style.pointerEvents = 'none';
+                } else {
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                }
+            };
+
+            document.addEventListener('fullscreenchange', handleFsChange);
+            document.addEventListener('webkitfullscreenchange', handleFsChange);
+        }
+
+        async function fetchData() {
+            try {
+                const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
+                const response = await fetch(supabaseUrl, {
+                    headers: {
+                        "apikey": SB_KEY,
+                        "Authorization": "Bearer " + SB_KEY
+                    }
+                });
+                const sbData = await response.json();
+                
+                if (sbData && sbData.length > 0 && sbData[0].event_date) {
+                    EVENT_DATE = sbData[0].event_date;
+                }
+                
+                // Map data snake_case Supabase ke format camelCase frontend
+                masterData = (sbData || []).map(item => ({
+                    row: item.row,
+                    nama: item.nama,
+                    whatsapp: item.whatsapp,
+                    kategori: item.kategori,
+                    kode: item.kode,
+                    barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
+                    rencanaHadir: item.rencana_hadir,
+                    statusHadir: String(item.status_hadir),
+                    jamDatang: item.jam_datang,
+                    souvenir: item.souvenir,
+                    pihakPengundang: item.pihak_pengundang,
+                    alamat: item.alamat,
+                    realHadir: item.real_hadir,
+                    statusWA: item.status_wa,
+                    statusHadiah: item.status_hadiah,
+                    tandaKasih: item.tanda_kasih,
+                    sesi: item.sesi
+                }));
+
+                renderUI();
+            } catch (e) { console.error(e); }
+        }
+
+        function toggleFrontcamMode(enabled) {
+            localStorage.setItem('force_frontcam_on', enabled ? '1' : '0');
+            document.getElementById('reader')?.classList.toggle('mirror-mode', enabled);
+            if (scannerEnabled) {
+                if (html5QrCode) {
+                    html5QrCode.stop().then(() => {
+                        html5QrCode = null;
+                        initScanner();
+                    }).catch(() => {
+                        html5QrCode = null;
+                        initScanner();
+                    });
+                } else {
+                    initScanner();
+                }
+            }
+        }
+
+        function initScanner() {
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+            const useFront = localStorage.getItem('force_frontcam_on') === '1';
+            const mode = useFront ? "user" : "environment";
+            html5QrCode.start({ facingMode: mode }, { fps: 25, qrbox: 220, aspectRatio: 1.0 }, onScanSuccess).then(() => {
+                document.getElementById('reader')?.classList.toggle('mirror-mode', useFront);
+            }).catch(e => console.log(e));
+        }
+
+        function onScanSuccess(txt) {
+            if (document.getElementById('modalConfirm').style.display === 'flex') return;
+            const frame = document.getElementById('target-frame');
+            let scCode = txt.trim();
+            if (scCode.includes("id=")) scCode = scCode.split("id=")[1].split("&")[0];
+
+            frame.classList.add('qr-detected');
+            const guest = masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase());
+
+            if (guest) {
+                if (String(guest.statusHadir) === "1") {
+                    showAlert("Sudah Hadir", "Tamu '" + guest.nama + "' sudah hadir.", "⚠️");
+                    frame.classList.remove('qr-detected');
+                } else {
+                    frame.classList.add('qr-success');
+                    setTimeout(() => {
+                        frame.classList.remove('qr-success', 'qr-detected');
+                        openConfirm(guest);
+                    }, 400);
+                }
+            } else {
+                setTimeout(() => frame.classList.remove('qr-detected'), 1000);
+            }
+        }
+
+        function switchTab(t) {
+            document.getElementById('tab-scan-btn').classList.toggle('active', t === 'scan');
+            document.getElementById('tab-reg-btn').classList.toggle('active', t === 'reg');
+            document.getElementById('pane-scan').style.display = t === 'scan' ? 'flex' : 'none';
+            document.getElementById('pane-reg').style.display = t === 'reg' ? 'block' : 'none';
+            if (t === 'scan') {
+                initScanner();
+                if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
+                document.getElementById('reg-preview-container').style.display = 'none';
+                document.getElementById('btn-reg-snap').innerText = "📸 AMBIL SELFIE (OPSIONAL)";
+                document.getElementById('btn-reg-snap').style.background = "white";
+                document.getElementById('btn-reg-snap').style.color = "var(--gold)";
+                capturedBase64 = null;
+            }
+            else if (html5QrCode) html5QrCode.stop();
+        }
+
+        function renderUI() {
+            const checkedInGuests = masterData.filter(r => r.jamDatang && r.jamDatang !== "-");
+            const totalGuests = checkedInGuests.length;
+            const totalPax = checkedInGuests.reduce((acc, r) => acc + (parseInt(r.realHadir) || 0), 0);
+            
+            const guestEl = document.getElementById('checkedin-guests');
+            if (guestEl) guestEl.innerText = `${totalGuests} GUESTS`;
+            const paxEl = document.getElementById('checkedin-pax');
+            if (paxEl) paxEl.innerText = `${totalPax} PAX`;
+
+            const term = document.getElementById('search-box').value.toLowerCase();
+            const searchTerms = term.trim().split(/\s+/).filter(Boolean);
+            const filtered = masterData.filter(g => {
+                const rowText = [
+                    g.nama || "", g.kode || "", g.whatsapp || "",
+                    g.alamat || "", g.pihakPengundang || "",
+                    g.sesi || "", g.kategori || "", String(g.rencanaHadir || "")
+                ].join(" ").toLowerCase();
+                return searchTerms.every(t => rowText.includes(t));
+            });
+            document.getElementById('guest-list').innerHTML = filtered.map(row => {
+                const isDone = row.jamDatang && row.jamDatang !== "-";
+                const isChecked = selectedIDs.has(row.kode);
+                
+                let giftIcons = "";
+                if ((row.statusHadiah && row.statusHadiah.includes("ANGPAO")) || parseFloat(row.tandaKasih) > 0) giftIcons += "🧧";
+                if (row.statusHadiah && row.statusHadiah.includes("KADO")) giftIcons += "🎁";
+
+                return `
+                <div class="guest-item ${isDone ? 'checked-in' : ''}" style="border-top: 4px solid ${isDone?'var(--success)':'var(--border)'}">
+                    <div class="guest-header">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div onclick="${isDone ? '' : `toggleSelect('${row.kode}')`}" style="cursor: pointer; padding: 5px;">
+                                ${!isDone ? `<input type="checkbox" ${isChecked ? 'checked' : ''} style="accent-color:var(--gold); transform:scale(1.3); pointer-events:none;">` : '✅'}
+                            </div>
+                            <div>
+                                <div class="guest-name">${row.nama} <span style="margin-left:5px;">${giftIcons}</span></div>
+                            </div>
+                        </div>
+                        <div class="guest-wa">${row.whatsapp || '-'}</div>
+                    </div>
+
+                    <div class="guest-details">
+                        <div class="detail-item">📍 <span>${row.alamat || '-'}</span></div>
+                        <div class="detail-item">💌 Inv by: <span>${row.pihakPengundang || '-'}</span></div>
+                        <div class="detail-item">⏰ Sesi: <span>${row.sesi || row.rencanaJamHadir || row.jamHadir || '-'}</span></div>
+                    </div>
+
+                    <div class="guest-footer">
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <div class="guest-cat" style="display:inline-block">${row.kategori || 'UMUM'}</div>
+                            <div style="font-size:8px; font-weight:800; color:var(--primary); margin-left:2px;">PAX PLAN: ${(row.rencanaHadir !== "" && row.rencanaHadir !== undefined) ? row.rencanaHadir : '1'}</div>
+                        </div>
+                        <div class="guest-status" style="color:${isDone ? 'var(--success)':'var(--text-muted)'}; text-align:right">
+                            ${isDone ? `✓ HADIR (${row.realHadir})` : '● BELUM SCAN'}
+                        </div>
+                    </div>
+                    <div style="font-size:7px; color:#ccc; margin-top:8px; text-align:right">ID: ${row.kode}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function executeQuickCheckin(guest) {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+
+            const blocker = document.createElement('div');
+            blocker.id = "global-blocker";
+            blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
+            document.body.appendChild(blocker);
+
+            const plan = parseInt(guest.rencanaHadir) || 1;
+            const paxString = `${plan} ( ${plan}D + 0A )`;
+            const gift = "-";
+
+            try {
+                const stationId = JALUR_ID === "ALL" ? "ONSITE-ALL" : "ONSITE-" + JALUR_ID;
+                const nowISO = new Date().toLocaleTimeString('en-GB', { hour12: false });
+                const SB_HEADERS = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                };
+
+                // Update tamu status
+                await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${guest.kode}`, {
+                    method: "PATCH",
+                    headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        status_hadir: "1",
+                        jam_datang: nowISO,
+                        real_hadir: paxString,
+                        status_hadiah: gift
+                    })
+                });
+
+                const genUUID = () => {
+                    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                };
+
+                // Write welcome queue (skip print queue)
+                await fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                    method: "POST", headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        id: genUUID(),
+                        ssid: CURRENT_SS_ID,
+                        nama: guest.nama || "Tanpa Nama",
+                        kategori: guest.kategori || "Umum",
+                        alamat: guest.alamat || "-",
+                        pihak: guest.pihakPengundang || "-",
+                        pax: paxString,
+                        kode: guest.kode || "-",
+                        status: "DISPLAY",
+                        created_at: new Date().toISOString()
+                    })
+                }).then(async res => {
+                    if (!res.ok) console.warn("welcome_queue onsite write error:", await res.text());
+                }).catch(e => console.warn(e));
+
+                // GAS update in background
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "confirm_checkin",
+                        ssId: CURRENT_SS_ID,
+                        kodeUnik: guest.kode,
+                        realHadir: paxString,
+                        statusAngpao: gift,
+                        stationId: stationId,
+                        customUuid: null,
+                        skipSupabase: true,
+                        skipSupabasePrint: true
+                    })
+                }).catch(e => console.error("GAS onsite sync failed:", e));
+
+                // Blast WA Automation in background
+                fetch(SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: guest.kode })
+                }).catch(e => console.warn(e));
+
+                // Update local state
+                const idx = masterData.findIndex(r => r.kode === guest.kode);
+                if (idx !== -1) {
+                    masterData[idx].jamDatang = nowISO;
+                    masterData[idx].realHadir = paxString;
+                    masterData[idx].statusHadiah = gift;
+                    masterData[idx].statusHadir = "1";
+                }
+
+                selectedIDs.clear();
+                document.getElementById('selected-count').innerText = "0";
+                document.getElementById('bulk-btn').style.display = 'none';
+
+                renderUI();
+
+                if (blocker) blocker.remove();
+                document.body.style.cursor = 'default';
+
+                await showAlert(
+                    "CHECK-IN BERHASIL",
+                    `Selamat Datang,\n\n${guest.nama.toUpperCase()}\n(${guest.kategori || 'REGULER'})\n\nSilakan Masuk`,
+                    "✨"
+                );
+
+                fetchData();
+
+            } catch (e) {
+                if (blocker) blocker.remove();
+                console.error("Check-in error:", e);
+                showAlert("Error", "Gagal memproses check-in. Cek internet.", "❌");
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function openConfirm(guest) {
+            const isQuickActive = document.getElementById('quick-checkin-toggle')?.checked;
+            if (isQuickActive) {
+                executeQuickCheckin(guest);
+                return;
+            }
+            selectedGuest = guest;
+            document.getElementById('m-nama').innerText = guest.nama;
+            document.getElementById('m-info').innerText = `${guest.kategori || 'UMUM'} | ${guest.alamat || '-'}`;
+            document.getElementById('m-card-nama').innerText = guest.nama;
+            document.getElementById('m-card-cat').innerText = guest.kategori || 'UMUM';
+            document.getElementById('modalConfirm').style.display = 'flex';
+            capturedBase64 = null;
+
+            // Reset tags
+            document.getElementById('tag-angpao').classList.remove('active');
+            document.getElementById('tag-kado').classList.remove('active');
+
+            // Reset pax based on plan
+            const initialAdult = parseInt(guest.rencanaHadir) || 1;
+            document.getElementById('m-pax-adult').innerText = initialAdult;
+            document.getElementById('m-pax-child').innerText = "0";
+            document.getElementById('m-pax-total').innerText = initialAdult;
+
+            // Reset camera display to default
+            const v = document.getElementById('camera-preview');
+            const photoPreview = document.getElementById('camera-photo-preview');
+            const btnSnap = document.getElementById('btn-snap');
+
+            v.style.display = 'block';
+            if (photoPreview) {
+                photoPreview.style.display = 'none';
+                photoPreview.src = "";
+            }
+            btnSnap.innerText = "AMBIL FOTO";
+            btnSnap.style.background = "none";
+            btnSnap.style.color = "var(--gold)";
+
+            try {
+                if (html5QrCode) {
+                    try { await html5QrCode.stop(); } catch(e) {}
+                }
+                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                v.srcObject = currentStream;
+            } catch (e) { }
+        }
+
+        function closeModal() {
+            if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
+            document.getElementById('modalConfirm').style.display = 'none';
+
+            // Reset preview display just in case
+            document.getElementById('camera-preview').style.display = 'block';
+            const photoPreview = document.getElementById('camera-photo-preview');
+            if (photoPreview) {
+                photoPreview.style.display = 'none';
+                photoPreview.src = "";
+            }
+
+            if (scannerEnabled) setTimeout(() => initScanner(), 300);
+        }
+
+        window.updatePax = function (type, delta) {
+            const el = document.getElementById('m-pax-' + type);
+            let val = parseInt(el.innerText) + delta;
+            if (type === 'adult' && val < 1) val = 1;
+            if (type === 'child' && val < 0) val = 0;
+            el.innerText = val;
+
+            const adult = parseInt(document.getElementById('m-pax-adult').innerText);
+            const child = parseInt(document.getElementById('m-pax-child').innerText);
+            document.getElementById('m-pax-total').innerText = adult + child;
+        };
+
+        window.updateRegPax = function (type, delta) {
+            const el = document.getElementById('reg-pax-' + type);
+            let val = parseInt(el.innerText) + delta;
+            if (type === 'adult' && val < 1) val = 1;
+            if (type === 'child' && val < 0) val = 0;
+            el.innerText = val;
+        };
+
+        window.toggleRegSelfie = async function () {
+            const v = document.getElementById('reg-video');
+            const container = document.getElementById('reg-preview-container');
+            const preview = document.getElementById('reg-photo-preview');
+            const btn = document.getElementById('btn-reg-snap');
+            const canvas = document.getElementById('reg-canvas');
+            
+            if (!regStream && !capturedBase64) {
+                try {
+                    regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                    v.srcObject = regStream;
+                    container.style.display = 'block';
+                    v.style.display = 'block';
+                    preview.style.display = 'none';
+                    btn.innerText = "📖· AMBIL FOTO SEKARANG";
+                    btn.style.background = "var(--gold)";
+                    btn.style.color = "white";
+                } catch (err) {
+                    alert("Gagal mengakses kamera: " + err.message);
+                }
+            } else if (regStream && !capturedBase64) {
+                const isCountdownEnabled = document.getElementById('countdown-toggle')?.checked !== false;
+                if (!isCountdownEnabled) {
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = v.videoWidth || 640;
+                    canvas.height = v.videoHeight || 480;
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+                    capturedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                    
+                    regStream.getTracks().forEach(t => t.stop());
+                    regStream = null;
+                    
+                    v.style.display = 'none';
+                    preview.src = capturedBase64;
+                    preview.style.display = 'block';
+                    
+                    btn.disabled = false;
+                    btn.innerText = "🔄 ULANGI SELFIE";
+                    btn.style.background = "white";
+                    btn.style.color = "var(--gold)";
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.innerText = "MENYIAPKAN...";
+
+                const overlay = document.getElementById('reg-countdown-overlay');
+                if(overlay) overlay.style.display = 'flex';
+                let count = 3;
+                if(overlay) overlay.innerText = count;
+                
+                const timer = setInterval(() => {
+                    count--;
+                    if (count > 0) {
+                        if(overlay) overlay.innerText = count;
+                    } else if (count === 0) {
+                        if(overlay) overlay.innerText = "📸";
+                    } else {
+                        clearInterval(timer);
+                        if(overlay) overlay.style.display = 'none';
+                        
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = v.videoWidth || 640;
+                        canvas.height = v.videoHeight || 480;
+                        ctx.translate(canvas.width, 0);
+                        ctx.scale(-1, 1);
+                        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+                        capturedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                        
+                        regStream.getTracks().forEach(t => t.stop());
+                        regStream = null;
+                        
+                        v.style.display = 'none';
+                        preview.src = capturedBase64;
+                        preview.style.display = 'block';
+                        
+                        btn.disabled = false;
+                        btn.innerText = "🔄 ULANGI SELFIE";
+                        btn.style.background = "white";
+                        btn.style.color = "var(--gold)";
+                    }
+                }, 800);
+            } else if (capturedBase64) {
+                capturedBase64 = null;
+                preview.style.display = 'none';
+                preview.src = "";
+                toggleRegSelfie();
+            }
+        };
+
+        async function takeSelfie() {
+            const v = document.getElementById('camera-preview');
+            const c = document.getElementById('capture-canvas');
+            const ctx = c.getContext('2d');
+            const photoPreview = document.getElementById('camera-photo-preview');
+            const btnSnap = document.getElementById('btn-snap');
+
+            // If streaming, take picture and freeze
+            if (currentStream) {
+                const isCountdownEnabled = document.getElementById('countdown-toggle')?.checked !== false;
+                if (!isCountdownEnabled) {
+                    executePhotoCaptureOnsite();
+                    return;
+                }
+
+                btnSnap.disabled = true;
+                btnSnap.innerText = "MENYIAPKAN...";
+
+                const overlay = document.getElementById('countdown-overlay');
+                if(overlay) overlay.style.display = 'flex';
+                let count = 3;
+                if(overlay) overlay.innerText = count;
+                
+                const timer = setInterval(() => {
+                    count--;
+                    if (count > 0) {
+                        if(overlay) overlay.innerText = count;
+                    } else if (count === 0) {
+                        if(overlay) overlay.innerText = "📸";
+                    } else {
+                        clearInterval(timer);
+                        if(overlay) overlay.style.display = 'none';
+                        executePhotoCaptureOnsite();
+                    }
+                }, 800);
+            }
+            // If frozen, restart stream to retake
+            else {
+                try {
+                    if (html5QrCode) {
+                        try { await html5QrCode.stop(); } catch(e) {}
+                    }
+                    currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                    v.srcObject = currentStream;
+                    v.style.display = 'block';
+                    if (photoPreview) {
+                        photoPreview.style.display = 'none';
+                        photoPreview.src = "";
+                    }
+                    btnSnap.innerText = "AMBIL FOTO";
+                    btnSnap.style.background = "none";
+                    btnSnap.style.color = "var(--gold)";
+                } catch (e) {
+                    showAlert("Akses Kamera", "Kamera tidak diizinkan.", "⚠️");
+                }
+            }
+        }
+
+        function executePhotoCaptureOnsite() {
+            const v = document.getElementById('camera-preview');
+            const c = document.getElementById('capture-canvas');
+            const ctx = c.getContext('2d');
+            const photoPreview = document.getElementById('camera-photo-preview');
+            const btnSnap = document.getElementById('btn-snap');
+
+            c.width = v.videoWidth || 640;
+            c.height = v.videoHeight || 480;
+            ctx.translate(c.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(v, 0, 0, c.width, c.height);
+            capturedBase64 = c.toDataURL('image/jpeg', 0.8);
+
+            // Stop stream
+            if (currentStream) {
+                currentStream.getTracks().forEach(t => t.stop());
+                currentStream = null;
+            }
+
+            v.style.display = 'none';
+            if (photoPreview) {
+                photoPreview.src = capturedBase64;
+                photoPreview.style.display = 'block';
+            }
+
+            btnSnap.disabled = false;
+            btnSnap.innerText = "ULANGI FOTO ✓";
+            btnSnap.style.background = "var(--success)";
+            btnSnap.style.color = "white";
+        }
+
+        async function executeCheckin() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+
+            // --- STEP 1: BLOCK UI ---
+            const blocker = document.createElement('div');
+            blocker.id = "global-blocker";
+            blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
+            document.body.appendChild(blocker);
+
+            const adult = document.getElementById('m-pax-adult').innerText;
+            const child = document.getElementById('m-pax-child').innerText;
+            const total = document.getElementById('m-pax-total').innerText;
+            const paxString = `${total} ( ${adult}D + ${child}A )`;
+            const gift = (document.getElementById('tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('tag-kado').classList.contains('active') ? "KADO" : "");
+
+            try {
+                // --- STEP 1.5: SUPABASE UPDATE & PRINT QUEUE LANGSUNG (< 200ms) ---
+                const stationId = JALUR_ID === "ALL" ? "ONSITE-ALL" : "ONSITE-" + JALUR_ID;
+                const mainPrintId = crypto.randomUUID();
+                const nowISO = new Date().toLocaleTimeString('en-GB', { hour12: false });
+                const SB_HEADERS = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                };
+
+                // Update tamu status
+                await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${selectedGuest.kode}`, {
+                    method: "PATCH",
+                    headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        status_hadir: "1",
+                        jam_datang: nowISO,
+                        real_hadir: paxString,
+                        status_hadiah: gift || "-"
+                    })
+                });
+
+                // Write print queue
+                let catUpper = String(selectedGuest.kategori || "").toUpperCase();
+                let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
+
+                // Fallback UUID generator
+                const genUUID = () => {
+                    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                };
+
+                const printPromises = [
+                        fetch(`${SB_URL}/rest/v1/print_queue`, {
+                            method: "POST",
+                            headers: SB_HEADERS,
+                            body: JSON.stringify({
+                                id: mainPrintId,
+                                ssid: CURRENT_SS_ID,
+                                nama: selectedGuest.nama || "-",
+                                kode: selectedGuest.kode || "-",
+                                qr: `https://api.qrserver.com/v1/create-qr-code/?data=${selectedGuest.kode}&size=400x400`,
+                                info: labelType,
+                                status: "WAITING",
+                                kategori: selectedGuest.kategori || "Umum",
+                                alamat: selectedGuest.alamat || "-",
+                                pihak: selectedGuest.pihakPengundang || "-",
+                                sesi: selectedGuest.sesi || "-",
+                                pax: paxString,
+                                station_id: stationId
+                            })
+                        })
+                    ];
+
+                    if (gift && gift !== "-" && gift !== "ON-SITE") {
+                        const statusUpper = String(gift).toUpperCase();
+                        const queueSouvenir = (souvenirType) => {
+                            const souvenirPrintId = crypto.randomUUID();
+                            printPromises.push(
+                                fetch(`${SB_URL}/rest/v1/print_queue`, {
+                                    method: "POST",
+                                    headers: SB_HEADERS,
+                                    body: JSON.stringify({
+                                        id: souvenirPrintId,
+                                        ssid: CURRENT_SS_ID,
+                                        nama: selectedGuest.nama || "-",
+                                        kode: selectedGuest.kode || "-",
+                                        qr: `https://api.qrserver.com/v1/create-qr-code/?data=${selectedGuest.kode}&size=400x400`,
+                                        info: "SOUVENIR: " + souvenirType,
+                                        status: "WAITING",
+                                        kategori: selectedGuest.kategori || "Umum",
+                                        alamat: selectedGuest.alamat || "-",
+                                        pihak: selectedGuest.pihakPengundang || "-",
+                                        sesi: selectedGuest.sesi || "-",
+                                        pax: paxString,
+                                        station_id: stationId
+                                    })
+                                })
+                            );
+                        };
+
+                        if (statusUpper.includes("ANGPAO") && statusUpper.includes("KADO")) {
+                            queueSouvenir("KADO");
+                            queueSouvenir("ANGPAO");
+                        } else {
+                            queueSouvenir(statusUpper);
+                        }
+                    }
+                    printPromises.push(
+                        fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                            method: "POST", headers: SB_HEADERS,
+                            body: JSON.stringify({
+                                id: genUUID(),
+                                ssid: CURRENT_SS_ID,
+                                nama: selectedGuest.nama || "Tanpa Nama",
+                                kategori: selectedGuest.kategori || "Umum",
+                                alamat: selectedGuest.alamat || "-",
+                                pihak: selectedGuest.pihakPengundang || "-",
+                                pax: paxString,
+                                kode: selectedGuest.kode || "-",
+                                status: "DISPLAY",
+                                created_at: new Date().toISOString()
+                            })
+                        }).then(async res => {
+                            if (!res.ok) console.warn("welcome_queue onsite write error:", await res.text());
+                        }).catch(e => console.warn(e))
+                    );
+
+                    await Promise.all(printPromises);
+
+                // --- STEP 2: CORE CHECKIN (Non-Blocking background sync to GAS) ---
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "confirm_checkin",
+                        ssId: CURRENT_SS_ID,
+                        kodeUnik: selectedGuest.kode,
+                        realHadir: paxString,
+                        statusAngpao: gift || "-",
+                        stationId: stationId,
+                        customUuid: mainPrintId,
+                        skipSupabase: true,
+                        skipSupabasePrint: true
+                    })
+                }).catch(e => console.error("GAS onsite sync failed:", e));
+
+                // Blast WA Automation in background
+                fetch(SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ action: "broadcastWA", ssId: CURRENT_SS_ID, kodeUnik: selectedGuest.kode })
+                }).catch(e => console.warn(e));
+
+                if (capturedBase64) {
+                    fetch(SCRIPT_URL, {
+                        method: 'POST', mode: 'no-cors',
+                        body: JSON.stringify({
+                            action: "uploadSelfie",
+                            image: capturedBase64,
+                            nama: selectedGuest.nama,
+                            kode: selectedGuest.kode,
+                            ssId: CURRENT_SS_ID
+                        })
+                    }).catch(e => console.warn("Background selfie upload failed:", e));
+                }
+
+                // Update local state
+                const idx = masterData.findIndex(r => r.kode === selectedGuest.kode);
+                if (idx !== -1) {
+                    masterData[idx].jamDatang = nowISO;
+                    masterData[idx].realHadir = paxString;
+                    masterData[idx].statusHadiah = gift || "-";
+                    masterData[idx].statusHadir = "1";
+                }
+
+                selectedIDs.clear();
+                document.getElementById('selected-count').innerText = "0";
+                document.getElementById('bulk-btn').style.display = 'none';
+
+                closeModal();
+                renderUI();
+
+                if (blocker) blocker.remove();
+                document.body.style.cursor = 'default';
+
+                await showAlert(
+                    "CHECK-IN BERHASIL",
+                    `Selamat Datang,\n\n${selectedGuest.nama.toUpperCase()}\n(${selectedGuest.kategori || 'REGULER'})\n\nSilakan Masuk`,
+                    "✨"
+                );
+
+                fetchData();
+
+            } catch (e) {
+                if (blocker) blocker.remove();
+                console.error("Check-in error:", e);
+                showAlert("Error", "Gagal memproses check-in. Cek internet.", "❌");
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        window.submitOnsite = async function() {
+            const nama = document.getElementById('reg-nama').value;
+            const whatsapp = document.getElementById('reg-wa').value;
+            if (!nama) { showAlert("Perhatian", "Nama wajib diisi!", "⚠️"); return; }
+            const cleanPhone = whatsapp.replace(/\D/g, '');
+
+            const loading = document.getElementById('loading');
+            loading.style.display = 'flex';
+
+            // --- STEP 1: BLOCK UI ---
+            const blocker = document.createElement('div');
+            blocker.id = "global-blocker";
+            blocker.style = "position:fixed; inset:0; z-index:999999; cursor:wait; background:transparent;";
+            document.body.appendChild(blocker);
+
+            const adult = document.getElementById('reg-pax-adult').innerText;
+            const child = document.getElementById('reg-pax-child').innerText;
+            const total = parseInt(adult) + parseInt(child);
+            const paxString = `${total} ( ${adult}D + ${child}A )`;
+            const gift = (document.getElementById('reg-tag-angpao').classList.contains('active') ? "ANGPAO " : "") + (document.getElementById('reg-tag-kado').classList.contains('active') ? "KADO" : "");
+            
+            try {
+                // Generate Unique Code and Print UUID on Frontend
+                const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+                const kodeUnik = "ONS-" + randomPart;
+                const mainPrintId = crypto.randomUUID();
+                const stationId = JALUR_ID === "ALL" ? "ONSITE-ALL" : "ONSITE-" + JALUR_ID;
+                const timeOnly = new Date().toLocaleTimeString('en-GB', { hour12: false });
+                const SB_HEADERS = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                };
+
+                try {
+                    // Update print queue and welcome queue first
+                    let catUpper = String(document.getElementById('reg-kategori').value || "").toUpperCase();
+                    let labelType = (catUpper.includes("VIP") || catUpper.includes("VVIP") || catUpper.includes("KELUARGA")) ? "CHECKIN-LABEL" : "CHECKIN-STRUK";
+
+                    const printPromises = [];
+                    const isQuickActive = document.getElementById('quick-checkin-toggle')?.checked;
+                    
+                    if (!isQuickActive) {
+                        printPromises.push(
+                            fetch(`${SB_URL}/rest/v1/print_queue`, {
+                                method: "POST",
+                                headers: SB_HEADERS,
+                                body: JSON.stringify({
+                                    id: mainPrintId,
+                                    ssid: CURRENT_SS_ID,
+                                    nama: nama || "-",
+                                    kode: kodeUnik,
+                                    qr: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
+                                    info: labelType,
+                                    status: "WAITING",
+                                    kategori: document.getElementById('reg-kategori').value || "Umum",
+                                    alamat: document.getElementById('reg-alamat').value || "-",
+                                    pihak: document.getElementById('reg-host').value || "-",
+                                    sesi: document.getElementById('reg-sesi').value || "-",
+                                    pax: paxString,
+                                    station_id: stationId
+                                })
+                            })
+                        );
+
+                        if (gift && gift !== "-" && gift !== "ON-SITE") {
+                            const statusUpper = String(gift).toUpperCase();
+                            const queueSouvenir = (souvenirType) => {
+                                const souvenirPrintId = crypto.randomUUID();
+                                printPromises.push(
+                                    fetch(`${SB_URL}/rest/v1/print_queue`, {
+                                        method: "POST",
+                                        headers: SB_HEADERS,
+                                        body: JSON.stringify({
+                                            id: souvenirPrintId,
+                                            ssid: CURRENT_SS_ID,
+                                            nama: nama || "-",
+                                            kode: kodeUnik,
+                                            qr: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
+                                            info: "SOUVENIR: " + souvenirType,
+                                            status: "WAITING",
+                                            kategori: document.getElementById('reg-kategori').value || "Umum",
+                                            alamat: document.getElementById('reg-alamat').value || "-",
+                                            pihak: document.getElementById('reg-host').value || "-",
+                                            sesi: document.getElementById('reg-sesi').value || "-",
+                                            pax: paxString,
+                                            station_id: stationId
+                                        })
+                                    })
+                                );
+                            };
+
+                            if (statusUpper.includes("ANGPAO") && statusUpper.includes("KADO")) {
+                                queueSouvenir("KADO");
+                                queueSouvenir("ANGPAO");
+                            } else {
+                                queueSouvenir(statusUpper);
+                            }
+                        }
+                    }
+
+                    printPromises.push(
+                        fetch(`${SB_URL}/rest/v1/welcome_queue`, {
+                            method: "POST", headers: SB_HEADERS,
+                            body: JSON.stringify({
+                                id: crypto.randomUUID(),
+                                ssid: CURRENT_SS_ID,
+                                nama: nama || "Tanpa Nama",
+                                kategori: document.getElementById('reg-kategori').value || "Umum",
+                                alamat: document.getElementById('reg-alamat').value || "-",
+                                pihak: document.getElementById('reg-host').value || "-",
+                                pax: paxString,
+                                kode: kodeUnik,
+                                status: "DISPLAY",
+                                created_at: new Date().toISOString()
+                            })
+                        }).then(async res => {
+                            if (!res.ok) console.warn("welcome_queue onsite write error:", await res.text());
+                        }).catch(e => console.warn(e))
+                    );
+
+                    await Promise.all(printPromises);
+
+                } catch(e) {
+                    console.error("Direct Supabase guest registration / print queuing failed:", e);
+                }
+
+                const payload = {
+                    action: "register_new_onsite",
+                    ssId: CURRENT_SS_ID,
+                    namaTamu: nama,
+                    alamat: document.getElementById('reg-alamat').value,
+                    whatsapp: whatsapp,
+                    kategori: document.getElementById('reg-kategori').value,
+                    host: document.getElementById('reg-host').value,
+                    sesi: document.getElementById('reg-sesi').value,
+                    souvenir: document.getElementById('reg-souvenir').value,
+                    realHadir: paxString,
+                    catatan: gift || "-",
+                    prefix: "ONS",
+                    stationId: stationId,
+                    kodeUnik: kodeUnik,
+                    customUuid: mainPrintId,
+                    skipSupabase: false, // Let GAS sync this record to Supabase tamu table with the correct row ID
+                    skipSupabasePrint: true // Skip duplicate print queue insertions in Supabase
+                };
+
+                // Optimistic UI Update: Add to local masterData list immediately
+                const localGuest = {
+                    row: null, // Will be updated via realtime sync once GAS writes to database
+                    nama: nama || "Tanpa Nama",
+                    whatsapp: cleanPhone,
+                    kategori: document.getElementById('reg-kategori').value || "UMUM",
+                    kode: kodeUnik,
+                    barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${kodeUnik}&size=400x400`,
+                    rencanaHadir: 0,
+                    statusHadir: "1",
+                    jamDatang: timeOnly,
+                    souvenir: document.getElementById('reg-souvenir').value === "tidak" ? "tidak" : "ya",
+                    pihakPengundang: document.getElementById('reg-host').value || "-",
+                    alamat: document.getElementById('reg-alamat').value || "-",
+                    realHadir: paxString,
+                    statusWA: "-",
+                    statusHadiah: gift || "-",
+                    tandaKasih: 0,
+                    sesi: document.getElementById('reg-sesi').value || "-"
+                };
+                if (!masterData.some(g => g.kode === localGuest.kode)) {
+                    masterData.unshift(localGuest);
+                    renderUI();
+                }
+
+                // --- STEP 2: CORE REGISTER (Non-Blocking background sync) ---
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload)
+                }).catch(e => console.error("GAS registration sync failed:", e));
+
+                // --- STEP 3: FAST FEEDBACK ---
+                if (blocker) blocker.remove();
+
+                // --- STEP 4: SUCCESS GREETING MODAL ---
+                document.getElementById('loading').style.display = 'none';
+                if (document.getElementById('global-blocker')) document.getElementById('global-blocker').remove();
+                document.body.style.cursor = 'default';
+
+                await showAlert(
+                    "REGISTRASI BERHASIL",
+                    `Selamat Datang,\n\n${nama.toUpperCase()}\n(${payload.kategori || 'UMUM'})\n\nSilakan Masuk`,
+                    "✨"
+                );
+
+                // RESET FIELDS
+                document.getElementById('reg-nama').value = "";
+                document.getElementById('reg-wa').value = "";
+                document.getElementById('reg-alamat').value = "";
+                document.getElementById('reg-pax-adult').innerText = "1";
+                document.getElementById('reg-pax-child').innerText = "0";
+                document.getElementById('reg-tag-angpao').classList.remove('active');
+                document.getElementById('reg-tag-kado').classList.remove('active');
+
+                // Reset registration camera preview container and preview image
+                document.getElementById('reg-preview-container').style.display = 'none';
+                document.getElementById('reg-video').style.display = 'block';
+                const photoPreview = document.getElementById('reg-photo-preview');
+                if (photoPreview) {
+                    photoPreview.style.display = 'none';
+                    photoPreview.src = "";
+                }
+
+                // --- STEP 5: BACKGROUND TASKS ---
+                if (capturedBase64) {
+                    fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify({
+                            action: "uploadSelfie",
+                            image: capturedBase64,
+                            nama: nama,
+                            kode: kodeUnik,
+                            ssId: CURRENT_SS_ID
+                        })
+                    }).catch(e => console.warn("Background selfie upload failed:", e));
+                }
+
+                capturedBase64 = null;
+                document.getElementById('btn-reg-snap').innerText = "📸 AMBIL SELFIE (OPSIONAL)";
+                document.getElementById('btn-reg-snap').style.background = "white";
+                document.getElementById('btn-reg-snap').style.color = "var(--gold)";
+
+                switchTab('scan');
+                fetchData();
+            } catch (e) {
+                if (blocker) blocker.remove();
+                showAlert("Error", "Gagal koneksi.", "❌");
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+    function setupHIDBarcodeListener() {
+        const searchBox = document.getElementById('search-box');
+        if (!searchBox) return;
+
+        let keyTimes = [];
+        let lastVal = "";
+        let lastScannedCode = "";
+        let lastScanTime = 0;
+
+        searchBox.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const val = searchBox.value.trim();
+                const isHIDEnabled = localStorage.getItem('hid_barcode_on') === '1';
+                if (isHIDEnabled) {
+                    const last9 = val.slice(-9);
+                    if (last9.length === 9 && last9.charAt(3) === '-') {
+                        e.preventDefault();
+                    }
+                }
+            }
+        });
+
+        searchBox.addEventListener('input', async (e) => {
+            const val = searchBox.value.trim();
+            const now = Date.now();
+
+            if (val.length === 0) {
+                keyTimes = [];
+                lastVal = "";
+                return;
+            }
+
+            const addedCount = val.length - lastVal.length;
+            if (addedCount > 0) {
+                for (let i = 0; i < addedCount; i++) {
+                    keyTimes.push(now);
+                }
+            }
+            if (keyTimes.length > 9) {
+                keyTimes = keyTimes.slice(-9);
+            }
+            lastVal = val;
+
+            const isHIDEnabled = localStorage.getItem('hid_barcode_on') === '1';
+            if (!isHIDEnabled) return;
+
+            const last9 = val.slice(-9);
+            if (last9.length === 9) {
+                const isPattern = last9.charAt(3) === '-';
+                const duration = keyTimes.length === 9 ? (keyTimes[8] - keyTimes[0]) : Infinity;
+                const isFast = duration < 250;
+
+                if (isPattern && isFast) {
+                    const codeToCheck = last9.toUpperCase();
+                    if (codeToCheck === lastScannedCode && (now - lastScanTime < 1500)) {
+                        searchBox.value = "";
+                        lastVal = "";
+                        keyTimes = [];
+                        renderUI();
+                        return;
+                    }
+
+                    const matchedGuest = masterData.find(g => String(g.kode).trim().toUpperCase() === codeToCheck);
+                    if (matchedGuest) {
+                        searchBox.value = "";
+                        lastVal = "";
+                        keyTimes = [];
+                        renderUI();
+
+                        lastScannedCode = codeToCheck;
+                        lastScanTime = now;
+
+                        const isAlreadyCheckedIn = matchedGuest.jamDatang && matchedGuest.jamDatang !== "-";
+                        if (isAlreadyCheckedIn) {
+                            showAlert("Sudah Check-in", `Tamu "${matchedGuest.nama}" sudah check-in.`, "⚠️");
+                        } else {
+                            const isQuickActive = document.getElementById('quick-checkin-toggle')?.checked;
+                            if (isQuickActive) {
+                                executeQuickCheckin(matchedGuest);
+                            } else {
+                                openConfirm(matchedGuest);
+                            }
+                        }
+                    } else {
+                        if (codeToCheck !== lastScannedCode || (now - lastScanTime > 2000)) {
+                            lastScannedCode = codeToCheck;
+                            lastScanTime = now;
+                            showAlert("Tidak Ditemukan", `Kode unik "${codeToCheck}" tidak terdaftar dalam tamu.`, "❌");
+                        }
+                        searchBox.value = "";
+                        lastVal = "";
+                        keyTimes = [];
+                        renderUI();
+                    }
+                }
+            }
+        });
+    }
+
+    function processGlobalHIDBarcode(codeToCheck) {
+        const matchedGuest = masterData.find(g => String(g.kode).trim().toUpperCase() === codeToCheck);
+        if (matchedGuest) {
+            const isAlreadyCheckedIn = matchedGuest.jamDatang && matchedGuest.jamDatang !== "-";
+            if (isAlreadyCheckedIn) {
+                showAlert("Sudah Check-in", `Tamu "${matchedGuest.nama}" sudah check-in.`, "⚠️");
+            } else {
+                const isQuickActive = document.getElementById('quick-checkin-toggle')?.checked;
+                if (isQuickActive) {
+                    executeQuickCheckin(matchedGuest);
+                } else {
+                    openConfirm(matchedGuest);
+                }
+            }
+        } else {
+            showAlert("Tidak Ditemukan", `Kode unik "${codeToCheck}" tidak terdaftar dalam tamu.`, "❌");
+        }
+    }
+
+    (function() {
+        let globalKeyTimes = [];
+        let globalBuffer = "";
+        let lastScannedCode = "";
+        let lastScanTime = 0;
+
+        document.addEventListener('keydown', (e) => {
+            const isHIDEnabled = localStorage.getItem('hid_barcode_on') === '1';
+            if (!isHIDEnabled) return;
+
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            if (e.key.length > 1 && e.key !== 'Enter') {
+                return;
+            }
+
+            const now = Date.now();
+            
+            if (e.key === 'Enter') {
+                e.preventDefault();
+            } else {
+                globalBuffer += e.key;
+                globalKeyTimes.push(now);
+            }
+
+            if (globalBuffer.length > 9) {
+                globalBuffer = globalBuffer.slice(-9);
+            }
+            if (globalKeyTimes.length > 9) {
+                globalKeyTimes = globalKeyTimes.slice(-9);
+            }
+
+            if (globalBuffer.length === 9) {
+                const isPattern = globalBuffer.charAt(3) === '-';
+                const duration = globalKeyTimes.length === 9 ? (globalKeyTimes[8] - globalKeyTimes[0]) : Infinity;
+                const isFast = duration < 250;
+
+                if (isPattern && isFast) {
+                    const codeToCheck = globalBuffer.toUpperCase();
+                    if (codeToCheck === lastScannedCode && (now - lastScanTime < 1500)) {
+                        globalBuffer = "";
+                        globalKeyTimes = [];
+                        return;
+                    }
+
+                    processGlobalHIDBarcode(codeToCheck);
+                    
+                    lastScannedCode = codeToCheck;
+                    lastScanTime = now;
+                    globalBuffer = "";
+                    globalKeyTimes = [];
+                }
+            }
+        });
+    })();
+
+    window.initApp();
+    
+    function initDynamicIslandNav() {
+        const island = document.getElementById('nav-island');
+        const labelText = document.getElementById('di-label-text');
+        if (!island) return;
+        const activeLink = document.querySelector('.nav-link.active');
+        if (activeLink && labelText) labelText.textContent = activeLink.textContent.trim();
+        let collapseTimer = null;
+        function expandNav() { clearTimeout(collapseTimer); island.classList.add('di-expanded'); }
+        function scheduleCollapse(delay) {
+            clearTimeout(collapseTimer);
+            collapseTimer = setTimeout(function() { island.classList.remove('di-expanded'); }, delay || 3000);
+        }
+        island.addEventListener('mouseenter', expandNav);
+        island.addEventListener('mouseleave', function() { scheduleCollapse(3000); });
+        island.addEventListener('click', function(e) {
+            if (!island.classList.contains('di-expanded')) {
+                e.preventDefault(); expandNav(); scheduleCollapse(4000);
+            }
+        });
+        scheduleCollapse(4000);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDynamicIslandNav);
+    } else { initDynamicIslandNav(); }
+</script>
