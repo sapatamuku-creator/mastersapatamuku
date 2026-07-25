@@ -2759,9 +2759,32 @@
                 }
             };
             await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+
+            // STEP 2: Direct Supabase UPSERT (Supabase First — same pattern as config_invitation.html)
+            const metaPayload = {
+                ssid: ssid,
+                nama_pengantin: document.getElementById('edit_ev_nama').value,
+                hari_tanggal: document.getElementById('edit_ev_date').value,
+                lokasi_acara: document.getElementById('edit_ev_loc').value,
+                waktu_acara: document.getElementById('edit_ev_time').value,
+                link_invitation: document.getElementById('edit_ev_link').value,
+                sesi_1: document.getElementById('edit_ev_s1').value,
+                sesi_2: document.getElementById('edit_ev_s2').value,
+                sesi_3: document.getElementById('edit_ev_s3').value,
+                updated_at: new Date().toISOString()
+            };
+            fetch(`${SB_URL}/rest/v1/metadata_client?on_conflict=ssid`, {
+                method: "POST",
+                headers: { ...SB_HEADERS, "Prefer": "resolution=merge-duplicates" },
+                body: JSON.stringify(metaPayload)
+            }).then(r => {
+                if (!r.ok) console.warn("Mirror metadata to Supabase failed:", r.status);
+                else console.log("✅ Metadata mirrored to Supabase");
+            }).catch(e => console.warn("Mirror metadata skip:", e.message));
+
             tutupModalEdit();
             showSapaModal("Sukses", "Detail acara berhasil diperbarui!", "🎉");
-            refreshApp(); 
+            refreshApp();
         } catch (e) {
             showSapaModal("Gagal", "Gagal memperbarui detail acara.", "❌");
             toggleProcessing(false);
