@@ -53,6 +53,21 @@ function handleSelfiePost(data) {
 
 function getWeddingUsername(clientSsId, masterDbId) {
   try {
+    // 1. Coba ambil dari B1 client spreadsheet (nama wedding)
+    const clientSs = SpreadsheetApp.openById(clientSsId);
+    const clientSheet = clientSs.getSheetByName("Sheet1");
+    if (clientSheet) {
+      const b1Value = clientSheet.getRange("B1").getValue();
+      if (b1Value && b1Value.toString().trim()) {
+        return b1Value.toString().trim().replace(/\s+/g, '_').replace(/[\\\/\:\*\?\"\<\>\|]/g, "");
+      }
+    }
+  } catch (e) {
+    // Lanjut ke fallback
+  }
+
+  try {
+    // 2. Fallback: cari di Master Database
     const masterSs = SpreadsheetApp.openById(masterDbId);
     const sheet = masterSs.getSheets()[0];
     const range = sheet.getDataRange().getValues();
@@ -64,7 +79,7 @@ function getWeddingUsername(clientSsId, masterDbId) {
     }
     return "UnknownWedding";
   } catch (err) {
-    return "SystemError";
+    return "UnknownWedding";
   }
 }
 
