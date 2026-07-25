@@ -1,10 +1,10 @@
-// api/sortir-admin.js
+﻿// api/sortir-admin.js
 // Vercel serverless function for Sortir Super Admin Dashboard actions.
 // Secured using SapaTamu owner password verified via GAS.
 
 const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const GAS_SYNC_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+const GAS_SYNC_URL = "https://script.google.com/macros/s/AKfycbzy244BM3lYzw0ix7jD-_1Qvxu3deKukqHDJbr4RcJQn-K7k5Dgzw1sEBclT2w8jIys/exec";
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

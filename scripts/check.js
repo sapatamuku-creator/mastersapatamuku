@@ -1,5 +1,5 @@
-
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+﻿
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzy244BM3lYzw0ix7jD-_1Qvxu3deKukqHDJbr4RcJQn-K7k5Dgzw1sEBclT2w8jIys/exec";
 
         let CURRENT_SS_ID = null;
         let masterData = [];
@@ -777,6 +777,21 @@
                     );
 
                     await Promise.all(printPromises);
+
+                    // --- STEP 2: BACKGROUND SELFIE UPLOAD ---
+                    if (capturedBase64) {
+                        fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            body: JSON.stringify({
+                                action: "uploadSelfie",
+                                image: capturedBase64,
+                                nama: selectedGuest.nama,
+                                kode: selectedGuest.kode,
+                                ssId: CURRENT_SS_ID
+                            })
+                        }).catch(e => console.warn("Background selfie upload failed:", e));
+                    }
 
             } catch (e) {
                 if (blocker) blocker.remove();

@@ -82,6 +82,7 @@ function doPost(e) {
       // Media & Selfie (SelfieCheckin.gs)
       case 'selfie':
       case 'uploadSelfie':
+      case 'selfiePost':
         return handleSelfiePost(payload);
 
       // Messaging (WhatsAppEngine.gs)

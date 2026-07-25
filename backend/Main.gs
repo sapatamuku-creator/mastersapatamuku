@@ -206,6 +206,7 @@ function handleMainPost(payload) {
         break;
         
       case "uploadSelfie":
+      case "selfiePost":
         result = handleSelfiePost(payload);
         break;
       

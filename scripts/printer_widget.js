@@ -1,4 +1,4 @@
-/**
+﻿/**
  * printer_widget.js --- SapaTamu Bluetooth Printer Widget v1.0
  * Inject tombol printer + modal ke panel jalur di kiosk, checkin, onsite.
  * Panggil: PrinterWidget.init({ sourceId: 'CHECKIN', jalurSelectorId: 'jalur-selector', jalurKey: 'checkin_jalur_id' })
@@ -8,7 +8,7 @@
 
   const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
   const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzy244BM3lYzw0ix7jD-_1Qvxu3deKukqHDJbr4RcJQn-K7k5Dgzw1sEBclT2w8jIys/exec";
 
   let printCharacteristic = null;
   let isProcessing = false;
