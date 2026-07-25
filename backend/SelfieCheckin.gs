@@ -52,74 +52,43 @@ function handleSelfiePost(data) {
 }
 
 function getWeddingUsername(clientSsId, masterDbId) {
-  // 1. Coba ambil dari B1 client spreadsheet (nama wedding)
+  // 1. Coba ambil dari Sheet1!B1 (nama wedding)
   try {
     const clientSs = SpreadsheetApp.openById(clientSsId);
     const clientSheet = clientSs.getSheetByName("Sheet1");
     if (clientSheet) {
       const b1Value = clientSheet.getRange("B1").getValue();
       if (b1Value && b1Value.toString().trim()) {
-        const cleaned = b1Value.toString().trim().replace(/\s+/g, '_').replace(/[\\\/\:\*\?\"\<\>\|]/g, "");
-        if (cleaned) {
-          console.log("getWeddingUsername: resolved from Sheet1!B1 = " + cleaned);
-          return cleaned;
-        }
-      }
-      // Jika B1 kosong, coba metadata lain di Sheet1
-      const b2Value = clientSheet.getRange("B2").getValue();
-      if (b2Value && b2Value.toString().trim()) {
-        // B2 berisi tanggal, skip - coba baris lain
+        return b1Value.toString().trim().replace(/\s+/g, '_').replace(/[\\\/\:\*\?\"\<\>\|]/g, "");
       }
     }
   } catch (e) {
     console.warn("getWeddingUsername: gagal baca Sheet1!B1 - " + e.toString());
   }
 
-  // 2. Fallback: cari di Master Database
-  if (masterDbId) {
-    try {
-      const masterSs = SpreadsheetApp.openById(masterDbId);
-      const sheet = masterSs.getSheets()[0];
-      const range = sheet.getDataRange().getValues();
-
-      for (let i = 1; i < range.length; i++) {
-        if (String(range[i][2]).trim() === String(clientSsId).trim()) {
-          const name = range[i][0];
-          if (name && name.toString().trim()) {
-            console.log("getWeddingUsername: resolved from MasterDB row " + (i+1) + " = " + name);
-            return name.toString().trim().replace(/\s+/g, '_').replace(/[\\\/\:\*\?\"\<\>\|]/g, "");
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("getWeddingUsername: gagal baca Master Database - " + e.toString());
-    }
-  }
-
-  // 3. Fallback: coba baca dari Config sheet di client spreadsheet
+  // 2. Ambil subdomain dari Supabase client_public_profile
   try {
-    const clientSs = SpreadsheetApp.openById(clientSsId);
-    const configSheet = clientSs.getSheetByName("Config") || clientSs.getSheetByName("CONFIG");
-    if (configSheet) {
-      // Config B3 berisi kategori, tapi kita coba cari nama di sheet lain
-      const settingsSheet = clientSs.getSheetByName("Settings_Event");
-      if (settingsSheet) {
-        const namaMempelai = settingsSheet.getRange("D5").getValue();
-        if (namaMempelai && namaMempelai.toString().trim()) {
-          const cleaned = namaMempelai.toString().trim().replace(/\s+/g, '_').replace(/[\\\/\:\*\?\"\<\>\|]/g, "");
-          console.log("getWeddingUsername: resolved from Settings_Event!D5 = " + cleaned);
-          return cleaned;
-        }
+    const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/client_public_profile?ssid=eq." + encodeURIComponent(clientSsId) + "&select=subdomain&limit=1";
+    const sbRes = UrlFetchApp.fetch(sbUrl, {
+      method: "get",
+      headers: {
+        "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
+        "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u"
+      },
+      muteHttpExceptions: true
+    });
+    if (sbRes.getResponseCode() === 200) {
+      const rows = JSON.parse(sbRes.getContentText());
+      if (rows && rows.length > 0 && rows[0].subdomain) {
+        return rows[0].subdomain.toLowerCase().trim();
       }
     }
   } catch (e) {
-    console.warn("getWeddingUsername: gagal baca Config/Settings_Event - " + e.toString());
+    console.warn("getWeddingUsername: gagal ambil subdomain - " + e.toString());
   }
 
-  // 4. Terakhir: gunakan spreadsheet ID sebagai identifier (bukan "UnknownWedding")
-  const shortId = clientSsId ? clientSsId.substring(0, 8) : "NoID";
-  console.warn("getWeddingUsername: semua metode gagal, menggunakan fallback ID = " + shortId);
-  return "Client_" + shortId;
+  // 3. Fallback: gunakan ssId
+  return clientSsId || "unknown";
 }
 
 function updateSpreadsheetPhoto(ssId, kode, url) {
