@@ -974,6 +974,19 @@
                 const finalPax = (attendanceStatus === 'hadir') ? paxCount : 0;
                 const senderName = guestName || "Tamu Undangan";
 
+                // --- OPTIMISTIC UI: Tampilkan sukses langsung ---
+                document.getElementById("formContent").style.display = "none";
+                document.getElementById("successView").style.display = "block";
+                btnSpinner.style.display = "none";
+
+                if (attendanceStatus === 'hadir') {
+                    document.getElementById("successMsg").innerText = `Terima kasih atas konfirmasinya! Kami menantikan kehadiran Anda (${paxCount} orang) di hari bahagia kami.`;
+                } else {
+                    document.getElementById("successMsg").innerText = "Terima kasih atas konfirmasinya. Ucapan dan doa restu Anda telah kami terima dengan penuh syukur.";
+                }
+                showToast("✅ Konfirmasi berhasil dikirim!", "success");
+
+                // --- BACKGROUND: Proses di belakang ---
                 const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
                 const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
                 const SB_HDRS = {
@@ -982,80 +995,63 @@
                     "Content-Type": "application/json"
                 };
 
+                // Selfie upload (background)
                 let selfieUrl = null;
                 if (attendanceStatus === 'hadir' && capturedSelfieBase64) {
-                    try {
-                        const selfieRes = await fetch(window.SCRIPT_URL, {
-                            method: "POST",
-                            body: JSON.stringify({
-                                action: "selfiePost",
-                                ssId: clientSsid,
-                                kode: guestId,
-                                nama: guestName || "Guest",
-                                kategori: "REGULAR",
-                                image: capturedSelfieBase64
-                            })
-                        });
-                        const selfieData = await selfieRes.json();
-                        if (selfieData.status === "success" && selfieData.fileUrl) {
-                            selfieUrl = selfieData.fileUrl;
+                    fetch(window.SCRIPT_URL, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            action: "selfiePost",
+                            ssId: clientSsid,
+                            kode: guestId,
+                            nama: guestName || "Guest",
+                            kategori: "REGULAR",
+                            image: capturedSelfieBase64
+                        })
+                    }).then(r => r.json()).then(data => {
+                        if (data.status === "success" && data.fileUrl) {
+                            // Update Supabase with selfie URL
+                            fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${clientSsid}&kode=eq.${guestId}`, {
+                                method: "PATCH",
+                                headers: SB_HDRS,
+                                body: JSON.stringify({ selfie_url: data.fileUrl })
+                            }).catch(e => console.warn("Selfie URL sync failed:", e));
                         }
-                    } catch (uploadErr) {
-                        console.warn("Selfie upload failed (non-blocking):", uploadErr);
-                    }
+                    }).catch(e => console.warn("Background selfie upload failed:", e));
                 }
 
-                const rsvpBody = { rencana_hadir: finalPax };
-                if (selfieUrl) rsvpBody.selfie_url = selfieUrl;
+                // Supabase RSVP update (background)
+                fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${clientSsid}&kode=eq.${guestId}`, {
+                    method: "PATCH",
+                    headers: SB_HDRS,
+                    body: JSON.stringify({ rencana_hadir: finalPax })
+                }).catch(e => console.warn("Background RSVP update failed:", e));
 
-                const [sbRsvpRes, sbWishRes] = await Promise.all([
-                    fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${clientSsid}&kode=eq.${guestId}`, {
-                        method: "PATCH",
-                        headers: SB_HDRS,
-                        body: JSON.stringify(rsvpBody)
-                    }),
-                    fetch(`${SB_URL}/rest/v1/wishes_queue`, {
-                        method: "POST",
-                        headers: SB_HDRS,
-                        body: JSON.stringify({ ssid: clientSsid, nama: senderName, ucapan: wishesText })
-                    })
-                ]);
+                // Supabase wishes (background)
+                fetch(`${SB_URL}/rest/v1/wishes_queue`, {
+                    method: "POST",
+                    headers: SB_HDRS,
+                    body: JSON.stringify({ ssid: clientSsid, nama: senderName, ucapan: wishesText })
+                }).catch(e => console.warn("Background wishes failed:", e));
 
-                if (sbRsvpRes.ok && sbWishRes.ok) {
-                    showToast("✅ RSVP & Ucapan berhasil disimpan!", "success");
-                    
-                    document.getElementById("formContent").style.display = "none";
-                    document.getElementById("successView").style.display = "block";
-                    
-                    if (attendanceStatus === 'hadir') {
-                        let successMsg = `Terima kasih atas konfirmasinya! Kami menantikan kehadiran Anda (${paxCount} orang) di hari bahagia kami.`;
-                        if (selfieUrl) successMsg += "\n\nFoto selfie Anda telah tersimpan untuk check-in.";
-                        document.getElementById("successMsg").innerText = successMsg;
-                    } else {
-                        document.getElementById("successMsg").innerText = "Terima kasih atas konfirmasinya. Ucapan dan doa restu Anda telah kami terima dengan penuh syukur.";
-                    }
+                // GAS background sync
+                fetch(window.SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "updateRsvp", ssId: clientSsid, guestId: guestId, pax: finalPax })
+                }).catch(e => console.warn("Background GAS RSVP update failed:", e));
 
-                    fetch(window.SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify({ action: "updateRsvp", ssId: clientSsid, guestId: guestId, pax: finalPax })
-                    }).catch(e => console.warn("Background GAS RSVP update failed:", e));
-
-                    fetch(window.SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify({ action: "addWish", ssId: clientSsid, name: senderName, text: wishesText })
-                    }).catch(e => console.warn("Background GAS Wish update failed:", e));
-
-                } else {
-                    showToast("❌ Gagal mengirim konfirmasi. Silakan coba lagi.", "error");
-                    btnSubmit.disabled = false;
-                    btnSpinner.style.display = "none";
-                }
+                fetch(window.SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "addWish", ssId: clientSsid, name: senderName, text: wishesText })
+                }).catch(e => console.warn("Background GAS Wish update failed:", e));
 
             } catch (err) {
                 console.error("Gagal mengirim RSVP/Wishes:", err);
-                showToast("❌ Terjadi kesalahan jaringan. Coba lagi.", "error");
+                showToast("❌ Terjadi kesalahan. Silakan coba lagi.", "error");
                 btnSubmit.disabled = false;
                 btnSpinner.style.display = "none";
+                document.getElementById("formContent").style.display = "block";
+                document.getElementById("successView").style.display = "none";
             }
         }
 
