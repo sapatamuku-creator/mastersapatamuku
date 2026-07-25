@@ -106,7 +106,7 @@ function handleMainGet(e) {
   if (action === "getSettings") return createResponse(getSettings(ssId, e.parameter.guestId));
   if (action === "getDropdownOptions") return createResponse(getDropdownOptions(ssId));
   if (action === "getWishes") return createResponse(getWishes(ssId));
-  if (action === "updateRsvp") return createResponse(updateRsvp(ssId, e.parameter.guestId, e.parameter.pax));
+  if (action === "updateRsvp") return createResponse(updateRsvp(ssId, e.parameter.guestId, e.parameter.pax, e.parameter.wishText));
   
   // WELCOME SIGN HANDSHAKE
   if (action === "getWelcome") return createResponse(getWelcomeData(ssId));
@@ -227,7 +227,7 @@ function handleMainPost(payload) {
         break;
       
       case "updateRsvp":
-        result = updateRsvp(ssId, payload.guestId, payload.pax);
+        result = updateRsvp(ssId, payload.guestId, payload.pax, payload.wishText);
         break;
       
       case "saveSettings":
@@ -1721,7 +1721,7 @@ function getWishes(ssId) {
   }
 }
 
-function updateRsvp(ssId, guestId, pax) {
+function updateRsvp(ssId, guestId, pax, wishText) {
   try {
     const ss = getSS(ssId);
     const sheet = ss.getSheetByName(SHEET_DATA);
@@ -1737,6 +1737,17 @@ function updateRsvp(ssId, guestId, pax) {
       // Row 7 + guestIndex. Kolom H (Rencana Hadir) adalah kolom ke-8.
       const paxVal = (pax !== undefined && pax !== null && pax !== "") ? parseInt(pax) : 0;
       sheet.getRange(7 + guestIndex, 8).setValue(paxVal);
+      
+      // --- SYNC WISHES KE SPREADSHEET (jika ada) ---
+      if (wishText && wishText.trim()) {
+        try {
+          const senderName = guestData[guestIndex][2] || "Tamu Undangan"; // Kolom C: Nama
+          addWish(ssId, senderName, wishText.trim());
+          console.log("updateRsvp: wishes synced untuk " + senderName);
+        } catch (wishErr) {
+          console.error("updateRsvp: gagal sync wishes - " + wishErr.toString());
+        }
+      }
       
       // --- UPDATE KE SUPABASE tamu table ---
       try {
@@ -1760,7 +1771,7 @@ function updateRsvp(ssId, guestId, pax) {
         console.error("Gagal update rencana_hadir ke Supabase: " + sbErr.toString());
       }
       
-      return { status: "success", message: "Rencana Hadir diupdate" };
+      return { status: "success", message: "Rencana Hadir diupdate" + (wishText ? " & wishes disinkronkan" : "") };
     } else {
       return { status: "error", message: "Tamu tidak ditemukan" };
     }
