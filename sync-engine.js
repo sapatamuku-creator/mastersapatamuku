@@ -9,7 +9,7 @@ const SyncEngine = (() => {
         'Authorization': 'Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u',
         'Content-Type': 'application/json'
     };
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzy244BM3lYzw0ix7jD-_1Qvxu3deKukqHDJbr4RcJQn-K7k5Dgzw1sEBclT2w8jIys/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec';
 
     let isOnline = navigator.onLine;
     let isSyncing = false;
