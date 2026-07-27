@@ -1,4 +1,4 @@
-﻿/**
+/**
  * auth_guard.js — SapaTamu RBAC Guard
  * =====================================
  * Diinclude di setiap halaman yang dilindungi.
@@ -396,19 +396,25 @@
         // 1. Tentukan durasi idle berdasarkan halaman (Optimasi Supabase Pooler)
         let idleTimeoutDuration = 2 * 60 * 1000; // Standar 2 Menit (Dashboard & Undangan)
 
-        // Halaman operasional Hari H dengan akses konstan mendapatkan batas atas 60 Menit
-        if (
-            path.includes('kiosk.html') || 
-            path.includes('worker.html') || 
-            path.includes('onsite.html') || 
+        // Halaman operasional Hari H: kiosk/checkin/onsite/worker/welcome/formulir_tamu
+        // Mendapatkan idle timeout 60 menit DAN koneksi Realtime TIDAK diputus saat tab inactive
+        const isOperationalPage = (
+            path.includes('kiosk.html') ||
+            path.includes('worker.html') ||
+            path.includes('onsite.html') ||
             path.includes('checkin.html') ||
-            path.includes('welcome.html')
-        ) {
+            path.includes('welcome.html') ||
+            path.includes('formulir_tamu.html')
+        );
+
+        if (isOperationalPage) {
             idleTimeoutDuration = 60 * 60 * 1000; // 60 Menit
         }
 
         // 2. Pembersihan Koneksi Realtime Supabase Dinamis
-        async function cleanupSupabaseConnections() {
+        // Pada halaman operasional, fungsi ini TIDAK memutus channel Realtime
+        // agar auto-refresh tetap berjalan tanpa reload halaman.
+        async function cleanupSupabaseConnections({ skipRealtimeOnOperational = false } = {}) {
             console.warn("[SapaGuard] Mengaktifkan pembersihan koneksi Supabase...");
             const potentialKeys = ['supabaseClient', 'arrivalRealtimeClient', 'supabase'];
             const clientsToClean = [];
@@ -430,11 +436,14 @@
             }
 
             for (const client of clientsToClean) {
-                try {
-                    await client.removeAllChannels();
-                    console.log("[SapaGuard] Realtime channel Supabase berhasil diputus.");
-                } catch (err) {
-                    console.error("[SapaGuard] Gagal memutuskan channel realtime:", err);
+                // Jika halaman operasional & flag skipRealtime aktif, lewati removeAllChannels
+                if (!(skipRealtimeOnOperational && isOperationalPage)) {
+                    try {
+                        await client.removeAllChannels();
+                        console.log("[SapaGuard] Realtime channel Supabase berhasil diputus.");
+                    } catch (err) {
+                        console.error("[SapaGuard] Gagal memutuskan channel realtime:", err);
+                    }
                 }
                 if (client.auth && typeof client.auth.signOut === 'function') {
                     try {
@@ -444,6 +453,49 @@
                         console.error("[SapaGuard] Gagal sign out dari Supabase Auth:", e);
                     }
                 }
+            }
+        }
+
+        // 2b. Reconnect seluruh channel Supabase yang mungkin terputus
+        // Dipanggil saat tab kembali aktif (visibilitychange visible)
+        async function reconnectSupabaseChannels() {
+            console.log("[SapaGuard] Mencoba reconnect channel Supabase...");
+            const potentialKeys = ['supabaseClient', 'arrivalRealtimeClient', 'supabase'];
+            const clientsToReconnect = [];
+
+            potentialKeys.forEach(key => {
+                if (window[key] && typeof window[key].getChannels === 'function') {
+                    clientsToReconnect.push(window[key]);
+                }
+            });
+            for (let key in window) {
+                try {
+                    if (window[key] && typeof window[key] === 'object' && !potentialKeys.includes(key)) {
+                        if (typeof window[key].getChannels === 'function') {
+                            clientsToReconnect.push(window[key]);
+                        }
+                    }
+                } catch (e) { }
+            }
+
+            for (const client of clientsToReconnect) {
+                try {
+                    const channels = client.getChannels();
+                    for (const ch of channels) {
+                        // Hanya subscribe ulang jika channel tidak dalam state SUBSCRIBED
+                        if (ch.state !== 'joined' && ch.state !== 'joining') {
+                            ch.subscribe();
+                            console.log('[SapaGuard] Re-subscribed channel:', ch.topic);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[SapaGuard] Gagal reconnect channel:', e);
+                }
+            }
+
+            // Juga panggil callback yang didaftarkan halaman (opsional)
+            if (typeof window.onSapaRealtimeReconnect === 'function') {
+                window.onSapaRealtimeReconnect();
             }
         }
 
@@ -487,7 +539,8 @@
                 return;
             }
             console.warn("[SapaGuard] Sesi idle terdeteksi. Membersihkan koneksi & memaksa logout...");
-            await cleanupSupabaseConnections();
+            // Idle logout selalu memutus semua channel (termasuk halaman operasional)
+            await cleanupSupabaseConnections({ skipRealtimeOnOperational: false });
 
             // Bersihkan sesi storage
             sessionStorage.clear();
@@ -519,32 +572,47 @@
         // Jalankan inisialisasi awal timer
         resetIdleTimer();
 
-        // 5. Page Visibility API (Menghemat koneksi saat tab tidak aktif lebih dari 30 detik)
+        // 5. Page Visibility API
+        // - Halaman operasional (kiosk/checkin/onsite/worker/welcome):
+        //   Koneksi Realtime TETAP HIDUP saat tab inactive.
+        //   Saat tab kembali aktif, lakukan reconnect tanpa reload halaman.
+        // - Halaman non-operasional:
+        //   Putus channel setelah 30 detik inactive, reload saat kembali aktif.
         let visibilityTimeoutId;
         document.addEventListener('visibilitychange', () => {
-            // Pengecualian halaman yang berjalan di latar belakang (seperti WA Blast atau Formulir Tamu)
-            // Welcome TV Screen tidak lagi dikecualikan sepenuhnya agar mengikuti 60 menit timeout
-            const isExemptFromVisibility = path.includes('wa_blast.html') || path.includes('formulir_tamu.html') || window.SapaExemptVisibility;
+            // Pengecualian halaman background tasks (WA Blast) — selalu skip visibilitychange
+            const isExemptFromVisibility = path.includes('wa_blast.html') || window.SapaExemptVisibility;
             if (isExemptFromVisibility) {
                 console.log("[SapaGuard] Halaman dikecualikan dari pemutus koneksi otomatis saat tab tidak aktif.");
                 return;
             }
 
             if (document.hidden) {
-                // Jika tab tersembunyi, tunggu 30 detik sebelum memutuskan channel
-                visibilityTimeoutId = setTimeout(async () => {
-                    await cleanupSupabaseConnections();
-                    window.SAPAGUARD_CHANNELS_CLEANED = true;
-                    console.log("[SapaGuard] Koneksi disuspensi karena tab tidak aktif lebih dari 30 detik.");
-                }, 30000);
+                if (isOperationalPage) {
+                    // Halaman operasional: JANGAN putus channel Realtime
+                    // Hanya log agar mudah di-debug
+                    console.log("[SapaGuard] Tab tidak aktif — koneksi Realtime dipertahankan (halaman operasional).");
+                } else {
+                    // Halaman non-operasional: tunggu 30 detik baru putus channel
+                    visibilityTimeoutId = setTimeout(async () => {
+                        await cleanupSupabaseConnections({ skipRealtimeOnOperational: false });
+                        window.SAPAGUARD_CHANNELS_CLEANED = true;
+                        console.log("[SapaGuard] Koneksi disuspensi karena tab tidak aktif lebih dari 30 detik.");
+                    }, 30000);
+                }
             } else {
                 clearTimeout(visibilityTimeoutId);
-                // Jika koneksi sudah sempat disuspensi, lakukan refresh/restore saat kembali
-                if (window.SAPAGUARD_CHANNELS_CLEANED) {
+
+                if (isOperationalPage) {
+                    // Halaman operasional: reconnect channel yang mungkin terputus
+                    // (misal karena browser suspensi koneksi WebSocket secara paksa)
+                    console.log("[SapaGuard] Tab kembali aktif — mencoba auto-reconnect Realtime...");
+                    reconnectSupabaseChannels();
+                } else if (window.SAPAGUARD_CHANNELS_CLEANED) {
+                    // Halaman non-operasional: reload atau tampilkan toast
                     window.SAPAGUARD_CHANNELS_CLEANED = false;
 
                     if (hasUnsavedFormChanges()) {
-                        // Tampilkan toast pemberitahuan ramah daripada langsung mereload form terisi
                         const toast = document.createElement('div');
                         toast.id = 'sapa-realtime-warning';
                         toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:999999; background:#FFEBEB; color:#D93838; border:1px solid #FFC4C4; padding:12px 24px; border-radius:30px; font-size:12px; font-weight:700; box-shadow:0 8px 24px rgba(217,56,56,0.15); font-family:sans-serif; display:flex; align-items:center; gap:10px;';

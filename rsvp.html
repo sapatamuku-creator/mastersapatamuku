@@ -556,6 +556,127 @@
             color: var(--error);
         }
 
+        /* ─── CAMERA PERMISSION MODAL ───────────────────────────────── */
+        #cameraPermModal {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(74, 63, 53, 0.55);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: sapaFadeIn 0.25s ease;
+        }
+        #cameraPermModal.visible { display: flex; }
+        @keyframes sapaFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .cam-perm-box {
+            background: #fff;
+            border-radius: 28px;
+            padding: 36px 28px 28px;
+            width: 100%;
+            max-width: 360px;
+            text-align: center;
+            box-shadow: 0 24px 60px rgba(74, 63, 53, 0.2);
+            animation: camBoxIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes camBoxIn {
+            from { transform: scale(0.88) translateY(16px); opacity: 0; }
+            to   { transform: scale(1) translateY(0);       opacity: 1; }
+        }
+
+        .cam-perm-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(200,150,46,0.12), rgba(224,123,123,0.12));
+            border: 1.5px solid var(--border-color);
+            font-size: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 18px;
+        }
+
+        .cam-perm-title {
+            font-family: var(--font-serif);
+            font-size: 19px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 10px;
+        }
+
+        .cam-perm-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.65;
+            margin-bottom: 8px;
+        }
+
+        .cam-perm-note {
+            font-size: 11px;
+            color: var(--text-muted);
+            background: #FDF8F4;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 22px;
+            line-height: 1.5;
+        }
+
+        .cam-perm-note strong { color: var(--text-main); }
+
+        .cam-perm-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .cam-perm-btn-allow {
+            width: 100%;
+            padding: 15px;
+            border-radius: 50px;
+            border: none;
+            background: var(--primary);
+            color: #fff;
+            font-family: var(--font-sans);
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.2s ease;
+        }
+        .cam-perm-btn-allow:active { transform: scale(0.97); }
+
+        .cam-perm-btn-skip {
+            width: 100%;
+            padding: 13px;
+            border-radius: 50px;
+            border: 1.5px solid var(--border-color);
+            background: transparent;
+            color: var(--text-muted);
+            font-family: var(--font-sans);
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+        .cam-perm-btn-skip:active { transform: scale(0.97); }
+
+        @media (hover: hover) and (pointer: fine) {
+            .cam-perm-btn-allow:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 24px rgba(224, 123, 123, 0.3);
+            }
+            .cam-perm-btn-skip:hover {
+                border-color: var(--text-muted);
+                color: var(--text-main);
+            }
+        }
+
         /* Success Card View */
         .success-view {
             text-align: center;
@@ -743,11 +864,11 @@
                         <textarea class="textarea-input" id="wishesText" placeholder="Tulis ucapan selamat dan harapan terbaik Anda untuk mempelai..." required></textarea>
                     </div>
 
-                    <!-- Selfie Section (hanya muncul jika hadir) -->
+                    <!-- Selfie Check-In (hanya muncul jika hadir) -->
                     <div class="selfie-section" id="selfieSection">
-                        <label class="form-label">Foto Selfie untuk Check-in</label>
-                        <p style="font-size: 10px; color: var(--text-muted); margin-bottom: 12px; text-align: center;">
-                            Ambil selfie untuk mempercepat proses check-in di hari H.
+                        <label class="form-label">📸 Selfie Check-In &mdash; Jalur Cepat</label>
+                        <p style="font-size: 10px; color: var(--text-muted); margin-bottom: 12px; text-align: center; line-height: 1.6;">
+                            Daftarkan wajah Anda sekarang &amp; nikmati <strong style="color: var(--gold);">check-in kilat</strong> tanpa antre di hari H. ✨
                         </p>
 
                         <div class="selfie-container" id="selfieContainer">
@@ -760,11 +881,11 @@
                         </div>
 
                         <button type="button" class="selfie-btn" id="btnSelfie" onclick="toggleSelfie()">
-                            📸 Ambil Selfie
+                            📸 Aktifkan Selfie Check-In
                         </button>
 
                         <div class="selfie-hint" id="selfieHint">
-                            Pastikan wajah terlihat jelas dan pencahayaan cukup
+                            Pastikan wajah Anda terlihat jelas &amp; pencahayaan cukup
                         </div>
                         <div class="selfie-status" id="selfieStatus"></div>
                     </div>
@@ -801,6 +922,32 @@
     <div class="toast" id="toast">
         <span id="toastIcon">⚠️</span>
         <span id="toastText">Pesan di sini</span>
+    </div>
+
+    <!-- Camera Permission Modal -->
+    <div id="cameraPermModal" role="dialog" aria-modal="true" aria-labelledby="camPermTitle">
+        <div class="cam-perm-box">
+            <div class="cam-perm-icon">🚀</div>
+            <h2 class="cam-perm-title" id="camPermTitle">Aktifkan Jalur Cepat</h2>
+            <p class="cam-perm-desc">
+                <strong>Selfie Check-In</strong> &mdash; daftarkan wajah Anda sekali,
+                masuk tanpa antre selamanya.
+            </p>
+            <div class="cam-perm-note">
+                📲 <strong>Bagaimana caranya?</strong><br>
+                Panitia menggunakan foto Anda untuk <strong>mengenali kehadiran secara instan</strong>
+                di hari-H &mdash; tanpa perlu tunjukkan undangan, tanpa antre panjang. Cukup datang,
+                senyum, dan langsung masuk! 🎊
+            </div>
+            <div class="cam-perm-actions">
+                <button class="cam-perm-btn-allow" id="btnAllowCamera" onclick="grantCameraAccess()">
+                    📸 Aktifkan Selfie Check-In
+                </button>
+                <button class="cam-perm-btn-skip" onclick="skipSelfie()">
+                    Lewati &mdash; check-in manual saja
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Resolver & Scripts -->
@@ -924,10 +1071,13 @@
                 optHadir.classList.add("selected");
                 optAbsen.classList.remove("selected");
                 paxContainer.style.display = "block";
-                selfieSection.classList.add("show");
                 document.querySelector('input[value="hadir"]').checked = true;
                 btnSubmit.disabled = true;
                 submitHint.textContent = "Ambil selfie terlebih dahulu";
+
+                // Tampilkan selfie section, lalu minta izin kamera
+                selfieSection.classList.add("show");
+                handleSelfiePermission();
             } else {
                 optAbsen.classList.add("selected");
                 optHadir.classList.remove("selected");
@@ -1103,6 +1253,7 @@
             const hint = document.getElementById("selfieHint");
 
             if (capturedSelfieBase64) {
+                // Reset: ulangi selfie
                 capturedSelfieBase64 = null;
                 selfieValidated = false;
                 preview.style.display = "none";
@@ -1116,11 +1267,86 @@
             }
 
             if (selfieStream) {
+                // Kamera sudah aktif → langsung ambil foto
                 takeSelfieWithCountdown();
                 return;
             }
 
+            // Belum ada stream → minta izin dulu
+            await handleSelfiePermission();
+        }
+
+        // ─── Camera Permission Gate ────────────────────────────────────
+        // Cek apakah izin kamera sudah diberikan sebelumnya.
+        // Jika sudah granted → langsung buka kamera.
+        // Jika belum/prompt → tampilkan modal custom lebih dahulu.
+        async function handleSelfiePermission() {
+            // Jika stream sudah aktif, tidak perlu cek ulang
+            if (selfieStream) return;
+
+            // Coba query permission API (tidak semua browser support)
+            try {
+                const perm = await navigator.permissions.query({ name: 'camera' });
+                if (perm.state === 'granted') {
+                    // Langsung aktifkan kamera tanpa modal
+                    await startSelfieCamera();
+                    return;
+                }
+                if (perm.state === 'denied') {
+                    // Izin ditolak permanen — tampilkan pesan
+                    _showCameraBlockedHint();
+                    return;
+                }
+                // state === 'prompt' → tampilkan modal custom
+                _showCameraPermModal();
+            } catch (e) {
+                // Browser tidak support permissions API → tampilkan modal custom
+                _showCameraPermModal();
+            }
+        }
+
+        function _showCameraPermModal() {
+            document.getElementById('cameraPermModal').classList.add('visible');
+        }
+
+        function _showCameraBlockedHint() {
+            const status = document.getElementById('selfieStatus');
+            const hint = document.getElementById('selfieHint');
+            const btn = document.getElementById('btnSelfie');
+            status.textContent = '⛔ Akses kamera diblokir';
+            status.className = 'selfie-status error';
+            hint.textContent = 'Aktifkan izin kamera di pengaturan browser Anda, lalu muat ulang halaman.';
+            btn.textContent = '📸 Ambil Selfie';
+        }
+
+        // Dipanggil tombol "Izinkan" di modal
+        async function grantCameraAccess() {
+            document.getElementById('cameraPermModal').classList.remove('visible');
             await startSelfieCamera();
+        }
+
+        // Dipanggil tombol "Lewati" di modal
+        function skipSelfie() {
+            document.getElementById('cameraPermModal').classList.remove('visible');
+            const status = document.getElementById('selfieStatus');
+            const hint = document.getElementById('selfieHint');
+            const btn = document.getElementById('btnSelfie');
+            const selfieSection = document.getElementById('selfieSection');
+
+            // Tandai sebagai skip: boleh submit tanpa selfie
+            capturedSelfieBase64 = null;
+            selfieValidated = true; // override: izin submit
+
+            selfieSection.classList.remove('show');
+            status.textContent = '';
+            hint.textContent = 'Selfie dilewati';
+            btn.textContent = '📸 Ambil Selfie';
+
+            // Aktifkan tombol submit
+            const btnSubmit = document.getElementById('btnSubmit');
+            const submitHint = document.getElementById('submitHint');
+            btnSubmit.disabled = false;
+            submitHint.textContent = '';
         }
 
         async function startSelfieCamera() {
