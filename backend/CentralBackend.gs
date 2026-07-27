@@ -146,7 +146,7 @@ function handleRegister(data) {
         category: data.category || "wedding",
         subdomain: sub,
         client_name: data.clientName,
-        package: data.package || ""   // Ã¢Å“â€¦ FIX: kirim field package ke Supabase
+        package: data.package || ""   // ✅ FIX: kirim field package ke Supabase
       });
       syncAdminPasswordToSupabase();
     } catch (e) {
@@ -155,7 +155,7 @@ function handleRegister(data) {
 
     return createResponse({ status: "success", message: "Pendaftaran berhasil" });
   } catch (err) {
-    // Ã°Å¸â€Â´ LOG ke system_logs Ã¢â‚¬â€ akan memicu alert WA admin via Gemini
+    // 🔴 LOG ke system_logs — akan memicu alert WA admin via Gemini
     logToSupabase('REGISTER_CLIENT', 'FAILED', 'GAS', 'Gagal pendaftaran klien baru: ' + err.toString(), { stack: err.stack || '' });
     return createResponse({ status: "error", message: "Gagal pendaftaran: " + err.toString() });
   }
@@ -231,7 +231,7 @@ function handleRegisterAndActivate(data) {
     sheet1.getRange("A4:B4").setValues([["Waktu Acara :", ""]]);
     sheet1.getRange("A5:B5").setValues([["Link Invitation :", ""]]);
 
-    // Append ke Master Sheet (Kolom AÃ¢â‚¬â€œM)
+    // Append ke Master Sheet (Kolom A–M)
     sheet.appendRow([
       sub, newSsId, data.password, data.whatsapp, tgl, new Date(),
       data.email, "Active", cat, sub, clientName,
@@ -299,7 +299,7 @@ function handleRegisterAndActivate(data) {
       data: { ssId: newSsId, fileName: finalFileName }
     });
   } catch (err) {
-    // Ã°Å¸â€Â´ LOG ke system_logs Ã¢â‚¬â€ error aktivasi akun adalah kejadian kritis
+    // 🔴 LOG ke system_logs — error aktivasi akun adalah kejadian kritis
     logToSupabase('ACTIVATE_CLIENT', 'FAILED', 'GAS', 'Gagal aktivasi akun ' + (data.subdomain || '?') + ': ' + err.toString(), { stack: err.stack || '', subdomain: data.subdomain });
     return createResponse({ status: "error", message: "Gagal aktivasi: " + err.toString() });
   }
@@ -632,13 +632,13 @@ function sendWA(target, message) {
     if (json.status === true) {
       return "success";
     } else {
-      // Ã°Å¸â€Â´ LOG kegagalan pengiriman WA ke system_logs
+      // 🔴 LOG kegagalan pengiriman WA ke system_logs
       logToSupabase('SEND_WA', 'FAILED', 'GAS', 'Fonnte menolak pengiriman WA ke ' + cleanTarget + ': ' + (json.reason || 'Tidak ada alasan'), { target: cleanTarget, reason: json.reason });
       return "failed: " + json.reason;
     }
   } catch (e) {
     console.log("Error: " + e.toString());
-    // Ã°Å¸â€Â´ LOG error jaringan ke system_logs
+    // 🔴 LOG error jaringan ke system_logs
     logToSupabase('SEND_WA', 'FAILED', 'GAS', 'Error jaringan saat hubungi Fonnte API: ' + e.toString(), { target: cleanTarget });
     return "error: " + e.toString();
   }
@@ -841,7 +841,7 @@ function handleLogin(data) {
     const values = sheet.getDataRange().getValues();
     const dValues = sheet.getDataRange().getDisplayValues();
 
-    // Baca admin password dari K1 (kolom 11, index 10) Ã¢â‚¬â€ baris pertama header
+    // Baca admin password dari K1 (kolom 11, index 10) — baris pertama header
     const adminPassword = String(sheet.getRange(1, 11).getValue() || "").trim();
 
     // Normalisasi username: lowercase, hapus spasi & "&"
@@ -855,7 +855,7 @@ function handleLogin(data) {
 
       if (colA !== targetUser && colJ !== targetUser) continue;
 
-      // Cocok username Ã¢â‚¬â€ tentukan role berdasarkan password
+      // Cocok username — tentukan role berdasarkan password
       let clientPassword = values[i][2];
       if (clientPassword instanceof Date) {
         clientPassword = dValues[i][2].replace(/\s+/g, '').toLowerCase();
@@ -887,7 +887,7 @@ function handleLogin(data) {
         whatsapp:  values[i][3],
         email:     values[i][6],
         category:  values[i][8] || "wedding",
-        role:      role           // Ã¢â€ Â BARU: 'client' | 'usher'
+        role:      role           // ← BARU: 'client' | 'usher'
       } });
     }
 
@@ -1371,7 +1371,7 @@ function watchAndScrapeThirdPartyWishes() {
       try {
         let wishes = [];
         
-        // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ CASE A: LEAFITATION Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        // ─── CASE A: LEAFITATION ───
         if (link.includes("leafitation.com")) {
           // 1. Fetch HTML halaman untuk mendapatkan post_id
           const htmlResponse = UrlFetchApp.fetch(link, { muteHttpExceptions: true });
@@ -1397,7 +1397,7 @@ function watchAndScrapeThirdPartyWishes() {
             }
           }
         }
-        // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ CASE B: UNDGN Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        // ─── CASE B: UNDGN ───
         else if (link.includes("undgn.id")) {
           // Fetch HTML dan parse DOM menggunakan regex
           const htmlResponse = UrlFetchApp.fetch(link, { muteHttpExceptions: true });

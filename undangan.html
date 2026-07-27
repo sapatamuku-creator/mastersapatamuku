@@ -340,7 +340,7 @@
             transform: scale(0.97);
         }
 
-        /* â”€â”€â”€ CUSTOM NOTIFICATION MODAL REFRACTOR â”€â”€â”€ */
+        /* ─── CUSTOM NOTIFICATION MODAL REFRACTOR ─── */
         #sapa-notify-modal {
             position: fixed;
             inset: 0;
@@ -385,7 +385,7 @@
             }
         }
 
-        /* â”€â”€â”€ HOVER PROTECTION MEDIA QUERY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        /* ─── HOVER PROTECTION MEDIA QUERY ────────────────────────── */
         @media (hover: hover) and (pointer: fine) {
             .btn-primary:hover {
                 background: #333333;
@@ -416,7 +416,7 @@
     <!-- CUSTOM NOTIFICATION MODAL -->
     <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
         <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid #F0E6DE; animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
-            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">âœ¨</div>
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
             <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: #4A3F35; margin-bottom: 15px;">Pesan</h2>
             <p id="notify-msg" style="font-size: 15px; color: #8C7560; line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
             <button onclick="closeSapaModal()" style="width: 100%; padding: 15px; border-radius: 15px; border: none; font-size: 11px; font-weight: 900; letter-spacing: 2px; cursor: pointer; color: white; background: #4A3F35; box-shadow: 0 8px 20px rgba(74, 63, 53, 0.3);">MENGERTI</button>
@@ -426,7 +426,7 @@
         @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
     <script>
-        window.showSapaModal = function(title, msg, icon = "âœ¨") {
+        window.showSapaModal = function(title, msg, icon = "✨") {
             document.getElementById('notify-title').innerText = title;
             document.getElementById('notify-msg').innerText = msg;
             document.getElementById('notify-icon').innerText = icon;
@@ -1000,7 +1000,7 @@
             if (!name || !text) return;
 
             const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
-            if (!ssId) { showSapaModal("Perhatian", "Sesi undangan tidak valid.", "âš ï¸"); return; }
+            if (!ssId) { showSapaModal("Perhatian", "Sesi undangan tidak valid.", "⚠️"); return; }
 
             const btn = document.getElementById('btn-wish');
             btn.disabled = true;
@@ -1051,7 +1051,7 @@
                      // Optional: Add Admin Pin
                      const adminDiv = document.createElement('div');
                      adminDiv.className = "wish-card border-l-4 border-[#D4AF37]";
-                     adminDiv.innerHTML = `<p class="text-[11px] font-bold text-neutral-800 mb-1">Admin SapaTamu.Ku âœ¨</p>
+                     adminDiv.innerHTML = `<p class="text-[11px] font-bold text-neutral-800 mb-1">Admin SapaTamu.Ku ✨</p>
                          <p class="text-[10px] text-neutral-500">Selamat menempuh hidup baru!</p>`;
                      container.appendChild(adminDiv);
 
@@ -1073,7 +1073,7 @@
             const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
             const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
 
-            // â”€â”€ JALUR 1: Supabase (cepat, < 200ms, tanpa GAS cold start) â”€â”€
+            // ── JALUR 1: Supabase (cepat, < 200ms, tanpa GAS cold start) ──
             try {
                 const sbRes = await fetch(
                     `${SB_URL}/rest/v1/config_invitation?ssid=eq.${ssId}&select=data&limit=1`,
@@ -1082,17 +1082,17 @@
                 if (sbRes.ok) {
                     const rows = await sbRes.json();
                     if (rows && rows.length > 0 && rows[0].data) {
-                        console.log("âœ… Config loaded from Supabase (fast path)");
+                        console.log("✅ Config loaded from Supabase (fast path)");
                         window.applyLivePreview(rows[0].data);
                         hideInitialLoader();
-                        return; // Selesai â€” tidak perlu ke GAS
+                        return; // Selesai — tidak perlu ke GAS
                     }
                 }
             } catch (e) {
                 console.warn("Supabase config fetch failed, trying GAS fallback:", e.message);
             }
 
-            // â”€â”€ JALUR 2: GAS Fallback (lambat, hanya jika Supabase kosong/gagal) â”€â”€
+            // ── JALUR 2: GAS Fallback (lambat, hanya jika Supabase kosong/gagal) ──
             // Ini terjadi hanya jika config belum pernah di-save via config_invitation.html baru.
             try {
                 const response = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`);
@@ -1102,7 +1102,7 @@
                         const invData = result.data.invitationData;
                         if (result.data.tanggal) invData.weddingDate = result.data.tanggal;
                         window.applyLivePreview(invData);
-                        console.log("âš¡ Config loaded from GAS (fallback)");
+                        console.log("⚡ Config loaded from GAS (fallback)");
                     }
                     if (result.data.theme === 'modern') document.body.classList.add('modern-theme');
                 }
@@ -1298,7 +1298,7 @@
 })();
 </script>
 <style>
-.is-offline::before{content:'âš ï¸ OFFLINE â€” Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
+.is-offline::before{content:'⚠️ OFFLINE — Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
 @media(min-width:1024px){.is-offline::before{display:none;}}
 </style>
 </body>

@@ -1,4 +1,4 @@
-
+﻿
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 
         let CURRENT_SS_ID = null;
@@ -18,7 +18,7 @@
             const selectedList = Array.from(selectedIDs).map(id => masterData.find(r => r.kode === id));
             if (selectedList.length === 0) return;
             if (selectedList.length > 1) {
-                showAlert("Perhatian", "Pilih 1 tamu saja. Fitur On-Site Check-in khusus untuk melayani registrasi, foto & angpao/kado secara perorangan.", "ï¿½aï¿½ï¸");
+                showAlert("Perhatian", "Pilih 1 tamu saja. Fitur On-Site Check-in khusus untuk melayani registrasi, foto & angpao/kado secara perorangan.", "�a�️");
                 return;
             }
             openConfirm(selectedList[0]);
@@ -141,7 +141,7 @@
             }
         }
 
-        window.showAlert = function (title, msg, icon = "ï¿½aï¿½ï¸") {
+        window.showAlert = function (title, msg, icon = "�a�️") {
             return new Promise(resolve => {
                 document.getElementById('st-modal-icon').innerText = icon;
                 document.getElementById('st-modal-title').innerText = title;
@@ -157,7 +157,7 @@
             });
         };
 
-        window.showConfirm = function (title, msg, icon = "ï¿½xaï¿½") {
+        window.showConfirm = function (title, msg, icon = "�xa�") {
             return new Promise(resolve => {
                 document.getElementById('st-modal-icon').innerText = icon;
                 document.getElementById('st-modal-title').innerText = title;
@@ -334,7 +334,7 @@
 
             if (guest) {
                 if (String(guest.statusHadir) === "1") {
-                    showAlert("Sudah Hadir", "Tamu '" + guest.nama + "' sudah hadir.", "ï¿½aï¿½ï¸");
+                    showAlert("Sudah Hadir", "Tamu '" + guest.nama + "' sudah hadir.", "�a�️");
                     frame.classList.remove('qr-detected');
                 } else {
                     frame.classList.add('qr-success');
@@ -357,7 +357,7 @@
                 initScanner();
                 if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
                 document.getElementById('reg-preview-container').style.display = 'none';
-                document.getElementById('btn-reg-snap').innerText = "ï¿½xï¿½ AMBIL SELFIE (OPSIONAL)";
+                document.getElementById('btn-reg-snap').innerText = "�x� AMBIL SELFIE (OPSIONAL)";
                 document.getElementById('btn-reg-snap').style.background = "white";
                 document.getElementById('btn-reg-snap').style.color = "var(--gold)";
                 capturedBase64 = null;
@@ -390,15 +390,15 @@
                 const isChecked = selectedIDs.has(row.kode);
                 
                 let giftIcons = "";
-                if ((row.statusHadiah && row.statusHadiah.includes("ANGPAO")) || parseFloat(row.tandaKasih) > 0) giftIcons += "ï¿½xï¿½ï¿½";
-                if (row.statusHadiah && row.statusHadiah.includes("KADO")) giftIcons += "ï¿½x}ï¿½";
+                if ((row.statusHadiah && row.statusHadiah.includes("ANGPAO")) || parseFloat(row.tandaKasih) > 0) giftIcons += "�x��";
+                if (row.statusHadiah && row.statusHadiah.includes("KADO")) giftIcons += "�x}�";
 
                 return `
                 <div class="guest-item ${isDone ? 'checked-in' : ''}" style="border-top: 4px solid ${isDone?'var(--success)':'var(--border)'}">
                     <div class="guest-header">
                         <div style="display:flex; align-items:center; gap:10px;">
                             <div onclick="${isDone ? '' : `toggleSelect('${row.kode}')`}" style="cursor: pointer; padding: 5px;">
-                                ${!isDone ? `<input type="checkbox" ${isChecked ? 'checked' : ''} style="accent-color:var(--gold); transform:scale(1.3); pointer-events:none;">` : 'ï¿½S&'}
+                                ${!isDone ? `<input type="checkbox" ${isChecked ? 'checked' : ''} style="accent-color:var(--gold); transform:scale(1.3); pointer-events:none;">` : '�S&'}
                             </div>
                             <div>
                                 <div class="guest-name">${row.nama} <span style="margin-left:5px;">${giftIcons}</span></div>
@@ -408,9 +408,9 @@
                     </div>
 
                     <div class="guest-details">
-                        <div class="detail-item">ï¿½xï¿½ï¿½ <span>${row.alamat || '-'}</span></div>
-                        <div class="detail-item">ï¿½xR Inv by: <span>${row.pihakPengundang || '-'}</span></div>
-                        <div class="detail-item">â° Sesi: <span>${row.sesi || row.rencanaJamHadir || row.jamHadir || '-'}</span></div>
+                        <div class="detail-item">�x�� <span>${row.alamat || '-'}</span></div>
+                        <div class="detail-item">�xR Inv by: <span>${row.pihakPengundang || '-'}</span></div>
+                        <div class="detail-item">⏰ Sesi: <span>${row.sesi || row.rencanaJamHadir || row.jamHadir || '-'}</span></div>
                     </div>
 
                     <div class="guest-footer">
@@ -419,7 +419,7 @@
                             <div style="font-size:8px; font-weight:800; color:var(--primary); margin-left:2px;">PAX PLAN: ${(row.rencanaHadir !== "" && row.rencanaHadir !== undefined) ? row.rencanaHadir : '1'}</div>
                         </div>
                         <div class="guest-status" style="color:${isDone ? 'var(--success)':'var(--text-muted)'}; text-align:right">
-                            ${isDone ? `ï¿½S HADIR (${row.realHadir})` : 'ï¿½ï¿½ BELUM SCAN'}
+                            ${isDone ? `�S HADIR (${row.realHadir})` : '�� BELUM SCAN'}
                         </div>
                     </div>
                     <div style="font-size:7px; color:#ccc; margin-top:8px; text-align:right">ID: ${row.kode}</div>
@@ -518,7 +518,7 @@
                     container.style.display = 'block';
                     v.style.display = 'block';
                     preview.style.display = 'none';
-                    btn.innerText = "ï¿½xï¿½ AMBIL FOTO SEKARANG";
+                    btn.innerText = "�x� AMBIL FOTO SEKARANG";
                     btn.style.background = "var(--gold)";
                     btn.style.color = "white";
                 } catch (err) {
@@ -538,7 +538,7 @@
                     if (count > 0) {
                         if(overlay) overlay.innerText = count;
                     } else if (count === 0) {
-                        if(overlay) overlay.innerText = "ï¿½xï¿½";
+                        if(overlay) overlay.innerText = "�x�";
                     } else {
                         clearInterval(timer);
                         if(overlay) overlay.style.display = 'none';
@@ -559,7 +559,7 @@
                         preview.style.display = 'block';
                         
                         btn.disabled = false;
-                        btn.innerText = "ï¿½xâ€” ULANGI SELFIE";
+                        btn.innerText = "�x— ULANGI SELFIE";
                         btn.style.background = "white";
                         btn.style.color = "var(--gold)";
                     }
@@ -594,7 +594,7 @@
                     if (count > 0) {
                         if(overlay) overlay.innerText = count;
                     } else if (count === 0) {
-                        if(overlay) overlay.innerText = "ï¿½xï¿½";
+                        if(overlay) overlay.innerText = "�x�";
                     } else {
                         clearInterval(timer);
                         if(overlay) overlay.style.display = 'none';
@@ -619,7 +619,7 @@
                     btnSnap.style.background = "none";
                     btnSnap.style.color = "var(--gold)";
                 } catch (e) {
-                    showAlert("Akses Kamera", "Kamera tidak diizinkan.", "ï¿½aï¿½ï¸");
+                    showAlert("Akses Kamera", "Kamera tidak diizinkan.", "�a�️");
                 }
             }
         }
@@ -651,7 +651,7 @@
             }
 
             btnSnap.disabled = false;
-            btnSnap.innerText = "ULANGI FOTO ï¿½S";
+            btnSnap.innerText = "ULANGI FOTO �S";
             btnSnap.style.background = "var(--success)";
             btnSnap.style.color = "white";
         }
@@ -795,7 +795,7 @@
 
             } catch (e) {
                 if (blocker) blocker.remove();
-                showAlert("Error", "Gagal koneksi.", "ï¿½R");
+                showAlert("Error", "Gagal koneksi.", "�R");
             } finally {
                 loading.style.display = 'none';
             }
@@ -804,7 +804,7 @@
         window.submitOnsite = async function() {
             const nama = document.getElementById('reg-nama').value;
             const whatsapp = document.getElementById('reg-wa').value;
-            if (!nama) { showAlert("Perhatian", "Nama wajib diisi!", "ï¿½aï¿½ï¸"); return; }
+            if (!nama) { showAlert("Perhatian", "Nama wajib diisi!", "�a�️"); return; }
             const cleanPhone = whatsapp.replace(/\D/g, '');
 
             const loading = document.getElementById('loading');
@@ -987,7 +987,7 @@
                 await showAlert(
                     "REGISTRASI BERHASIL",
                     `Selamat Datang,\n\n${nama.toUpperCase()}\n(${payload.kategori || 'UMUM'})\n\nSilakan Masuk`,
-                    "ï¿½Sï¿½"
+                    "�S�"
                 );
 
                 // RESET FIELDS
@@ -1024,7 +1024,7 @@
                 }
 
                 capturedBase64 = null;
-                document.getElementById('btn-reg-snap').innerText = "ï¿½xï¿½ AMBIL SELFIE (OPSIONAL)";
+                document.getElementById('btn-reg-snap').innerText = "�x� AMBIL SELFIE (OPSIONAL)";
                 document.getElementById('btn-reg-snap').style.background = "white";
                 document.getElementById('btn-reg-snap').style.color = "var(--gold)";
 
@@ -1032,7 +1032,7 @@
                 fetchData();
             } catch (e) {
                 if (blocker) blocker.remove();
-                showAlert("Error", "Gagal koneksi.", "ï¿½R");
+                showAlert("Error", "Gagal koneksi.", "�R");
             } finally {
                 loading.style.display = 'none';
             }

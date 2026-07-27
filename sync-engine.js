@@ -1,6 +1,6 @@
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   SYNC-ENGINE.JS â€” Offline Sync Engine for SapaTamu PWA
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+﻿/* ═══════════════════════════════════════════════════════════
+   SYNC-ENGINE.JS — Offline Sync Engine for SapaTamu PWA
+   ═══════════════════════════════════════════════════════════ */
 
 const SyncEngine = (() => {
     const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
@@ -15,7 +15,7 @@ const SyncEngine = (() => {
     let isSyncing = false;
     let syncInterval = null;
 
-    // â”€â”€ Initialize â”€â”€
+    // ── Initialize ──
     function init() {
         // Listen for online/offline events
         window.addEventListener('online', () => {
@@ -38,7 +38,7 @@ const SyncEngine = (() => {
         console.log('[SyncEngine] Initialized. Online:', isOnline);
     }
 
-    // â”€â”€ Online Status UI â”€â”€
+    // ── Online Status UI ──
     function updateOnlineStatus(online) {
         const indicator = document.getElementById('online-status-indicator');
         const text = document.getElementById('online-status-text');
@@ -61,7 +61,7 @@ const SyncEngine = (() => {
         }));
     }
 
-    // â”€â”€ Sync Queue Processor â”€â”€
+    // ── Sync Queue Processor ──
     async function triggerSync() {
         if (!isOnline || isSyncing) return;
 
@@ -112,7 +112,7 @@ const SyncEngine = (() => {
         }
     }
 
-    // â”€â”€ Process Individual Operation â”€â”€
+    // ── Process Individual Operation ──
     async function processOperation(op) {
         const session = await OfflineDB.auth.get();
         const ssId = session?.ssId;
@@ -132,7 +132,7 @@ const SyncEngine = (() => {
         }
     }
 
-    // â”€â”€ Sync Operations â”€â”€
+    // ── Sync Operations ──
     async function syncInsert(ssId, guestData) {
         const payload = {
             ssid: ssId,
@@ -202,7 +202,7 @@ const SyncEngine = (() => {
         if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
     }
 
-    // â”€â”€ Sync Print Queue â”€â”€
+    // ── Sync Print Queue ──
     async function syncPrintQueue() {
         if (!isOnline) return;
 
@@ -230,7 +230,7 @@ const SyncEngine = (() => {
         }
     }
 
-    // â”€â”€ Load Data from Server â”€â”€
+    // ── Load Data from Server ──
     async function pullFromServer() {
         if (!isOnline) return null;
 
@@ -287,7 +287,7 @@ const SyncEngine = (() => {
         }
     }
 
-    // â”€â”€ Auto Sync â”€â”€
+    // ── Auto Sync ──
     function startAutoSync() {
         if (syncInterval) clearInterval(syncInterval);
         syncInterval = setInterval(() => {
@@ -305,7 +305,7 @@ const SyncEngine = (() => {
         }
     }
 
-    // â”€â”€ Full Bootstrap (first login) â”€â”€
+    // ── Full Bootstrap (first login) ──
     async function bootstrap(ssId, username, subdomain) {
         // 1. Save auth
         await OfflineDB.auth.save(ssId, username, subdomain);
@@ -316,7 +316,7 @@ const SyncEngine = (() => {
         console.log('[SyncEngine] Bootstrap complete');
     }
 
-    // â”€â”€ Public API â”€â”€
+    // ── Public API ──
     return {
         init,
         triggerSync,

@@ -17,10 +17,10 @@ $newFunc = @"
                 currentUserData = rows[0];
                 renderProfile();
             } else {
-                showSapaModal("Data Tidak Ditemukan", "Tidak dapat memuat profil Anda.", "Ã¢ÂÅ’");
+                showSapaModal("Data Tidak Ditemukan", "Tidak dapat memuat profil Anda.", "❌");
             }
         } catch (e) {
-            showSapaModal("Koneksi Gagal", "Gagal menghubungi server database.", "Ã¢Å¡Â Ã¯Â¸Â");
+            showSapaModal("Koneksi Gagal", "Gagal menghubungi server database.", "⚠️");
         }
     }
 "@
