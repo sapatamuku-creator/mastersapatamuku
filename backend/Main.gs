@@ -61,7 +61,7 @@ function handleMainGet(e) {
 
       let message = (presetKode == 1) 
         ? `Halo, Bapak/Ibu *${namaTamu}*.\n\nSelamat datang di hari bahagia *${namaMempelai}* di *${namaGedung}*.\n\nTerima kasih telah melakukan check-in melalui *SapaTamu.Ku*.`
-        : `Selamat datang, Kak *${namaTamu}*! âœ¨\n\nTerima kasih sudah hadir di *${namaMempelai}*. Check-in berhasil!\n\nEnjoy the party! ðŸ¥‚`;
+        : `Selamat datang, Kak *${namaTamu}*! Ã¢Å“Â¨\n\nTerima kasih sudah hadir di *${namaMempelai}*. Check-in berhasil!\n\nEnjoy the party! Ã°Å¸Â¥â€š`;
 
       const options = {
         'method': 'post',
@@ -851,7 +851,7 @@ function registerNewOnsite(data) {
   try {
     lock.waitLock(30000);
     const now = new Date();
-    const timestampP = "[âœ… " + Utilities.formatDate(now, "GMT+7", "dd/MM HH:mm") + "]";
+    const timestampP = "[Ã¢Å“â€¦ " + Utilities.formatDate(now, "GMT+7", "dd/MM HH:mm") + "]";
     const nowFormatted = Utilities.formatDate(now, "GMT+7", "yyyy-MM-dd HH:mm:ss");
     const timeOnly = Utilities.formatDate(now, "GMT+7", "HH:mm:ss");
     
@@ -1073,7 +1073,7 @@ function submitGuestCollection(formData) {
 function markAsSent(ssId, row, kodeUnik) {
   const ss = getSS(ssId);
   const sheet = ss.getSheetByName(SHEET_DATA);
-  const statusStr = "âœ… " + Utilities.formatDate(new Date(), "GMT+7", "dd/MM HH:mm");
+  const statusStr = "Ã¢Å“â€¦ " + Utilities.formatDate(new Date(), "GMT+7", "dd/MM HH:mm");
   
   let targetRow = row;
   let targetKode = kodeUnik;
@@ -1236,7 +1236,7 @@ function getWelcomeData(ssId) {
       if (rdLast >= 2) {
         const logData = rundownSheet.getRange(Math.max(2, rdLast - 10), 6, Math.min(11, rdLast), 1).getValues();
         const names = logData.map(r => String(r[0] || "").trim()).filter(n => n !== "").reverse();
-        if (names.length > 0) guestLog = "SELAMAT DATANG: " + names.join("  â€¢  ");
+        if (names.length > 0) guestLog = "SELAMAT DATANG: " + names.join("  Ã¢â‚¬Â¢  ");
       }
     }
 
@@ -1782,7 +1782,7 @@ function updateRsvp(ssId, guestId, pax, wishText) {
 
 // --- SUPABASE INTEGRATION SCRIPT ---
 var SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+var SUPABASE_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
 
 function supabaseFetch(url, options) {
   options = options || {};
@@ -1808,7 +1808,7 @@ function supabaseFetch(url, options) {
  * Tabel target: config_invitation (ssid TEXT PK, data JSONB, updated_at TIMESTAMPTZ)
  *
  * SQL untuk buat tabel (jalankan sekali di Supabase Dashboard > SQL Editor):
- * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
  * CREATE TABLE IF NOT EXISTS config_invitation (
  *   ssid       TEXT PRIMARY KEY,
  *   data       JSONB NOT NULL DEFAULT '{}',
@@ -1817,7 +1817,7 @@ function supabaseFetch(url, options) {
  * ALTER TABLE config_invitation ENABLE ROW LEVEL SECURITY;
  * CREATE POLICY "Public read" ON config_invitation FOR SELECT USING (true);
  * CREATE POLICY "Anon write"  ON config_invitation FOR ALL  USING (true);
- * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
  */
 function mirrorInvConfigToSupabase(ssId, invitationData) {
   try {
@@ -2251,7 +2251,7 @@ function editGuest(payload) {
     sheet.getRange(rowIndex, 4).setValue("'" + finalPhone);
     sheet.getRange(rowIndex, 5).setValue(payload.kategori);
     sheet.getRange(rowIndex, 8).setValue(payload.pax || payload.rencana || 1);
-    sheet.getRange(rowIndex, 11).setValue(payload.souvenir || "tidak");  // âœ… FIX: souvenir col
+    sheet.getRange(rowIndex, 11).setValue(payload.souvenir || "tidak");  // Ã¢Å“â€¦ FIX: souvenir col
     sheet.getRange(rowIndex, 12).setValue(payload.pihak);
     sheet.getRange(rowIndex, 13).setValue(payload.alamat);
     sheet.getRange(rowIndex, 19).setValue(payload.sesi || "-");

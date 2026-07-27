@@ -1,12 +1,12 @@
-/* ═══════════════════════════════════════════════════════════
-   SYNC-ENGINE.JS — Offline Sync Engine for SapaTamu PWA
-   ═══════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SYNC-ENGINE.JS â€” Offline Sync Engine for SapaTamu PWA
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 const SyncEngine = (() => {
     const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
     const SB_HEADERS = {
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII',
+        'apikey': 'sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u',
+        'Authorization': 'Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u',
         'Content-Type': 'application/json'
     };
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec';
@@ -15,7 +15,7 @@ const SyncEngine = (() => {
     let isSyncing = false;
     let syncInterval = null;
 
-    // ── Initialize ──
+    // â”€â”€ Initialize â”€â”€
     function init() {
         // Listen for online/offline events
         window.addEventListener('online', () => {
@@ -38,7 +38,7 @@ const SyncEngine = (() => {
         console.log('[SyncEngine] Initialized. Online:', isOnline);
     }
 
-    // ── Online Status UI ──
+    // â”€â”€ Online Status UI â”€â”€
     function updateOnlineStatus(online) {
         const indicator = document.getElementById('online-status-indicator');
         const text = document.getElementById('online-status-text');
@@ -61,7 +61,7 @@ const SyncEngine = (() => {
         }));
     }
 
-    // ── Sync Queue Processor ──
+    // â”€â”€ Sync Queue Processor â”€â”€
     async function triggerSync() {
         if (!isOnline || isSyncing) return;
 
@@ -112,7 +112,7 @@ const SyncEngine = (() => {
         }
     }
 
-    // ── Process Individual Operation ──
+    // â”€â”€ Process Individual Operation â”€â”€
     async function processOperation(op) {
         const session = await OfflineDB.auth.get();
         const ssId = session?.ssId;
@@ -132,7 +132,7 @@ const SyncEngine = (() => {
         }
     }
 
-    // ── Sync Operations ──
+    // â”€â”€ Sync Operations â”€â”€
     async function syncInsert(ssId, guestData) {
         const payload = {
             ssid: ssId,
@@ -202,7 +202,7 @@ const SyncEngine = (() => {
         if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
     }
 
-    // ── Sync Print Queue ──
+    // â”€â”€ Sync Print Queue â”€â”€
     async function syncPrintQueue() {
         if (!isOnline) return;
 
@@ -230,7 +230,7 @@ const SyncEngine = (() => {
         }
     }
 
-    // ── Load Data from Server ──
+    // â”€â”€ Load Data from Server â”€â”€
     async function pullFromServer() {
         if (!isOnline) return null;
 
@@ -287,7 +287,7 @@ const SyncEngine = (() => {
         }
     }
 
-    // ── Auto Sync ──
+    // â”€â”€ Auto Sync â”€â”€
     function startAutoSync() {
         if (syncInterval) clearInterval(syncInterval);
         syncInterval = setInterval(() => {
@@ -305,7 +305,7 @@ const SyncEngine = (() => {
         }
     }
 
-    // ── Full Bootstrap (first login) ──
+    // â”€â”€ Full Bootstrap (first login) â”€â”€
     async function bootstrap(ssId, username, subdomain) {
         // 1. Save auth
         await OfflineDB.auth.save(ssId, username, subdomain);
@@ -316,7 +316,7 @@ const SyncEngine = (() => {
         console.log('[SyncEngine] Bootstrap complete');
     }
 
-    // ── Public API ──
+    // â”€â”€ Public API â”€â”€
     return {
         init,
         triggerSync,

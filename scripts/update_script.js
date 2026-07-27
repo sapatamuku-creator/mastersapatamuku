@@ -7,8 +7,8 @@ const scriptEnd = html.lastIndexOf('</script>') + 9;
 const newScript = `<script>
     const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
     const SB_HEADERS = {
-        "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
-        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII",
+        "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
+        "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
         "Content-Type": "application/json",
         "Prefer": "return=representation"
     };
@@ -34,10 +34,10 @@ const newScript = `<script>
                 document.getElementById('login-overlay').style.display = 'none';
                 loadData();
             } else {
-                showToast("�R Akses Ditolak: Password Salah!", "red");
+                showToast("ï¿½R Akses Ditolak: Password Salah!", "red");
             }
         } catch (e) {
-            showToast("�R Error Koneksi: " + e.toString(), "red");
+            showToast("ï¿½R Error Koneksi: " + e.toString(), "red");
         }
         btn.innerHTML = 'Masuk Dashboard';
         btn.disabled = false;
@@ -53,7 +53,7 @@ const newScript = `<script>
             updateStats(allClients);
             renderTable(allClients);
         } catch (e) {
-            tbody.innerHTML = \`<tr><td colspan="13" style="text-align:center; color:var(--red); padding:40px;">�R Error: \${e.message}</td></tr>\`;
+            tbody.innerHTML = \`<tr><td colspan="13" style="text-align:center; color:var(--red); padding:40px;">ï¿½R Error: \${e.message}</td></tr>\`;
         }
     }
 
@@ -77,7 +77,7 @@ const newScript = `<script>
             const rawDate = c.created_at ? new Date(c.created_at) : null;
             const dateStr = rawDate ? rawDate.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) : '-';
 
-            const ssIdHtml = c.ssid ? \`<a href="https://docs.google.com/spreadsheets/d/\${esc(c.ssid)}/edit" target="_blank" style="color:var(--gold); text-decoration:none;">�x— Buka Sheet</a>\` : \`<span style="color:var(--muted)">Belum Dibuat</span>\`;
+            const ssIdHtml = c.ssid ? \`<a href="https://docs.google.com/spreadsheets/d/\${esc(c.ssid)}/edit" target="_blank" style="color:var(--gold); text-decoration:none;">ï¿½xâ€” Buka Sheet</a>\` : \`<span style="color:var(--muted)">Belum Dibuat</span>\`;
 
             return \`<tr id="row-\${i}" data-username="\${esc(c.username)}">
                 <td style="color:var(--muted)">\${i + 1}</td>
@@ -94,7 +94,7 @@ const newScript = `<script>
                 </td>
                 <td>\${ssIdHtml}</td>
                 <td style="color:var(--muted); font-size:11px;">\${dateStr}</td>
-                <td><button class="save-row-btn" onclick="saveRow(\${i})">�x� Simpan</button></td>
+                <td><button class="save-row-btn" onclick="saveRow(\${i})">ï¿½xï¿½ Simpan</button></td>
             </tr>\`;
         }).join('');
     }
@@ -135,7 +135,7 @@ const newScript = `<script>
         };
 
         const btn = row.querySelector('.save-row-btn');
-        btn.innerText = '⏳...'; btn.disabled = true;
+        btn.innerText = 'â³...'; btn.disabled = true;
 
         try {
             const res = await fetch(\`\${SUPABASE_URL}/rest/v1/clients?username=eq.\${encodeURIComponent(username)}\`, {
@@ -150,12 +150,12 @@ const newScript = `<script>
                 row.setAttribute('data-username', freshClient.username);
             }
             row.classList.remove('dirty');
-            showToast("�S& Tersimpan di Supabase! Sync ke Spreadsheet berjalan.", "green");
+            showToast("ï¿½S& Tersimpan di Supabase! Sync ke Spreadsheet berjalan.", "green");
             triggerGasSyncBackground(username, payload);
         } catch (e) {
-            showToast("�R Error: " + e.message, "red");
+            showToast("ï¿½R Error: " + e.message, "red");
         }
-        btn.innerText = '�x� Simpan'; btn.disabled = false;
+        btn.innerText = 'ï¿½xï¿½ Simpan'; btn.disabled = false;
     }
 
     function triggerGasSyncBackground(username, payload) {
@@ -166,12 +166,12 @@ const newScript = `<script>
     }
 
     async function triggerGasSync() {
-        showToast("⏳ Meminta sinkronisasi massal Supabase -> Spreadsheet...", "gold");
+        showToast("â³ Meminta sinkronisasi massal Supabase -> Spreadsheet...", "gold");
         try {
             fetch(GAS_SYNC_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "syncAllClients" }) });
-            setTimeout(() => showToast("�S& Permintaan sync dikirim ke GAS!", "green"), 1000);
+            setTimeout(() => showToast("ï¿½S& Permintaan sync dikirim ke GAS!", "green"), 1000);
         } catch (e) {
-            showToast("�R Gagal kirim sync: " + e.message, "red");
+            showToast("ï¿½R Gagal kirim sync: " + e.message, "red");
         }
     }
 

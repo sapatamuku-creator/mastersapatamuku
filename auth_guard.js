@@ -1,5 +1,5 @@
 /**
- * auth_guard.js — SapaTamu RBAC Guard
+ * auth_guard.js â€” SapaTamu RBAC Guard
  * =====================================
  * Diinclude di setiap halaman yang dilindungi.
  * Otomatis menerapkan akses berdasarkan role session.
@@ -16,7 +16,7 @@
     const SESSION_KEY = 'sapatamu_session';
     const LOCAL_DB = 'sapatamu_db';
 
-    // ─── Baca session & role ───────────────────────────────────────────────
+    // â”€â”€â”€ Baca session & role â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function getSession() {
         try {
             return JSON.parse(sessionStorage.getItem(SESSION_KEY)) ||
@@ -32,7 +32,7 @@
         return s.role || undefined;
     }
 
-    // ─── Upgrade role di session (Switch to Admin) ─────────────────────────
+    // â”€â”€â”€ Upgrade role di session (Switch to Admin) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function upgradeRoleToUsher() {
         const s = getSession();
         s.role = 'usher';
@@ -41,7 +41,7 @@
         localStorage.setItem(LOCAL_DB, JSON.stringify(s));
     }
 
-    // ─── Disable seluruh konten (view-only) ───────────────────────────────
+    // â”€â”€â”€ Disable seluruh konten (view-only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // NAV SELALU BEBAS: elemen di dalam #nav-scroll / .nav-scroll-container
     // tidak pernah di-disable agar user tetap bisa pindah halaman
     function isInsideNav(el) {
@@ -115,13 +115,13 @@
         }
     }
 
-    // ─── MODE A: Halaman Lapangan (kiosk/checkin/onsite/worker) ──────────
+    // â”€â”€â”€ MODE A: Halaman Lapangan (kiosk/checkin/onsite/worker) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // CLIENT: tampilkan overlay warning + Switch to Admin
     // USHER : langsung full access
     function applyFieldGuard() {
         const role = getRole();
         // Hanya terapkan guard jika role EKSPLISIT 'client'
-        // Usher → full access | Tidak ada role (sesi lama) → full access (backward compat)
+        // Usher â†’ full access | Tidak ada role (sesi lama) â†’ full access (backward compat)
         if (role !== 'client') return;
         // Cegah double-inject jika initApp() dipanggil ulang saat retry SAPATAMU_RESOLVED
         if (document.getElementById('sapa-guard-overlay')) return;
@@ -143,7 +143,7 @@
                 pointer-events: none;   /* overlay sendiri tidak blokir klik */
             }
             #sapa-guard-overlay.dismissed #sapa-guard-box { display: none; }
-            /* TIDAK ada ::after — nav dan halaman bisa di-scroll/klik sesuai hak */
+            /* TIDAK ada ::after â€” nav dan halaman bisa di-scroll/klik sesuai hak */
             #sapa-guard-box {
                 background: #fff;
                 width: 90%; max-width: 380px;
@@ -210,12 +210,12 @@
         overlay.id = 'sapa-guard-overlay';
         overlay.innerHTML = `
             <div id="sapa-guard-box">
-                <div style="font-size:48px">⚠️</div>
+                <div style="font-size:48px">âš ï¸</div>
                 <h3>Akses Terbatas</h3>
                 <p>Halaman ini hanya dapat dioperasikan oleh <strong>Admin/Usher Sapatamu</strong> yang bertugas.<br><br>Anda dapat melihat halaman ini, namun tidak dapat berinteraksi.</p>
                 <div class="sapa-guard-btn-row">
                     <button class="sapa-guard-btn secondary" onclick="SapaGuard.dismissOverlay()">Mengerti</button>
-                    <button class="sapa-guard-btn primary" onclick="SapaGuard.showAdminModal()">🔑 Masuk Admin</button>
+                    <button class="sapa-guard-btn primary" onclick="SapaGuard.showAdminModal()">ðŸ”‘ Masuk Admin</button>
                 </div>
             </div>
         `;
@@ -226,10 +226,10 @@
         modal.id = 'sapa-admin-modal';
         modal.innerHTML = `
             <div id="sapa-admin-modal-box">
-                <div style="font-size:36px; margin-bottom:10px">🔑</div>
+                <div style="font-size:36px; margin-bottom:10px">ðŸ”‘</div>
                 <h3>Masuk sebagai Admin</h3>
                 <p>Masukkan password Admin Sapatamu untuk mengaktifkan halaman ini.</p>
-                <input type="password" id="sapa-admin-pass-input" placeholder="••••••" 
+                <input type="password" id="sapa-admin-pass-input" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢" 
                     onkeydown="if(event.key==='Enter') SapaGuard.verifyAdmin()">
                 <div id="sapa-admin-err"></div>
                 <div class="sapa-guard-btn-row">
@@ -244,13 +244,13 @@
         applyViewOnlyContent();
     }
 
-    // ─── MODE B: Halaman Sensitif (formulir/wa_blast/config/angpao) ───────
+    // â”€â”€â”€ MODE B: Halaman Sensitif (formulir/wa_blast/config/angpao) â”€â”€â”€â”€â”€â”€â”€
     // USHER : tampilkan banner VIEW ONLY + disable input/button
     // CLIENT: full access, tidak ada guard
     function applySensitiveGuard() {
         const role = getRole();
         // Hanya terapkan view-only jika role EKSPLISIT 'usher'
-        // Client → full access | Tidak ada role (sesi lama) → full access (backward compat)
+        // Client â†’ full access | Tidak ada role (sesi lama) â†’ full access (backward compat)
         if (role !== 'usher') return;
         // Cegah double-inject jika initApp() dipanggil ulang
         if (document.getElementById('sapa-guard-banner')) return;
@@ -279,8 +279,8 @@
         const banner = document.createElement('div');
         banner.id = 'sapa-guard-banner';
         banner.innerHTML = `
-            🔒 Mode Lihat Saja
-            <span>— Halaman ini tidak dapat diedit oleh Usher/Admin Lapangan</span>
+            ðŸ”’ Mode Lihat Saja
+            <span>â€” Halaman ini tidak dapat diedit oleh Usher/Admin Lapangan</span>
         `;
         document.body.prepend(banner);
 
@@ -296,7 +296,7 @@
         return s.role === 'client' || s.role === 'usher';
     }
 
-    // ─── Public API ────────────────────────────────────────────────────────
+    // â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     window.SapaGuard = {
         apply: function (mode) {
             window.SAPAGUARD_MODE = mode;
@@ -377,19 +377,19 @@
                         el.style.cursor = '';
                     });
                 } else {
-                    errEl.innerText = '❌ ' + (data.message || 'Password salah');
+                    errEl.innerText = 'âŒ ' + (data.message || 'Password salah');
                     document.getElementById('sapa-admin-pass-input').value = '';
                     document.getElementById('sapa-admin-pass-input').focus();
                 }
             } catch (e) {
-                errEl.innerText = '⚠️ Gagal menghubungi server.';
+                errEl.innerText = 'âš ï¸ Gagal menghubungi server.';
             }
             btn.disabled = false;
             btn.innerText = 'Konfirmasi';
         }
     };
 
-    // ─── Terapkan Proteksi Timeout & Visibility Terpusat ───────────────────
+    // â”€â”€â”€ Terapkan Proteksi Timeout & Visibility Terpusat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     (function initTimeoutAndVisibility() {
         const path = window.location.pathname.toLowerCase();
 
@@ -548,7 +548,7 @@
                         const toast = document.createElement('div');
                         toast.id = 'sapa-realtime-warning';
                         toast.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:999999; background:#FFEBEB; color:#D93838; border:1px solid #FFC4C4; padding:12px 24px; border-radius:30px; font-size:12px; font-weight:700; box-shadow:0 8px 24px rgba(217,56,56,0.15); font-family:sans-serif; display:flex; align-items:center; gap:10px;';
-                        toast.innerHTML = '⚠️ Koneksi realtime dijeda. <span style="text-decoration:underline; cursor:pointer;" onclick="window.location.reload()">Refresh Halaman</span> untuk menyambungkan kembali.';
+                        toast.innerHTML = 'âš ï¸ Koneksi realtime dijeda. <span style="text-decoration:underline; cursor:pointer;" onclick="window.location.reload()">Refresh Halaman</span> untuk menyambungkan kembali.';
                         document.body.appendChild(toast);
                         setTimeout(() => { if (toast) toast.remove(); }, 10000);
                     } else {
@@ -569,10 +569,10 @@
         });
     })();
 
-    // ─── Presence Tracking: Daftarkan browser user ke Supabase Realtime ─────
+    // â”€â”€â”€ Presence Tracking: Daftarkan browser user ke Supabase Realtime â”€â”€â”€â”€â”€
     (function initPresenceTracking() {
         const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
+        const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
         const SESSION_KEY = 'sapatamu_session';
         const LOCAL_DB = 'sapatamu_db';
 
@@ -692,7 +692,7 @@
 
                     // Hanya daftarkan kick listener dan poller untuk role operasional (client/usher)
                     if (session.role === 'client' || session.role === 'usher') {
-                        // ── Force-Disconnect Listener ──────────────────────────────────
+                        // â”€â”€ Force-Disconnect Listener â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                         try {
                             const kickChannel = client.channel('sapatamu-kick-signal')
                                 .on('broadcast', { event: 'force-disconnect' }, (payload) => {
@@ -746,7 +746,7 @@
             // Tampilkan notifikasi sebelum redirect
             const msg = document.createElement('div');
             msg.style.cssText = 'position:fixed;inset:0;z-index:9999999;background:rgba(74,63,53,0.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;font-family:sans-serif;';
-            msg.innerHTML = '<div style="text-align:center;color:#fff;"><div style="font-size:48px;margin-bottom:16px">🔒</div><div style="font-size:20px;font-weight:800;margin-bottom:8px">Sesi Diakhiri</div><div style="font-size:13px;opacity:0.7">Admin memutus koneksi Anda. Anda akan diarahkan ke halaman login.</div></div>';
+            msg.innerHTML = '<div style="text-align:center;color:#fff;"><div style="font-size:48px;margin-bottom:16px">ðŸ”’</div><div style="font-size:20px;font-weight:800;margin-bottom:8px">Sesi Diakhiri</div><div style="font-size:13px;opacity:0.7">Admin memutus koneksi Anda. Anda akan diarahkan ke halaman login.</div></div>';
             document.body.appendChild(msg);
             setTimeout(() => window.location.replace('login.html?reason=force_disconnect'), 2500);
         }
