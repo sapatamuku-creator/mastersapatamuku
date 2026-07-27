@@ -24,10 +24,10 @@ DROP POLICY IF EXISTS "Anon CRUD config_welcome" ON public.config_welcome;
 CREATE POLICY "Anon CRUD config_welcome" ON public.config_welcome
   FOR ALL TO anon
   USING (
-    (current_setting('request.headers', true)::json ->> 'x-sapatamu-secret') = 'sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u' OR 
+    (current_setting('request.headers', true)::json ->> 'x-sapatamu-secret') = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII' OR 
     (current_setting('request.headers', true)::json ->> 'x-sapatamu-secret') IS NOT NULL
   )
   WITH CHECK (
-    (current_setting('request.headers', true)::json ->> 'x-sapatamu-secret') = 'sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u' OR
+    (current_setting('request.headers', true)::json ->> 'x-sapatamu-secret') = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII' OR
     (current_setting('request.headers', true)::json ->> 'x-sapatamu-secret') IS NOT NULL
   );

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * auth_guard.js — SapaTamu RBAC Guard
  * =====================================
  * Diinclude di setiap halaman yang dilindungi.
@@ -572,7 +572,7 @@
     // ─── Presence Tracking: Daftarkan browser user ke Supabase Realtime ─────
     (function initPresenceTracking() {
         const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-        const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII";
         const SESSION_KEY = 'sapatamu_session';
         const LOCAL_DB = 'sapatamu_db';
 

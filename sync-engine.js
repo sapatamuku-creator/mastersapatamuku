@@ -1,12 +1,12 @@
-﻿/* ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    SYNC-ENGINE.JS — Offline Sync Engine for SapaTamu PWA
    ═══════════════════════════════════════════════════════════ */
 
 const SyncEngine = (() => {
     const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
     const SB_HEADERS = {
-        'apikey': 'sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u',
-        'Authorization': 'Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxscmFwZXNhYW9saXlqcnJyc2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzU2ODUsImV4cCI6MjA5NDc1MTY4NX0.rZPCxRQmjb3SyimYDokgm1R1u2QSqj3iBv0gGEEteII',
         'Content-Type': 'application/json'
     };
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec';
