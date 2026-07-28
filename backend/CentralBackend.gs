@@ -38,7 +38,10 @@ function validateCsrfToken(token) {
 }
 
 function requireCsrf(request) {
-  var token = request.csrf_token || request.headers?.['x-csrf-token'];
+  var token = request.csrf_token;
+  if (!token && request.headers) {
+    token = request.headers['x-csrf-token'];
+  }
   if (!validateCsrfToken(token)) {
     return createResponse({ status: "error", message: "Sesi tidak valid atau sudah kedaluwarsa. Silakan muat ulang halaman." });
   }
