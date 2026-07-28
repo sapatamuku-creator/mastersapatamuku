@@ -326,9 +326,10 @@
         updateQueueIndicator(count);
     }
 
-    // Intercept fungsi fetch global browser
+    // Intercept fungsi fetch global browser (dengan safeguards)
     if (!window.originalFetch) {
         window.originalFetch = window.fetch;
+        const MAX_QUEUE_SIZE = 50; // Batas maksimal antrean
         window.fetch = function(url, options) {
             let shouldIntercept = false;
             
@@ -353,6 +354,16 @@
             }
             
             if (shouldIntercept) {
+                // Cek batas antrean sebelum enqueue
+                const currentCount = document.getElementById('sync-queue-badge')?.dataset?.count || 0;
+                if (parseInt(currentCount) >= MAX_QUEUE_SIZE) {
+                    console.warn('[SyncQueue] Antrean penuk, request diabaikan:', url);
+                    return Promise.resolve(new Response(JSON.stringify({ status: 'queue_full', error: 'Queue limit reached' }), {
+                        status: 503,
+                        headers: { 'Content-Type': 'application/json' }
+                    }));
+                }
+                
                 enqueue(url, options);
                 
                 // Kembalikan Response sukses palsu ke frontend asli agar tidak merusak alur JS utama
@@ -413,12 +424,14 @@
 
         if (pendingCount > 0) {
             indicator.style.display = 'flex';
+            indicator.dataset.count = pendingCount; // Store count for fetch patch queue limit check
             indicator.innerHTML = `
                 <span style="display:inline-block; width:6px; height:6px; background:#C8962E; border-radius:50%; animation:syncPulse 1.5s infinite;"></span>
                 Sync Data: ${pendingCount} Antrean
             `;
         } else {
             indicator.style.display = 'none';
+            indicator.dataset.count = 0;
         }
     }
 
