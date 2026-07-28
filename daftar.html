@@ -965,9 +965,6 @@
             return showSapaModal("Syarat & Ketentuan", "Harap setujui Syarat & Ketentuan dan Kebijakan Pembayaran sebelum melanjutkan.", "⚠️ ");
         }
 
-        // Generate 6 digit OTP code
-        generatedOTPCode = Math.floor(100000 + Math.random() * 900000).toString();
-
         setLoading('btn_send_otp', true);
         try {
             const response = await fetch(SCRIPT_URL, {
@@ -978,8 +975,7 @@
                     action: "sendOTP",
                     whatsapp: wa,
                     email: email,
-                    channel: channel,
-                    otp: generatedOTPCode
+                    channel: channel
                 })
             });
             const res = await response.json();
@@ -1028,17 +1024,34 @@
         }, 1000);
     }
 
-    window.verifyOTPAndProceed = function() {
+    window.verifyOTPAndProceed = async function() {
         const inputVal = document.getElementById('otp_input').value.trim();
-        if (inputVal === generatedOTPCode) {
-            clearInterval(otpTimerInterval);
-                showSapaModal("Verifikasi Sukses!", "WhatsApp Anda telah diverifikasi secara sukses.", "✅");
-            setTimeout(() => {
-                nextStep('2-5');
-            }, 1000);
-        } else {
-                showSapaModal("OTP Salah", "Kode OTP yang Anda masukkan tidak cocok.", "❌");
+        if (!inputVal || inputVal.length !== 6) {
+            return showSapaModal("OTP Tidak Valid", "Masukkan 6 digit kode OTP.", "⚠️");
         }
+        setLoading('btn_verify_otp', true);
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "cors",
+                body: JSON.stringify({
+                    action: "verifyOTP",
+                    target: regData.whatsapp || regData.email,
+                    otp: inputVal
+                })
+            });
+            const res = await response.json();
+            if (res.status === "success") {
+                clearInterval(otpTimerInterval);
+                showSapaModal("Verifikasi Sukses!", "WhatsApp Anda telah diverifikasi secara sukses.", "✅");
+                setTimeout(() => { nextStep('2-5'); }, 1000);
+            } else {
+                showSapaModal("OTP Salah", res.message || "Kode OTP yang Anda masukkan tidak valid.", "❌");
+            }
+        } catch (e) {
+            showSapaModal("Error", "Gagal memverifikasi OTP: " + e.toString(), "❌");
+        }
+        setLoading('btn_verify_otp', false);
     };
 
     // ==============================================

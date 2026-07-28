@@ -163,6 +163,10 @@ function handleCentralPost(request) {
     case 'uploadFile': return handleUploadFile(request);
     case 'createMidtransTransaction': return handleCreateMidtransTransaction(request);
     case 'sendOTP': return handleSendOTP(request);
+    case 'verifyOTP': return (function() {
+      var r = verifyOTP(request.target || request.whatsapp || request.email, request.otp);
+      return createResponse({ status: r.valid ? "success" : "error", message: r.message });
+    })();
     case 'savePendingClient': return handleSavePendingClient(request);
     case 'registerAndActivate': return handleRegisterAndActivate(request);
     case 'getOwnerClients': return handleGetOwnerClients(request);
@@ -643,15 +647,22 @@ function deleteClientFromSupabaseWithResult(username) {
 
 function handleSendOTP(data) {
   try {
-    if (!data.otp) {
-      return createResponse({ status: "error", message: "OTP wajib diisi" });
-    }
-    
     const channel = data.channel || "wa";
+    const target = channel === "email" ? data.email : data.whatsapp;
+    
+    if (!target) {
+      return createResponse({ status: "error", message: channel === "email" ? "Email tujuan wajib diisi" : "WhatsApp tujuan wajib diisi" });
+    }
+
+    // ── SERVER-SIDE OTP GENERATION ──
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const props = PropertiesService.getScriptProperties();
+    const otpKey = 'otp_' + target.replace(/[^a-zA-Z0-9]/g, '_');
+    const otpExpiryKey = otpKey + '_expiry';
+    props.setProperty(otpKey, otp);
+    props.setProperty(otpExpiryKey, String(Date.now() + 5 * 60 * 1000)); // 5 minutes expiry
 
     if (channel === "email") {
-      if (!data.email) return createResponse({ status: "error", message: "Email tujuan wajib diisi" });
-      
       const emailHtml = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
         <div style="text-align: center; margin-bottom: 20px;">
@@ -661,7 +672,7 @@ function handleSendOTP(data) {
         <p style="color: #4A3F35; font-size: 16px; line-height: 1.5;">Halo,</p>
         <p style="color: #4A3F35; font-size: 16px; line-height: 1.5;">Berikut adalah kode OTP 6-digit untuk melanjutkan proses pendaftaran atau verifikasi akun SapaTamu Anda:</p>
         <div style="background-color: #FFF9F6; border: 2px dashed #E07B7B; padding: 20px; text-align: center; border-radius: 8px; margin: 25px 0;">
-          <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4A3F35;">${data.otp}</span>
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4A3F35;">${otp}</span>
         </div>
         <p style="color: #4A3F35; font-size: 14px; line-height: 1.5;"><strong>Peringatan Keamanan:</strong> Jangan pernah membagikan kode OTP ini kepada siapa pun, termasuk pihak yang mengaku sebagai tim SapaTamu.ku.</p>
         <hr style="border: none; border-top: 1px solid #F0E6DE; margin: 30px 0;">
@@ -671,7 +682,7 @@ function handleSendOTP(data) {
       GmailApp.sendEmail(
         data.email, 
         "Kode Verifikasi OTP SapaTamu.ku", 
-        `Kode OTP Anda adalah: ${data.otp}. Jangan bagikan kode ini kepada siapapun.`, 
+        `Kode OTP Anda adalah: ${otp}. Jangan bagikan kode ini kepada siapapun.`, 
         {
           name: "SapaTamu Security",
           htmlBody: emailHtml
@@ -680,18 +691,41 @@ function handleSendOTP(data) {
       return createResponse({ status: "success", message: "OTP terkirim via Email" });
     } else {
       // Default to WA
-      if (!data.whatsapp) return createResponse({ status: "error", message: "WhatsApp tujuan wajib diisi" });
-      const message = `*KODE OTP SAPATAMU.KU*\n\nKode OTP Anda adalah: *${data.otp}*\n\nKode ini digunakan untuk verifikasi pendaftaran akun SapaTamu Anda. Rahasiakan kode ini dari siapa pun.`;
+      const message = `*KODE OTP SAPATAMU.KU*\n\nKode OTP Anda adalah: *${otp}*\n\nKode ini digunakan untuk verifikasi pendaftaran akun SapaTamu Anda. Rahasiakan kode ini dari siapa pun.`;
       const res = sendWA(data.whatsapp, message);
       if (res === "success") {
         return createResponse({ status: "success", message: "OTP terkirim via WhatsApp" });
       } else {
+        props.deleteProperty(otpKey);
+        props.deleteProperty(otpExpiryKey);
         return createResponse({ status: "error", message: "Gagal mengirim OTP: " + res });
       }
     }
   } catch (e) {
     return createResponse({ status: "error", message: "Terjadi error OTP: " + e.toString() });
   }
+}
+
+// ── SERVER-SIDE OTP VERIFICATION ──
+function verifyOTP(target, inputOtp) {
+  const props = PropertiesService.getScriptProperties();
+  const otpKey = 'otp_' + target.replace(/[^a-zA-Z0-9]/g, '_');
+  const otpExpiryKey = otpKey + '_expiry';
+  const storedOtp = props.getProperty(otpKey);
+  const expiry = props.getProperty(otpExpiryKey);
+  
+  if (!storedOtp) return { valid: false, message: "OTP tidak ditemukan atau sudah digunakan" };
+  if (expiry && Date.now() > parseInt(expiry)) {
+    props.deleteProperty(otpKey);
+    props.deleteProperty(otpExpiryKey);
+    return { valid: false, message: "OTP sudah kedaluwarsa (5 menit)" };
+  }
+  if (storedOtp !== String(inputOtp)) return { valid: false, message: "OTP salah" };
+  
+  // OTP valid — delete after use
+  props.deleteProperty(otpKey);
+  props.deleteProperty(otpExpiryKey);
+  return { valid: true };
 }
 
 function sendWA(target, message) {
