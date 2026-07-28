@@ -57,34 +57,37 @@ async function csrfHeaders() {
   return token ? { 'X-CSRF-Token': token } : {};
 }
 
-// ── SESSION MANAGEMENT (httpOnly-equivalent for static sites) ──
+// ── SESSION MANAGEMENT ──
+// NOTE: sessionStorage TIDAK bisa cross-subdomain (sapatamu.id → fazafarid.sapatamu.id)
+// Jadi localStorage tetap dibutuhkan sebagai session store utama.
 const SESSION_CONFIG = {
   timeoutMs: 30 * 60 * 1000, // 30 minutes inactivity timeout
   storageKey: 'sapatamu_session',
+  legacyKey: 'sapatamu_db',
   lastActivityKey: 'sapatamu_last_activity'
 };
 
-// Save session to sessionStorage ONLY (clears on tab close — like httpOnly)
+// Save session — write to both localStorage (cross-subdomain) and sessionStorage
 function saveSession(data) {
-  sessionStorage.setItem(SESSION_CONFIG.storageKey, JSON.stringify(data));
-  sessionStorage.setItem(SESSION_CONFIG.lastActivityKey, String(Date.now()));
-  // Clear legacy localStorage session if exists
-  localStorage.removeItem('sapatamu_db');
+  var json = JSON.stringify(data);
+  localStorage.setItem(SESSION_CONFIG.legacyKey, json);
+  sessionStorage.setItem(SESSION_CONFIG.storageKey, json);
+  localStorage.setItem(SESSION_CONFIG.lastActivityKey, String(Date.now()));
 }
 
-// Get session from sessionStorage (with inactivity check)
+// Get session — try sessionStorage first, fallback to localStorage
 function getSession() {
   try {
-    const raw = sessionStorage.getItem(SESSION_CONFIG.storageKey);
+    var raw = sessionStorage.getItem(SESSION_CONFIG.storageKey) || localStorage.getItem(SESSION_CONFIG.legacyKey);
     if (!raw) return null;
     // Check inactivity timeout
-    const lastActivity = parseInt(sessionStorage.getItem(SESSION_CONFIG.lastActivityKey) || '0');
-    if (Date.now() - lastActivity > SESSION_CONFIG.timeoutMs) {
+    var lastActivity = parseInt(localStorage.getItem(SESSION_CONFIG.lastActivityKey) || '0');
+    if (lastActivity && Date.now() - lastActivity > SESSION_CONFIG.timeoutMs) {
       clearSession();
       return null;
     }
     // Refresh activity timestamp
-    sessionStorage.setItem(SESSION_CONFIG.lastActivityKey, String(Date.now()));
+    localStorage.setItem(SESSION_CONFIG.lastActivityKey, String(Date.now()));
     return JSON.parse(raw);
   } catch (e) {
     return null;
@@ -94,13 +97,14 @@ function getSession() {
 // Clear session on logout or timeout
 function clearSession() {
   sessionStorage.removeItem(SESSION_CONFIG.storageKey);
-  sessionStorage.removeItem(SESSION_CONFIG.lastActivityKey);
+  localStorage.removeItem(SESSION_CONFIG.legacyKey);
+  localStorage.removeItem(SESSION_CONFIG.lastActivityKey);
 }
 
 // Periodic inactivity check (call on page load)
 function startSessionWatchdog() {
-  setInterval(() => {
-    const lastActivity = parseInt(sessionStorage.getItem(SESSION_CONFIG.lastActivityKey) || '0');
+  setInterval(function() {
+    var lastActivity = parseInt(localStorage.getItem(SESSION_CONFIG.lastActivityKey) || '0');
     if (lastActivity && Date.now() - lastActivity > SESSION_CONFIG.timeoutMs) {
       clearSession();
       if (window.location.pathname.indexOf('login.html') === -1) {
