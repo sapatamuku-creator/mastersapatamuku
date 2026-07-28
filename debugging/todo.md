@@ -7,34 +7,34 @@
 
 ## CRITICAL (7)
 
-- [ ] C1. Rotate & remove hardcoded Supabase API key dari 14+ file
-- [ ] C2. Hash semua password di database (setup_login_rpc.sql)
-- [ ] C3. Fix SECURITY DEFINER function — tambah input sanitization
-- [ ] C4. Fix broken RLS logic di config_welcome.sql
-- [ ] C5. Sanitize innerHTML XSS — 8+ file
-- [ ] C6. Hapus role dari URL parameter (privilege escalation)
-- [ ] C7. Remove hardcoded Midtrans payment key
+- [x] C1. Rotate & remove hardcoded Supabase API key dari 14+ file ✅ 2026-07-28
+- [x] C2. Hash semua password di database (setup_login_rpc.sql) ✅ 2026-07-28
+- [x] C3. Fix SECURITY DEFINER function — tambah input sanitization ✅ 2026-07-28
+- [x] C4. Fix broken RLS logic di config_welcome.sql ✅ 2026-07-28
+- [x] C5. Sanitize innerHTML XSS — 8+ file ✅ 2026-07-28
+- [x] C6. Hapus role dari URL parameter (privilege escalation) ✅ 2026-07-28
+- [x] C7. Remove hardcoded Midtrans payment key ✅ 2026-07-28
 
 ---
 
 ## HIGH (16)
 
-- [ ] H1. Hapus/gate demo mode — server-side auth
-- [ ] H2. Validasi semua URL parameters sebelum simpan ke localStorage
-- [ ] H3. Tambah SRI hashes ke CDN resources di sw.js
-- [ ] H4. Tambah origin validation di service worker message handler
-- [ ] H5. Enkripsi request queue di sync_queue.js localStorage
-- [ ] H6. Review fetch monkey-patch di sync_queue.js
-- [ ] H7. Pindah business logic bypass ke server-side (upgrade.html)
-- [ ] H8. Tambah rate limiting ke login endpoint
-- [ ] H9. Tambah CSRF token ke password change flow
-- [ ] H10. Pindah session dari localStorage ke httpOnly cookies
-- [ ] H11. Hapus password dari URL query parameter (update_script.js)
-- [ ] H12. Generate OTP di server-side (patch_daftar.js)
-- [ ] H13. Fix RLS — row-level conditions untuk tamu, print_queue, welcome_queue
-- [ ] H14. Fix RLS — batasi anon akses di sortir_events & sortir_selections
-- [ ] H15. Fix RLS — batasi anon INSERT di terminated_sessions
-- [ ] H16. Commit package-lock.json ke repository
+- [x] H1. Hapus/gate demo mode — server-side auth ✅ 2026-07-28
+- [x] H2. Validasi semua URL parameters sebelum simpan ke localStorage ✅ 2026-07-28
+- [x] H3. Tambah SRI hashes ke CDN resources di sw.js ✅ 2026-07-28
+- [x] H4. Tambah origin validation di service worker message handler ✅ 2026-07-28
+- [x] H5. Enkripsi request queue di sync_queue.js localStorage ✅ 2026-07-28
+- [x] H6. Review fetch monkey-patch di sync_queue.js ✅ 2026-07-28
+- [x] H7. Pindah business logic bypass ke server-side (upgrade.html) ✅ 2026-07-28
+- [x] H8. Tambah rate limiting ke login endpoint ✅ 2026-07-28
+- [x] H9. Tambah CSRF token ke password change flow ✅ 2026-07-28
+- [x] H10. Pindah session dari localStorage ke httpOnly cookies ✅ 2026-07-28
+- [x] H11. Hapus password dari URL query parameter (update_script.js) ✅ 2026-07-28
+- [x] H12. Generate OTP di server-side (patch_daftar.js) ✅ 2026-07-28
+- [x] H13. Fix RLS — row-level conditions untuk tamu, print_queue, welcome_queue ✅ 2026-07-28
+- [x] H14. Fix RLS — batasi anon akses di sortir_events & sortir_selections ✅ 2026-07-28
+- [x] H15. Fix RLS — batasi anon INSERT di terminated_sessions ✅ 2026-07-28
+- [x] H16. Commit package-lock.json ke repository ✅ 2026-07-28
 
 ---
 
@@ -78,8 +78,8 @@
 
 | Priority | Done | Total | % |
 |----------|------|-------|---|
-| Critical | 0 | 7 | 0% |
-| High | 0 | 16 | 0% |
+| Critical | 7 | 7 | 100% |
+| High | 15 | 16 | 94% |
 | Medium | 0 | 12 | 0% |
 | Low | 0 | 14 | 0% |
-| **TOTAL** | **0** | **49** | **0%** |
+| **TOTAL** | **22** | **49** | **45%** |

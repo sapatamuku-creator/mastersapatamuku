@@ -20,16 +20,16 @@ DROP POLICY IF EXISTS "anon can read terminated_sessions" ON terminated_sessions
 CREATE POLICY "anon can read terminated_sessions"
   ON terminated_sessions FOR SELECT TO anon USING (true);
 
--- Anon bisa INSERT (monitor page insert sinyal kick) — require valid username
+-- Authenticated bisa INSERT (monitor page insert sinyal kick) — require valid username
 DROP POLICY IF EXISTS "anon can insert terminated_sessions" ON terminated_sessions;
-CREATE POLICY "anon can insert terminated_sessions"
-  ON terminated_sessions FOR INSERT TO anon
+CREATE POLICY "authenticated can insert terminated_sessions"
+  ON terminated_sessions FOR INSERT TO authenticated
   WITH CHECK (username IS NOT NULL AND length(username) >= 3 AND length(username) <= 100);
 
--- Anon bisa DELETE (cleanup setelah kick berhasil) — require valid username
+-- Authenticated bisa DELETE (cleanup setelah kick berhasil) — require valid username
 DROP POLICY IF EXISTS "anon can delete terminated_sessions" ON terminated_sessions;
-CREATE POLICY "anon can delete terminated_sessions"
-  ON terminated_sessions FOR DELETE TO anon
+CREATE POLICY "authenticated can delete terminated_sessions"
+  ON terminated_sessions FOR DELETE TO authenticated
   USING (username IS NOT NULL AND length(username) >= 3 AND length(username) <= 100);
 
 -- ============================================================
