@@ -9,6 +9,12 @@
   // SB_URL and SB_KEY are now global vars from config.js
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 
+  function sanitizeHTML(str) {
+    const temp = document.createElement('div');
+    temp.textContent = str;
+    return temp.innerHTML;
+  }
+
   let printCharacteristic = null;
   let isProcessing = false;
   let pollingTimer = null;
@@ -136,7 +142,7 @@
     const el = document.getElementById('pw-console');
     if (!el) return;
     const t = new Date().toLocaleTimeString('id-ID', { hour12: false });
-    el.innerHTML += `<div style="${isError ? 'color:#f87171' : ''}"><span style="opacity:0.35">[${t}]</span> &gt; ${msg}</div>`;
+    el.innerHTML += `<div style="${isError ? 'color:#f87171' : ''}"><span style="opacity:0.35">[${t}]</span> &gt; ${sanitizeHTML(msg)}</div>`;
     el.scrollTop = el.scrollHeight;
   }
 

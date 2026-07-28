@@ -152,6 +152,14 @@
 
   <script src="config.js"></script>
   <script>
+    function sanitizeHTML(str) {
+      if (str == null) return '';
+      const temp = document.createElement('div');
+      temp.textContent = String(str);
+      return temp.innerHTML;
+    }
+  </script>
+  <script>
     // --- CONFIG ---
     const urlParams = new URLSearchParams(window.location.search);
     const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
@@ -247,7 +255,7 @@
     function log(msg, isError = false) {
       const logDiv = document.getElementById('consoleLog');
       const time = new Date().toLocaleTimeString('id-ID', { hour12: false });
-      logDiv.innerHTML += `<div class="mb-1 ${isError ? 'text-red-400' : ''}"><span class="opacity-30">[${time}]</span> > ${msg}</div>`;
+      logDiv.innerHTML += `<div class="mb-1 ${isError ? 'text-red-400' : ''}"><span class="opacity-30">[${time}]</span> > ${sanitizeHTML(msg)}</div>`;
       logDiv.scrollTop = logDiv.scrollHeight;
     }
 

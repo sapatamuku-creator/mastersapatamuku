@@ -1,6 +1,12 @@
 ﻿
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 
+        function sanitizeHTML(str) {
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        }
+
         let CURRENT_SS_ID = null;
         let masterData = [];
         let html5QrCode;
@@ -400,7 +406,7 @@
                                 ${!isDone ? `<input type="checkbox" ${isChecked ? 'checked' : ''} style="accent-color:var(--gold); transform:scale(1.3); pointer-events:none;">` : '�S&'}
                             </div>
                             <div>
-                                <div class="guest-name">${row.nama} <span style="margin-left:5px;">${giftIcons}</span></div>
+                                <div class="guest-name">${sanitizeHTML(row.nama)} <span style="margin-left:5px;">${giftIcons}</span></div>
                             </div>
                         </div>
                         <div class="guest-wa">${row.whatsapp || '-'}</div>

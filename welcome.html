@@ -441,6 +441,14 @@
     </div>
 
     <script src="config.js"></script>
+    <script>
+        function sanitizeHTML(str) {
+            if (str == null) return '';
+            const temp = document.createElement('div');
+            temp.textContent = String(str);
+            return temp.innerHTML;
+        }
+    </script>
     <script>function getSSID() {
             const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
             let id = window.CURRENT_SS_ID || (session ? session.ssId : null);
@@ -580,8 +588,8 @@
                 const card = document.createElement('div');
                 card.className = 'vendor-card enter-from-top';
                 card.innerHTML = `
-                    <div class="vendor-role">${wrapCharacters(vendor.role, 0)}</div>
-                    <div class="vendor-name">${wrapCharacters(vendor.name, 0.2)}</div>
+                    <div class="vendor-role">${wrapCharacters(sanitizeHTML(vendor.role), 0)}</div>
+                    <div class="vendor-name">${wrapCharacters(sanitizeHTML(vendor.name), 0.2)}</div>
                 `;
                 displayArea.appendChild(card);
 
@@ -704,7 +712,7 @@
 
         function applyWelcomeData(data) {
             if (!data) return;
-            document.getElementById('couple-name').innerHTML = (data.weddingName || "SapaTamu.Ku").replace(" & ", " &amp; ");
+            document.getElementById('couple-name').innerHTML = sanitizeHTML(data.weddingName || "SapaTamu.Ku");
             document.getElementById('wedding-date').innerText = data.weddingDate;
             if (data.teksSambutan1) document.getElementById('welcome-teks-1').innerText = data.teksSambutan1;
             if (data.teksSambutan2) document.getElementById('welcome-teks-2').innerText = data.teksSambutan2;
@@ -726,8 +734,8 @@
                     : (nowVal >= startVal);
                 rundownHtml += `
                 <div class="rundown-item ${active ? 'active-event' : ''}">
-                    <div class="event-time">${item.displayTime}</div>
-                    <div class="event-name">${item.eventName}</div>
+                    <div class="event-time">${sanitizeHTML(item.displayTime)}</div>
+                    <div class="event-name">${sanitizeHTML(item.eventName)}</div>
                 </div>`;
             });
             document.getElementById('rundown-list').innerHTML = rundownHtml;

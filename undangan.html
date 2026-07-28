@@ -1035,6 +1035,11 @@
             setTimeout(() => { btn.innerText = "Kirim Ucapan"; btn.disabled = false; }, 2000);
         };
 
+        function sanitizeHTML(str) {
+          const temp = document.createElement('div');
+          temp.textContent = str;
+          return temp.innerHTML;
+        }
         window.loadWishes = async function () {
             const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
             if (!ssId) return;
@@ -1060,8 +1065,14 @@
                      result.data.forEach(wish => {
                          const div = document.createElement('div');
                          div.className = "wish-card";
-                         div.innerHTML = `<p class="text-[11px] font-bold text-neutral-800 mb-1">${wish.name || 'Tamu'}</p>
-                             <p class="text-[10px] text-neutral-500">${wish.text}</p>`;
+                         const nameEl = document.createElement('p');
+                         nameEl.className = "text-[11px] font-bold text-neutral-800 mb-1";
+                         nameEl.textContent = sanitizeHTML(wish.name || 'Tamu');
+                         const textEl = document.createElement('p');
+                         textEl.className = "text-[10px] text-neutral-500";
+                         textEl.textContent = sanitizeHTML(wish.text);
+                         div.appendChild(nameEl);
+                         div.appendChild(textEl);
                          container.appendChild(div);
                      });
                 }
@@ -1184,7 +1195,12 @@
             if (data.groom && data.bride) {
                 const groomFirst = data.groom.name ? data.groom.name.split(" ")[0] : "Bintang";
                 const brideFirst = data.bride.name ? data.bride.name.split(" ")[0] : "Anisa";
-                document.querySelectorAll('.wedding-names-text').forEach(el => el.innerHTML = groomFirst + " <br>& " + brideFirst);
+                document.querySelectorAll('.wedding-names-text').forEach(el => {
+                    el.textContent = '';
+                    el.appendChild(document.createTextNode(groomFirst));
+                    el.appendChild(document.createElement('br'));
+                    el.appendChild(document.createTextNode('& ' + brideFirst));
+                });
             }
 
             if (data.groom) {
@@ -1193,7 +1209,14 @@
                 
                 if (data.groom.header) document.querySelectorAll('.groom-header-text').forEach(el => el.innerText = data.groom.header);
                 document.querySelectorAll('.groom-name-text').forEach(el => el.innerText = data.groom.name || "Bintang Zahlahar Trijati");
-                document.querySelectorAll('.groom-desc-text').forEach(el => el.innerHTML = data.groom.desc ? data.groom.desc.replace(/\n/g, '<br>') : "Putra dari...");
+                document.querySelectorAll('.groom-desc-text').forEach(el => {
+                    const desc = data.groom.desc || "Putra dari...";
+                    el.textContent = '';
+                    desc.split('\n').forEach((line, i) => {
+                        if (i > 0) el.appendChild(document.createElement('br'));
+                        el.appendChild(document.createTextNode(line));
+                    });
+                });
                 if (data.groom.photo) document.querySelectorAll('.groom-photo-img').forEach(el => el.src = data.groom.photo);
                 if (data.groom.ig) {
                     document.querySelectorAll('.groom-ig-link').forEach(el => {
@@ -1209,7 +1232,14 @@
 
                 if (data.bride.header) document.querySelectorAll('.bride-header-text').forEach(el => el.innerText = data.bride.header);
                 document.querySelectorAll('.bride-name-text').forEach(el => el.innerText = data.bride.name || "Anisa Nur Fitria");
-                document.querySelectorAll('.bride-desc-text').forEach(el => el.innerHTML = data.bride.desc ? data.bride.desc.replace(/\n/g, '<br>') : "Putri dari...");
+                document.querySelectorAll('.bride-desc-text').forEach(el => {
+                    const desc = data.bride.desc || "Putri dari...";
+                    el.textContent = '';
+                    desc.split('\n').forEach((line, i) => {
+                        if (i > 0) el.appendChild(document.createElement('br'));
+                        el.appendChild(document.createTextNode(line));
+                    });
+                });
                 if (data.bride.photo) document.querySelectorAll('.bride-photo-img').forEach(el => el.src = data.bride.photo);
                 if (data.bride.ig) {
                     document.querySelectorAll('.bride-ig-link').forEach(el => {
@@ -1227,7 +1257,14 @@
                 document.querySelectorAll('.ev1-name-text').forEach(el => el.innerText = data.ev1.name || "Akad Nikah");
                 document.querySelectorAll('.ev1-date-text').forEach(el => el.innerText = formatDateId(data.ev1.date) || "Senin, 25 Mei 2026");
                 document.querySelectorAll('.ev1-time-text').forEach(el => el.innerText = formatTimeId(data.ev1.time, data.ev1.zone) || "08.00 WIB");
-                document.querySelectorAll('.ev1-loc-text').forEach(el => el.innerHTML = data.ev1.locName ? data.ev1.locName.replace(/\n/g, '<br>') : "Lokasi");
+                document.querySelectorAll('.ev1-loc-text').forEach(el => {
+                    const loc = data.ev1.locName || "Lokasi";
+                    el.textContent = '';
+                    loc.split('\n').forEach((line, i) => {
+                        if (i > 0) el.appendChild(document.createElement('br'));
+                        el.appendChild(document.createTextNode(line));
+                    });
+                });
                 if (data.ev1.photo) document.querySelectorAll('.ev1-photo-img').forEach(el => el.src = data.ev1.photo);
                 if (data.ev1.maps) document.querySelectorAll('.ev1-maps-btn').forEach(el => el.href = data.ev1.maps);
             }
@@ -1236,7 +1273,14 @@
                 document.querySelectorAll('.ev2-name-text').forEach(el => el.innerText = data.ev2.name || "Resepsi");
                 document.querySelectorAll('.ev2-date-text').forEach(el => el.innerText = formatDateId(data.ev2.date) || "Senin, 25 Mei 2026");
                 document.querySelectorAll('.ev2-time-text').forEach(el => el.innerText = formatTimeId(data.ev2.time, data.ev2.zone) || "11.00 WIB");
-                document.querySelectorAll('.ev2-loc-text').forEach(el => el.innerHTML = data.ev2.locName ? data.ev2.locName.replace(/\n/g, '<br>') : "Lokasi");
+                document.querySelectorAll('.ev2-loc-text').forEach(el => {
+                    const loc = data.ev2.locName || "Lokasi";
+                    el.textContent = '';
+                    loc.split('\n').forEach((line, i) => {
+                        if (i > 0) el.appendChild(document.createElement('br'));
+                        el.appendChild(document.createTextNode(line));
+                    });
+                });
                 if (data.ev2.photo) document.querySelectorAll('.ev2-photo-img').forEach(el => el.src = data.ev2.photo);
                 if (data.ev2.maps) document.querySelectorAll('.ev2-maps-btn').forEach(el => el.href = data.ev2.maps);
             }

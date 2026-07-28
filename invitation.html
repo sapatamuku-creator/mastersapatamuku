@@ -225,7 +225,12 @@
                 const gFirst = data.groom.name ? data.groom.name.split(" ")[0] : "";
                 const bFirst = data.bride.name ? data.bride.name.split(" ")[0] : "";
                 if (gFirst && bFirst) {
-                    document.querySelectorAll('.wedding-names-text').forEach(el => el.innerHTML = gFirst + " <br>& " + bFirst);
+                    document.querySelectorAll('.wedding-names-text').forEach(el => {
+                        el.textContent = '';
+                        el.appendChild(document.createTextNode(gFirst));
+                        el.appendChild(document.createElement('br'));
+                        el.appendChild(document.createTextNode('& ' + bFirst));
+                    });
                     document.getElementById('page-title').innerText = `Undangan: ${gFirst} & ${bFirst}`;
                 }
             }
@@ -236,14 +241,24 @@
                 if (gSec) gSec.style.display = (data.show_groom === "false") ? 'none' : 'block';
                 if (data.groom.header) document.querySelectorAll('.groom-header-text').forEach(el => el.innerText = data.groom.header);
                 if (data.groom.name) document.querySelectorAll('.groom-name-text').forEach(el => el.innerText = data.groom.name);
-                if (data.groom.desc) document.querySelectorAll('.groom-desc-text').forEach(el => el.innerHTML = data.groom.desc.replace(/\n/g, '<br>'));
-                if (data.groom.photo) document.querySelectorAll('.groom-photo-img').forEach(el => el.src = data.groom.photo);
-                if (data.groom.ig) {
-                    document.querySelectorAll('.groom-ig-link').forEach(el => {
-                        el.href = `https://instagram.com/${data.groom.ig.replace('@', '')}`;
-                        el.innerHTML = `<i class="fab fa-instagram text-sm"></i> ${data.groom.ig}`;
+                    if (data.groom.desc) document.querySelectorAll('.groom-desc-text').forEach(el => {
+                        el.textContent = '';
+                        data.groom.desc.split('\n').forEach((line, i) => {
+                            if (i > 0) el.appendChild(document.createElement('br'));
+                            el.appendChild(document.createTextNode(line));
+                        });
                     });
-                }
+                if (data.groom.photo) document.querySelectorAll('.groom-photo-img').forEach(el => el.src = data.groom.photo);
+                    if (data.groom.ig) {
+                        document.querySelectorAll('.groom-ig-link').forEach(el => {
+                            el.href = `https://instagram.com/${data.groom.ig.replace('@', '')}`;
+                            el.textContent = '';
+                            const igIcon = document.createElement('i');
+                            igIcon.className = 'fab fa-instagram text-sm';
+                            el.appendChild(igIcon);
+                            el.appendChild(document.createTextNode(' ' + sanitizeHTML(data.groom.ig)));
+                        });
+                    }
             }
 
             // Mempelai Wanita
@@ -252,14 +267,24 @@
                 if (bSec) bSec.style.display = (data.show_bride === "false") ? 'none' : 'block';
                 if (data.bride.header) document.querySelectorAll('.bride-header-text').forEach(el => el.innerText = data.bride.header);
                 if (data.bride.name) document.querySelectorAll('.bride-name-text').forEach(el => el.innerText = data.bride.name);
-                if (data.bride.desc) document.querySelectorAll('.bride-desc-text').forEach(el => el.innerHTML = data.bride.desc.replace(/\n/g, '<br>'));
-                if (data.bride.photo) document.querySelectorAll('.bride-photo-img').forEach(el => el.src = data.bride.photo);
-                if (data.bride.ig) {
-                    document.querySelectorAll('.bride-ig-link').forEach(el => {
-                        el.href = `https://instagram.com/${data.bride.ig.replace('@', '')}`;
-                        el.innerHTML = `<i class="fab fa-instagram text-sm"></i> ${data.bride.ig}`;
+                    if (data.bride.desc) document.querySelectorAll('.bride-desc-text').forEach(el => {
+                        el.textContent = '';
+                        data.bride.desc.split('\n').forEach((line, i) => {
+                            if (i > 0) el.appendChild(document.createElement('br'));
+                            el.appendChild(document.createTextNode(line));
+                        });
                     });
-                }
+                if (data.bride.photo) document.querySelectorAll('.bride-photo-img').forEach(el => el.src = data.bride.photo);
+                    if (data.bride.ig) {
+                        document.querySelectorAll('.bride-ig-link').forEach(el => {
+                            el.href = `https://instagram.com/${data.bride.ig.replace('@', '')}`;
+                            el.textContent = '';
+                            const igIcon = document.createElement('i');
+                            igIcon.className = 'fab fa-instagram text-sm';
+                            el.appendChild(igIcon);
+                            el.appendChild(document.createTextNode(' ' + sanitizeHTML(data.bride.ig)));
+                        });
+                    }
             }
 
             // Events
@@ -271,7 +296,13 @@
                 if (data.ev1.name) document.querySelectorAll('.ev1-name-text').forEach(el => el.innerText = data.ev1.name);
                 if (data.ev1.date) document.querySelectorAll('.ev1-date-text').forEach(el => el.innerText = formatDateId(data.ev1.date));
                 if (data.ev1.time) document.querySelectorAll('.ev1-time-text').forEach(el => el.innerText = formatTimeId(data.ev1.time, data.ev1.zone));
-                if (data.ev1.locName) document.querySelectorAll('.ev1-loc-text').forEach(el => el.innerHTML = data.ev1.locName.replace(/\n/g, '<br>'));
+                if (data.ev1.locName) document.querySelectorAll('.ev1-loc-text').forEach(el => {
+                    el.textContent = '';
+                    data.ev1.locName.split('\n').forEach((line, i) => {
+                        if (i > 0) el.appendChild(document.createElement('br'));
+                        el.appendChild(document.createTextNode(line));
+                    });
+                });
                 if (data.ev1.photo) document.querySelectorAll('.ev1-photo-img').forEach(el => el.src = data.ev1.photo);
                 if (data.ev1.maps) document.querySelectorAll('.ev1-maps-btn').forEach(el => el.href = data.ev1.maps);
                 
@@ -289,7 +320,13 @@
                 if (data.ev2.name) document.querySelectorAll('.ev2-name-text').forEach(el => el.innerText = data.ev2.name);
                 if (data.ev2.date) document.querySelectorAll('.ev2-date-text').forEach(el => el.innerText = formatDateId(data.ev2.date));
                 if (data.ev2.time) document.querySelectorAll('.ev2-time-text').forEach(el => el.innerText = formatTimeId(data.ev2.time, data.ev2.zone));
-                if (data.ev2.locName) document.querySelectorAll('.ev2-loc-text').forEach(el => el.innerHTML = data.ev2.locName.replace(/\n/g, '<br>'));
+                if (data.ev2.locName) document.querySelectorAll('.ev2-loc-text').forEach(el => {
+                    el.textContent = '';
+                    data.ev2.locName.split('\n').forEach((line, i) => {
+                        if (i > 0) el.appendChild(document.createElement('br'));
+                        el.appendChild(document.createTextNode(line));
+                    });
+                });
                 if (data.ev2.photo) document.querySelectorAll('.ev2-photo-img').forEach(el => el.src = data.ev2.photo);
                 if (data.ev2.maps) document.querySelectorAll('.ev2-maps-btn').forEach(el => el.href = data.ev2.maps);
             }
@@ -434,6 +471,11 @@
             navigator.clipboard.writeText(text).then(() => alert("Disalin: " + text));
         }
 
+        function sanitizeHTML(str) {
+          const temp = document.createElement('div');
+          temp.textContent = str;
+          return temp.innerHTML;
+        }
         window.loadWishes = async function () {
             const ssId = window.CURRENT_SS_ID || urlParams.get('ssId');
             if (!ssId) return;
@@ -447,8 +489,14 @@
                      result.data.forEach(wish => {
                          const div = document.createElement('div');
                          div.className = "wish-card";
-                         div.innerHTML = `<p class="text-[11px] font-bold text-neutral-800 mb-1">${wish.name || 'Tamu'}</p>
-                             <p class="text-[10px] text-neutral-500">${wish.text}</p>`;
+                         const nameEl = document.createElement('p');
+                         nameEl.className = "text-[11px] font-bold text-neutral-800 mb-1";
+                         nameEl.textContent = sanitizeHTML(wish.name || 'Tamu');
+                         const textEl = document.createElement('p');
+                         textEl.className = "text-[10px] text-neutral-500";
+                         textEl.textContent = sanitizeHTML(wish.text);
+                         div.appendChild(nameEl);
+                         div.appendChild(textEl);
                          container.appendChild(div);
                      });
                 }
