@@ -70,34 +70,34 @@ DECLARE
     ];
     pol TEXT;
 BEGIN
-    -- sortir_events policies
+    -- sortir_events: SELECT open (public), INSERT/UPDATE/DELETE restricted
     FOREACH pol IN ARRAY policies[1:4] LOOP
         IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'sortir_events' AND policyname = pol) THEN
             CASE pol
                 WHEN 'Allow public insert for events' THEN
-                    EXECUTE 'CREATE POLICY "Allow public insert for events" ON public.sortir_events FOR INSERT WITH CHECK (true)';
+                    EXECUTE 'CREATE POLICY "Allow public insert for events" ON public.sortir_events FOR INSERT WITH CHECK (whatsapp_admin IS NOT NULL AND length(whatsapp_admin) >= 10)';
                 WHEN 'Allow public select for events' THEN
                     EXECUTE 'CREATE POLICY "Allow public select for events" ON public.sortir_events FOR SELECT USING (true)';
                 WHEN 'Allow public update for events' THEN
-                    EXECUTE 'CREATE POLICY "Allow public update for events" ON public.sortir_events FOR UPDATE USING (true)';
+                    EXECUTE 'CREATE POLICY "Allow public update for events" ON public.sortir_events FOR UPDATE USING (whatsapp_admin IS NOT NULL AND length(whatsapp_admin) >= 10)';
                 WHEN 'Allow public delete for events' THEN
-                    EXECUTE 'CREATE POLICY "Allow public delete for events" ON public.sortir_events FOR DELETE USING (true)';
+                    EXECUTE 'CREATE POLICY "Allow public delete for events" ON public.sortir_events FOR DELETE USING (whatsapp_admin IS NOT NULL AND length(whatsapp_admin) >= 10)';
             END CASE;
         END IF;
     END LOOP;
 
-    -- sortir_selections policies
+    -- sortir_selections: SELECT open (public), INSERT/UPDATE restricted, DELETE via service role only
     FOREACH pol IN ARRAY policies[5:8] LOOP
         IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'sortir_selections' AND policyname = pol) THEN
             CASE pol
                 WHEN 'Allow public insert for selections' THEN
-                    EXECUTE 'CREATE POLICY "Allow public insert for selections" ON public.sortir_selections FOR INSERT WITH CHECK (true)';
+                    EXECUTE 'CREATE POLICY "Allow public insert for selections" ON public.sortir_selections FOR INSERT WITH CHECK (event_id IS NOT NULL)';
                 WHEN 'Allow public select for selections' THEN
                     EXECUTE 'CREATE POLICY "Allow public select for selections" ON public.sortir_selections FOR SELECT USING (true)';
                 WHEN 'Allow public update for selections' THEN
-                    EXECUTE 'CREATE POLICY "Allow public update for selections" ON public.sortir_selections FOR UPDATE USING (true)';
+                    EXECUTE 'CREATE POLICY "Allow public update for selections" ON public.sortir_selections FOR UPDATE USING (event_id IS NOT NULL)';
                 WHEN 'Allow public delete for selections' THEN
-                    EXECUTE 'CREATE POLICY "Allow public delete for selections" ON public.sortir_selections FOR DELETE USING (true)';
+                    EXECUTE 'CREATE POLICY "Allow public delete for selections" ON public.sortir_selections FOR DELETE USING (false)';
             END CASE;
         END IF;
     END LOOP;
