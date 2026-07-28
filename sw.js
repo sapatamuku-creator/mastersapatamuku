@@ -122,12 +122,39 @@ self.addEventListener('message', (event) => {
   }
 
   if (event.data?.type === 'CACHE_IMAGES') {
+    // SECURITY: Validate origin — hanya terima dari sapatamu.id
+    const origin = event.origin || event.source?.origin;
+    const ALLOWED_ORIGINS = ['https://sapatamu.id', 'https://www.sapatamu.id', 'http://localhost:3000', 'http://localhost:8080'];
+    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+      console.warn('[SW] CACHE_IMAGES rejected from untrusted origin:', origin);
+      return;
+    }
+
     const { urls } = event.data;
+    if (!Array.isArray(urls)) return;
+
+    // SECURITY: Limit jumlah URLs yang bisa di-cache sekaligus
+    const MAX_CACHE_LIMIT = 50;
+    const safeUrls = urls.slice(0, MAX_CACHE_LIMIT);
+
+    // SECURITY: Hanya cache URLs dari domain yang diizinkan
+    const ALLOWED_CACHE_HOSTS = ['supabase.co', 'sapatamu.id', 'googleapis.com', 'gstatic.com', 'img.youtube.com'];
+    
     caches.open(CACHE_NAME).then((cache) => {
-      urls.forEach((url) => {
-        fetch(url).then((response) => {
-          if (response.ok) cache.put(url, response);
-        }).catch(() => null);
+      safeUrls.forEach((url) => {
+        try {
+          const urlObj = new URL(url);
+          const isAllowed = ALLOWED_CACHE_HOSTS.some(host => urlObj.hostname.includes(host));
+          if (!isAllowed) {
+            console.warn('[SW] Blocked caching untrusted URL:', url);
+            return;
+          }
+          fetch(url).then((response) => {
+            if (response.ok) cache.put(url, response);
+          }).catch(() => null);
+        } catch (e) {
+          console.warn('[SW] Invalid URL skipped:', url);
+        }
       });
     });
   }
