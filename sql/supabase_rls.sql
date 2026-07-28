@@ -87,8 +87,10 @@ CREATE POLICY "Anon insert wishes_queue" ON wishes_queue
 
 -- 6. TABLE: config_invitation
 ALTER TABLE IF EXISTS config_invitation ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public read config_invitation" ON config_invitation;
 DROP POLICY IF EXISTS "Public read" ON config_invitation;
 DROP POLICY IF EXISTS "Anon write" ON config_invitation;
+DROP POLICY IF EXISTS "Anon write config_invitation" ON config_invitation;
 
 CREATE POLICY "Public read config_invitation" ON config_invitation
   FOR SELECT TO anon USING (true);
