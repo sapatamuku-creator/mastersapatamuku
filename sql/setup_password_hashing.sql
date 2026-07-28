@@ -11,8 +11,16 @@ CREATE OR REPLACE FUNCTION hash_password(p_password text)
 RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
+  -- Input validation
+  IF p_password IS NULL OR length(p_password) < 6 THEN
+    RAISE EXCEPTION 'Password must be at least 6 characters';
+  END IF;
+  IF length(p_password) > 128 THEN
+    RAISE EXCEPTION 'Password too long (max 128 characters)';
+  END IF;
   RETURN crypt(p_password, gen_salt('bf', 12));
 END;
 $$;
@@ -22,24 +30,55 @@ CREATE OR REPLACE FUNCTION verify_password(p_password text, p_hash text)
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
+  -- Input validation
+  IF p_password IS NULL OR p_hash IS NULL THEN
+    RETURN false;
+  END IF;
+  IF length(p_password) > 128 THEN
+    RETURN false;
+  END IF;
+  -- Verify bcrypt hash format
+  IF length(p_hash) != 60 OR p_hash NOT LIKE '$2%' THEN
+    RETURN false;
+  END IF;
   RETURN crypt(p_password, p_hash) = p_hash;
 END;
 $$;
 
--- 4. Update auth_client function untuk use bcrypt
+-- 4. Update auth_client function untuk use bcrypt + input sanitization
 DROP FUNCTION IF EXISTS auth_client(text, text);
 CREATE OR REPLACE FUNCTION auth_client(p_username text, p_password text)
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_client record;
   v_admin_pass text;
   v_is_usher boolean := false;
+  v_clean_username text;
 BEGIN
+  -- Input validation & sanitization
+  IF p_username IS NULL OR length(trim(p_username)) = 0 THEN
+    RETURN json_build_object('error', 'Username tidak valid');
+  END IF;
+  IF p_password IS NULL OR length(p_password) = 0 THEN
+    RETURN json_build_object('error', 'Password tidak valid');
+  END IF;
+  IF length(p_password) > 128 THEN
+    RETURN json_build_object('error', 'Password terlalu panjang');
+  END IF;
+  
+  -- Sanitize username: lowercase, trim, limit length
+  v_clean_username := lower(trim(p_username));
+  IF length(v_clean_username) > 100 THEN
+    v_clean_username := left(v_clean_username, 100);
+  END IF;
+
   -- 1. Ambil password admin_global (hash) untuk mengecek apakah user login sebagai usher
   SELECT password INTO v_admin_pass FROM clients WHERE username = 'admin_global' LIMIT 1;
   
@@ -56,11 +95,11 @@ BEGIN
     END IF;
   END IF;
 
-  -- 2. Cari data client berdasarkan username atau subdomain
+  -- 2. Cari data client berdasarkan username atau subdomain (parameterized query)
   SELECT *
   INTO v_client
   FROM clients
-  WHERE (username = p_username OR subdomain = p_username)
+  WHERE (username = v_clean_username OR subdomain = v_clean_username)
   LIMIT 1;
 
   IF FOUND THEN
