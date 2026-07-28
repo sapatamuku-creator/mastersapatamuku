@@ -25,6 +25,47 @@ function supabaseFetch(url, options) {
   return UrlFetchApp.fetch(url, options);
 }
 
+// Helper: Hash password menggunakan Supabase RPC (bcrypt)
+function hashPassword(password) {
+  try {
+    const url = SUPABASE_URL + '/rest/v1/rpc/hash_password';
+    const res = supabaseFetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      },
+      payload: JSON.stringify({ p_password: password })
+    });
+    const hash = res.getContentText();
+    return hash || password; // Fallback ke plaintext jika RPC gagal
+  } catch (e) {
+    console.error("Gagal hash password: " + e.toString());
+    return password; // Fallback ke plaintext
+  }
+}
+
+// Helper: Verify password menggunakan Supabase RPC
+function verifyPasswordRPC(password, hash) {
+  try {
+    const url = SUPABASE_URL + '/rest/v1/rpc/verify_password';
+    const res = supabaseFetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      },
+      payload: JSON.stringify({ p_password: password, p_hash: hash })
+    });
+    return res.getContentText() === 'true';
+  } catch (e) {
+    console.error("Gagal verify password: " + e.toString());
+    return false;
+  }
+}
+
 const MASTER_SS_ID = "1R99hDczYr4_OW7l41_DDrYuQRwZx30rhhaRHbJfRq1I"; 
 const FOLDER_KLIEN_ID = "1vKXjrfkPLHctEHc_RqK8hSDizpBjph4P"; 
 const MASTER_SHEET_NAME = "Sheet1";
@@ -117,10 +158,11 @@ function handleRegister(data) {
 
     // Append Row ke Master
     // A: Username (Slug), B: ID, C: Pass, D: WA, E: Date, F: Created, G: Email, H: Status, I: Kategori, J: Subdomain (Slug), K: Nama Klien, L: Paket
+    const hashedPassword = hashPassword(data.password);
     sheet.appendRow([
       sub,               // A: Username (Slug)
       data.ssId,         // B
-      data.password,     // C
+      hashedPassword,    // C (hashed)
       data.whatsapp,     // D
       data.weddingDate,  // E
       new Date(),        // F
@@ -137,7 +179,7 @@ function handleRegister(data) {
       syncClientToSupabase({
         username: sub,
         ssid: data.ssId,
-        password: data.password,
+        password: hashedPassword, // Password hashed
         whatsapp: data.whatsapp,
         wedding_date: data.weddingDate,
         created_at: new Date().toISOString(),
@@ -177,9 +219,10 @@ function handleSavePendingClient(data) {
     }
 
     // Simpan ke Supabase dengan status PendingActivation, ssid kosong
+    const hashedPassword = hashPassword(data.password);
     syncClientToSupabaseWithResult({
       username: sub, ssid: "",
-      password: data.password, whatsapp: data.whatsapp,
+      password: hashedPassword, whatsapp: data.whatsapp,
       wedding_date: data.weddingDate || "",
       created_at: new Date().toISOString(),
       email: data.email, status: "PendingActivation",
@@ -232,8 +275,9 @@ function handleRegisterAndActivate(data) {
     sheet1.getRange("A5:B5").setValues([["Link Invitation :", ""]]);
 
     // Append ke Master Sheet (Kolom A–M)
+    const hashedPassword = hashPassword(data.password);
     sheet.appendRow([
-      sub, newSsId, data.password, data.whatsapp, tgl, new Date(),
+      sub, newSsId, hashedPassword, data.whatsapp, tgl, new Date(),
       data.email, "Active", cat, sub, clientName,
       data.package || "", tgl  // L: Paket, M: Event Date (slot check)
     ]);
@@ -242,7 +286,7 @@ function handleRegisterAndActivate(data) {
     try {
       syncClientToSupabase({
         username: sub, ssid: newSsId,
-        password: data.password, whatsapp: data.whatsapp,
+        password: hashedPassword, whatsapp: data.whatsapp,
         wedding_date: tgl, created_at: new Date().toISOString(),
         email: data.email, status: "Active",
         category: cat, subdomain: sub,
@@ -760,15 +804,27 @@ function handleChangePassword(data) {
     const values = sheet.getDataRange().getValues();
 
     for (let i = 1; i < values.length; i++) {
-      if (values[i][0] == data.username && values[i][2] == data.currentPass) {
-        sheet.getRange(i + 1, 3).setValue(data.newPass); // Update Kolom C
+      const storedPass = String(values[i][2] || '');
+      let passwordMatch = false;
+
+      // Cek password: plaintext atau bcrypt hash
+      if (storedPass === data.currentPass) {
+        passwordMatch = true;
+      } else if (storedPass.length === 60 && storedPass.startsWith('$2')) {
+        passwordMatch = verifyPasswordRPC(data.currentPass, storedPass);
+      }
+
+      if (values[i][0] == data.username && passwordMatch) {
+        // Hash password baru sebelum simpan
+        const hashedPassword = hashPassword(data.newPass);
+        sheet.getRange(i + 1, 3).setValue(hashedPassword); // Update Kolom C
 
         // Sinkronisasi perubahan password ke Supabase
         try {
           syncClientToSupabase({
             username: values[i][0],
             ssid: values[i][1],
-            password: data.newPass, // Password baru
+            password: hashedPassword, // Password hashed
             whatsapp: values[i][3],
             wedding_date: values[i][4],
             created_at: values[i][5] ? new Date(values[i][5]).toISOString() : new Date().toISOString(),
@@ -865,10 +921,26 @@ function handleLogin(data) {
       
       let role = null;
 
-      if (adminPassword && inputPass === adminPassword) {
-        role = "usher"; // Login sebagai Admin/Usher Sapatamu
-      } else if (inputPass === clientPassword) {
-        role = "client"; // Login sebagai Client
+      // Cek admin password: plaintext atau bcrypt hash
+      if (adminPassword) {
+        if (inputPass === adminPassword) {
+          role = "usher";
+        } else if (adminPassword.length === 60 && adminPassword.startsWith('$2')) {
+          if (verifyPasswordRPC(inputPass, adminPassword)) {
+            role = "usher";
+          }
+        }
+      }
+
+      // Cek client password: plaintext atau bcrypt hash
+      if (!role) {
+        if (inputPass === clientPassword) {
+          role = "client";
+        } else if (clientPassword.length === 60 && clientPassword.startsWith('$2')) {
+          if (verifyPasswordRPC(inputPass, clientPassword)) {
+            role = "client";
+          }
+        }
       }
 
       if (!role) {
