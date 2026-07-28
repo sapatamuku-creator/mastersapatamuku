@@ -639,8 +639,7 @@
 
     // ─── Presence Tracking: Daftarkan browser user ke Supabase Realtime ─────
     (function initPresenceTracking() {
-        const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-        const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+        // SB_URL and SB_KEY are now global vars from config.js
         const SESSION_KEY = 'sapatamu_session';
         const LOCAL_DB = 'sapatamu_db';
 

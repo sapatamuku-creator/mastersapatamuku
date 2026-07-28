@@ -6,8 +6,7 @@
 (function (window) {
   'use strict';
 
-  const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-  const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+  // SB_URL and SB_KEY are now global vars from config.js
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 
   let printCharacteristic = null;

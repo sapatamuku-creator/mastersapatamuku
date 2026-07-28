@@ -150,6 +150,7 @@
 
   </div>
 
+  <script src="config.js"></script>
   <script>
     // --- CONFIG ---
     const urlParams = new URLSearchParams(window.location.search);
@@ -293,8 +294,7 @@
     function initSupabaseRealtime() {
       if (!CURRENT_SS_ID) return;
       try {
-        const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
         
         if (window.supabase) {
           supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -358,7 +358,7 @@
         SOURCE_ID = document.getElementById('sourceInput').value;
         JALUR_ID = document.getElementById('jalurInput').value;
         
-        const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/print_queue?ssid=eq." + CURRENT_SS_ID + "&status=eq.WAITING&order=created_at.asc";
+        const supabaseUrl = `${SUPABASE_URL}/rest/v1/print_queue?ssid=eq.` + CURRENT_SS_ID + "&status=eq.WAITING&order=created_at.asc";
         const response = await fetch(supabaseUrl, {
             headers: {
                 "apikey": SUPABASE_KEY,
@@ -426,7 +426,7 @@
         try {
           // Update status ke DONE di Supabase secara instan agar antrean langsung kosong
           const promises = printedIds.map(id => 
-            fetch("https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/print_queue?id=eq." + id, {
+            fetch(`${SUPABASE_URL}/rest/v1/print_queue?id=eq.` + id, {
               method: "PATCH",
               headers: {
                 "apikey": SUPABASE_KEY,

@@ -179,11 +179,11 @@ async function resolveSapatamuSubdomain() {
             let resolvedFromSupabase = false;
             try {
                 const sbRes = await fetch(
-                    `https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/client_public_profile?subdomain=eq.${sub}&select=ssid,client_name,category,package`,
+                    `${SB_URL}/rest/v1/client_public_profile?subdomain=eq.${sub}&select=ssid,client_name,category,package`,
                     {
                         headers: {
-                            "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
-                            "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u"
+                            "apikey": SB_KEY,
+                            "Authorization": "Bearer " + SB_KEY
                         }
                     }
                 );

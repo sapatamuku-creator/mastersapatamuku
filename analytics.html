@@ -14,6 +14,7 @@
         rel="stylesheet">
     <script src="subdomain_resolver.js?v=3.3"></script>
     <script src="auth_guard.js?v=1.0"></script>
+    <script src="config.js"></script>
     <style>
         :root {
             --accent: #111;
@@ -1076,8 +1077,7 @@
         window.addEventListener('resize', resizeWelcomeMirror);
 
         // ── REALTIME ARRIVAL NOTIFICATIONS ──────────────────────────────
-        const SB_RT_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-        const SB_RT_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
         let arrivalRealtimeClient = null;
         let arrivalRealtimeChannel = null;
         let arrivalPollTimer = null;
@@ -1118,9 +1118,9 @@
         async function fetchArrivalList() {
             if (!arrivalSsId) return;
             try {
-                const url = `${SB_RT_URL}/rest/v1/welcome_queue?ssid=eq.${arrivalSsId}&status=eq.DISPLAY&order=created_at.desc&limit=5&select=nama,kategori,pihak,created_at`;
+                const url = `${SB_URL}/rest/v1/welcome_queue?ssid=eq.${arrivalSsId}&status=eq.DISPLAY&order=created_at.desc&limit=5&select=nama,kategori,pihak,created_at`;
                 const res = await fetch(url, {
-                    headers: { "apikey": SB_RT_KEY, "Authorization": "Bearer " + SB_RT_KEY }
+                    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
                 });
                 if (!res.ok) return;
                 const data = await res.json();
@@ -1138,7 +1138,7 @@
             // Supabase Realtime
             try {
                 if (window.supabase) {
-                    arrivalRealtimeClient = window.supabase.createClient(SB_RT_URL, SB_RT_KEY);
+                    arrivalRealtimeClient = window.supabase.createClient(SB_URL, SB_KEY);
                     arrivalRealtimeChannel = arrivalRealtimeClient
                         .channel('analytics_arrival_channel')
                         .on('postgres_changes', {

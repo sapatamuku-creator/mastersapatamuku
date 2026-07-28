@@ -5,10 +5,10 @@ const scriptStart = html.indexOf('<script>');
 const scriptEnd = html.lastIndexOf('</script>') + 9;
 
 const newScript = `<script>
-    const SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    // SUPABASE_URL and SB_KEY are now global vars from config.js
     const SB_HEADERS = {
-        "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
-        "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
+        "apikey": SB_KEY,
+        "Authorization": "Bearer " + SB_KEY,
         "Content-Type": "application/json",
         "Prefer": "return=representation"
     };

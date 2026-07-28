@@ -30,8 +30,7 @@
         let selectedGuest = null;
         let JALUR_ID = "ALL";
 
-        const SB_URL  = "https://llrapesaaoliyjrrrsjh.supabase.co";
-        const SB_KEY  = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+        // SB_URL and SB_KEY are now global vars from config.js
 
         let supabaseClient = null;
         let realtimeChannel = null;
@@ -280,7 +279,7 @@
 
         async function fetchData() {
             try {
-                const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
+                const supabaseUrl = SB_URL + "/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
                 const response = await fetch(supabaseUrl, {
                     headers: {
                         "apikey": SB_KEY,

@@ -68,12 +68,12 @@ function getWeddingUsername(clientSsId, masterDbId) {
 
   // 2. Ambil subdomain dari Supabase client_public_profile
   try {
-    const sbUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/client_public_profile?ssid=eq." + encodeURIComponent(clientSsId) + "&select=subdomain&limit=1";
+    const sbUrl = SUPABASE_URL + "/rest/v1/client_public_profile?ssid=eq." + encodeURIComponent(clientSsId) + "&select=subdomain&limit=1";
     const sbRes = UrlFetchApp.fetch(sbUrl, {
       method: "get",
       headers: {
-        "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
-        "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u"
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
       },
       muteHttpExceptions: true
     });

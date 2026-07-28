@@ -738,6 +738,7 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>(function () {
             window.togglePasswordVisibility = function (inputId, buttonEl) {
                 const input = document.getElementById(inputId);
@@ -893,10 +894,10 @@
                 if (isInitial) toggleProcessing(true, "LOADING DATA TAMU...");
                 try {
                     // Fetch tamu dari Supabase (Instant)
-                    const sbResponse = await fetch("https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID, {
+                    const sbResponse = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.` + CURRENT_SS_ID, {
                         headers: {
-                            "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
-                            "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u"
+                            "apikey": SB_KEY,
+                            "Authorization": "Bearer " + SB_KEY
                         }
                     });
                     const sbData = await sbResponse.json();
@@ -943,10 +944,10 @@
                     // Ambil status koneksi & token Fonnte dari GAS & Subdomain dari Supabase di background
                     Promise.all([
                         fetch(SCRIPT_URL + "?action=getWAForm&ssId=" + CURRENT_SS_ID).then(r => r.json()),
-                        fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/client_public_profile?ssid=eq.${CURRENT_SS_ID}&select=subdomain`, {
+                        fetch(`${SB_URL}/rest/v1/client_public_profile?ssid=eq.${CURRENT_SS_ID}&select=subdomain`, {
                             headers: {
-                                "apikey": "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u",
-                                "Authorization": "Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u"
+                                "apikey": SB_KEY,
+                                "Authorization": "Bearer " + SB_KEY
                             }
                         }).then(r => r.ok ? r.json() : Promise.resolve([]))
                     ])
@@ -1278,18 +1279,17 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                         if (!proceedAnyway) return;
 
                         // Sinkronisasikan status duplikat ke Supabase secara langsung dari frontend
-                        const supabaseApiKey = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
                         const now = new Date();
                         const pad = n => String(n).padStart(2, '0');
                         const nowStr = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
 
                         Promise.all(
                             duplicates.map(d => 
-                                fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${d.row}`, {
+                                fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${d.row}`, {
                                     method: "PATCH",
                                     headers: {
-                                        "apikey": supabaseApiKey,
-                                        "Authorization": "Bearer " + supabaseApiKey,
+                                        "apikey": SB_KEY,
+                                        "Authorization": "Bearer " + SB_KEY,
                                         "Content-Type": "application/json"
                                     },
                                     body: JSON.stringify({ status_wa: '⚠️ Duplikasi Nomor [' + nowStr + ']' })
@@ -1483,14 +1483,14 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                                 });
 
                                 // Sinkronisasikan status ke Supabase secara langsung dan asinkron (background)
-                                const supabaseApiKey = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
                                 await Promise.all(
                                     successRows.map(t => 
-                                        fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${t.row}`, {
+                                        fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${t.row}`, {
                                             method: "PATCH",
                                             headers: {
-                                                "apikey": supabaseApiKey,
-                                                "Authorization": "Bearer " + supabaseApiKey,
+                                        "apikey": SB_KEY,
+                                        "Authorization": "Bearer " + SB_KEY,
                                                 "Content-Type": "application/json"
                                             },
                                             body: JSON.stringify({ status_wa: '✅ [' + nowStr + ']' })
@@ -1526,15 +1526,14 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                     toggleProcessing(false);
 
                     // Sinkronisasikan status duplikat ke Supabase jika ada
-                    const supabaseApiKey = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
                     if (duplicates.length > 0) {
                         await Promise.all(
                             duplicates.map(t => 
-                                fetch(`https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${t.row}`, {
+                                fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${t.row}`, {
                                     method: "PATCH",
                                     headers: {
-                                        "apikey": supabaseApiKey,
-                                        "Authorization": "Bearer " + supabaseApiKey,
+                                        "apikey": SB_KEY,
+                                        "Authorization": "Bearer " + SB_KEY,
                                         "Content-Type": "application/json"
                                     },
                                     body: JSON.stringify({ status_wa: '⚠️  Duplikasi Nomor [' + nowStr + ']' })

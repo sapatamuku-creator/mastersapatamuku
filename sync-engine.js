@@ -3,10 +3,9 @@
    ═══════════════════════════════════════════════════════════ */
 
 const SyncEngine = (() => {
-    const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
     const SB_HEADERS = {
-        'apikey': 'sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u',
-        'Authorization': 'Bearer sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u',
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
         'Content-Type': 'application/json'
     };
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec';

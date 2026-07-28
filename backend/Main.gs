@@ -1781,8 +1781,8 @@ function updateRsvp(ssId, guestId, pax, wishText) {
 }
 
 // --- SUPABASE INTEGRATION SCRIPT ---
-var SUPABASE_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-var SUPABASE_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+var SUPABASE_URL = PropertiesService.getScriptProperties().getProperty('SUPABASE_URL') || 'https://llrapesaaoliyjrrrsjh.supabase.co';
+var SUPABASE_KEY = PropertiesService.getScriptProperties().getProperty('SUPABASE_KEY') || 'sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u';
 
 function supabaseFetch(url, options) {
   options = options || {};
