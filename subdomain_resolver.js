@@ -249,7 +249,7 @@ async function resolveSapatamuSubdomain() {
                         const _isDemoUser = sub === 'akundemo';
                         // ✅ FIX: Gunakan subdomain slug (sub) sebagai username
                         const _resolvedData = { ssId: res.ssId, username: sub, client_name: res.clientName || sub, category: window.CURRENT_CATEGORY, package: res.package || '' };
-                        if (_existRole) _resolvedData.role = _existRole;
+                        _resolvedData.role = _existRole || 'client';
                         if (_isDemoUser) _resolvedData.is_demo = true;
                         localStorage.setItem('sapatamu_db', JSON.stringify(_resolvedData));
                         sessionStorage.setItem('sapatamu_session', JSON.stringify(_resolvedData));
