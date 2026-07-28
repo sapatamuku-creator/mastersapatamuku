@@ -489,8 +489,13 @@
                     role: sbData.role || 'client',
                     package: sbData.package || ''
                 };
-                localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
-                sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+                // Use secure session storage (sessionStorage only, clears on tab close)
+                if (typeof saveSession === 'function') {
+                    saveSession(userData);
+                } else {
+                    localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
+                    sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+                }
 
                 const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
                 const targetPage = (currentPage === "login.html" || currentPage === "") ? "dashboard.html" : currentPage;
@@ -526,8 +531,13 @@
                     role: res.data.role || 'client',
                     package: res.data.package || ''
                 };
-                localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
-                sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+                // Use secure session storage (sessionStorage only, clears on tab close)
+                if (typeof saveSession === 'function') {
+                    saveSession(userData);
+                } else {
+                    localStorage.setItem(LOCAL_DB, JSON.stringify(userData));
+                    sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+                }
 
                 const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
                 const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;

@@ -974,12 +974,13 @@
 
     function isDemoMode() {
         try {
-            const s = JSON.parse(localStorage.getItem('sapatamu_db') || sessionStorage.getItem('sapatamu_session') || '{}');
+            const s = (typeof getSession === 'function' ? getSession() : null) || JSON.parse(localStorage.getItem('sapatamu_db') || sessionStorage.getItem('sapatamu_session') || '{}');
             return s.is_demo === true;
         } catch(e) { return false; }
     }
 
     function exitDemoMode() {
+        if (typeof clearSession === 'function') clearSession();
         localStorage.removeItem('sapatamu_db');
         sessionStorage.removeItem('sapatamu_session');
         localStorage.removeItem('sapatamu_avatar');

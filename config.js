@@ -56,3 +56,56 @@ async function csrfHeaders() {
   const token = await generateCsrfToken();
   return token ? { 'X-CSRF-Token': token } : {};
 }
+
+// ── SESSION MANAGEMENT (httpOnly-equivalent for static sites) ──
+const SESSION_CONFIG = {
+  timeoutMs: 30 * 60 * 1000, // 30 minutes inactivity timeout
+  storageKey: 'sapatamu_session',
+  lastActivityKey: 'sapatamu_last_activity'
+};
+
+// Save session to sessionStorage ONLY (clears on tab close — like httpOnly)
+function saveSession(data) {
+  sessionStorage.setItem(SESSION_CONFIG.storageKey, JSON.stringify(data));
+  sessionStorage.setItem(SESSION_CONFIG.lastActivityKey, String(Date.now()));
+  // Clear legacy localStorage session if exists
+  localStorage.removeItem('sapatamu_db');
+}
+
+// Get session from sessionStorage (with inactivity check)
+function getSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_CONFIG.storageKey);
+    if (!raw) return null;
+    // Check inactivity timeout
+    const lastActivity = parseInt(sessionStorage.getItem(SESSION_CONFIG.lastActivityKey) || '0');
+    if (Date.now() - lastActivity > SESSION_CONFIG.timeoutMs) {
+      clearSession();
+      return null;
+    }
+    // Refresh activity timestamp
+    sessionStorage.setItem(SESSION_CONFIG.lastActivityKey, String(Date.now()));
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Clear session on logout or timeout
+function clearSession() {
+  sessionStorage.removeItem(SESSION_CONFIG.storageKey);
+  sessionStorage.removeItem(SESSION_CONFIG.lastActivityKey);
+}
+
+// Periodic inactivity check (call on page load)
+function startSessionWatchdog() {
+  setInterval(() => {
+    const lastActivity = parseInt(sessionStorage.getItem(SESSION_CONFIG.lastActivityKey) || '0');
+    if (lastActivity && Date.now() - lastActivity > SESSION_CONFIG.timeoutMs) {
+      clearSession();
+      if (window.location.pathname.indexOf('login.html') === -1) {
+        window.location.href = 'login.html';
+      }
+    }
+  }, 60000); // Check every minute
+}
