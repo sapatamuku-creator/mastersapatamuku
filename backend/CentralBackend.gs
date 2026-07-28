@@ -892,6 +892,30 @@ function handleCopyMaster(data) {
 
 function handleLogin(data) {
   try {
+    const normalize = s => String(s || "").toLowerCase().replace(/[\s&]/g, '');
+    const targetUser = normalize(data.username);
+    const inputPass  = String(data.password || "");
+
+    // ── RATE LIMITING: 5 attempts per 15 minutes per username ──
+    const MAX_ATTEMPTS = 5;
+    const LOCKOUT_SECONDS = 900; // 15 minutes
+    const props = PropertiesService.getScriptProperties();
+    const rateKey = 'login_attempts_' + targetUser;
+    const lockKey = 'login_lockout_' + targetUser;
+    
+    // Check if account is locked
+    const lockTime = props.getProperty(lockKey);
+    if (lockTime) {
+      const elapsed = (Date.now() - parseInt(lockTime)) / 1000;
+      if (elapsed < LOCKOUT_SECONDS) {
+        const remaining = Math.ceil(LOCKOUT_SECONDS - elapsed);
+        return createResponse({ status: "error", message: "Terlalu banyak percobaan gagal. Coba lagi dalam " + remaining + " detik." });
+      }
+      // Lockout expired, clear it
+      props.deleteProperty(lockKey);
+      props.deleteProperty(rateKey);
+    }
+
     const ss = SpreadsheetApp.openById(MASTER_SS_ID);
     const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
     const values = sheet.getDataRange().getValues();
@@ -899,11 +923,6 @@ function handleLogin(data) {
 
     // Baca admin password dari K1 (kolom 11, index 10) — baris pertama header
     const adminPassword = String(sheet.getRange(1, 11).getValue() || "").trim();
-
-    // Normalisasi username: lowercase, hapus spasi & "&"
-    const normalize = s => String(s || "").toLowerCase().replace(/[\s&]/g, '');
-    const targetUser = normalize(data.username);
-    const inputPass  = String(data.password || "");
 
     for (let i = 1; i < values.length; i++) {
       const colA = normalize(values[i][0]);  // Col A: username asli
@@ -944,8 +963,20 @@ function handleLogin(data) {
       }
 
       if (!role) {
-        return createResponse({ status: "error", message: "Password salah" });
+        // Increment failed attempt counter
+        const attempts = parseInt(props.getProperty(rateKey) || '0') + 1;
+        props.setProperty(rateKey, String(attempts));
+        if (attempts >= MAX_ATTEMPTS) {
+          props.setProperty(lockKey, String(Date.now()));
+          props.deleteProperty(rateKey);
+          return createResponse({ status: "error", message: "Terlalu banyak percobaan gagal. Akun dikunci selama 15 menit." });
+        }
+        return createResponse({ status: "error", message: "Password salah. Percobaan tersisa: " + (MAX_ATTEMPTS - attempts) });
       }
+
+      // Login successful — reset rate limit
+      props.deleteProperty(rateKey);
+      props.deleteProperty(lockKey);
 
       // HANYA SET STATUS KE ACTIVE JIKA BELUM ACTIVE (MENGURANGI LOCK SHEET)
       if (values[i][7] !== "Active") {
