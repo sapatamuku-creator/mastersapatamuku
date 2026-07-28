@@ -26,16 +26,31 @@ const newScript = `<script>
         btn.disabled = true;
 
         try {
-            const res = await fetch(\`\${SUPABASE_URL}/rest/v1/clients?username=eq.admin_global&password=eq.\${encodeURIComponent(pass)}&select=username\`, { headers: SB_HEADERS });
-            const rows = await res.json();
+            // Use RPC instead of query parameter to avoid password in URL
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/auth_client`, {
+                method: "POST",
+                headers: {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ p_username: "admin_global", p_password: pass })
+            });
+            const data = await res.json();
 
-            if (Array.isArray(rows) && rows.length > 0) {
+            if (data && !data.error && data.username) {
                 adminPassword = pass;
                 document.getElementById('login-overlay').style.display = 'none';
                 loadData();
             } else {
-                showToast("�R Akses Ditolak: Password Salah!", "red");
+                showToast("❌ Akses Ditolak: Password Salah!", "red");
             }
+        } catch (e) {
+            showToast("❌ Error Koneksi: " + e.toString(), "red");
+        }
+        btn.innerHTML = 'Masuk Dashboard';
+        btn.disabled = false;
+    }
         } catch (e) {
             showToast("�R Error Koneksi: " + e.toString(), "red");
         }
