@@ -20,15 +20,17 @@ DROP POLICY IF EXISTS "anon can read terminated_sessions" ON terminated_sessions
 CREATE POLICY "anon can read terminated_sessions"
   ON terminated_sessions FOR SELECT TO anon USING (true);
 
--- Anon bisa INSERT (monitor page insert sinyal kick)
+-- Anon bisa INSERT (monitor page insert sinyal kick) — require valid username
 DROP POLICY IF EXISTS "anon can insert terminated_sessions" ON terminated_sessions;
 CREATE POLICY "anon can insert terminated_sessions"
-  ON terminated_sessions FOR INSERT TO anon WITH CHECK (true);
+  ON terminated_sessions FOR INSERT TO anon
+  WITH CHECK (username IS NOT NULL AND length(username) >= 3 AND length(username) <= 100);
 
--- Anon bisa DELETE (cleanup setelah kick berhasil)
+-- Anon bisa DELETE (cleanup setelah kick berhasil) — require valid username
 DROP POLICY IF EXISTS "anon can delete terminated_sessions" ON terminated_sessions;
 CREATE POLICY "anon can delete terminated_sessions"
-  ON terminated_sessions FOR DELETE TO anon USING (true);
+  ON terminated_sessions FOR DELETE TO anon
+  USING (username IS NOT NULL AND length(username) >= 3 AND length(username) <= 100);
 
 -- ============================================================
 -- VERIFIKASI: Cek apakah Realtime sudah aktif untuk tabel ini
