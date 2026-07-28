@@ -17,15 +17,16 @@ async function resolveSapatamuSubdomain() {
     // 0. DETEKSI MODE DEMO DARI URL
     const _urlParams = new URLSearchParams(window.location.search);
     const _urlDemo = _urlParams.get('demo') === 'true' || _urlParams.get('triggerDemo') === 'true';
-    const _urlPkg = _urlParams.get('pkg');
     if (_urlDemo) {
-        console.log("Demo session detected in URL. Package:", _urlPkg);
+        console.log("Demo session detected in URL.");
+        // SECURITY: Demo mode hanya untuk akun demo yang sudah ditentukan
+        // Tidak bisa manipulate package atau data lain via URL
         const demoSession = {
             ssId: "1URVle0-ptX2kyxR99E6HJruIkwuwcE5zES4k8BYnoJU",
             username: "akundemo",
             client_name: "Akun Demo SapaTamu",
             category: "wedding",
-            package: _urlPkg || "Bronze Guestbook",
+            package: "Bronze Guestbook", // FIXED: tidak bisa diubah via URL
             role: "client",
             is_demo: true,
             demo_started_at: new Date().toISOString()
@@ -37,17 +38,10 @@ async function resolveSapatamuSubdomain() {
         window.CURRENT_CATEGORY = demoSession.category;
         window.SAPATAMU_RESOLVED = true;
 
-        if (_urlPkg) {
-            // Update package in the backend (Spreadsheet and Supabase) asynchronously
-            fetch(window.SCRIPT_URL, {
-                method: "POST", mode: "cors",
-                body: JSON.stringify({ action: "upgradePackage", username: "akundemo", newPackage: _urlPkg })
-            }).catch(e => console.error("Gagal update package demo di backend", e));
-        }
-
-        // Bersihkan parameter demo & pkg dari URL tanpa reload
+        // Bersihkan parameter demo dari URL tanpa reload
         const _newUrl = new URL(window.location.href);
         _newUrl.searchParams.delete('demo');
+        _newUrl.searchParams.delete('triggerDemo');
         _newUrl.searchParams.delete('pkg');
         window.history.replaceState({}, '', _newUrl);
 
