@@ -1690,6 +1690,39 @@ function handleUpgradePackage(data) {
     
     const orig = values[rowIndex - 1];
     const newPackage = data.newPackage;
+
+    // ── SERVER-SIDE DOWNGRADE CHECK ──
+    function getServerPackageTier(pkgName) {
+      var tierMap = {
+        'standard': 1, 'e-invitation standard': 1, 'e-inv standard': 1,
+        'premium': 2,  'e-invitation premium': 2,  'e-inv premium': 2,
+        'bronze': 3,   'bronze guestbook': 3,
+        'silver': 4,   'silver guestbook': 4,
+        'gold': 5,     'gold guestbook': 5,
+        'exclusive': 6, 'exclusive collaboration': 6,
+        'deluxe': 7,   'deluxe collaboration': 7,
+        'platinum': 7, 'platinum collaboration': 7,
+        'collaboration': 6, 'b2b': 6
+      };
+      var key = String(pkgName || '').toLowerCase().trim();
+      if (tierMap[key] !== undefined) return tierMap[key];
+      var keys = Object.keys(tierMap);
+      for (var k = 0; k < keys.length; k++) {
+        if (key.indexOf(keys[k]) !== -1 || keys[k].indexOf(key) !== -1) return tierMap[keys[k]];
+      }
+      return 0;
+    }
+
+    var currentPkg = String(orig[11] || '');  // Column L = index 11 = current package
+    var currentTier = getServerPackageTier(currentPkg);
+    var newTier = getServerPackageTier(newPackage);
+
+    if (newTier <= currentTier) {
+      return createResponse({ status: "error", message: "Tidak dapat downgrade atau memilih paket yang sama." });
+    }
+    if (newTier === 0) {
+      return createResponse({ status: "error", message: "Nama paket tidak valid: " + newPackage });
+    }
     
     // Update Kolom L (index 11) dengan paket baru
     sheet.getRange(rowIndex, 12).setValue(newPackage);
