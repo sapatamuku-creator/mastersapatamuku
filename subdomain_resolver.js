@@ -57,7 +57,6 @@ async function resolveSapatamuSubdomain() {
     // 1. TRANSFER DATA DARI URL
     const _urlSsid = _urlParams.get('ssId');
     const _urlUser = _urlParams.get('user');
-    const _urlRole = _urlParams.get('role'); // RBAC: baca role dari URL
 
     if (_urlSsid) {
         console.log("ID Spreadsheet ditemukan di URL:", _urlSsid);
@@ -66,8 +65,8 @@ async function resolveSapatamuSubdomain() {
         // Simpan ke storage jika ada data user/kategori
         if (_urlUser) {
             const _urlCat = _urlParams.get('category') || "wedding";
-            // Preserve role jika ada di URL, jika tidak ambil dari storage lama
-            const _existingRole = _urlRole || (function () {
+            // SECURITY: Jangan ambil role dari URL — hanya dari storage yang sudah ada
+            const _existingRole = (function () {
                 try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch (e) { return undefined; }
             })();
             const _sessionData = { ssId: _urlSsid, username: _urlUser, category: _urlCat };
