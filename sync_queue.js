@@ -9,6 +9,56 @@
     let isProcessing = false;
     let dbPromise = null;
 
+    // ── ENCRYPTION HELPERS (Web Crypto API) ──
+    const ENCRYPTION_ALGO = 'AES-GCM';
+    const KEY_DERIVATION_ALGO = 'PBKDF2';
+    const ITERATIONS = 100000;
+
+    async function getEncryptionKey() {
+        // Derive key dari session data (unique per-user)
+        let sessionSeed = 'sapatamu-default-key';
+        try {
+            const session = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
+            sessionSeed = (session.username || '') + (session.ssId || '') + 'sapatamu-queue-encryption';
+        } catch (e) {}
+
+        const encoder = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw', encoder.encode(sessionSeed), KEY_DERIVATION_ALGO, false, ['deriveKey']
+        );
+        return crypto.subtle.deriveKey(
+            { name: KEY_DERIVATION_ALGO, salt: encoder.encode('sapatamu-queue-salt'), iterations, hash: 'SHA-256' },
+            keyMaterial,
+            { name: ENCRYPTION_ALGO, length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+        );
+    }
+
+    async function encryptData(data) {
+        try {
+            const key = await getEncryptionKey();
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encoded = new TextEncoder().encode(JSON.stringify(data));
+            const encrypted = await crypto.subtle.encrypt({ name: ENCRYPTION_ALGO, iv }, key, encoded);
+            return { iv: Array.from(iv), data: Array.from(new Uint8Array(encrypted)) };
+        } catch (e) {
+            return null; // Fallback ke plaintext jika encryption gagal
+        }
+    }
+
+    async function decryptData(enc) {
+        try {
+            const key = await getEncryptionKey();
+            const iv = new Uint8Array(enc.iv);
+            const data = new Uint8Array(enc.data);
+            const decrypted = await crypto.subtle.decrypt({ name: ENCRYPTION_ALGO, iv }, key, data);
+            return JSON.parse(new TextDecoder().decode(decrypted));
+        } catch (e) {
+            return null;
+        }
+    }
+
     // Inisialisasi/koneksi IndexedDB
     function getDB() {
         if (!window.indexedDB) {
@@ -32,11 +82,11 @@
         return dbPromise;
     }
 
-    // Antrekan request fallback ke localStorage jika IndexedDB bermasalah
-    function fallbackEnqueue(url, options) {
+    // Antrekan request fallback ke localStorage jika IndexedDB bermasalah (ENCRYPTED)
+    async function fallbackEnqueue(url, options) {
         try {
             const queue = JSON.parse(localStorage.getItem('sapatamu_sync_queue')) || [];
-            queue.push({
+            const item = {
                 id: 'fb_' + Date.now() + Math.random().toString(36).substr(2, 5),
                 url: url,
                 method: options.method || 'POST',
@@ -44,7 +94,10 @@
                 body: options.body,
                 retryCount: 0,
                 isFallback: true
-            });
+            };
+            // Encrypt sebelum simpan ke localStorage
+            const encrypted = await encryptData(item);
+            queue.push(encrypted || item); // Fallback plaintext jika encryption gagal
             localStorage.setItem('sapatamu_sync_queue', JSON.stringify(queue));
             updateQueueCount();
             if (!isProcessing) processQueue();
@@ -91,7 +144,12 @@
         try {
             const fbQueue = JSON.parse(localStorage.getItem('sapatamu_sync_queue')) || [];
             if (fbQueue.length > 0) {
-                const item = fbQueue[0];
+                let item = fbQueue[0];
+                // Decrypt jika data ter-encrypt
+                if (item && item.iv && item.data) {
+                    const decrypted = await decryptData(item);
+                    if (decrypted) item = decrypted;
+                }
                 return {
                     id: item.id,
                     url: item.url,
@@ -165,7 +223,11 @@
         if (typeof id === 'string' && id.startsWith('fb_')) {
             try {
                 const fbQueue = JSON.parse(localStorage.getItem('sapatamu_sync_queue')) || [];
-                const updated = fbQueue.filter(item => item.id !== id);
+                const updated = fbQueue.filter(item => {
+                    // Handle both encrypted ({iv, data}) and plaintext ({id}) formats
+                    if (item && item.iv && item.data) return true; // Keep encrypted items (can't check id without decrypt)
+                    return item.id !== id;
+                });
                 localStorage.setItem('sapatamu_sync_queue', JSON.stringify(updated));
                 updateQueueCount();
             } catch(e) {}
