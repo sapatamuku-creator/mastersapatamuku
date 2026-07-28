@@ -2,10 +2,10 @@
    SERVICE WORKER — SapaTamu PWA Offline Mode
    ═══════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'sapatamu-pwa-v1';
-const CACHE_VERSION = '1.0.0';
+const CACHE_NAME = 'sapatamu-pwa-v2';
+const CACHE_VERSION = '2.0.0';
 
-// Files to cache on install
+// Files to cache on install (lokal saja — CDN tidak di-cache untuk hindari supply chain risk)
 const PRECACHE_ASSETS = [
   './',
   './index.html',
@@ -18,9 +18,8 @@ const PRECACHE_ASSETS = [
   './sync-engine.js',
   './animations.css',
   './subdomain_resolver.js',
-  './manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap'
+  './config.js',
+  './manifest.json'
 ];
 
 // ── INSTALL: Cache all static assets ──
