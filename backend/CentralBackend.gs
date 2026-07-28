@@ -7,6 +7,44 @@
 var SUPABASE_URL = PropertiesService.getScriptProperties().getProperty('SUPABASE_URL') || 'https://llrapesaaoliyjrrrsjh.supabase.co';
 var SUPABASE_KEY = PropertiesService.getScriptProperties().getProperty('SUPABASE_KEY') || 'sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u';
 
+// ── CSRF PROTECTION: Signed Timestamp Token ──
+var CSRF_SECRET = PropertiesService.getScriptProperties().getProperty('CSRF_SECRET');
+if (!CSRF_SECRET) {
+  CSRF_SECRET = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  PropertiesService.getScriptProperties().setProperty('CSRF_SECRET', CSRF_SECRET);
+}
+var CSRF_MAX_AGE = 300; // 5 minutes
+
+function generateCsrfToken(username) {
+  var ts = Math.floor(Date.now() / 1000);
+  var data = username + ':' + ts;
+  var hmac = Utilities.computeHmacSha256Signature(data, CSRF_SECRET);
+  return data + ':' + hmac;
+}
+
+function validateCsrfToken(token) {
+  if (!token || typeof token !== 'string') return false;
+  var parts = token.split(':');
+  if (parts.length !== 3) return false;
+  var username = parts[0];
+  var ts = parseInt(parts[1]);
+  var hmac = parts[2];
+  // Check expiry
+  var now = Math.floor(Date.now() / 1000);
+  if (now - ts > CSRF_MAX_AGE) return false;
+  // Verify HMAC
+  var expectedHmac = Utilities.computeHmacSha256Signature(username + ':' + ts, CSRF_SECRET);
+  return hmac === expectedHmac;
+}
+
+function requireCsrf(request) {
+  var token = request.csrf_token || request.headers?.['x-csrf-token'];
+  if (!validateCsrfToken(token)) {
+    return createResponse({ status: "error", message: "Sesi tidak valid atau sudah kedaluwarsa. Silakan muat ulang halaman." });
+  }
+  return null; // valid
+}
+
 function supabaseFetch(url, options) {
   options = options || {};
   options.headers = options.headers || {};
@@ -101,6 +139,13 @@ const MIDTRANS_IS_PRODUCTION = true; // Set ke true jika live production
 function handleCentralPost(request) {
   const action = request.action;
   
+  // ── CSRF PROTECTION: Validate token on sensitive actions ──
+  const csrfActions = ['register', 'changePassword', 'upgradePackage', 'deleteOwnerClient', 'updateClientData', 'resetPasswordWithToken'];
+  if (csrfActions.includes(action)) {
+    const csrfErr = requireCsrf(request);
+    if (csrfErr) return csrfErr;
+  }
+
   switch(action) {
     case 'copyMaster': return handleCopyMaster(request); 
     case 'register': return handleRegister(request); 

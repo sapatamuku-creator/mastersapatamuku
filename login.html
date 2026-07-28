@@ -568,13 +568,15 @@
     };
 
     window.prosesGantiPassword = async function() {
+        const csrfToken = await generateCsrfToken();
         const data = {
             action: "changePassword",
             username: document.getElementById('chg_user').value,
             currentPass: document.getElementById('chg_curr_pass').value,
-            newPass: document.getElementById('chg_new_pass').value
+            newPass: document.getElementById('chg_new_pass').value,
+            csrf_token: csrfToken
         };
-        if(data.newPass !== document.getElementById('chg_conf_pass').value) return showSapaModal("Password Tidak Cocok", "Konfirmasi password baru tidak sesuai.", "⚠️");
+        if(data.newPass !== document.getElementById('chg_conf_pass').value) return showSapaModal("Password Tidak Cocok", "Konfirmasi password baru tidak sesuai.", "⚠️");
         
         setLoading('btn_chg', true);
         try {
@@ -582,7 +584,7 @@
             const res = await response.json();
             showSapaModal("Hasil", res.message, (res.status === "success" ? "✅" : "❌"));
             if(res.status === "success") location.reload();
-        } catch (e) { showSapaModal("Error", "Gagal menghubungi server.", "⚠️"); }
+        } catch (e) { showSapaModal("Error", "Gagal menghubungi server.", "⚠️"); }
         setLoading('btn_chg', false);
     };
 

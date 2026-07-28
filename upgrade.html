@@ -658,9 +658,10 @@
         setLoading('btn_upgrade_pay', true);
         document.getElementById('text_upgrade_pay').innerText = "Mengupgrade Akun...";
         try {
+            const csrfToken = await generateCsrfToken();
             const response = await fetch(SCRIPT_URL, {
                 method: "POST", mode: "cors",
-                body: JSON.stringify({ action: "upgradePackage", username: currentUserData.username, newPackage: newPackage })
+                body: JSON.stringify({ action: "upgradePackage", username: currentUserData.username, newPackage: newPackage, csrf_token: csrfToken })
             });
             const resJson = await response.json();
             if (resJson.status === "success") {
