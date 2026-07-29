@@ -192,17 +192,20 @@ async function resolveSapatamuSubdomain() {
 
             // ===== STEP 1: Supabase view (PRIMARY — cepat ~200ms, tanpa cold start) =====
             let resolvedFromSupabase = false;
-            try {
-                const sbRes = await fetch(
-                    `${SB_URL}/rest/v1/client_public_profile?subdomain=eq.${sub}&select=ssid,client_name,category,package`,
-                    {
-                        headers: {
-                            "apikey": SB_KEY,
-                            "Authorization": "Bearer " + SB_KEY
+            const sbUrl = (typeof SB_URL !== 'undefined') ? SB_URL : (window.SB_URL || '');
+            const sbKey = (typeof SB_KEY !== 'undefined') ? SB_KEY : (window.SB_KEY || '');
+            if (sbUrl && sbKey) {
+                try {
+                    const sbRes = await fetch(
+                        `${sbUrl}/rest/v1/client_public_profile?subdomain=eq.${sub}&select=ssid,client_name,category,package`,
+                        {
+                            headers: {
+                                "apikey": sbKey,
+                                "Authorization": "Bearer " + sbKey
+                            }
                         }
-                    }
-                );
-                const sbData = await sbRes.json();
+                    );
+                    const sbData = await sbRes.json();
                 if (Array.isArray(sbData) && sbData.length > 0 && sbData[0].ssid) {
                     window.CURRENT_SS_ID = sbData[0].ssid;
                     window.CURRENT_CATEGORY = sbData[0].category || "wedding";
@@ -232,6 +235,7 @@ async function resolveSapatamuSubdomain() {
                 }
             } catch (e) {
                 console.warn("Supabase resolve gagal, mencoba GAS fallback:", e);
+            }
             }
 
             // ===== STEP 3: GAS fallback (hanya jika Supabase gagal) =====
