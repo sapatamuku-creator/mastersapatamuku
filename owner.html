@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -230,12 +230,35 @@
 
 <!-- LOGIN GATE -->
 <div id="login-gate">
-    <div class="login-card">
-        <div style="font-size: 48px; margin-bottom: 16px;">🛡️</div>
+    <div class="login-card" id="step-pass-card">
+        <div style="font-size: 48px; margin-bottom: 16px;">🛡️ </div>
         <h1>Owner Access</h1>
-        <p>Masukkan password admin untuk mengakses dashboard pengelolaan klien.</p>
-        <input type="password" id="admin-pass-input" class="input-dark" placeholder="Password Admin">
-        <button class="btn-primary" id="btn-login" onclick="doLogin()">Masuk Dashboard</button>
+        <p>Masukkan password admin untuk melanjutkan ke verifikasi 2-Langkah.</p>
+        <input type="password" id="admin-pass-input" class="input-dark" placeholder="Password Admin" onkeydown="if(event.key==='Enter') doLogin()">
+        <button class="btn-primary" id="btn-login" onclick="doLogin()">Lanjutkan (2-Step Verification) →</button>
+    </div>
+
+    <!-- STEP 2: 2-FACTOR AUTHENTICATION (OTP) CARD -->
+    <div class="login-card" id="step-otp-card" style="display: none;">
+        <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
+        <h1>2-Step Verification</h1>
+        <p style="font-size: 12px; margin-bottom: 20px;">Pilih saluran pengiriman kode OTP 6-Digit:</p>
+
+        <!-- Pilihan Kanal Pengiriman OTP -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button id="opt-method-email" class="btn-sm btn-outline" style="flex: 1; padding: 12px; border-color: var(--primary); color: var(--primary);" onclick="selectOtpMethod('email')">📧 Email<br><span style="font-size:9px; opacity:0.8;">opick8c@...</span></button>
+            <button id="opt-method-wa" class="btn-sm btn-outline" style="flex: 1; padding: 12px;" onclick="selectOtpMethod('wa')">💬 WhatsApp<br><span style="font-size:9px; opacity:0.8;">62822145...</span></button>
+        </div>
+
+        <button class="btn-primary" id="btn-send-otp" onclick="requestOtp()" style="margin-bottom: 20px; background: var(--gold);">⚡ Kirim Kode OTP</button>
+
+        <div id="otp-input-section" style="display: none;">
+            <input type="text" id="otp-code-input" class="input-dark" placeholder="Masukkan 6-Digit OTP" maxlength="6" style="text-align: center; letter-spacing: 6px; font-size: 20px; font-weight: 800;" onkeydown="if(event.key==='Enter') verifyOtp()">
+            <button class="btn-primary" id="btn-verify-otp" onclick="verifyOtp()" style="background: var(--green);">Verifikasi & Masuk Dashboard</button>
+            <p id="otp-timer-info" style="font-size: 11px; color: var(--muted); margin-top: 15px;">Kode OTP berlaku selama <b id="otp-countdown" style="color: var(--gold);">05:00</b></p>
+        </div>
+        
+        <button onclick="resetToPassStep()" style="background: none; border: none; color: var(--muted); font-size: 11px; margin-top: 20px; cursor: pointer; text-decoration: underline;">← Kembali ke Input Password</button>
     </div>
 </div>
 
@@ -416,14 +439,39 @@
     const GAS_SYNC_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 
     let adminPassword = "";
+    let selectedOtpMethod = "email"; // 'email' atau 'wa'
+    let otpCountdownInterval = null;
     let allClients = [];
+
+    function selectOtpMethod(method) {
+        selectedOtpMethod = method;
+        const btnEmail = document.getElementById('opt-method-email');
+        const btnWa = document.getElementById('opt-method-wa');
+        if (method === 'email') {
+            btnEmail.style.borderColor = 'var(--primary)';
+            btnEmail.style.color = 'var(--primary)';
+            btnWa.style.borderColor = 'var(--border)';
+            btnWa.style.color = 'var(--muted)';
+        } else {
+            btnWa.style.borderColor = 'var(--primary)';
+            btnWa.style.color = 'var(--primary)';
+            btnEmail.style.borderColor = 'var(--border)';
+            btnEmail.style.color = 'var(--muted)';
+        }
+    }
+
+    function resetToPassStep() {
+        document.getElementById('step-otp-card').style.display = 'none';
+        document.getElementById('step-pass-card').style.display = 'block';
+        if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+    }
 
     async function doLogin() {
         const pass = document.getElementById('admin-pass-input').value.trim();
         if (!pass) return;
         const btn = document.getElementById('btn-login');
 
-        btn.innerHTML = '<span class="spin"></span>';
+        btn.innerHTML = '<span class="spin"></span> Memverifikasi...';
         btn.disabled = true;
 
         try {
@@ -432,16 +480,104 @@
 
             if (result.status === 'success') {
                 adminPassword = pass;
-                document.getElementById('login-gate').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'block';
-                loadClients();
+                // Lanjut ke Step 2: 2FA OTP
+                document.getElementById('step-pass-card').style.display = 'none';
+                document.getElementById('step-otp-card').style.display = 'block';
+                showToast("🔑 Password Benar! Pilih saluran pengiriman OTP.", "gold");
             } else {
                 showToast("❌ Akses Ditolak: Password Salah!", "red");
             }
         } catch (e) {
             showToast("❌ Error Koneksi: " + e.toString(), "red");
         }
-        btn.innerHTML = 'Masuk Dashboard';
+        btn.innerHTML = 'Lanjutkan (2-Step Verification) →';
+        btn.disabled = false;
+    }
+
+    async function requestOtp() {
+        const btn = document.getElementById('btn-send-otp');
+        btn.innerHTML = '<span class="spin"></span> Mengirim OTP...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(GAS_SYNC_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "sendOwnerOtp",
+                    adminPassword: adminPassword,
+                    method: selectedOtpMethod
+                })
+            });
+            const result = await res.json();
+
+            if (result.status === 'success') {
+                showToast(`✅ Kode OTP berhasil dikirim via ${selectedOtpMethod.toUpperCase()}!`, "green");
+                document.getElementById('otp-input-section').style.display = 'block';
+                btn.style.display = 'none';
+                startOtpTimer(300); // 5 Menit timer
+            } else {
+                showToast("❌ Gagal Mengirim OTP: " + (result.message || "Error server"), "red");
+                btn.innerHTML = '⚡ Kirim Kode OTP';
+                btn.disabled = false;
+            }
+        } catch (e) {
+            showToast("❌ Error Koneksi OTP: " + e.toString(), "red");
+            btn.innerHTML = '⚡ Kirim Kode OTP';
+            btn.disabled = false;
+        }
+    }
+
+    function startOtpTimer(durationSeconds) {
+        if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+        let timer = durationSeconds;
+        const countdownEl = document.getElementById('otp-countdown');
+        otpCountdownInterval = setInterval(() => {
+            const min = String(Math.floor(timer / 60)).padStart(2, '0');
+            const sec = String(timer % 60).padStart(2, '0');
+            if (countdownEl) countdownEl.textContent = `${min}:${sec}`;
+            if (--timer < 0) {
+                clearInterval(otpCountdownInterval);
+                if (countdownEl) countdownEl.textContent = "EXPIRED";
+                showToast("⚠️ Kode OTP telah kadaluarsa. Silakan minta kode baru.", "red");
+                document.getElementById('btn-send-otp').style.display = 'block';
+                document.getElementById('btn-send-otp').innerHTML = '⚡ Kirim Ulang OTP';
+                document.getElementById('btn-send-otp').disabled = false;
+            }
+        }, 1000);
+    }
+
+    async function verifyOtp() {
+        const otpCode = document.getElementById('otp-code-input').value.trim();
+        if (!otpCode || otpCode.length !== 6) return showToast("⚠️ Masukkan 6-digit kode OTP!", "gold");
+
+        const btn = document.getElementById('btn-verify-otp');
+        btn.innerHTML = '<span class="spin"></span> Memverifikasi OTP...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(GAS_SYNC_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "verifyOwnerOtp",
+                    adminPassword: adminPassword,
+                    otp: otpCode
+                })
+            });
+            const result = await res.json();
+
+            if (result.status === 'success') {
+                showToast("🎉 Verifikasi 2FA Berhasil! Selamat Datang, Owner.", "green");
+                document.getElementById('login-gate').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+                loadClients();
+            } else {
+                showToast("❌ " + (result.message || "Kode OTP Salah / Expired"), "red");
+            }
+        } catch(e) {
+            showToast("❌ Error Verifikasi OTP: " + e.toString(), "red");
+        }
+        btn.innerHTML = 'Verifikasi & Masuk Dashboard';
         btn.disabled = false;
     }
 

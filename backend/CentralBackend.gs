@@ -172,6 +172,8 @@ function handleCentralPost(request) {
     case 'getOwnerClients': return handleGetOwnerClients(request);
     case 'updateOwnerClient': return handleUpdateOwnerClient(request);
     case 'deleteOwnerClient': return handleDeleteOwnerClient(request);
+    case 'sendOwnerOtp': return handleSendOwnerOtp(request);
+    case 'verifyOwnerOtp': return handleVerifyOwnerOtp(request);
     case 'syncFromSupabase': return handleSyncFromSupabase(request);
     case 'upgradePackage': return handleUpgradePackage(request);
     case 'syncAllClients': return createResponse({ status: "success", message: syncAllClientsToSupabase() });
@@ -625,6 +627,95 @@ function handleDeleteOwnerClient(data) {
     return createResponse({ status: "success", message: "Data client dan spreadsheet berhasil dihapus." });
   } catch (err) {
     return createResponse({ status: "error", message: "Gagal hapus client: " + err.toString() });
+  }
+}
+
+// --- OWNER 2FA OTP GENERATION & VERIFICATION ---
+function handleSendOwnerOtp(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const adminPass = String(sheet.getRange(1, 11).getValue() || "").trim();
+    if (data.adminPassword !== adminPass) {
+      return createResponse({ status: "error", message: "Password admin tidak valid" });
+    }
+
+    const method = data.method || "email";
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const now = Math.floor(Date.now() / 1000);
+    const expiry = now + 300; // 5 menit
+
+    // Simpan OTP ke ScriptProperties
+    const props = PropertiesService.getScriptProperties();
+    props.setProperty('owner_otp_code', otp);
+    props.setProperty('owner_otp_expiry', String(expiry));
+
+    if (method === "email") {
+      const emailTarget = "opick8c@gmail.com";
+      const subject = "🔐 Kode Verifikasi 2FA Owner SapaTamu.ku - " + otp;
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #0F0F14; color: #E8E8F0; border-radius: 12px;">
+          <h2 style="color: #C8962E; margin-bottom: 10px;">Verifikasi 2-Langkah Owner Access</h2>
+          <p>Anda sedang mencoba masuk ke Owner Dashboard SapaTamu.ku.</p>
+          <p>Berikut adalah kode OTP Anda (berlaku 5 menit):</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #E07B7B; margin: 20px 0; padding: 15px; background: #1A1A24; border-radius: 8px; text-align: center; border: 1px solid #2E2E42;">
+            ${otp}
+          </div>
+          <p style="font-size: 12px; color: #888899;">Jika Anda tidak melakukan permintaan ini, segera amankan akun Anda.</p>
+        </div>
+      `;
+      MailApp.sendEmail({
+        to: emailTarget,
+        subject: subject,
+        htmlBody: htmlBody
+      });
+      return createResponse({ status: "success", message: "OTP dikirim ke Email opick8c@gmail.com" });
+    } else {
+      const waTarget = "6282214578132";
+      const waMessage = `🔐 *Kode Verifikasi 2FA Owner SapaTamu.ku*\n\nKode OTP Anda adalah: *${otp}*\n\nKode ini berlaku selama 5 menit. Jangan berikan kode ini kepada siapapun.`;
+      
+      // Kirim via Fonnte WA Gateway
+      const options = {
+        method: "post",
+        headers: { "Authorization": FONNTE_TOKEN },
+        payload: { target: waTarget, message: waMessage }
+      };
+      UrlFetchApp.fetch("https://api.fonnte.com/send", options);
+      return createResponse({ status: "success", message: "OTP dikirim ke WA 6282214578132" });
+    }
+  } catch (e) {
+    return createResponse({ status: "error", message: "Gagal mengirim OTP: " + e.toString() });
+  }
+}
+
+function handleVerifyOwnerOtp(data) {
+  try {
+    const ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const adminPass = String(sheet.getRange(1, 11).getValue() || "").trim();
+    if (data.adminPassword !== adminPass) {
+      return createResponse({ status: "error", message: "Password admin tidak valid" });
+    }
+
+    const props = PropertiesService.getScriptProperties();
+    const storedOtp = props.getProperty('owner_otp_code');
+    const storedExpiry = parseInt(props.getProperty('owner_otp_expiry') || "0");
+    const now = Math.floor(Date.now() / 1000);
+
+    if (!storedOtp || now > storedExpiry) {
+      return createResponse({ status: "error", message: "Kode OTP sudah kadaluarsa. Silakan minta kode baru." });
+    }
+
+    if (String(data.otp).trim() === String(storedOtp).trim()) {
+      // Hapus OTP setelah sukses diverifikasi (one-time use)
+      props.deleteProperty('owner_otp_code');
+      props.deleteProperty('owner_otp_expiry');
+      return createResponse({ status: "success", message: "Verifikasi 2FA Berhasil" });
+    } else {
+      return createResponse({ status: "error", message: "Kode OTP salah. Periksa kembali SMS/WA/Email Anda." });
+    }
+  } catch(e) {
+    return createResponse({ status: "error", message: "Error verifikasi OTP: " + e.toString() });
   }
 }
 
