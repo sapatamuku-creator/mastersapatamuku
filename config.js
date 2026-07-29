@@ -2,21 +2,21 @@
 // Single source of truth for all credentials.
 // All files should reference this config instead of hardcoding keys.
 
-const SUPABASE_CONFIG = {
+var SUPABASE_CONFIG = window.SUPABASE_CONFIG || {
   url: 'https://llrapesaaoliyjrrrsjh.supabase.co',
   key: 'sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u'
 };
 
-const MIDTRANS_CONFIG = {
+var MIDTRANS_CONFIG = window.MIDTRANS_CONFIG || {
   clientKey: 'Mid-client-6PvcKPvkHyWGLN8l',
   snapUrl: 'https://app.midtrans.com/snap/snap.js'
 };
 
 // Backward-compatible aliases
-const SB_URL = SUPABASE_CONFIG.url;
-const SB_KEY = SUPABASE_CONFIG.key;
-const SUPABASE_URL = SUPABASE_CONFIG.url;
-const SUPABASE_KEY = SUPABASE_CONFIG.key;
+var SB_URL = SUPABASE_CONFIG.url;
+var SB_KEY = SUPABASE_CONFIG.key;
+var SUPABASE_URL = SUPABASE_CONFIG.url;
+var SUPABASE_KEY = SUPABASE_CONFIG.key;
 
 // Dynamically load Midtrans Snap.js with centralized key
 function loadMidtransSnap() {
@@ -28,7 +28,7 @@ function loadMidtransSnap() {
 }
 
 // ── CSRF TOKEN GENERATION (HMAC-SHA256 via Web Crypto API) ──
-const CSRF_CONFIG = {
+var CSRF_CONFIG = window.CSRF_CONFIG || {
   secret: 'sapatamu-csrf-xK9m2pL8vQ3nR7wY', // Shared with GAS PropertiesService
   maxAge: 300 // 5 minutes
 };
@@ -60,7 +60,7 @@ async function csrfHeaders() {
 // ── SESSION MANAGEMENT ──
 // NOTE: sessionStorage TIDAK bisa cross-subdomain (sapatamu.id → fazafarid.sapatamu.id)
 // Jadi localStorage tetap dibutuhkan sebagai session store utama.
-const SESSION_CONFIG = {
+var SESSION_CONFIG = window.SESSION_CONFIG || {
   timeoutMs: 30 * 60 * 1000, // 30 minutes inactivity timeout
   storageKey: 'sapatamu_session',
   legacyKey: 'sapatamu_db',
