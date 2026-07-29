@@ -66,16 +66,18 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
-  if (request.method !== 'GET') return;
+  // Skip non-http/https requests (e.g. chrome-extension://)
+  if (!url.protocol.startsWith('http')) return;
 
-  // Skip Supabase & external API calls (always go to network)
+  // Skip Supabase & external API calls / CDNs (always go directly to network, do not attempt background caching)
   if (url.hostname.includes('supabase.co') ||
       url.hostname.includes('script.google.com') ||
       url.hostname.includes('api.qrserver.com') ||
-      url.hostname.includes('googleapis.com/css') ||
-      url.hostname.includes('fonts.googleapis.com') ||
-      url.hostname.includes('fonts.gstatic.com')) {
+      url.hostname.includes('googleapis.com') ||
+      url.hostname.includes('gstatic.com') ||
+      url.hostname.includes('tailwindcss.com') ||
+      url.hostname.includes('jsdelivr.net') ||
+      url.hostname.includes('icons8.com')) {
     event.respondWith(
       fetch(request).catch(() => caches.match(request))
     );
@@ -86,22 +88,24 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Return cached, but also update cache in background
-        event.waitUntil(
-          fetch(request).then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, networkResponse);
-              });
-            }
-          }).catch(() => null)
-        );
+        // Return cached, but also update cache in background (only for same-origin)
+        if (url.origin === self.location.origin) {
+          event.waitUntil(
+            fetch(request).then((networkResponse) => {
+              if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                caches.open(CACHE_NAME).then((cache) => {
+                  cache.put(request, networkResponse);
+                });
+              }
+            }).catch(() => null)
+          );
+        }
         return cachedResponse;
       }
 
       // Not in cache → fetch from network
       return fetch(request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
+        if (networkResponse && networkResponse.status === 200 && url.origin === self.location.origin) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseClone);
