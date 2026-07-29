@@ -81,12 +81,13 @@ async function resolveSapatamuSubdomain() {
                 if (!validUser) {
                     console.warn("Invalid username parameter rejected:", _urlUser);
                 } else {
-                    // SECURITY: Jangan ambil role dari URL — hanya dari storage yang sudah ada
+                    // Simpan role dari URL (jika baru login) atau pertahankan role yang ada
+                    const _urlRole = _urlParams.get('role');
                     const _existingRole = (function () {
                         try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch (e) { return undefined; }
                     })();
-                    const _sessionData = { ssId: validSsId, username: validUser, category: validCat };
-                    if (_existingRole) _sessionData.role = _existingRole;
+                    const _sessionRole = _urlRole || _existingRole || 'client';
+                    const _sessionData = { ssId: validSsId, username: validUser, category: validCat, role: _sessionRole };
                     localStorage.setItem('sapatamu_db', JSON.stringify(_sessionData));
                     sessionStorage.setItem('sapatamu_session', JSON.stringify(_sessionData));
                     window.CURRENT_CATEGORY = validCat;
