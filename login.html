@@ -345,12 +345,12 @@
     const SESSION_KEY = 'sapatamu_session';
     const LOCAL_DB = 'sapatamu_db';
 
-    // CLEAR STORAGE IMMEDIATELY IF SIGNOUT PARAMETER IS PRESENT
+    // CLEAR STORAGE IMMEDIATELY IF SIGNOUT OR UNAUTHENTICATED PARAMETER IS PRESENT
     const _initUrlParams = new URLSearchParams(window.location.search);
-    if (_initUrlParams.get('signout') === 'true' || _initUrlParams.get('forceReset') === 'true') {
+    if (_initUrlParams.get('signout') === 'true' || _initUrlParams.get('forceReset') === 'true' || _initUrlParams.get('reason') === 'unauthenticated' || _initUrlParams.get('reason') === 'force_disconnect') {
         localStorage.clear();
         sessionStorage.clear();
-        window.history.replaceState({}, '', window.location.pathname);
+        window.history.replaceState({}, '', window.location.pathname + '?reason=' + encodeURIComponent(_initUrlParams.get('reason') || 'signout'));
     }
 
     window.forceResetSesi = function() {
@@ -369,8 +369,9 @@
         const session = sessionStorage.getItem(SESSION_KEY);
         const localData = localStorage.getItem(LOCAL_DB);
         
-        // Cek lagi jika butuh return awal (opsional karena sudah di atas)
-        if (new URLSearchParams(window.location.search).get('signout') === 'true') return;
+        // Jangan auto-redirect jika sedang signout / unauthenticated / force_disconnect
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('signout') === 'true' || urlParams.get('reason')) return;
 
         let targetSsId = window.CURRENT_SS_ID;
 
