@@ -341,28 +341,28 @@
 ---
 
 ### H15. Fix RLS — terminated_sessions
-- **Status:** Pending
+- **Status:** Completed
 - **Priority:** High
 - **File:** `sql/setup_presence_monitor.sql`
 - **Estimasi:** 30 menit
 
 **Subtask:**
-- [ ] Batasi anon INSERT di `terminated_sessions`
-- [ ] Test
+- [x] Batasi anon INSERT di `terminated_sessions`
+- [x] Test
 
 ---
 
 ### H16. Commit package-lock.json
-- **Status:** Pending
+- **Status:** Completed
 - **Priority:** High
 - **File:** `.gitignore`
 - **Estimasi:** 10 menit
 
 **Subtask:**
-- [ ] Hapus `package-lock.json` dari `.gitignore`
-- [ ] Run `npm install` untuk generate lockfile
-- [ ] Commit lockfile
-- [ ] Update CI untuk frozen install
+- [x] Hapus `package-lock.json` dari `.gitignore`
+- [x] Run `npm install` untuk generate lockfile
+- [x] Commit lockfile
+- [x] Update CI untuk frozen install
 
 ---
 
@@ -371,31 +371,31 @@
 ### M1. Security Headers
 - **File:** `vercel.json`
 - **Estimasi:** 1 jam
-- [ ] Tambah CSP header
-- [ ] Tambah HSTS header
-- [ ] Tambah X-Frame-Options: DENY
-- [ ] Tambah X-Content-Type-Options: nosniff
-- [ ] Tambah Referrer-Policy
-- [ ] Test dengan securityheaders.com
+- [x] Tambah CSP header
+- [x] Tambah HSTS header
+- [x] Tambah X-Frame-Options: DENY
+- [x] Tambah X-Content-Type-Options: nosniff
+- [x] Tambah Referrer-Policy
+- [x] Test dengan securityheaders.com
 
 ### M2. CORS Config
 - **File:** `vercel.json`
 - **Estimasi:** 30 menit
-- [ ] Restrict allowed origins
-- [ ] Test cross-origin requests
+- [x] Restrict allowed origins
+- [x] Test cross-origin requests
 
 ### M3. .gitignore Fix
 - **File:** `.gitignore`
 - **Estimasi:** 10 menit
-- [ ] Tambah `.env.local`
-- [ ] Tambah `.env.*.local`
-- [ ] Verify
+- [x] Tambah `.env.local`
+- [x] Tambah `.env.*.local`
+- [x] Verify
 
 ### M4. CSP Meta Tags
 - **File:** Semua HTML
 - **Estimasi:** 1-2 jam
-- [ ] Tambah `<meta http-equiv="Content-Security-Policy">` ke setiap HTML
-- [ ] Test semua fitur
+- [x] Tambah `<meta http-equiv="Content-Security-Policy">` ke setiap HTML
+- [x] Test semua fitur
 
 ### M5. Sanitize Push Notifications
 - **File:** `sw.js`
