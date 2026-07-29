@@ -172,9 +172,8 @@ async function resolveSapatamuSubdomain() {
         if (_localData) {
             try {
                 const _parsed = JSON.parse(_localData);
-                // ✅ FIX: Validasi username - harus berupa slug valid (hanya huruf kecil & angka)
-                // Jika tidak valid (misal "Meri & Rosid"), paksa re-fetch dari Supabase
-                const isValidSlug = /^[a-z0-9]+$/.test(_parsed.username || '');
+                // ✅ FIX: Validasi username/subdomain slug - hanya huruf kecil, angka, & tanda hubung (-)
+                const isValidSlug = /^[a-z0-9-]+$/.test(_parsed.username || '');
                 if (_parsed.ssId && isValidSlug) {
                     window.CURRENT_SS_ID = _parsed.ssId;
                     window.CURRENT_CATEGORY = _parsed.category || "wedding";
@@ -261,13 +260,13 @@ async function resolveSapatamuSubdomain() {
         }
 
         // 3. SATPAM AKHIR (Hanya di Subdomain): Jika masih kosong, tendang ke login
-        // KECUALI untuk halaman publik (undangan, welcome, worker)
-        const publicPages = ["undangan.html", "welcome.html", "worker.html", "invitation.html", "rsvp.html"];
+        // KECUALI untuk halaman publik / auth (undangan, welcome, worker, login)
+        const publicPages = ["undangan.html", "welcome.html", "worker.html", "invitation.html", "rsvp.html", "login.html", "login"];
         const isPublicPage = publicPages.some(page => window.location.pathname.includes(page));
 
         if (!window.CURRENT_SS_ID && !isPublicPage) {
             console.warn("Akses ditolak: Tidak ada sesi valid di subdomain ini.");
-            window.location.replace("https://sapatamu.id/login.html");
+            window.location.replace("https://sapatamu.id/login.html?reason=unauthenticated");
             return null;
         }
     }
