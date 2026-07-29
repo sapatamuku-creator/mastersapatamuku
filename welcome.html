@@ -721,7 +721,7 @@
                 const photoUrls = data.urlFoto.split(",").map(u => u.trim()).filter(u => u !== "");
                 initSlideshow(photoUrls);
             } else {
-                initSlideshow(['https://drive.google.com/uc?id=1jBzMvevbhVvuVFTzwiLzmrum5IiEpwwz']);
+                initSlideshow([]);
             }
 
             const now = new Date();
@@ -1021,7 +1021,18 @@
             urls.forEach((url, i) => {
                 const div = document.createElement('div');
                 div.className = `slide ${i === 0 ? 'active' : ''}`;
-                div.style.backgroundImage = `url('${url}')`;
+                
+                // Preload image to test if valid
+                const img = new Image();
+                img.onload = () => {
+                    div.style.backgroundImage = `url('${url}')`;
+                };
+                img.onerror = () => {
+                    // Fallback to elegant dark gradient background if image fails to load
+                    div.style.background = `linear-gradient(135deg, #1A1A24 0%, #0F0F14 100%)`;
+                };
+                img.src = url;
+
                 container.appendChild(div);
             });
 
