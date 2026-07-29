@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    SYNC-ENGINE.JS — Offline Sync Engine for SapaTamu PWA
    ═══════════════════════════════════════════════════════════ */
 
@@ -160,7 +160,7 @@ const SyncEngine = (() => {
             body: JSON.stringify(payload)
         });
 
-        if (!res.ok) throw new Error(`Insert failed: ${res.status}`);
+        if (!res.ok) throw new Error("Gagal menyimpan data (Insert Error)");
     }
 
     async function syncUpdate(ssId, kode, updates) {
@@ -173,7 +173,7 @@ const SyncEngine = (() => {
             }
         );
 
-        if (!res.ok) throw new Error(`Update failed: ${res.status}`);
+        if (!res.ok) throw new Error("Gagal memperbarui data (Update Error)");
     }
 
     async function syncDelete(ssId, kode) {
@@ -185,7 +185,7 @@ const SyncEngine = (() => {
             }
         );
 
-        if (!res.ok && res.status !== 204) throw new Error(`Delete failed: ${res.status}`);
+        if (!res.ok && res.status !== 204) throw new Error("Gagal menghapus data (Delete Error)");
     }
 
     async function syncUpdateStatus(ssId, kode, data) {
@@ -198,7 +198,7 @@ const SyncEngine = (() => {
             }
         );
 
-        if (!res.ok) throw new Error(`Status update failed: ${res.status}`);
+        if (!res.ok) throw new Error("Gagal memperbarui status (Status Update Error)");
     }
 
     // ── Sync Print Queue ──

@@ -30,9 +30,12 @@ self.addEventListener('install', (event) => {
       console.log('[SW] Precaching assets');
       return cache.addAll(PRECACHE_ASSETS).catch((err) => {
         console.warn('[SW] Some assets failed to cache:', err);
-        // Cache individually, skip failures
+        // Cache individually, log failures explicitly
         return Promise.allSettled(
-          PRECACHE_ASSETS.map((url) => cache.add(url).catch(() => null))
+          PRECACHE_ASSETS.map((url) => cache.add(url).catch((itemErr) => {
+            console.warn('[SW] Failed to precache asset:', url, itemErr);
+            return null;
+          }))
         );
       });
     })
@@ -106,9 +109,15 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       }).catch(() => {
-        // Offline and not in cache → return offline page
+        // Offline and not in cache → return cached offline page or generic offline HTML
         if (request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('./formulir_tamu.html');
+          return caches.match('./formulir_tamu.html').then((offlinePage) => {
+            if (offlinePage) return offlinePage;
+            return new Response(
+              '<!DOCTYPE html><html><head><title>Offline</title></head><body style="text-align:center;padding:50px;font-family:sans-serif;"><h2>Mode Offline</h2><p>Koneksi internet Anda terputus. Silakan hubungkan kembali perangkat Anda.</p></body></html>',
+              { headers: { 'Content-Type': 'text/html' } }
+            );
+          });
         }
       });
     })
@@ -174,11 +183,24 @@ self.addEventListener('sync', (event) => {
   }
 });
 
+// Helper function to sanitize text input for notifications
+function sanitizeText(str) {
+  if (typeof str !== 'string') return '';
+  // Strip HTML tags and control characters
+  return str.replace(/<[^>]*>/g, '').replace(/[\r\n\t]/g, ' ').trim();
+}
+
 // ── NOTIFICATION: Push notifications ──
 self.addEventListener('push', (event) => {
-  const data = event.data?.json() || {};
-  const title = data.title || 'SapaTamu';
-  const body = data.body || 'Ada pembaruan data';
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+
+  const title = sanitizeText(data.title) || 'SapaTamu';
+  const body = sanitizeText(data.body) || 'Ada pembaruan data';
   const icon = 'icon-192.png';
 
   event.waitUntil(

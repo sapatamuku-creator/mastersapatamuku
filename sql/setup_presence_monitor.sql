@@ -15,18 +15,21 @@ CREATE TABLE IF NOT EXISTS terminated_sessions (
 
 ALTER TABLE terminated_sessions ENABLE ROW LEVEL SECURITY;
 
--- Anon bisa SELECT (browser user perlu baca untuk cek apakah mereka di-kick)
+-- Anon bisa SELECT (browser user perlu baca untuk cek apakah mereka di-kick — dibatasi 24 jam terakhir)
 DROP POLICY IF EXISTS "anon can read terminated_sessions" ON terminated_sessions;
 CREATE POLICY "anon can read terminated_sessions"
-  ON terminated_sessions FOR SELECT TO anon USING (true);
+  ON terminated_sessions FOR SELECT TO anon 
+  USING (terminated_at > (now() - INTERVAL '24 hours'));
 
 -- Authenticated bisa INSERT (monitor page insert sinyal kick) — require valid username
+DROP POLICY IF EXISTS "authenticated can insert terminated_sessions" ON terminated_sessions;
 DROP POLICY IF EXISTS "anon can insert terminated_sessions" ON terminated_sessions;
 CREATE POLICY "authenticated can insert terminated_sessions"
   ON terminated_sessions FOR INSERT TO authenticated
   WITH CHECK (username IS NOT NULL AND length(username) >= 3 AND length(username) <= 100);
 
 -- Authenticated bisa DELETE (cleanup setelah kick berhasil) — require valid username
+DROP POLICY IF EXISTS "authenticated can delete terminated_sessions" ON terminated_sessions;
 DROP POLICY IF EXISTS "anon can delete terminated_sessions" ON terminated_sessions;
 CREATE POLICY "authenticated can delete terminated_sessions"
   ON terminated_sessions FOR DELETE TO authenticated

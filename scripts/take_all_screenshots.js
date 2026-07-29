@@ -1,12 +1,12 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
-const ssId = '1l4NNvzl-9GpVqoVWlIha9POQLKGzSA8ByF1dTLp6SYc';
-const user = 'BintangAnisa';
+const ssId = process.env.TEST_SSID || '';
+const user = process.env.TEST_USER || 'testuser';
 const category = 'Wedding';
 const role = 'admin';
 
-const queryParams = `?ssId=${ssId}&user=${encodeURIComponent(user)}&category=${category}&role=${role}`;
+const queryParams = ssId ? `?ssId=${ssId}&user=${encodeURIComponent(user)}&category=${category}&role=${role}` : '';
 
 const pagesToCapture = [
     { name: 'feature_dashboard', file: 'dashboard.html' },

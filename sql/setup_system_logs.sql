@@ -19,17 +19,25 @@ CREATE TABLE IF NOT EXISTS public.system_logs (
 ALTER TABLE public.system_logs ENABLE ROW LEVEL SECURITY;
 
 -- 3. Membuat Kebijakan RLS (Policies)
--- Kebijakan INSERT: Mengizinkan client (anon) dan backend (authenticated) memasukan log
+-- Kebijakan INSERT: Mengizinkan client (anon) dengan validasi field & authenticated memasukan log
+DROP POLICY IF EXISTS "Allow anon insert logs" ON public.system_logs;
 CREATE POLICY "Allow anon insert logs" ON public.system_logs
-    FOR INSERT TO anon WITH CHECK (true);
+    FOR INSERT TO anon 
+    WITH CHECK (
+        action_type IS NOT NULL AND length(action_type) > 0 AND length(action_type) <= 100 AND
+        status IN ('SUCCESS', 'FAILED', 'WARNING', 'INFO')
+    );
 
+DROP POLICY IF EXISTS "Allow authenticated insert logs" ON public.system_logs;
 CREATE POLICY "Allow authenticated insert logs" ON public.system_logs
     FOR INSERT TO authenticated WITH CHECK (true);
 
--- Kebijakan SELECT: Mengizinkan admin/monitor membaca log untuk visualisasi realtime
+-- Kebijakan SELECT: Mengizinkan admin/monitor membaca log (dibatasi 24 jam terakhir untuk anon demi keamanan)
+DROP POLICY IF EXISTS "Allow anon select logs" ON public.system_logs;
 CREATE POLICY "Allow anon select logs" ON public.system_logs
-    FOR SELECT TO anon USING (true);
+    FOR SELECT TO anon USING (created_at > (now() - INTERVAL '24 hours'));
 
+DROP POLICY IF EXISTS "Allow authenticated select logs" ON public.system_logs;
 CREATE POLICY "Allow authenticated select logs" ON public.system_logs
     FOR SELECT TO authenticated USING (true);
 

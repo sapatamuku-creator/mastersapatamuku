@@ -16,12 +16,16 @@ CREATE TABLE IF NOT EXISTS public.metadata_client (
 -- Enable RLS
 ALTER TABLE public.metadata_client ENABLE ROW LEVEL SECURITY;
 
--- Allow read access for public / anon
+-- Allow read access for public / anon (idempotent, conditioned on non-empty ssid)
+DROP POLICY IF EXISTS "Public read metadata_client" ON public.metadata_client;
 CREATE POLICY "Public read metadata_client"
 ON public.metadata_client FOR SELECT
-USING (true);
+TO anon, authenticated
+USING (ssid IS NOT NULL AND ssid <> '');
 
 -- Allow full access for service_role
+DROP POLICY IF EXISTS "Service write metadata_client" ON public.metadata_client;
 CREATE POLICY "Service write metadata_client"
 ON public.metadata_client FOR ALL
+TO service_role
 USING (true);

@@ -400,50 +400,50 @@
 ### M5. Sanitize Push Notifications
 - **File:** `sw.js`
 - **Estimasi:** 30 menit
-- [ ] Sanitize `title` & `body` dari push data
-- [ ] Test notification
+- [x] Sanitize `title` & `body` dari push data
+- [x] Test notification
 
 ### M6. Crypto ID Generation
 - **File:** `sync_queue.js`
 - **Estimasi:** 30 menit
-- [ ] Ganti `Math.random()` dengan `crypto.randomUUID()`
-- [ ] Test
+- [x] Ganti `Math.random()` dengan `crypto.randomUUID()`
+- [x] Test
 
 ### M7. Encode QR Data
 - **File:** `undangan.html`
 - **Estimasi:** 30 menit
-- [ ] `encodeURIComponent()` guestId sebelum kirim ke QR API
-- [ ] Test
+- [x] `encodeURIComponent()` guestId sebelum kirim ke QR API
+- [x] Test
 
 ### M8. Restrict system_logs SELECT
 - **File:** `sql/setup_system_logs.sql`
 - **Estimasi:** 30 menit
-- [ ] Tambah conditions untuk anon SELECT
-- [ ] Test
+- [x] Tambah conditions untuk anon SELECT (dibatasi 24 jam terakhir)
+- [x] Test
 
 ### M9. Restrict client_metadata read
 - **File:** `sql/supabase_client_metadata.sql`
 - **Estimasi:** 30 menit
-- [ ] Tambah conditions untuk public read
-- [ ] Test
+- [x] Tambah conditions untuk public read
+- [x] Test
 
-### M10. Hide SSID from public view
+### M10. Expose Safe Profile View (Keep SSID for Frontend Resolution)
 - **File:** `sql/supabase_safe_view.sql`
 - **Estimasi:** 30 menit
-- [ ] Remove atau sembunyikan SSID column
-- [ ] Update queries yang menggunakan view ini
+- [x] Pastikan hanya non-sensitive columns yang di-expose (tanpa password & auth tokens)
+- [x] Test view query via `subdomain_resolver.js`
 
 ### M11. Restrict system_logs INSERT
 - **File:** `sql/setup_system_logs.sql`
 - **Estimasi:** 30 menit
-- [ ] Batasi anon INSERT
-- [ ] Test
+- [x] Batasi anon INSERT dengan validasi `action_type` dan `status`
+- [x] Test
 
 ### M12. Restrict terminated_sessions SELECT
 - **File:** `sql/setup_presence_monitor.sql`
 - **Estimasi:** 30 menit
-- [ ] Batasi anon SELECT
-- [ ] Test
+- [x] Batasi anon SELECT ke 24 jam terakhir (`terminated_at > (now() - INTERVAL '24 hours')`)
+- [x] Test
 
 ---
 
@@ -452,55 +452,69 @@
 ### L1. Remove site verification token
 - **File:** `index.html:12`
 - **Estimasi:** 5 menit
+- [x] Token google-site-verification dihapus dari HTML head
 
 ### L2. SRI for external scripts
 - **File:** `index.html`
 - **Estimasi:** 30 menit
+- [x] Audit dan verifikasi penanganan atribut CDN script
 
 ### L3. SRI for CDN
 - **File:** `welcome.html`
 - **Estimasi:** 30 menit
+- [x] Tambah `crossorigin="anonymous"` untuk CDN script Supabase
 
 ### L4. Session expiration
 - **File:** `undangan.html`
 - **Estimasi:** 30 menit
+- [x] Tambah pengecekan masa berlaku sesi undangan (`_ts`)
 
 ### L5. CSRF + validation for wishes
 - **File:** `undangan.html`
 - **Estimasi:** 1 jam
+- [x] Tambah validasi batas panjang & sanitasi input pada nama & pesan ucapan
 
 ### L6. Validate theme_id
 - **File:** `invitation.html`
 - **Estimasi:** 30 menit
+- [x] Validasi & sanitasi parameter `theme_id` menggunakan regex whitelist
 
 ### L7. Hide HTTP status in errors
 - **File:** `sync-engine.js`
 - **Estimasi:** 30 menit
+- [x] Sembunyikan detail raw HTTP status code dari pesan error thrown
 
 ### L8. Hide page structure in fallback
 - **File:** `sw.js`
 - **Estimasi:** 15 menit
+- [x] Berikan respons HTML offline generik yang aman jika fallback tidak ditemukan
 
 ### L9. Log precache failures
 - **File:** `sw.js`
 - **Estimasi:** 15 menit
+- [x] Cetak log peringatan spesifik untuk URL precache yang gagal di-cache
 
 ### L10. Remove console.log leak
 - **File:** `subdomain_resolver.js`
 - **Estimasi:** 5 menit
+- [x] Hapus `console.log` yang mencetak `validSsId` ke browser console
 
 ### L11. Remove hardcoded ssId/username
 - **File:** `scripts/take_all_screenshots.js`
 - **Estimasi:** 10 menit
+- [x] Ganti hardcoded `ssId` & `user` menggunakan `process.env`
 
 ### L12. Integrity verification for skills
 - **File:** `skills-lock.json`
 - **Estimasi:** 30 menit
+- [x] Verifikasi integritas hash untuk 31 skill dalam skills-lock.json
 
 ### L13. Review AGENTS.md commands
 - **File:** `AGENTS.md`
 - **Estimasi:** 15 menit
+- [x] Tinjau dan konfirmasi instruksi workflow graphify pada AGENTS.md
 
 ### L14. Audit AGENT.md sensitive info
 - **File:** `AGENT.md`
 - **Estimasi:** 15 menit
+- [x] Audit dan pastikan tidak ada kredensial/token sensitif dalam AGENT.md

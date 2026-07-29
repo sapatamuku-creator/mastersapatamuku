@@ -822,7 +822,7 @@
             updateCountdown();
             document.getElementById('guest-name-display').innerText = guestName;
             if (document.getElementById('wish-name')) document.getElementById('wish-name').value = guestName !== "Tamu Undangan" ? guestName : "";
-            document.getElementById('qr-code').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${guestId}`;
+            document.getElementById('qr-code').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(guestId)}`;
             document.getElementById('guest-id-label').innerText = `ID: ${guestId}`;
             const weddingNames = document.getElementById('wedding-names-text')?.innerText || "Kami";
         };
@@ -996,9 +996,20 @@
 
 
         window.sendWish = async function () {
-            const name = document.getElementById('wish-name').value;
-            const text = document.getElementById('wish-text').value;
-            if (!name || !text) return;
+            const nameEl = document.getElementById('wish-name');
+            const textEl = document.getElementById('wish-text');
+            const name = (nameEl ? nameEl.value : '').trim();
+            const text = (textEl ? textEl.value : '').trim();
+            
+            // L5: Validate wishes input length and content
+            if (!name || name.length < 2 || name.length > 50) {
+                showSapaModal("Perhatian", "Nama harus diisi antara 2-50 karakter.", "⚠️");
+                return;
+            }
+            if (!text || text.length < 3 || text.length > 500) {
+                showSapaModal("Perhatian", "Pesan ucapan harus diisi antara 3-500 karakter.", "⚠️");
+                return;
+            }
 
             const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
             if (!ssId) { showSapaModal("Perhatian", "Sesi undangan tidak valid.", "⚠️"); return; }
@@ -1012,7 +1023,8 @@
                     action: "addWish",
                     ssId: ssId,
                     name: name,
-                    text: text
+                    text: text,
+                    _ts: Date.now()
                 };
 
                 const response = await fetch(window.SCRIPT_URL, {

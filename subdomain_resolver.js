@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SAPATAMU.KU - GLOBAL SUBDOMAIN RESOLVER (VERSI SEDERHANA v1.5)
  */
 
@@ -70,9 +70,8 @@ async function resolveSapatamuSubdomain() {
         // SECURITY: Validasi ssId sebelum digunakan
         const validSsId = validateSsId(_urlSsid);
         if (!validSsId) {
-            console.warn("Invalid ssId parameter rejected:", _urlSsid);
+            console.warn("Invalid ssId parameter rejected");
         } else {
-            console.log("ID Spreadsheet ditemukan di URL:", validSsId);
             window.CURRENT_SS_ID = validSsId;
 
             // Simpan ke storage jika ada data user/kategori

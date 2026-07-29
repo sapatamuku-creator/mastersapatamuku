@@ -87,7 +87,7 @@
         try {
             const queue = JSON.parse(localStorage.getItem('sapatamu_sync_queue')) || [];
             const item = {
-                id: 'fb_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                id: 'fb_' + (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '_' + Math.random().toString(36).substr(2, 9))),
                 url: url,
                 method: options.method || 'POST',
                 headers: options.headers || {},
