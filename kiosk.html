@@ -207,7 +207,7 @@
 
     <!-- STEP 1: KIOSK IDLE STATE (WELCOME SIGN) -->
     <div id="kiosk-idle-state" class="fixed inset-0 z-[100] transition-opacity duration-700 bg-black cursor-pointer" onclick="startScanning()">
-        <iframe id="welcome-frame" src="welcome.html?mode=kiosk" class="w-full h-full border-none pointer-events-none"></iframe>
+        <iframe id="welcome-frame" src="about:blank" class="w-full h-full border-none pointer-events-none"></iframe>
         
         <div class="absolute bottom-[14%] left-1/2 transform -translate-x-1/2 bg-white/10 backdrop-blur-md px-10 py-5 rounded-full border border-white/30 shadow-[0_10px_40px_rgba(0,0,0,0.5)] pointer-events-none animate-pulse text-center">
             <span class="text-white font-bold tracking-[5px] uppercase text-xl md:text-2xl drop-shadow-lg">TAP LAYAR UNTUK CHECK-IN</span>
@@ -478,6 +478,14 @@
                 showToast(`Jalur rute diubah ke: ${JALUR_ID}`, true);
             });
             if (!CURRENT_SS_ID) { window.location.href = "login.html"; return; }
+            
+            // Set welcome screen iframe source dynamically with ssId
+            const welcomeFrame = document.getElementById('welcome-frame');
+            if (welcomeFrame) {
+                const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+                const uname = sessionObj.username || sessionObj.subdomain || 'kiosk';
+                welcomeFrame.src = `welcome.html?mode=kiosk&ssId=${CURRENT_SS_ID}&user=${encodeURIComponent(uname)}`;
+            }
 
             // Init Bluetooth Printer Widget
             if (typeof PrinterWidget !== 'undefined') {
