@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SapaTamu.Ku</title>
+    <script src="subdomain_resolver.js?v=3.3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth_guard.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
+    
+    <style>
+        :root { 
+            --primary: #E07B7B; /* Rose */
+            --bg: #FFF9F5;      /* Warm White */
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --gold: #C8962E;
+            --border: #F0E6DE;
+        }
+        * { line-height: normal !important; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            min-height: 100vh;
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+        .main-wrapper {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+            padding: 100px 20px 50px;
+        }
+        .brand-title {
+            font-family: 'Lora', serif;
+            font-weight: 700 !important;
+            letter-spacing: 2px !important;
+            font-size: clamp(28px, 6vw, 36px) !important;
+            margin-bottom: 15px !important;
+            color: var(--text-main) !important;
+        }
+        .tagline-box {
+            padding: 30px 10px !important;
+            margin-bottom: 40px !important;
+            border-top: 1.5px solid var(--border) !important;
+            border-bottom: 1.5px solid var(--border) !important;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .tagline-main {
+            font-size: clamp(12px, 3.5vw, 14px) !important;
+            font-weight: 800 !important;
+            letter-spacing: 1px !important;
+            margin-bottom: 12px !important;
+            color: var(--primary) !important;
+            text-transform: uppercase !important;
+        }
+        .tagline-sub {
+            font-size: clamp(10px, 3vw, 13px) !important;
+            font-weight: 500 !important;
+            color: var(--text-muted) !important;
+            line-height: 1.7 !important;
+            min-height: 55px;
+            position: relative;
+            overflow: hidden;
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+        }
+        .tagline-slide {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            transform: translateY(100%);
+            opacity: 0;
+            transition: transform 600ms var(--ease-out), opacity 600ms var(--ease-out);
+            text-align: center;
+        }
+        .tagline-slide.active {
+            transform: translateY(-50%);
+            opacity: 1;
+        }
+        .tagline-slide.exit {
+            transform: translateY(-200%);
+            opacity: 0;
+        }
+        .tagline-highlight {
+            color: var(--gold) !important;
+            font-weight: 800 !important;
+            display: block;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        .nav-container {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+        @media (min-width: 768px) {
+            .nav-container {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 25px;
+            border-radius: 24px;
+            text-align: left;
+            cursor: pointer;
+            transition: transform var(--duration-normal) var(--ease-out), border-color var(--duration-fast) ease, box-shadow var(--duration-normal) var(--ease-out);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border);
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(140, 117, 96, 0.05);
+        }
+
+        /* ADVANCED NAVBAR STYLES (DYNAMIC ISLAND) */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
+        
+        /* Dynamic Island wrapper */
+        .nav-outer-wrapper {
+            position: relative;
+            display: flex; align-items: center;
+            background: rgba(255, 253, 251, 0.92);
+            backdrop-filter: blur(20px);
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.10);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            /* Dynamic Island: gunakan width eksplisit agar transition reliable */
+            width: 180px;
+            transition: width var(--duration-slow) var(--ease-drawer),
+                        box-shadow var(--duration-normal) ease-out;
+            cursor: pointer;
+        }
+        .nav-outer-wrapper.di-expanded {
+            width: min(960px, 96vw);
+            cursor: default;
+            box-shadow: 0 14px 40px rgba(74, 63, 53, 0.13);
+        }
+
+        /* Collapsed label pill */
+        .di-collapsed-label {
+            position: absolute;
+            left: 0; right: 0;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 22px;
+            font-size: 11px; font-weight: 800;
+            color: var(--text-main);
+            white-space: nowrap;
+            opacity: 1;
+            transition: opacity var(--duration-fast) ease;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .di-collapsed-label .di-dot {
+            width: 7px; height: 7px;
+            background: var(--primary);
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: diPulse 2s infinite;
+        }
+        @keyframes diPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.7); }
+        }
+        .nav-outer-wrapper.di-expanded .di-collapsed-label { opacity: 0; pointer-events: none; }
+        .nav-outer-wrapper:not(.di-expanded) .nav-scroll-container { opacity: 0; pointer-events: none; }
+        .nav-outer-wrapper.di-expanded .nav-scroll-container { opacity: 1; pointer-events: auto; }
+
+        .nav-scroll-container { 
+            display: flex; align-items: center; gap: 5px; padding: 6px 15px;
+            overflow-x: auto; white-space: nowrap; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none;
+            transition: opacity var(--duration-fast) ease;
+            min-width: 0;
+        }
+        .nav-scroll-container::-webkit-scrollbar { display: none; }
+        
+        .nav-fade { position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none; z-index: 2; transition: opacity var(--duration-fast) ease; opacity: 0; }
+        .nav-fade-left { left: 0; background: linear-gradient(to right, rgba(255,253,251,0.95) 20%, transparent); }
+        .nav-fade-right { right: 0; background: linear-gradient(to left, rgba(255,253,251,0.95) 20%, transparent); }
+        .nav-fade.visible { opacity: 1; }
+
+        .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; font-size: 10px; color: var(--text-muted); opacity: 0.5; pointer-events: none; transition: opacity var(--duration-fast) ease; }
+        .nav-arrow-left { left: 8px; }
+        .nav-arrow-right { right: 8px; }
+
+        .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: color var(--duration-fast) ease, background-color var(--duration-fast) ease; display: flex; align-items: center; white-space: nowrap; }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-link.sign-out { color: #E07B7B !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
+
+        .nav-item:active {
+            transform: scale(0.98) translateY(-2px);
+            transition: transform var(--duration-fast) var(--ease-out);
+        }
+        .glass-box {
+            background: #fff;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: clamp(65px, 15vw, 80px);
+            height: clamp(65px, 15vw, 80px);
+            flex-shrink: 0;
+            transition: transform var(--duration-normal) var(--ease-out), border-color var(--duration-fast) ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .icon-mono {
+            filter: grayscale(1);
+            opacity: 0.7;
+            width: 28px;
+            transition: filter var(--duration-fast) ease, opacity var(--duration-fast) ease;
+        }
+        .content-box {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden;
+        }
+        .label-text {
+            font-size: clamp(10px, 2.5vw, 12px) !important;
+            font-weight: 900 !important;
+            letter-spacing: 1.2px !important;
+            text-transform: uppercase !important;
+            color: #111 !important;
+            margin: 0 !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .desc-text {
+            font-size: clamp(8px, 2vw, 10px) !important;
+            font-weight: 500 !important;
+            color: #888 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            line-height: 1.4 !important;
+            margin: 0 !important;
+        }
+        .gold-accent .label-text, 
+        .gold-accent .desc-text { color: var(--gold) !important; }
+        .gold-border { border-bottom: 2px solid rgba(212, 175, 55, 0.4) !important; }
+        .gold-bg { background: rgba(212, 175, 55, 0.03) !important; }
+        .logout-pill {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid #eee;
+            cursor: pointer;
+            z-index: 1000;
+            transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, color var(--duration-fast) ease;
+        }
+        .logout-pill:active {
+            transform: scale(0.96);
+            transition: transform var(--duration-fast) var(--ease-out);
+        }
+
+    #loading-global {
+        position: fixed; inset: 0;
+        background: rgba(255, 249, 245, 0.95); 
+        display: none; justify-content: center;
+        align-items: center; z-index: 100000; flex-direction: column;
+        backdrop-filter: blur(10px);
+        cursor: wait;
+    }
+    .spinner {
+        width: 45px; height: 45px;
+        border: 4px solid var(--border); border-top: 4px solid var(--primary);
+        border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* MODAL STYLES */
+    .st-modal-overlay {
+        position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4);
+        display: none; justify-content: center; align-items: center;
+        z-index: 100000; backdrop-filter: blur(10px);
+    }
+    .st-modal-content {
+        background: #fff;
+        padding: 50px 40px; border-radius: 32px;
+        text-align: center; max-width: 400px; width: 90%;
+        box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2);
+        border: 1px solid var(--border);
+    }
+    .st-modal-title { font-family: 'Lora', serif; color: var(--text-main); font-size: 24px; margin-bottom: 15px; font-weight:700; }
+    .st-modal-msg { color: var(--text-muted); line-height: 1.6; font-size: 15px; margin-bottom: 35px; white-space: pre-line; }
+    .st-btn { cursor: pointer; padding: 15px; border-radius: 12px; font-weight: 700; font-size: 11px; letter-spacing: 1px; transition: 0.3s; border: none; }
+    .btn-dark { background: var(--text-main); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+
+    /* -------------------------------------
+       ANIMASI BACKGROUND FLOATING HEARTS
+    ---------------------------------------- */
+    .dynamic-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: -1;
+        overflow: hidden;
+        pointer-events: none;
+        background: linear-gradient(135deg, #FFF9F5 0%, #FDF2F2 100%);
+        margin: 0; padding: 0;
+    }
+
+    .dynamic-bg li {
+        position: absolute;
+        display: block;
+        list-style: none;
+        width: 30px;
+        height: 30px;
+        background: transparent;
+        animation: floatDiagonal 20s linear infinite;
+        bottom: -150px;
+    }
+
+    .dynamic-bg li::before {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E07B7B' opacity='0.2'%3E%3Cpath d='M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z'/%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
+        animation: pulseHeart 4s ease-in-out infinite alternate;
+    }
+
+    .dynamic-bg li:nth-child(1) { left: -10%; width: 40px; height: 40px; animation-delay: 0s; animation-duration: 25s; }
+    .dynamic-bg li:nth-child(2) { left: 5%; width: 20px; height: 20px; animation-delay: 2s; animation-duration: 17s; }
+    .dynamic-bg li:nth-child(3) { left: 15%; width: 60px; height: 60px; animation-delay: 4s; animation-duration: 22s; }
+    .dynamic-bg li:nth-child(4) { left: 25%; width: 35px; height: 35px; animation-delay: 0s; animation-duration: 18s; }
+    .dynamic-bg li:nth-child(5) { left: 40%; width: 25px; height: 25px; animation-delay: 6s; animation-duration: 20s; }
+    .dynamic-bg li:nth-child(6) { left: 55%; width: 50px; height: 50px; animation-delay: 3s; animation-duration: 24s; }
+    .dynamic-bg li:nth-child(7) { left: -20%; width: 30px; height: 30px; animation-delay: 8s; animation-duration: 19s; }
+    .dynamic-bg li:nth-child(8) { left: -5%; width: 45px; height: 45px; animation-delay: 10s; animation-duration: 28s; }
+    .dynamic-bg li:nth-child(9) { left: 45%; width: 20px; height: 20px; animation-delay: 1s; animation-duration: 15s; }
+    .dynamic-bg li:nth-child(10){ left: 10%; width: 55px; height: 55px; animation-delay: 7s; animation-duration: 26s; }
+
+    @keyframes floatDiagonal {
+        0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { transform: translate(40vw, -120vh) rotate(260deg); opacity: 0; }
+    }
+
+        @keyframes pulseHeart {
+        0% { transform: scale(1); }
+        100% { transform: scale(1.15); }
+    }
+    
+    /* HERO AVATAR (DASHBOARD BANNER) */
+    .hero-avatar-wrapper {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 20px;
+        cursor: pointer;
+        transition: transform var(--duration-normal) var(--ease-out);
+    }
+    .hero-avatar {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), #d96262);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        font-weight: 700;
+        font-family: 'Lora', serif;
+        overflow: hidden;
+        border: 4px solid white;
+        box-shadow: 0 10px 30px rgba(224, 123, 123, 0.25);
+    }
+    .hero-avatar-edit {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 32px;
+        height: 32px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid var(--border);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        transition: transform var(--duration-normal) var(--ease-out), background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+    }
+    .hero-avatar-edit img {
+        width: 16px;
+        height: 16px;
+        filter: grayscale(1);
+        transition: filter var(--duration-fast) ease;
+    }
+
+    /* ─── DEMO MODE: TOMBOL COBA GRATIS ─────────────────────────── */
+    #coba-gratis-section {
+        display: none;
+        margin: 20px 0 10px;
+        text-align: center;
+    }
+    #btn-coba-gratis {
+        background: linear-gradient(135deg, #E07B7B 0%, #c85c5c 100%);
+        color: #fff; border: none;
+        padding: 16px 32px;
+        border-radius: 22px;
+        font-size: 13px; font-weight: 800;
+        letter-spacing: 0.8px; text-transform: uppercase;
+        cursor: pointer;
+        transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+        box-shadow: 0 10px 32px rgba(224,123,123,0.38);
+        display: inline-flex; align-items: center; gap: 10px;
+        position: relative; overflow: hidden;
+    }
+    #btn-coba-gratis::before {
+        content: '';
+        position: absolute; inset: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.18), transparent);
+        pointer-events: none;
+    }
+    #btn-coba-gratis:active {
+        transform: scale(0.97);
+        transition: transform var(--duration-fast) var(--ease-out);
+    }
+    #coba-gratis-section .cg-sub {
+        display: block; margin-top: 10px;
+        font-size: 10px; font-weight: 600;
+        color: var(--text-muted); letter-spacing: 0.5px;
+    }
+
+    /* ─── DEMO MODE: BANNER AKTIF ────────────────────────────────── */
+    #demo-mode-banner {
+        display: none;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 18px;
+        margin-bottom: 16px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        animation: demoBannerPop var(--duration-slow) var(--ease-out);
+    }
+    .demo-banner-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+    .demo-badge-pill {
+        background: linear-gradient(135deg, #E07B7B, #c85c5c);
+        padding: 4px 12px; border-radius: 20px;
+        font-size: 9px; font-weight: 900;
+        letter-spacing: 1.5px; text-transform: uppercase;
+        flex-shrink: 0;
+        animation: demoPulse 2.5s ease-in-out infinite;
+    }
+    .demo-banner-info { font-size: 11px; font-weight: 700; opacity: 0.9; }
+    .demo-banner-pkg { font-size: 10px; opacity: 0.55; font-weight: 600; margin-top: 2px; }
+    #btn-exit-demo {
+        background: rgba(255,255,255,0.08);
+        color: rgba(255,255,255,0.7);
+        border: 1px solid rgba(255,255,255,0.15);
+        padding: 7px 16px; border-radius: 12px;
+        font-size: 10px; font-weight: 800;
+        cursor: pointer; transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, color var(--duration-fast) ease;
+        white-space: nowrap; flex-shrink: 0;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    #btn-exit-demo:active {
+        transform: scale(0.96);
+        transition: transform var(--duration-fast) var(--ease-out);
+    }
+    @keyframes demoPulse {
+        0%, 100% { opacity: 1; } 50% { opacity: 0.7; }
+    }
+    @keyframes demoBannerPop {
+        from { transform: translateY(-10px); opacity: 0; }
+        to   { transform: translateY(0);     opacity: 1; }
+    }
+
+    /* ─── DEMO MODE: MODAL PILIH PAKET ──────────────────────────── */
+    #demo-modal-overlay {
+        position: fixed; inset: 0;
+        background: rgba(8,6,4,0.78);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        display: none;
+        align-items: center; justify-content: center;
+        z-index: 10000001;
+        padding: 20px;
+    }
+    #demo-modal-box {
+        background: #fff;
+        border-radius: 34px;
+        padding: 44px 36px 36px;
+        max-width: 510px; width: 100%;
+        max-height: 88vh; overflow-y: auto;
+        box-shadow: 0 50px 100px rgba(0,0,0,0.3);
+        border: 1px solid var(--border);
+        animation: demoModalPop var(--duration-slow) var(--ease-modal);
+        scrollbar-width: none;
+    }
+    #demo-modal-box::-webkit-scrollbar { display: none; }
+    @keyframes demoModalPop {
+        from { transform: scale(0.95) translateY(12px); opacity: 0; }
+        to   { transform: scale(1) translateY(0);       opacity: 1; }
+    }
+    .demo-modal-header { text-align: center; margin-bottom: 28px; }
+    .demo-modal-header .dm-icon { font-size: 44px; display: block; margin-bottom: 14px; }
+    .demo-modal-header h2 {
+        font-family: 'Lora', serif; font-size: 22px;
+        font-weight: 700; color: var(--text-main); margin-bottom: 8px;
+    }
+    .demo-modal-header p {
+        font-size: 12px; color: var(--text-muted);
+        line-height: 1.7; max-width: 340px; margin: 0 auto;
+    }
+    /* Tab kategori */
+    .demo-tab-row {
+        display: flex; gap: 6px; flex-wrap: wrap;
+        justify-content: center; margin-bottom: 20px;
+    }
+    .demo-tab-btn {
+        padding: 8px 16px; border-radius: 30px;
+        font-size: 11px; font-weight: 800;
+        border: 1.5px solid var(--border);
+        background: #fff; color: var(--text-muted);
+        cursor: pointer; transition: border-color var(--duration-fast) ease, color var(--duration-fast) ease, background-color var(--duration-fast) ease;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .demo-tab-btn.active {
+        background: var(--text-main); color: #fff;
+        border-color: var(--text-main);
+    }
+    /* Cards */
+    .demo-card {
+        border: 2px solid var(--border);
+        border-radius: 18px; padding: 18px 20px;
+        background: #fff; cursor: pointer;
+        transition: border-color var(--duration-fast) ease, box-shadow var(--duration-normal) var(--ease-out), background-color var(--duration-fast) ease; margin-bottom: 10px;
+        position: relative;
+    }
+    .demo-card.selected {
+        border-color: var(--primary) !important;
+        background: #FFF9F6;
+        box-shadow: 0 10px 28px rgba(224,123,123,0.13);
+    }
+    .demo-card.selected::after {
+        content: "✔ Dipilih";
+        position: absolute; top: 12px; right: 14px;
+        background: var(--primary); color: #fff;
+        font-size: 9px; font-weight: 900;
+        padding: 3px 10px; border-radius: 20px;
+    }
+    .demo-card-name {
+        font-size: 14px; font-weight: 800;
+        color: var(--text-main); margin-bottom: 4px;
+    }
+    .demo-card-tier {
+        display: inline-block;
+        font-size: 9px; font-weight: 800;
+        color: var(--text-muted);
+        background: rgba(140,117,96,0.08);
+        padding: 2px 10px; border-radius: 10px;
+        letter-spacing: 0.5px; margin-bottom: 10px;
+    }
+    .demo-card-features {
+        list-style: none; padding: 0; margin: 0;
+        display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .demo-card-features li {
+        font-size: 10px; color: var(--text-muted);
+        background: rgba(140,117,96,0.06);
+        padding: 3px 9px; border-radius: 8px;
+    }
+    .demo-card-features li.unlocked { color: #10B981; background: rgba(16,185,129,0.07); }
+    .demo-card-features li.locked   { color: #ccc; }
+    /* Submit button */
+    #btn-demo-submit {
+        width: 100%; padding: 16px;
+        background: var(--primary); color: #fff;
+        border: none; border-radius: 16px;
+        font-size: 13px; font-weight: 800;
+        letter-spacing: 0.5px; cursor: pointer;
+        transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-normal) var(--ease-out);
+        margin-top: 8px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    #btn-demo-submit:disabled {
+        opacity: 0.45; cursor: not-allowed;
+        background: #ccc;
+    }
+    #btn-demo-submit:not(:disabled):active {
+        transform: scale(0.97);
+        transition: transform var(--duration-fast) var(--ease-out);
+    }
+    .demo-modal-footer-note {
+        text-align: center; margin-top: 14px;
+        font-size: 10px; color: var(--text-muted);
+        line-height: 1.6;
+    }
+    .demo-cancel-link {
+        display: block; text-align: center;
+        margin-top: 10px; font-size: 11px;
+        color: var(--text-muted); cursor: pointer;
+        text-decoration: underline; opacity: 0.6;
+        transition: opacity var(--duration-fast) ease;
+    }
+    .demo-cancel-link:hover { opacity: 1; }
+
+    /* ─── HOVER PROTECTION MEDIA QUERY ────────────────────────── */
+    @media (hover: hover) and (pointer: fine) {
+        .nav-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 15px 30px rgba(224, 123, 123, 0.12);
+        }
+        .nav-item:hover .glass-box {
+            border-color: var(--gold);
+            transform: scale(1.05);
+        }
+        .nav-item:hover .icon-mono {
+            filter: none;
+            opacity: 1;
+        }
+        .nav-link:hover {
+            color: var(--primary);
+            background: rgba(224, 123, 123, 0.05);
+        }
+        .logout-pill:hover {
+            background: #fdfdfd;
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .hero-avatar-wrapper:hover {
+            transform: scale(1.03) translateY(-3px);
+        }
+        .hero-avatar-wrapper:hover .hero-avatar-edit {
+            transform: rotate(90deg);
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        .hero-avatar-wrapper:hover .hero-avatar-edit img {
+            filter: brightness(0) invert(1);
+        }
+        #btn-coba-gratis:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 16px 36px rgba(224,123,123,0.48);
+        }
+        #btn-exit-demo:hover {
+            background: rgba(239,68,68,0.25);
+            border-color: rgba(239,68,68,0.4);
+            color: #fff;
+        }
+        .demo-tab-btn:hover {
+            border-color: var(--text-main);
+            color: var(--text-main);
+        }
+        .demo-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(224,123,123,0.1);
+        }
+        #btn-demo-submit:not(:disabled):hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 30px rgba(224,123,123,0.3);
+        }
+        .demo-cancel-link:hover {
+            opacity: 1;
+        }
+    }
+    </style>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 flex flex-col font-sans" style="background-color: var(--bg);">
+
+<!-- Animasi Background -->
+<ul class="dynamic-bg">
+    <li></li><li></li><li></li><li></li><li></li>
+    <li></li><li></li><li></li><li></li><li></li>
+</ul>
+
+<!-- Toggle Language -->
+<div class="lang-switch-container" style="position:fixed; bottom:25px; right:25px; z-index:10001; display:flex; align-items:center; gap:5px; background: rgba(255,255,255,0.85); backdrop-filter:blur(15px); padding: 6px 12px; border-radius:50px; border:1px solid var(--border); box-shadow:0 10px 25px rgba(74, 63, 53, 0.1);">
+    <span id="lang-ind" class="lang-btn" onclick="setLang('ind')" style="font-size:11px; font-weight:800; cursor:pointer; padding:6px 14px; border-radius:30px; transition:0.3s; color:var(--primary); background:rgba(224,123,123,0.1);">IND</span>
+    <span id="lang-eng" class="lang-btn" onclick="setLang('eng')" style="font-size:11px; font-weight:800; cursor:pointer; padding:6px 14px; border-radius:30px; transition:0.3s; color:var(--text-muted); background:transparent;">ENG</span>
+</div>
+
+<nav class="sapatamu-navbar">
+    <div class="nav-outer-wrapper di-expanded" id="nav-island">
+        <!-- Dynamic Island collapsed label -->
+        <div class="di-collapsed-label" id="di-label">
+            <span class="di-dot"></span>
+            <span id="di-label-text">Dashboard</span>
+        </div>
+
+        <div class="nav-fade nav-fade-left" id="fade-left"></div>
+        <div class="nav-arrow nav-arrow-left">‹</div>
+        
+        <div class="nav-scroll-container" id="nav-scroll">
+            <div class="nav-group">
+                <a href="dashboard.html" class="nav-link active" id="nav-dashboard">Dashboard</a>
+                <div class="nav-divider"></div>
+                <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Buku Tamu</a>
+                <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+                <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+            </div>
+            <div class="nav-divider"></div>
+            <div class="nav-group">
+                <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+                <a href="kiosk.html" class="nav-link" id="nav-kiosk">Kiosk</a>
+                <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+            </div>
+            <div class="nav-divider"></div>
+            <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
+        </div>
+
+        <div class="nav-arrow nav-arrow-right">›</div>
+        <div class="nav-fade nav-fade-right" id="fade-right"></div>
+    </div>
+</nav>
+
+<div id="loading-global">
+    <div class="spinner"></div>
+    <div style="color:var(--primary); font-family:'Lora', serif; font-size: 16px; font-weight:700; letter-spacing: 1px;" id="loading-text">Menyiapkan Sistem...</div>
+</div>
+
+<div id="st-modal" class="st-modal-overlay">
+    <div id="modal-container" class="st-modal-content">
+        <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️</span>
+        <div id="st-modal-title" class="st-modal-title">Notifikasi</div>
+        <div id="st-modal-msg" class="st-modal-msg">Pesan akan muncul di sini.</div>
+        <div id="modal-actions" style="display: flex; gap: 10px; margin-top: 30px;">
+            <button id="modal-cancel-btn" class="st-btn btn-outline" style="flex:1; display:none;">BATAL</button>
+            <button id="modal-ok-btn" class="st-btn btn-dark" style="flex:1;">MENGERTI</button>
+        </div>
+    </div>
+</div>
+
+<div class="main-wrapper">
+    <header>
+        <div class="hero-avatar-wrapper" onclick="window.location.href='profile.html'" title="Pengaturan Pusat Akun">
+            <div class="hero-avatar">
+                <span id="header-avatar-letter">S</span>
+                <img id="header-avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover;">
+            </div>
+            <div class="hero-avatar-edit">
+                <img src="https://img.icons8.com/ios-filled/50/000000/settings.png" alt="Settings">
+            </div>
+        </div>
+        <h1 class="brand-title" id="display_wedding_name">SapaTamu.Ku</h1>
+        <div id="display_active_package" style="text-align:center; font-size:11px; font-weight:700; color:var(--primary); background:rgba(224,123,123,0.1); padding:4px 14px; border-radius:20px; display:inline-block; margin: 5px auto 15px; text-transform:uppercase; letter-spacing:1px; border: 1px solid rgba(224,123,123,0.2);">PAKET BELUM DIPILIH</div>
+
+        <!-- ░░ DEMO MODE BANNER — muncul saat is_demo=true ░░ -->
+        <div id="demo-mode-banner">
+            <div class="demo-banner-left">
+                <span class="demo-badge-pill">🎮 DEMO</span>
+                <div>
+                    <div class="demo-banner-info">Mode Eksplorasi Aktif</div>
+                    <div class="demo-banner-pkg" id="demo-banner-pkg-label">Paket: —</div>
+                </div>
+            </div>
+            <button id="btn-exit-demo" onclick="exitDemoMode()">Keluar Demo ✕</button>
+        </div>
+
+
+        <div class="tagline-box">
+            <p class="tagline-main" id="display_category_label">All in One Digital Guestbook Management</p>
+            <div class="tagline-sub" id="dynamic-tagline">
+                <!-- JS will inject .tagline-slide elements here -->
+            </div>
+        </div>
+    </header>
+
+    <div class="nav-container">
+        <!-- Guestbook -->
+        <div class="nav-item" onclick="nav('formulir_tamu.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/document.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text lang-text" data-eng="Digital Guestbook" data-ind="Pengisi Buku Tamu">Pengisi Buku Tamu</span>
+                <p class="desc-text lang-text" data-eng="Self-Registration & Realtime Check-in" data-ind="Registrasi Mandiri & Kehadiran Realtime">Registrasi Mandiri & Kehadiran Realtime</p>
+            </div>
+        </div>
+
+        <!-- Checkin Scanner -->
+        <div class="nav-item" onclick="nav('checkin.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/qr-code.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text lang-text" data-eng="QR Scanner" data-ind="Pemindai QR">Pemindai QR</span>
+                <p class="desc-text lang-text" data-eng="Fast Attendance & Selfie Mode" data-ind="Kehadiran Cepat & Mode Selfie">Kehadiran Cepat & Mode Selfie</p>
+            </div>
+        </div>
+
+        <!-- On-Site -->
+        <div class="nav-item" onclick="nav('onsite.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/plus.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text lang-text" data-eng="On-Site Registration" data-ind="Registrasi Di Tempat">Registrasi Di Tempat</span>
+                <p class="desc-text lang-text" data-eng="Manual entry at venue" data-ind="Input Manual oleh Resepsionis">Input Manual oleh Resepsionis</p>
+            </div>
+        </div>
+
+        <!-- Angpao -->
+        <div class="nav-item" onclick="nav('angpao.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/wallet.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text lang-text" data-eng="Input Angpao" data-ind="Pencatat Angpao">Pencatat Angpao</span>
+                <p class="desc-text lang-text" data-eng="Secure Digital Gift Log Record" data-ind="Rekap Aman Hadiah / Kado Digital">Rekap Aman Hadiah / Kado Digital</p>
+            </div>
+        </div>
+
+        <!-- WA Blast -->
+        <div class="nav-item" onclick="nav('wa_blast.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/whatsapp.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text lang-text" data-eng="WA Blast Manager" data-ind="Manajer WA Blast">Manajer WA Blast</span>
+                <p class="desc-text lang-text" data-eng="Broadcast Messages to Guests" data-ind="Siarkan Pesan Massal ke Tamu">Siarkan Pesan Massal ke Tamu</p>
+            </div>
+        </div>
+
+        <!-- Lucky Draw -->
+        <div class="nav-item" onclick="nav('luckydraw.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/trophy.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text lang-text" data-eng="Lucky Draw" data-ind="Undian Hadiah">Undian Hadiah</span>
+                <p class="desc-text lang-text" data-eng="Raffle System for Winners" data-ind="Sistem Pengacakan Pemenang">Sistem Pengacakan Pemenang</p>
+            </div>
+        </div>
+
+        <!-- Analytics -->
+        <div class="nav-item" onclick="nav('analytics.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/data-configuration.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text lang-text" data-eng="Analytics Node" data-ind="Pusat Analitik">Pusat Analitik</span>
+                <p class="desc-text lang-text" data-eng="Attendance & Traffic Insight" data-ind="Catatan Info Kehadiran & Arus Tamu">Catatan Info Kehadiran & Arus Tamu</p>
+            </div>
+        </div>
+
+        <!-- Self Check-in Kiosk -->
+        <div class="nav-item" onclick="nav('kiosk.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/ipad.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text lang-text" data-eng="Kiosk Check-in" data-ind="Kios Mandiri">Kios Mandiri</span>
+                <p class="desc-text lang-text" data-eng="Fastrack Self-Service Scanner" data-ind="Pelayanan Pindai Jalur Cepat">Pelayanan Pindai Jalur Cepat</p>
+            </div>
+        </div>
+
+        <!-- Welcome Sign -->
+        <div class="nav-item" onclick="nav('welcome.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/image.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text lang-text" data-eng="Welcome Sign" data-ind="Layar Sambutan">Layar Sambutan</span>
+                <p class="desc-text lang-text" data-eng="Greeting Screen Display" data-ind="Tampilan Layar Sapaan Interaktif">Tampilan Layar Sapaan Interaktif</p>
+            </div>
+        </div>
+
+        <!-- Worker -->
+        <div class="nav-item" onclick="nav('worker.html')">
+            <div class="glass-box">
+                <img src="https://img.icons8.com/ios-filled/50/000000/print.png" class="icon-mono"/>
+            </div>
+            <div class="content-box">
+                <span class="label-text lang-text" data-eng="Printer Worker" data-ind="Mesin Pencetak">Mesin Pencetak</span>
+                <p class="desc-text lang-text" data-eng="Bluetooth Label Printing Engine" data-ind="Sistem Cetak Label Bluetooth">Sistem Cetak Label Bluetooth</p>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="mt-20 text-center pb-10">
+        <p style="font-size: 8px !important; font-weight: 700; letter-spacing: 3px; color: #BBB; text-transform: uppercase;">Powered by Sapatamu.Ku</p>
+    </footer>
+
+</div>
+
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">⚠️</div>
+            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Sesi Berakhir</h2>
+            <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Silakan Login terlebih dahulu untuk mengakses menu ini.</p>
+            <button onclick="window.location.href='login.html'" class="nav-item" style="justify-content: center; background: var(--text-main); color: #fff; padding: 18px; border-radius: 18px; font-size: 11px; width: 100%; border: none;">LOGIN SEKARANG</button>
+        </div>
+    </div>
+
+    <!-- ░░ DEMO PACKAGE SELECTOR MODAL ░░ -->
+    <div id="demo-modal-overlay" onclick="handleDemoOverlayClick(event)">
+        <div id="demo-modal-box">
+            <div class="demo-modal-header">
+                <span class="dm-icon">🎊</span>
+                <h2>Pilih Paket untuk Dicoba</h2>
+                <p>Eksplorasi fitur SapaTamu secara langsung. Data yang Anda masukkan masuk ke akun demo bersama — tamu lain juga bisa melihatnya!</p>
+            </div>
+
+            <div class="demo-tab-row">
+                <button class="demo-tab-btn" id="demo-tab-einv"    onclick="filterDemoCat('einv')">E-Invitation</button>
+                <button class="demo-tab-btn" id="demo-tab-guestbook" onclick="filterDemoCat('guestbook')">Guestbook</button>
+                <button class="demo-tab-btn" id="demo-tab-allin"   onclick="filterDemoCat('allin')">All-In</button>
+            </div>
+
+            <div id="demo-cards-container"></div>
+
+            <button id="btn-demo-submit" disabled onclick="startDemoSession()">🚀 Mulai Eksplorasi Sekarang!</button>
+            <div class="demo-modal-footer-note">
+                ✅ Tidak perlu daftar &nbsp;·&nbsp; Data nyata ke Supabase &nbsp;·&nbsp; Gratis sepenuhnya
+            </div>
+            <span class="demo-cancel-link" onclick="closeDemoModal()">Batalkan, saya ingin login dulu</span>
+        </div>
+    </div>
+
+    <style>
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
+<script>
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
+    // ─── DEMO MODE CONSTANTS & HELPERS ──────────────────────────
+    const DEMO_USERNAME = "akundemo";
+    const DEMO_SSID = "1URVle0-ptX2kyxR99E6HJruIkwuwcE5zES4k8BYnoJU";
+    const DEMO_NAME = "Contoh & Preview";
+    const DEMO_CATEGORY = "wedding";
+
+    function isDemoMode() {
+        try {
+            const s = JSON.parse(localStorage.getItem('sapatamu_db') || sessionStorage.getItem('sapatamu_session') || '{}');
+            return s.is_demo === true;
+        } catch(e) { return false; }
+    }
+
+    function exitDemoMode() {
+        localStorage.removeItem('sapatamu_db');
+        sessionStorage.removeItem('sapatamu_session');
+        localStorage.removeItem('sapatamu_avatar');
+        // Redirect to main domain login or landing page
+        const hn = window.location.hostname;
+        if (hn.includes("akundemo.sapatamu.id")) {
+            window.location.replace("https://sapatamu.id/index.html?signout=true");
+        } else {
+            window.location.replace("index.html?signout=true");
+        }
+    }
+
+    async function syncClientData(username) {
+        try {
+            const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?username=eq.${username}&limit=1`, {
+                headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+            });
+            const rows = await response.json();
+            if (rows && rows.length > 0) {
+                const pkg = rows[0].package;
+                const clientName = rows[0].client_name;
+
+                let localData = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
+                
+                if (pkg !== undefined) {
+                    localData.package = pkg;
+                    localStorage.setItem('sapatamu_db', JSON.stringify(localData));
+                    sessionStorage.setItem('sapatamu_session', JSON.stringify(localData));
+                }
+
+                const activePkg = pkg || "PAKET BELUM DIPILIH";
+                const pkgEl = document.getElementById('display_active_package');
+                if (pkgEl) pkgEl.innerText = activePkg;
+                
+                applyPackageDimming();
+
+                // ✅ Update display name dari Supabase jika tersedia
+                if (clientName) {
+                    const nameEl = document.getElementById('display_wedding_name');
+                    if (nameEl) nameEl.innerText = clientName;
+                }
+            }
+        } catch (e) { console.warn("Silent sync failed", e); }
+    }
+
+    async function fetchAvatarSilently() {
+        if (!window.CURRENT_SS_ID) return;
+        try {
+            const url = (window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec") + "?action=getSettings&ssId=" + window.CURRENT_SS_ID;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.status === "success" && data.data && data.data.urlFoto) {
+                const photos = data.data.urlFoto.split(",").filter(u => u.trim());
+                if (photos.length > 0) {
+                    let previewUrl = photos[0].trim();
+                    const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+                    const match = previewUrl.match(driveRegex);
+                    if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file"))) {
+                        previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
+                    }
+                    localStorage.setItem('sapatamu_avatar', previewUrl);
+                    
+                    const avatarLetter = document.getElementById('header-avatar-letter');
+                    const avatarImg = document.getElementById('header-avatar-img');
+                    if (avatarLetter) avatarLetter.style.display = 'none';
+                    if (avatarImg) {
+                        avatarImg.src = previewUrl;
+                        avatarImg.style.display = 'block';
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    function syncNavbar() {
+        const ssId = window.CURRENT_SS_ID || "";
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            const baseHref = link.getAttribute('href').split('?')[0];
+            link.href = `${baseHref}?ssId=${ssId}`;
+        });
+    }
+
+    function initHub() {
+        syncNavbar();
+    }
+
+    // Tunggu resolver selesai baru init (SATPAM UTAMA)
+    function checkResolved() {
+        if (window.SAPATAMU_RESOLVED) {
+            const hn = window.location.hostname;
+            const localData = localStorage.getItem('sapatamu_db');
+            
+            // 1. CEK DOMAIN UTAMA (Redirect ke Subdomain)
+            if (hn === "sapatamu.id" || hn === "www.sapatamu.id") {
+                if (localData) {
+                    const parsed = JSON.parse(localData);
+                    const sub = (parsed.subdomain || parsed.username || "").toLowerCase().replace(/[\s&]/g, '');
+                    if (sub) {
+                        const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
+                        const targetPage = (currentPage === "" || currentPage === "/") ? "dashboard.html" : currentPage;
+                        window.location.replace("https://" + sub + ".sapatamu.id/" + targetPage);
+                        return;
+                    }
+                }
+                window.location.replace("login.html");
+                return;
+            }
+
+            // 2. CEK SESI (Wajib ada sapatamu_db)
+            if (!localData || !window.CURRENT_SS_ID) {
+                console.warn("Sesi tidak valid, kembali ke login.");
+                window.location.replace("https://sapatamu.id/login.html");
+                return;
+            }
+
+            // 3. JALANKAN DASHBOARD
+            const parsed = JSON.parse(localData);
+            
+            // Tampilkan/Sembunyikan Demo Banner
+            const demoBanner = document.getElementById('demo-mode-banner');
+            if (demoBanner) {
+                if (parsed.is_demo) {
+                    demoBanner.style.display = 'flex';
+                    const pkgLabel = document.getElementById('demo-banner-pkg-label');
+                    if (pkgLabel) {
+                        pkgLabel.innerText = "Paket: " + (parsed.package || "Bronze Guestbook");
+                    }
+                } else {
+                    demoBanner.style.display = 'none';
+                }
+            }
+
+            const cat = window.CURRENT_CATEGORY || "wedding";
+            // ✅ FIX: username = slug (merirosid), client_name = nama tampil (Meri & Rosid)
+            const username = parsed.username || "client";
+            const displayName = parsed.client_name || parsed.username || "Client";
+            
+            document.getElementById('display_wedding_name').innerText = displayName;
+            
+            // Set Avatar Letter or Image
+            const avatarLetter = document.getElementById('header-avatar-letter');
+            const avatarImg = document.getElementById('header-avatar-img');
+            
+            const savedAvatar = localStorage.getItem('sapatamu_avatar');
+            if (savedAvatar) {
+                if (avatarLetter) avatarLetter.style.display = 'none';
+                if (avatarImg) {
+                    avatarImg.src = savedAvatar;
+                    avatarImg.style.display = 'block';
+                }
+            } else {
+                if (avatarLetter) {
+                    avatarLetter.innerText = displayName.charAt(0).toUpperCase();
+                    avatarLetter.style.display = 'block';
+                }
+                if (avatarImg) avatarImg.style.display = 'none';
+                
+                // Fetch default avatar from Welcome Sign silently
+                setTimeout(fetchAvatarSilently, 1000);
+            }
+
+            document.getElementById('display_active_package').innerText = parsed.package || "PAKET BELUM DIPILIH";
+            const labels = {
+                wedding: "Wedding Guestbook Management",
+                birthday: "Birthday Event Management",
+                anniversary: "Anniversary Event Management",
+                corporate: "Corporate Meeting Management",
+                gathering: "Community Gathering Management"
+            };
+            document.getElementById('display_category_label').innerText = labels[cat] || labels.wedding;
+
+            initHub();
+            initNavScroll();
+            initDynamicIslandNav();
+            applyPackageDimming();
+            
+            // ✅ FIX: Ambil slug dari hostname URL (paling reliable, tidak bergantung localStorage lama)
+            // Contoh: merirosid.sapatamu.id → querySlug = "merirosid"
+            const _hostParts = window.location.hostname.split('.');
+            const _isSubdomain = _hostParts.length >= 3 && _hostParts[0] !== 'www' && _hostParts[0] !== 'sapatamu';
+            const _querySlug = _isSubdomain ? _hostParts[0].toLowerCase() : username;
+            syncClientData(_querySlug);
+        } else {
+            setTimeout(checkResolved, 100);
+        }
+    }
+
+    function toggleProcessing(isStart, text = "Menyiapkan Sistem...") {
+        isProcessing = isStart;
+        const loader = document.getElementById('loading-global');
+        if(loader) {
+            document.getElementById('loading-text').innerText = text;
+            loader.style.display = isStart ? 'flex' : 'none';
+        }
+        document.body.style.cursor = isStart ? 'wait' : 'default';
+    }
+
+    window.showAlert = function(title, msg, icon = "⚠️") {
+        return new Promise(resolve => {
+            document.getElementById('st-modal-icon').innerText = icon;
+            document.getElementById('st-modal-title').innerText = title;
+            document.getElementById('st-modal-msg').innerText = msg;
+            document.getElementById('modal-cancel-btn').style.display = 'none';
+            const okBtn = document.getElementById('modal-ok-btn');
+            okBtn.innerText = "MENGERTI";
+            okBtn.onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(true);
+            };
+            document.getElementById('st-modal').style.display = 'flex';
+        });
+    };
+
+    window.showConfirm = function(title, msg, icon = "🚀", okText = "LANJUTKAN", cancelText = "BATAL") {
+        return new Promise(resolve => {
+            document.getElementById('st-modal-icon').innerText = icon;
+            document.getElementById('st-modal-title').innerText = title;
+            document.getElementById('st-modal-msg').innerText = msg;
+            
+            const cancelBtn = document.getElementById('modal-cancel-btn');
+            cancelBtn.style.display = 'block';
+            cancelBtn.innerText = cancelText;
+            
+            const okBtn = document.getElementById('modal-ok-btn');
+            okBtn.innerText = okText;
+            
+            okBtn.onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(true);
+            };
+            cancelBtn.onclick = () => {
+                document.getElementById('st-modal').style.display = 'none';
+                resolve(false);
+            };
+            document.getElementById('st-modal').style.display = 'flex';
+        });
+    };
+
+    function initNavScroll() {
+        const container = document.getElementById('nav-scroll');
+        const fLeft = document.getElementById('fade-left');
+        const fRight = document.getElementById('fade-right');
+        
+        const updateFades = () => {
+            const scrollLeft = container.scrollLeft;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            fLeft.classList.toggle('visible', scrollLeft > 10);
+            fRight.classList.toggle('visible', scrollLeft < maxScroll - 10);
+        };
+        
+        container.addEventListener('scroll', updateFades);
+        window.addEventListener('resize', updateFades);
+        setTimeout(updateFades, 500);
+
+        // Auto-scroll to active link
+        const active = container.querySelector('.nav-link.active');
+        if (active) {
+            container.scrollLeft = active.offsetLeft - (container.clientWidth / 2) + (active.clientWidth / 2);
+        }
+    }
+
+    function initDynamicIslandNav() {
+        const island = document.getElementById('nav-island');
+        const labelText = document.getElementById('di-label-text');
+        if (!island) return;
+
+        // Set label dari active nav link
+        const activeLink = document.querySelector('.nav-link.active');
+        if (activeLink && labelText) labelText.textContent = activeLink.textContent.trim();
+
+        let collapseTimer = null;
+
+        function expandNav() {
+            clearTimeout(collapseTimer);
+            island.classList.add('di-expanded');
+        }
+
+        function scheduleCollapse(delay = 3000) {
+            clearTimeout(collapseTimer);
+            collapseTimer = setTimeout(() => {
+                island.classList.remove('di-expanded');
+            }, delay);
+        }
+
+        // Hover (desktop)
+        island.addEventListener('mouseenter', expandNav);
+        island.addEventListener('mouseleave', () => scheduleCollapse(3000));
+
+        // Touch (tablet/mobile): tap collapsed pill → expand
+        island.addEventListener('click', (e) => {
+            if (!island.classList.contains('di-expanded')) {
+                e.preventDefault();
+                expandNav();
+                scheduleCollapse(4000);
+            }
+        });
+
+        // Onboarding: mulai expanded, collapse setelah 4 detik
+        scheduleCollapse(4000);
+    }
+    checkResolved();
+
+    window.showSapaModal = function() {
+        document.getElementById('sapa-notify-modal').style.display = 'flex';
+    };
+
+    // --- PACKAGE-BASED ACCESS CONTROL (TIER HIERARCHY) ---
+    // Tier: 0=unknown, 1=E-Inv Standard, 2=E-Inv Premium, 3=Bronze, 4=Silver, 5=Gold, 6=Exclusive, 7=Platinum/Deluxe
+    const PACKAGE_TIER_MAP = {
+        'standard':                 1, 'e-invitation standard':     1, 'e-inv standard':           1,
+        'premium':                  2, 'e-invitation premium':      2, 'e-inv premium':            2,
+        'bronze':                   3, 'bronze guestbook':          3,
+        'silver':                   4, 'silver guestbook':          4,
+        'gold':                     5, 'gold guestbook':            5,
+        'exclusive':                6, 'exclusive collaboration':   6,
+        'deluxe':                   7, 'deluxe collaboration':      7,
+        'platinum':                 7, 'platinum collaboration':    7,
+        'collaboration':            6, 'b2b':                       6
+    };
+
+    // Minimum tier required per page
+    const PAGE_MIN_TIER = {
+        'undangan.html':            1,
+        'config_invitation.html':   1,
+        'katalog_undangan.html':    1,
+        'upgrade.html':             1,
+        'dashboard.html':           1,
+        'wa_blast.html':            2,   // E-Inv Premium+
+        'formulir_tamu.html':       2,   // E-Inv Premium+
+        'checkin.html':             3,   // Bronze+
+        'onsite.html':              3,
+        'angpao.html':              3,
+        'kiosk.html':               3,
+        'welcome.html':             4,   // Silver+
+        'config.html':              4,
+        'luckydraw.html':           4,
+        'worker.html':              4,
+        'analytics.html':           5,   // Gold+
+    };
+
+    function getClientTier() {
+        try {
+            const sess = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
+            const pkg = (sess.package || '').toLowerCase().trim();
+            if (!pkg) return 0; // No package info → no gating
+            // Try exact match first, then partial match
+            if (PACKAGE_TIER_MAP[pkg] !== undefined) return PACKAGE_TIER_MAP[pkg];
+            for (const key of Object.keys(PACKAGE_TIER_MAP)) {
+                if (pkg.includes(key) || key.includes(pkg)) return PACKAGE_TIER_MAP[key];
+            }
+            return 0;
+        } catch(e) { return 0; }
+    }
+
+    function canAccessPage(page) {
+        const tier = getClientTier();
+        if (tier === 0) return true; // No package info → allow (backward compat)
+        const pageBase = page.split('?')[0];
+        const minTier = PAGE_MIN_TIER[pageBase];
+        if (minTier === undefined) return true; // Page not in map → allow
+        return tier >= minTier;
+    }
+
+    function getPageTierName(minTier) {
+        const names = {1:'E-Invitation Standard', 2:'E-Invitation Premium', 3:'Bronze Guestbook', 4:'Silver Guestbook', 5:'Gold Guestbook', 6:'Collaboration'};
+        return names[minTier] || 'paket yang lebih tinggi';
+    }
+
+    function applyPackageDimming() {
+        const tier = getClientTier();
+        if (tier === 0) return;
+        document.querySelectorAll('.nav-item[onclick]').forEach(item => {
+            const onclickVal = item.getAttribute('onclick') || '';
+            const match = onclickVal.match(/nav\('([^']+)'\)/);
+            if (match) {
+                const targetPage = match[1].split('?')[0];
+                const minTier = PAGE_MIN_TIER[targetPage];
+                if (minTier !== undefined && tier < minTier) {
+                    item.style.opacity = '0.5';
+                    item.style.filter = 'grayscale(1)';
+                    item.style.cursor = 'pointer';
+                    item.title = `Untuk mengakses fitur ini silahkan untuk upgrade paket terlebih dahulu.`;
+                    
+                    const glassBox = item.querySelector('.glass-box');
+                    if (glassBox) {
+                        glassBox.style.position = 'relative';
+                        glassBox.innerHTML += '<div style="position:absolute; inset:0; background:rgba(255,255,255,0.7); border-radius:inherit; display:flex; justify-content:center; align-items:center; z-index:10;"><span style="font-size:24px;">🔒</span></div>';
+                    }
+                }
+            }
+        });
+    }
+
+    async function nav(target) {
+        if (!window.CURRENT_SS_ID && target !== 'undangan.html') {
+            document.getElementById('sapa-notify-modal').style.display = 'flex';
+            return;
+        }
+        if (!canAccessPage(target)) {
+            const goUpgrade = await showConfirm(
+                "Akses Terbatas 🔒", 
+                "Untuk mengakses fitur ini silahkan untuk upgrade paket terlebih dahulu.", 
+                "🔒", 
+                "UPGRADE SEKARANG", 
+                "TUTUP"
+            );
+            if (goUpgrade) {
+                window.location.href = "upgrade.html";
+            }
+            return;
+        }
+        window.location.href = target;
+    }
+
+    // --- LANGUAGE TOGGLE LOGIC ---
+    window.setLang = function(lang) {
+        localStorage.setItem('sapatamu_lang', lang);
+        
+        const btnInd = document.getElementById('lang-ind');
+        const btnEng = document.getElementById('lang-eng');
+        
+        if (lang === 'ind') {
+            btnInd.style.color = "var(--primary)";
+            btnInd.style.background = "rgba(224,123,123,0.1)";
+            btnEng.style.color = "var(--text-muted)";
+            btnEng.style.background = "transparent";
+        } else {
+            btnEng.style.color = "var(--primary)";
+            btnEng.style.background = "rgba(224,123,123,0.1)";
+            btnInd.style.color = "var(--text-muted)";
+            btnInd.style.background = "transparent";
+        }
+
+        document.querySelectorAll('.lang-text').forEach(el => {
+            if (el.hasAttribute('data-' + lang)) {
+                el.textContent = el.getAttribute('data-' + lang);
+            }
+        });
+
+        document.querySelectorAll('.lang-html').forEach(el => {
+            if (el.hasAttribute('data-' + lang)) {
+                el.innerHTML = el.getAttribute('data-' + lang);
+            }
+        });
+    };
+
+    // Data Deskripsi Fitur (Bilingual)
+    const featureDescriptions = {
+        'formulir_tamu.html': {
+            ind: 'Kelola data tamu, atur sesi kehadiran, dan bagikan tautan E-Invitation secara instan.',
+            eng: 'Manage guest data, assign attendance sessions, and share E-Invitation links instantly.'
+        },
+        'checkin.html': {
+            ind: 'Pindai QR Code tamu dengan cepat menggunakan kamera HP atau tablet usher.',
+            eng: 'Quickly scan guest QR Codes using your smartphone or usher tablet camera.'
+        },
+        'onsite.html': {
+            ind: 'Tambahkan tamu baru secara manual di lokasi acara jika mereka belum terdaftar.',
+            eng: 'Manually register walk-in guests at the venue if they are not on the list.'
+        },
+        'angpao.html': {
+            ind: 'Catat hadiah atau angpao fisik dari tamu secara digital agar aman dan terdata rapi.',
+            eng: 'Digitally record physical gifts or angpao from guests securely and neatly.'
+        },
+        'wa_blast.html': {
+            ind: 'Kirim pengingat atau undangan massal ke seluruh tamu melalui WhatsApp secara otomatis.',
+            eng: 'Send bulk reminders or invitations to all guests via WhatsApp automatically.'
+        },
+        'luckydraw.html': {
+            ind: 'Undi hadiah doorprize secara acak dan transparan berdasarkan daftar tamu yang hadir.',
+            eng: 'Randomly and transparently draw doorprizes based on the checked-in guest list.'
+        },
+        'analytics.html': {
+            ind: 'Pantau grafik kehadiran, arus kedatangan, dan statistik acara Anda secara real-time.',
+            eng: 'Monitor attendance charts, arrival flow, and your event statistics in real-time.'
+        },
+        'kiosk.html': {
+            ind: 'Ubah tablet menjadi Kios Mandiri agar tamu bisa memindai QR mereka sendiri.',
+            eng: 'Turn a tablet into a Self-Service Kiosk for guests to scan their own QR Codes.'
+        },
+        'welcome.html': {
+            ind: 'Tampilkan nama tamu yang baru hadir di layar besar, disambut dengan hangat dan berkesan.',
+            eng: 'Automatically display newly arrived guest names on a large screen with a warm impression.'
+        },
+        'worker.html': {
+            ind: 'Hubungkan printer bluetooth untuk mencetak label nama tamu saat check-in beserta label amplop/angpao kado.',
+            eng: 'Connect a bluetooth printer to print guest name and angpao labels upon check-in.'
+        }
+    };
+
+    const defaultDescription = {
+        ind: 'Menghadirkan pengalaman cerdas lewat kolaborasi bersama <b>Knowhere Studio</b>. Temukan galeri foto Anda secara instan menggunakan teknologi AI Face Finder berbasis QR Code.',
+        eng: 'An exclusive <b>AI Experience</b> powered by <b>Knowhere Studio</b>. Discover your moments instantly with our smart QR Face Finder.'
+    };
+
+    function initDynamicTagline() {
+        const taglineElement = document.getElementById('dynamic-tagline');
+        const navItems = document.querySelectorAll('.nav-item[onclick]');
+        const updateText = (indText, engText) => {
+            const currentLang = localStorage.getItem('sapatamu_lang') || 'ind';
+            
+            // Tandai slide lama sebagai keluar
+            const oldSlides = taglineElement.querySelectorAll('.tagline-slide');
+            oldSlides.forEach(slide => {
+                slide.classList.remove('active');
+                slide.classList.add('exit');
+                setTimeout(() => {
+                    if (slide.parentNode) slide.remove();
+                }, 600); // Sinkron dengan durasi CSS transition
+            });
+
+            // Buat slide baru
+            const newSlide = document.createElement('div');
+            newSlide.className = 'tagline-slide lang-html';
+            newSlide.setAttribute('data-ind', indText);
+            newSlide.setAttribute('data-eng', engText);
+            newSlide.innerHTML = currentLang === 'ind' ? indText : engText;
+
+            taglineElement.appendChild(newSlide);
+
+            // Trigger reflow agar animasi CSS jalan
+            void newSlide.offsetWidth;
+
+            // Masuk
+            newSlide.classList.add('active');
+        };
+
+        // Render awal default
+        updateText(defaultDescription.ind, defaultDescription.eng);
+
+        // Siapkan array untuk auto-loop
+        const loopItems = [defaultDescription];
+        const hoverMap = new Map();
+
+        navItems.forEach(item => {
+            const onclickVal = item.getAttribute('onclick') || '';
+            const match = onclickVal.match(/nav\('([^']+)'\)/);
+            
+            if (match) {
+                const page = match[1].split('?')[0]; 
+                const desc = featureDescriptions[page];
+                
+                if (desc) {
+                    loopItems.push(desc);
+                    hoverMap.set(item, desc);
+                }
+            }
+        });
+
+        let loopInterval;
+        let currentIndex = 0;
+
+        const startLoop = () => {
+            if (loopInterval) clearInterval(loopInterval);
+            loopInterval = setInterval(() => {
+                currentIndex = (currentIndex + 1) % loopItems.length;
+                const nextDesc = loopItems[currentIndex];
+                updateText(nextDesc.ind, nextDesc.eng);
+            }, 2500); // 2.5 detik untuk transisi nyaman
+        };
+
+        const stopLoop = () => {
+            if (loopInterval) clearInterval(loopInterval);
+        };
+
+        // Event listener hover pada menu
+        navItems.forEach(item => {
+            const desc = hoverMap.get(item);
+            if (desc) {
+                item.addEventListener('mouseenter', () => {
+                    stopLoop();
+                    updateText(desc.ind, desc.eng);
+                });
+                item.addEventListener('mouseleave', () => {
+                    currentIndex = 0;
+                    updateText(defaultDescription.ind, defaultDescription.eng);
+                    startLoop();
+                });
+            }
+        });
+
+        // Mulai rotasi otomatis saat pertama dimuat
+        startLoop();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof SapaGuard !== 'undefined') SapaGuard.apply('sensitive');
+        const savedLang = localStorage.getItem('sapatamu_lang') || 'ind';
+        setLang(savedLang);
+        initDynamicTagline();
+        // ✅ Panggil DI nav langsung saat DOM siap — tidak perlu tunggu auth resolver
+        initDynamicIslandNav();
+    });
+</script>
+
+<script src="offline-db.js"></script>
+<script src="sync-engine.js"></script>
+<script>
+(function(){
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+    window.addEventListener('online',function(){document.body.classList.remove('is-offline');});
+    window.addEventListener('offline',function(){document.body.classList.add('is-offline');});
+})();
+</script>
+<style>
+.is-offline::before{content:'⚠️ OFFLINE — Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
+@media(min-width:1024px){.is-offline::before{display:none;}}
+</style>
+</body>
+</html>

@@ -1,0 +1,2525 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaTamu Sortir — Galeri Culling & Seleksi Foto</title>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #E07B7B; /* Soft Rose */
+            --primary-hover: #D06F6F;
+            --bg: #FFF9F5;      /* Warm Cream Neutral */
+            --card: #FFFFFF;
+            --text-main: #4A3F35; /* Charcoal Deep Coffee */
+            --text-muted: #8C7560; /* Earthy Muted Brown */
+            --border: #F0E6DE;   /* Soft border */
+            --input-bg: #FDF8F4;
+            --gold: #C8962E;
+            --success: #10B981;
+            --shadow-sm: 0 4px 12px rgba(74, 63, 53, 0.03);
+            --shadow-md: 0 8px 24px rgba(74, 63, 53, 0.06);
+            --shadow-lg: 0 16px 36px rgba(74, 63, 53, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4, h5, h6, .font-serif {
+            font-family: 'Lora', serif;
+        }
+
+        /* Container Layouts */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header Styles */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 249, 245, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 0;
+            transition: all 0.3s ease;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-main);
+        }
+
+        .logo-badge {
+            background: var(--primary);
+            color: white;
+            font-weight: 800;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .logo-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        /* Buttons styling */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 12px 24px;
+            border-radius: 14px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 6px 20px rgba(224, 123, 123, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(224, 123, 123, 0.35);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-secondary:hover {
+            background: var(--input-bg);
+            border-color: var(--text-muted);
+            transform: translateY(-2px);
+        }
+
+        /* Form Inputs */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--input-bg);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(224, 123, 123, 0.15);
+        }
+
+        /* Cards and Sections */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 32px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-top: 32px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        /* Event Item Row */
+        .event-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 450px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .event-item {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .event-item:hover {
+            border-color: var(--primary);
+            background: white;
+            transform: translateX(4px);
+        }
+
+        .event-item.active {
+            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        /* Loading skeleton grid */
+        .skeleton-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 20px;
+        }
+        .skeleton-grid .skeleton-card {
+            height: 280px;
+            flex: 1 1 auto;
+            min-width: 100px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* Filter Controls */
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 18px;
+            margin-top: 24px;
+            backdrop-filter: blur(8px);
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+            max-width: 320px;
+        }
+
+        .search-wrapper input {
+            width: 100%;
+            padding: 10px 16px 10px 38px;
+            font-size: 13px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            outline: none;
+            background: white;
+        }
+
+        .search-wrapper input:focus {
+            border-color: var(--primary);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-tab {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-tab.active {
+            background: white;
+            border-color: var(--border);
+            color: var(--primary);
+            font-weight: 700;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Custom alert notification modal */
+        .notification-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(74, 63, 53, 0.5);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+        }
+
+        .notification-content {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 32px;
+            width: 90%;
+            max-width: 360px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Quota stats */
+        .quota-box {
+            background: white;
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Active Event Control Section */
+        .active-event-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .code-block {
+            background: #2D241E;
+            color: #E6DFD9;
+            padding: 16px;
+            border-radius: 14px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin: 8px 0;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border: 3px solid rgba(224, 123, 123, 0.2);
+            border-bottom-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #F0E6DE 25%, #E6DAD0 50%, #F0E6DE 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Badge selection count */
+        .selection-count-badge {
+            background: var(--primary);
+            color: white;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-title {
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        /* ---- Wizard Step Indicator ---- */
+        .wizard-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ws-num {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--border);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .ws-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+        .wizard-step.active .ws-num {
+            background: var(--primary);
+            color: white;
+        }
+        .wizard-step.active .ws-label {
+            color: var(--primary);
+        }
+        .wizard-step.done .ws-num {
+            background: var(--success);
+            color: white;
+        }
+        .wizard-step.done .ws-label {
+            color: var(--success);
+        }
+        .wizard-line {
+            flex: 1;
+            height: 2px;
+            background: var(--border);
+            margin: 0 12px;
+            transition: background 0.3s ease;
+            min-width: 24px;
+        }
+        .wizard-line.done {
+            background: var(--success);
+        }
+
+        /* ---- View Mode: Pinterest — justified flex gallery ---- */
+        .grid-pinterest {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 20px;
+            width: 100vw;
+            margin-left: calc(-50vw + 50%);
+            padding: 0 calc(50vw - 50%);
+        }
+
+        /* Pin card — all cards grow proportionally to fill row */
+        .pin-card {
+            position: relative;
+            cursor: pointer;
+            height: 280px;
+            flex: 1 1 auto;
+            min-width: 100px;
+            overflow: hidden;
+        }
+        .pin-card img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            image-rendering: -webkit-optimize-contrast;
+            transition: filter 0.2s ease;
+        }
+        .pin-card.selected img {
+            filter: brightness(0.72);
+        }
+        /* Checkmark badge — only visible when selected */
+        .pin-check-badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 14px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.6);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .pin-card.selected .pin-check-badge {
+            opacity: 1;
+            transform: scale(1);
+        }
+        /* Quota ring indicator top-left when selected */
+        .pin-card.selected::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 3px solid var(--primary);
+            pointer-events: none;
+        }
+
+
+        /* Local Culling & Lightroom Export */
+        .local-drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            background: var(--input-bg);
+        }
+        .local-drop-zone:hover {
+            border-color: var(--primary);
+            background: rgba(224,123,123,0.04);
+        }
+        .local-drop-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(224,123,123,0.08);
+        }
+        .local-export-panel {
+            position: sticky;
+            top: 64px;
+            z-index: 50;
+            background: rgba(255,249,245,0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            margin-top: 16px;
+        }
+        .local-export-panel h4 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+        .guide-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(74,63,53,0.5);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+        }
+        .guide-content {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            max-width: 560px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+        .guide-step {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 16px;
+            align-items: flex-start;
+        }
+        .guide-step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 13px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Infinite scroll loading indicator */
+        .local-scroll-sentinel {
+            width: 100%;
+            height: 1px;
+        }
+        .local-load-more-indicator {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .local-load-more-indicator .spinner {
+            width: 20px;
+            height: 20px;
+            margin: 0 auto 8px;
+        }
+        .local-buffer-status {
+            text-align: center;
+            padding: 8px;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Desktop Mode Switcher Modal */
+        .desktop-mode-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(74, 63, 53, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999999;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        .desktop-mode-modal.fadeout {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .desktop-mode-content {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 36px 32px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            transform: scale(1);
+            transition: transform 0.5s ease;
+        }
+        .desktop-mode-modal.fadeout .desktop-mode-content {
+            transform: scale(0.92);
+        }
+        .desktop-mode-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: rgba(224, 123, 123, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin: 0 auto 16px;
+        }
+        .desktop-mode-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+        .desktop-mode-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .btn-desktop-activate {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            background: var(--primary);
+            color: white;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 6px 20px rgba(224, 123, 123, 0.3);
+            margin-bottom: 10px;
+        }
+        .btn-desktop-activate:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(224, 123, 123, 0.4);
+        }
+        .btn-desktop-skip {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 14px;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .btn-desktop-skip:hover {
+            color: var(--text-main);
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- Global Header -->
+<header>
+    <div class="container header-content">
+        <a href="sortir.html" class="logo-group" onclick="event.preventDefault(); window.history.pushState({}, '', 'sortir.html'); router();">
+            <span class="logo-badge">SORTIR</span>
+            <span class="logo-title">SapaTamu</span>
+        </a>
+        <div id="header-actions" class="flex gap-12">
+            <!-- Dynamic Actions populated by JS -->
+        </div>
+    </div>
+</header>
+
+<!-- Main Wrapper -->
+<main class="container" style="padding-top: 32px; padding-bottom: 64px;">
+
+    <!-- ================= VIEW 1: PHOTOGRAPHER DASHBOARD ================= -->
+    <div id="view-dashboard" style="display: none;">
+        <h2 style="font-size: 32px; margin-bottom: 8px;">Culling Dashboard</h2>
+        <p style="color: var(--text-muted); margin-bottom: 32px;">Buat tautan pemilihan foto untuk klien Anda tanpa ribet.</p>
+
+        <div class="dashboard-grid">
+            <!-- Event Generator Form -->
+            <div>
+                <div class="card">
+                    <h3 style="font-size: 22px; margin-bottom: 20px; color: var(--primary);">Buat Tautan Event Baru</h3>
+                    
+                    <form id="create-event-form" onsubmit="handleCreateEvent(event)">
+                        <div class="form-group">
+                            <label class="form-label">Nama Event / Pernikahan</label>
+                            <input type="text" id="event-name-input" class="form-control" placeholder="Contoh: Rian & Andini Wedding" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Link Folder Google Drive (Publik)</label>
+                            <input type="url" id="drive-url-input" class="form-control" placeholder="https://drive.google.com/drive/folders/..." required>
+                            <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Pastikan folder disetel publik ("Siapa saja yang memiliki link dapat melihat").</p>
+                        </div>
+
+                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <label class="form-label">Kuota Foto Klien</label>
+                                <input type="number" id="quota-input" class="form-control" value="50" min="1" required>
+                            </div>
+                            <div>
+                                <label class="form-label">No. WA Terima Hasil</label>
+                                <input type="tel" id="wa-input" class="form-control" placeholder="Contoh: 62812345678" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px; margin-top: 10px;">
+                            Buat Event Culling
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Events List & Management -->
+            <div>
+                <div class="card" style="min-height: 480px; display: flex; flex-direction: column;">
+                    <h3 style="font-size: 22px; margin-bottom: 20px; color: var(--text-main);">Daftar Event Saya</h3>
+                    
+                    <div id="my-events-list" class="event-list" style="flex: 1;">
+                        <!-- Populate dynamic items or empty state -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Local Culling & Lightroom Integration Card -->
+        <div id="local-culling-section" style="margin-top: 32px;">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+                    <div>
+                        <h3 style="font-size: 22px; color: var(--primary);">Local Culling & Lightroom</h3>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Sortir foto lokal di PC, ekspor langsung ke Adobe Lightroom Classic.</p>
+                    </div>
+                    <span style="background: rgba(200,150,46,0.1); color: var(--gold); font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 10px;">VENDOR MODE</span>
+                </div>
+
+                <!-- Drop Zone -->
+                <div id="local-drop-zone" class="local-drop-zone" onclick="document.getElementById('local-folder-input').click()">
+                    <input type="file" id="local-folder-input" webkitdirectory multiple style="display:none" onchange="handleLocalFolderSelect(event)">
+                    <div style="font-size: 40px; margin-bottom: 12px;">📂</div>
+                    <p style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Buka Folder Foto Lokal</p>
+                    <p style="font-size: 12px; color: var(--text-muted);">Klik untuk memilih folder, atau seret & lepas folder ke sini</p>
+                </div>
+
+                <!-- Local Gallery Stats & Export Panel -->
+                <div id="local-export-panel" class="local-export-panel" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                        <div>
+                            <span style="font-size: 13px; color: var(--text-muted);">Foto Terpilih:</span>
+                            <strong id="local-selection-count" style="color: var(--primary); font-size: 16px; margin-left: 6px;">0 / 0</strong>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="localCopyFilterText()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;">
+                                📋 Salin Teks Filter
+                            </button>
+                            <button onclick="localShowGuide()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;">
+                                💡 Panduan Lightroom
+                            </button>
+                            <button onclick="localExportFiles()" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;">
+                                📁 Ekspor File ke Folder
+                            </button>
+                        </div>
+                    </div>
+                    <div style="background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-family: monospace; font-size: 11px; max-height: 100px; overflow-y: auto; white-space: pre-wrap; color: var(--text-muted);" id="local-file-list-preview">Belum ada foto yang dipilih.</div>
+                </div>
+
+                <!-- Local Pinterest Gallery -->
+                <div id="local-gallery" class="grid-pinterest" style="display: none; margin-top: 16px;"></div>
+                <div id="local-scroll-sentinel" class="local-scroll-sentinel"></div>
+                <div id="local-load-more" class="local-load-more-indicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>Memuat foto berikutnya...</span>
+                </div>
+                <div id="local-buffer-status" class="local-buffer-status"></div>
+            </div>
+        </div>
+
+        <!-- Active Event Details (Appears when an event is selected) -->
+        <div id="active-event-card" class="card" style="display: none; margin-top: 32px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 24px;">
+                <div>
+                    <h3 id="active-event-title" style="font-size: 26px; color: var(--text-main);">Nama Event</h3>
+                    <p id="active-event-meta" style="color: var(--text-muted); font-size: 13px; margin-top: 4px;"></p>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <a id="active-event-client-link" href="#" target="_blank" class="btn btn-secondary">Buka Halaman Klien ↗</a>
+                    <button onclick="deleteActiveEvent()" class="btn btn-secondary" style="color: #E07B7B; border-color: rgba(224, 123, 123, 0.3);">Hapus Event</button>
+                </div>
+            </div>
+
+            <div class="active-event-controls">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 32px;">
+                    <!-- Selections Panel -->
+                    <div>
+                        <h4 style="font-size: 16px; margin-bottom: 12px; font-weight: 750;">Hasil Sortir Klien (Real-Time)</h4>
+                        <div id="active-selections-stat" style="font-size: 14px; font-weight: bold; margin-bottom: 12px;">
+                            Pilihan: <span id="active-selections-count" class="selection-count-badge">0 / 0</span>
+                        </div>
+                        
+                        <label class="form-label">Daftar Indeks File Terpilih (Kopi Teks)</label>
+                        <div class="code-block" id="active-selections-text" style="min-height: 120px; max-height: 220px; white-space: pre-wrap;">Belum ada pilihan foto dari klien.</div>
+                        
+                        <button onclick="copySelectionsText()" class="btn btn-secondary" style="margin-top: 8px;">Salin Daftar Indeks</button>
+                    </div>
+
+                    <!-- Scripts download panel -->
+                    <div style="border-left: 1px solid var(--border); padding-left: 32px;">
+                        <h4 style="font-size: 16px; margin-bottom: 12px; font-weight: 750;">PnP Copy Script (Lokal)</h4>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+                            Unduh skrip otomatis yang akan menyalin seluruh berkas foto pilihan klien (RAW/JPG) dari direktori lokal Anda ke dalam subfolder `/Selected_by_Client/` secara instan.
+                        </p>
+
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label">📁 Path Folder Sumber RAW / JPG</label>
+                            <input type="text" id="pnp-source-path" class="form-control"
+                                placeholder="Contoh: D:\Foto\Rian-Andini-Wedding"
+                                style="font-family: monospace; font-size: 12px; padding: 10px 14px;">
+                            <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                                Path folder lokal tempat file RAW/JPG tersimpan. Otomatis terisi jika sudah diisi di panel Penerjemah Indeks.
+                            </p>
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <button onclick="downloadCopyScript('windows')" id="btn-pnp-win" class="btn btn-primary" style="background: #4A3F35; box-shadow: none;">
+                                💻 Unduh Script Windows (.bat)
+                            </button>
+                            <button onclick="downloadCopyScript('mac')" id="btn-pnp-mac" class="btn btn-secondary">
+                                🍎 Unduh Script macOS (.command)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Index Translator Card -->
+        <!-- Manual Index Translator — 3-Step Wizard -->
+        <div class="card" style="margin-top: 32px;">
+            <h3 style="font-size: 22px; margin-bottom: 4px; color: var(--primary);">📋 Penerjemah Indeks Manual</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 28px;">
+                Tiga langkah: ekstrak daftar foto dari teks WhatsApp → tentukan folder sumber RAW → siapkan folder output → unduh script.
+            </p>
+
+            <!-- Step indicator bar -->
+            <div style="display: flex; align-items: center; gap: 0; margin-bottom: 32px;">
+                <div class="wizard-step active" id="wstep-1">
+                    <span class="ws-num">1</span><span class="ws-label">Teks Klien</span>
+                </div>
+                <div class="wizard-line" id="wline-12"></div>
+                <div class="wizard-step" id="wstep-2">
+                    <span class="ws-num">2</span><span class="ws-label">Folder Sumber</span>
+                </div>
+                <div class="wizard-line" id="wline-23"></div>
+                <div class="wizard-step" id="wstep-3">
+                    <span class="ws-num">3</span><span class="ws-label">Lokasi Simpan</span>
+                </div>
+            </div>
+
+            <!-- STEP 1 -->
+            <div id="wizard-panel-1">
+                <label class="form-label">Tempel Teks Daftar Foto dari WhatsApp / Email Klien</label>
+                <textarea id="manual-index-textarea" class="form-control"
+                    style="min-height: 160px; font-family: monospace; font-size: 12px; resize: vertical;"
+                    placeholder="Contoh:&#10;Halo kak! Berikut daftar foto pilihan saya:&#10;1. DSC_1002.JPG&#10;2. DSC_1045.NEF&#10;3. IMG_2026&#10;...&#10;&#10;Terima kasih 🙏"></textarea>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+                    <div style="font-size: 13px; color: var(--text-muted);">
+                        Terdeteksi: <strong id="manual-parsed-count" style="color: var(--primary);">0</strong> file foto
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button onclick="clearManualIndex()" class="btn btn-secondary" style="padding: 10px 18px;">Reset</button>
+                        <button onclick="parseManualIndex()" class="btn btn-primary" style="padding: 10px 24px;">Proses & Lanjut →</button>
+                    </div>
+                </div>
+
+                <!-- Preview hasil parsing -->
+                <div id="manual-parse-result" style="display: none; margin-top: 16px;">
+                    <label class="form-label">Daftar File Terdeteksi</label>
+                    <div class="code-block" id="manual-parsed-preview"
+                        style="max-height: 130px; font-size: 11px; white-space: pre-wrap; overflow-y: auto;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div id="wizard-panel-2" style="display:none;">
+                <div style="background: rgba(200,150,46,0.08); border: 1px solid rgba(200,150,46,0.25); border-radius: 16px; padding: 16px 20px; margin-bottom: 24px; font-size: 13px; color: var(--gold);">
+                    ✅ <strong id="s2-count">0</strong> nama file berhasil diekstrak. Sekarang tentukan <strong>folder lokal</strong> tempat semua file RAW/JPG Anda tersimpan.
+                </div>
+
+                <label class="form-label">📁 Path Folder Sumber File RAW / JPG</label>
+                <input type="text" id="manual-source-path" class="form-control"
+                    placeholder="Contoh Windows: D:\Foto\2024\Rian-Andini-Wedding"
+                    style="font-family: monospace; font-size: 13px; margin-bottom: 8px;">
+                <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 20px;">
+                    Paste path folder tempat semua file foto RAW/JPG event ini berada di komputer Anda.
+                </p>
+
+                <label class="form-label">🔍 Preview Contoh Path File</label>
+                <div class="code-block" id="s2-path-preview" style="font-size: 12px; white-space: pre-wrap; margin-bottom: 24px;">— Isi path di atas untuk melihat preview —</div>
+
+                <div style="display: flex; justify-content: space-between;">
+                    <button onclick="wizardGo(1)" class="btn btn-secondary" style="padding: 10px 20px;">← Kembali</button>
+                    <button onclick="wizardGo(3)" class="btn btn-primary" style="padding: 10px 24px;">Lanjut →</button>
+                </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div id="wizard-panel-3" style="display:none;">
+                <div style="background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.25); border-radius: 16px; padding: 16px 20px; margin-bottom: 24px; font-size: 13px; color: #0d9488;">
+                    ✅ Folder sumber: <strong id="s3-source-display" style="font-family: monospace;"></strong>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px;">
+                    <div>
+                        <label class="form-label">📂 Folder Output / Tujuan</label>
+                        <input type="text" id="manual-dest-path" class="form-control"
+                            placeholder="Biarkan kosong = sama dengan folder sumber"
+                            style="font-family: monospace; font-size: 13px;">
+                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                            Kosongkan agar output dibuat di dalam folder sumber.
+                        </p>
+                    </div>
+                    <div>
+                        <label class="form-label">📁 Nama Sub-Folder Otomatis</label>
+                        <input type="text" id="manual-subfolder-name" class="form-control"
+                            value="Selected_by_Client"
+                            style="font-family: monospace; font-size: 13px;">
+                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                            Sub-folder ini dibuat otomatis oleh script saat dijalankan.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Wildcard mode info banner -->
+                <div style="background: rgba(224,123,123,0.07); border: 1px solid rgba(224,123,123,0.3); border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; font-size: 12px; color: var(--text-main); display: flex; align-items: flex-start; gap: 12px;">
+                    <span style="font-size: 20px; flex-shrink:0;">🔍</span>
+                    <div>
+                        <strong>Mode Pencarian: Wildcard Otomatis</strong><br>
+                        Script akan mencari file menggunakan pola <code style="background:#f0e6de;padding:1px 5px;border-radius:4px;">*NAMAFILE*</code> sehingga otomatis menemukan <code style="background:#f0e6de;padding:1px 5px;border-radius:4px;">_GSC8846.NEF</code>, <code style="background:#f0e6de;padding:1px 5px;border-radius:4px;">_GSC8846.JPG</code>, dll. dari indeks <strong>GSC8846</strong> — tanpa perlu mengetikkan prefix underscore atau ekstensi.
+                    </div>
+                </div>
+
+                <label class="form-label">📄 Preview Struktur Output</label>
+                <div class="code-block" id="s3-output-preview" style="font-size: 12px; white-space: pre; margin-bottom: 24px; line-height: 1.7;"></div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <button onclick="wizardGo(2)" class="btn btn-secondary" style="padding: 10px 20px;">← Kembali</button>
+                    <div style="display: flex; gap: 12px;">
+                        <button onclick="downloadManualScript('windows')" id="btn-download-manual-win" class="btn btn-primary" style="background: #4A3F35; box-shadow: none;">
+                            💻 Script Windows (.bat)
+                        </button>
+                        <button onclick="downloadManualScript('mac')" id="btn-download-manual-mac" class="btn btn-secondary">
+                            🍎 Script macOS (.command)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= VIEW 2: CLIENT CULLING VIEW ================= -->
+    <div id="view-culling" style="display: none;">
+        <!-- Header area inside view for client context -->
+        <div style="position: sticky; top: 64px; z-index: 50; background: rgba(255,249,245,0.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding: 20px 0; margin-bottom: 24px; flex-wrap: wrap; gap: 20px;">
+            <div>
+                <h2 id="client-event-title" style="font-size: 32px; font-weight: 700;">Event Culling</h2>
+                <p id="client-event-desc" style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">Pilihlah foto-foto terbaik Anda di bawah ini.</p>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="quota-box">
+                    <div style="font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Foto Terpilih</div>
+                    <div id="client-quota-counter" style="font-size: 18px; font-weight: 800; color: var(--primary);">0 / 0</div>
+                </div>
+                <button onclick="submitClientSelection()" class="btn btn-primary" style="padding: 16px 28px;">
+                    Kirim Hasil Sortir
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter container -->
+        <div class="filter-container">
+            <div class="search-wrapper">
+                <span class="search-icon">🔎</span>
+                <input type="text" id="client-search-input" placeholder="Cari nama foto..." oninput="handleClientSearch(this.value)">
+            </div>
+            <div class="filter-tabs">
+                <button id="tab-filter-all" class="filter-tab active" onclick="handleClientFilter('all')">Semua</button>
+                <button id="tab-filter-selected" class="filter-tab" onclick="handleClientFilter('selected')">Terpilih</button>
+                <button id="tab-filter-unselected" class="filter-tab" onclick="handleClientFilter('unselected')">Belum Terpilih</button>
+            </div>
+        </div>
+
+        <!-- Skeleton grid while loading -->
+        <div id="culling-loading-grid" class="skeleton-grid">
+            <div class="skeleton-card skeleton"></div>
+            <div class="skeleton-card skeleton"></div>
+            <div class="skeleton-card skeleton"></div>
+            <div class="skeleton-card skeleton"></div>
+        </div>
+
+        <!-- Photo Grid Container -->
+        <div id="culling-photos-grid" class="grid-pinterest" style="display: none;"></div>
+        
+        <!-- Empty / Error handlers -->
+        <div id="culling-empty-state" class="card empty-state" style="display: none;">
+            <div class="empty-icon">📷</div>
+            <h4 class="empty-title">Folder Foto Kosong</h4>
+            <p>Tidak ada foto yang terdeteksi di dalam folder Google Drive yang ditautkan.</p>
+        </div>
+        
+        <div id="culling-error-state" class="card empty-state" style="display: none; border-color: rgba(224, 123, 123, 0.4);">
+            <div class="empty-icon" style="color: #E07B7B;">⚠️</div>
+            <h4 class="empty-title" style="color: #E07B7B;">Event Tidak Ditemukan</h4>
+            <p>Tautan tidak valid, atau event ini telah dihapus. Silakan hubungi fotografer Anda.</p>
+        </div>
+    </div>
+
+    <!-- ================= VIEW 3: SUPER ADMIN / OWNER EVENT EXPLORER ================= -->
+    <div id="view-owner" style="display: none;">
+        <h2 style="font-size: 32px; margin-bottom: 8px;">Event Explorer (Super Admin)</h2>
+        <p style="color: var(--text-muted); margin-bottom: 32px;">Pantau seluruh event culling yang terdaftar di dalam platform SapaTamu Sortir.</p>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+                <h3 style="font-size: 20px;">Daftar Semua Event Sistem</h3>
+                <div class="search-wrapper" style="max-width: 280px; width: 100%;">
+                    <span class="search-icon">🔎</span>
+                    <input type="text" id="owner-search-input" placeholder="Cari nama event..." oninput="handleOwnerSearch(this.value)">
+                </div>
+            </div>
+
+            <div id="owner-loading" style="text-align: center; padding: 48px 0;">
+                <div class="spinner"></div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">Memuat data event...</p>
+            </div>
+
+            <table id="owner-events-table" style="width: 100%; border-collapse: collapse; display: none; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                        <th style="padding: 12px 16px;">Nama Event</th>
+                        <th style="padding: 12px 16px;">Drive Folder ID</th>
+                        <th style="padding: 12px 16px;">No. WhatsApp Admin</th>
+                        <th style="padding: 12px 16px;">Tanggal Dibuat</th>
+                        <th style="padding: 12px 16px; text-align: right;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="owner-events-tbody" style="font-size: 14px;">
+                    <!-- populated dynamically -->
+                </tbody>
+            </table>
+            
+            <div id="owner-empty-state" class="empty-state" style="display: none;">
+                <div class="empty-icon">📂</div>
+                <h4 class="empty-title">Tidak Ada Event</h4>
+                <p>Belum ada event culling yang dibuat di platform ini.</p>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+
+<!-- Custom alert notification modal -->
+<div id="alert-modal" class="notification-modal">
+    <div class="notification-content">
+        <div id="alert-modal-icon" style="font-size: 40px; margin-bottom: 12px;">✨</div>
+        <h3 id="alert-modal-title" style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Pemberitahuan</h3>
+        <p id="alert-modal-msg" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5;"></p>
+        <button onclick="closeAlertModal()" class="btn btn-primary" style="width: 100%; box-shadow: none;">Mengerti</button>
+    </div>
+</div>
+
+<!-- Desktop Mode Switcher Modal (Mobile Only) -->
+<div id="desktop-mode-modal" class="desktop-mode-modal">
+    <div class="desktop-mode-content">
+        <div class="desktop-mode-icon">🖥️</div>
+        <h3 class="desktop-mode-title">Aktifkan Mode Desktop?</h3>
+        <p class="desktop-mode-desc">
+            Rekomendasi: Aktifkan Mode Desktop agar sortir foto lebih mudah dan estetik seperti di komputer.
+        </p>
+        <button onclick="activateDesktopMode()" class="btn-desktop-activate">
+            Aktifkan Mode Desktop
+        </button>
+        <button onclick="dismissDesktopMode()" class="btn-desktop-skip">
+            Gunakan Mode Mobile saja
+        </button>
+    </div>
+</div>
+
+<!-- Lightroom Guide Modal -->
+<div id="lr-guide-modal" class="guide-modal" onclick="closeLRGuide()">
+    <div class="guide-content" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="font-size: 20px; font-weight: 700; color: var(--text-main);">Panduan Filter di Lightroom Classic</h3>
+            <button onclick="closeLRGuide()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+        <div style="background: rgba(200,150,46,0.08); border: 1px solid rgba(200,150,46,0.25); border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; font-size: 12px; color: var(--gold);">
+            <strong>Teks filter sudah disalin ke clipboard!</strong> Ikuti langkah di bawah untuk menggunakannya.
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">1</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Buka <strong>Adobe Lightroom Classic</strong> dan masuk ke folder/katalog produksi foto Anda.</p>
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">2</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Tekan tombol <kbd style="background: var(--input-bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: 700;">\</kbd> (Backslash) untuk memunculkan panel <strong>Library Filter</strong> di bagian atas grid foto.</p>
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">3</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Pada panel tersebut, pilih tab <strong>Text</strong>.</p>
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">4</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Ubah dropdown pertama menjadi <strong>Filename</strong> dan dropdown kedua menjadi <strong>Contains</strong>.</p>
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">5</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Tempel/Paste (<kbd style="background: var(--input-bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: 700;">Ctrl+V</kbd>) kode yang sudah disalin ke kolom pencarian.</p>
+        </div>
+        <div class="guide-step">
+            <span class="guide-step-num">6</span>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.5;">Lightroom akan langsung menyaring dan hanya menampilkan <strong>foto-foto pilihan Anda</strong> secara instan!</p>
+        </div>
+        <button onclick="closeLRGuide()" class="btn btn-primary" style="width: 100%; margin-top: 12px; box-shadow: none;">Mengerti</button>
+    </div>
+</div>
+
+<script type="module">
+    // Supabase credentials
+    const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+    const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+    const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+
+    // Global Store State
+    const store = {
+        myEvents: [], // Events tracked locally on this device
+        activeEvent: null, // Selected event for details
+        activeSelections: [], // Real-time selections from activeEvent
+        cullingEvent: null, // Event being culled by client
+        cullingFiles: [], // Files list in client culling
+        cullingSelections: new Set(), // Set of selected photo_ids
+        clientFilter: 'all',
+        clientSearch: '',
+        ownerEvents: [], // All events for admin/owner
+        ownerSearch: ''
+    };
+
+    // SPA Router
+    function router() {
+        const params = new URLSearchParams(window.location.search);
+        const eventSlug = params.get('event');
+        const action = params.get('action');
+
+        // Hide all views
+        document.getElementById('view-dashboard').style.display = 'none';
+        document.getElementById('view-culling').style.display = 'none';
+        document.getElementById('view-owner').style.display = 'none';
+
+        // Clear dynamic headers
+        const headerActions = document.getElementById('header-actions');
+        headerActions.innerHTML = '';
+
+        if (eventSlug) {
+            initCullingView(eventSlug);
+        } else if (action === 'owner' || action === 'admin') {
+            initOwnerView();
+        } else {
+            initDashboardView();
+        }
+    }
+
+    // Initialize SPA
+    window.addEventListener('load', () => {
+        router();
+        // Listen to navigation events
+        window.addEventListener('popstate', router);
+
+        // Sync: Manual Index source path → PnP Copy Script source path
+        const manualSourceInput = document.getElementById('manual-source-path');
+        if (manualSourceInput) {
+            manualSourceInput.addEventListener('input', function() {
+                const pnpInput = document.getElementById('pnp-source-path');
+                if (pnpInput && this.value.trim()) {
+                    pnpInput.value = this.value.trim();
+                }
+            });
+        }
+    });
+
+    // Helper alerts
+    function showAlert(title, message, icon = "✨") {
+        document.getElementById('alert-modal-title').innerText = title;
+        document.getElementById('alert-modal-msg').innerText = message;
+        document.getElementById('alert-modal-icon').innerText = icon;
+        document.getElementById('alert-modal').style.display = 'flex';
+    }
+
+    window.closeAlertModal = function() {
+        document.getElementById('alert-modal').style.display = 'none';
+    };
+
+    // ============================================================
+    // DESKTOP MODE SWITCHER (Mobile Detection)
+    // ============================================================
+    function isMobileDevice() {
+        return window.innerWidth < 768;
+    }
+
+    function applyDesktopViewport() {
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.setAttribute('content', 'width=1280, initial-scale=0.3, maximum-scale=1.0, user-scalable=yes');
+        }
+    }
+
+    function applyMobileViewport() {
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+        }
+    }
+
+    window.activateDesktopMode = function() {
+        localStorage.setItem('sortir_desktop_mode', 'on');
+        applyDesktopViewport();
+        closeModalWithFade('desktop-mode-modal');
+    };
+
+    window.dismissDesktopMode = function() {
+        localStorage.setItem('sortir_desktop_mode', 'off');
+        closeModalWithFade('desktop-mode-modal');
+    };
+
+    function closeModalWithFade(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.add('fadeout');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.remove('fadeout');
+        }, 500);
+    }
+
+    function checkDesktopModePrompt() {
+        if (!isMobileDevice()) return;
+
+        const pref = localStorage.getItem('sortir_desktop_mode');
+        if (pref === 'on') {
+            applyDesktopViewport();
+            return;
+        }
+        if (pref === 'off') return;
+
+        // First visit — show modal
+        setTimeout(() => {
+            const modal = document.getElementById('desktop-mode-modal');
+            if (modal) modal.style.display = 'flex';
+        }, 800);
+    }
+
+    // Run on page load
+    checkDesktopModePrompt();
+
+    // ----------------------------------------------------
+    // VIEW 1: PHOTOGRAPHER DASHBOARD LOGIC
+    // ----------------------------------------------------
+    async function initDashboardView() {
+        document.getElementById('view-dashboard').style.display = 'block';
+        document.title = "Dashboard Culling — SapaTamu Sortir";
+
+        // Setup dashboard header buttons
+        const headerActions = document.getElementById('header-actions');
+        headerActions.innerHTML = `
+            <a href="?action=owner" class="btn btn-secondary" onclick="event.preventDefault(); window.history.pushState({}, '', '?action=owner'); router();">
+                👑 Admin Panel
+            </a>
+        `;
+
+        // Load local tracking events
+        let trackedSlugs = [];
+        try {
+            trackedSlugs = JSON.parse(localStorage.getItem('sortir_created_events') || '[]');
+        } catch (e) {
+            trackedSlugs = [];
+        }
+
+        if (trackedSlugs.length > 0) {
+            // Fetch tracked events details
+            const { data, error } = await supabase
+                .from('sortir_events')
+                .select('*')
+                .in('event_slug', trackedSlugs);
+            
+            if (!error && data) {
+                store.myEvents = data;
+            }
+        } else {
+            store.myEvents = [];
+        }
+
+        renderMyEventsList();
+    }
+
+    function renderMyEventsList() {
+        const listContainer = document.getElementById('my-events-list');
+        listContainer.innerHTML = '';
+
+        if (store.myEvents.length === 0) {
+            listContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📅</div>
+                    <h4 class="empty-title">Belum Ada Event</h4>
+                    <p style="font-size: 13px;">Buat event culling baru menggunakan form di sebelah kiri.</p>
+                </div>
+            `;
+            return;
+        }
+
+        store.myEvents.forEach(evt => {
+            const isActive = store.activeEvent && store.activeEvent.id === evt.id;
+            const item = document.createElement('div');
+            item.className = `event-item ${isActive ? 'active' : ''}`;
+            item.innerHTML = `
+                <div>
+                    <h4 style="font-size: 15px; font-weight: 700; color: var(--text-main);">${evt.event_name}</h4>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Slug: ?event=${evt.event_slug}</p>
+                </div>
+                <span style="font-size: 16px;">👉</span>
+            `;
+            item.addEventListener('click', () => selectActiveEvent(evt));
+            listContainer.appendChild(item);
+        });
+    }
+
+    async function selectActiveEvent(evt) {
+        store.activeEvent = evt;
+        renderMyEventsList(); // Update highlights
+
+        const card = document.getElementById('active-event-card');
+        card.style.display = 'block';
+
+        document.getElementById('active-event-title').innerText = evt.event_name;
+        document.getElementById('active-event-meta').innerText = `Folder Drive: ${evt.drive_folder_id} | Quota: ${evt.quota_limit} Foto | No. WA: +${evt.whatsapp_admin}`;
+
+        const clientUrl = `${window.location.origin}${window.location.pathname}?event=${evt.event_slug}`;
+        document.getElementById('active-event-client-link').href = clientUrl;
+
+        // Fetch selections
+        document.getElementById('active-selections-count').innerText = `Loading...`;
+        document.getElementById('active-selections-text').innerText = `Memuat data pilihan klien...`;
+
+        // Fetch Selections list
+        const { data, error } = await supabase
+            .from('sortir_selections')
+            .select('*')
+            .eq('event_id', evt.id)
+            .eq('is_selected', true)
+            .order('photo_name', { ascending: true });
+
+        if (error) {
+            document.getElementById('active-selections-text').innerText = `Gagal memuat seleksi: ${error.message}`;
+            return;
+        }
+
+        store.activeSelections = data || [];
+        updateActiveSelectionsUI();
+
+        // Subscribe to real-time selections updates
+        supabase
+            .channel(`public:sortir_selections:event_id=eq.${evt.id}`)
+            .on('postgres_changes', { event: '*', filter: `event_id=eq.${evt.id}`, schema: 'public', table: 'sortir_selections' }, async () => {
+                // Re-fetch selections on real-time update
+                const { data: updatedData } = await supabase
+                    .from('sortir_selections')
+                    .select('*')
+                    .eq('event_id', evt.id)
+                    .eq('is_selected', true)
+                    .order('photo_name', { ascending: true });
+                store.activeSelections = updatedData || [];
+                updateActiveSelectionsUI();
+            })
+            .subscribe();
+    }
+
+    function updateActiveSelectionsUI() {
+        if (!store.activeEvent) return;
+
+        const countEl = document.getElementById('active-selections-count');
+        countEl.innerText = `${store.activeSelections.length} / ${store.activeEvent.quota_limit}`;
+
+        const textEl = document.getElementById('active-selections-text');
+        if (store.activeSelections.length === 0) {
+            textEl.innerText = `Belum ada pilihan foto dari klien.`;
+            return;
+        }
+
+        // Generate names array
+        const names = store.activeSelections.map(s => {
+            // strip extension
+            return s.photo_name.split('.').slice(0, -1).join('.');
+        });
+        
+        textEl.innerText = names.join(', ');
+    }
+
+    window.copySelectionsText = function() {
+        const text = document.getElementById('active-selections-text').innerText;
+        if (text === 'Belum ada pilihan foto dari klien.' || !text) {
+            showAlert('Peringatan', 'Tidak ada daftar indeks foto untuk disalin.', '⚠️');
+            return;
+        }
+        navigator.clipboard.writeText(text)
+            .then(() => showAlert('Sukses', 'Daftar indeks foto terpilih berhasil disalin ke clipboard!', '✅'))
+            .catch(() => showAlert('Error', 'Gagal menyalin teks.', '❌'));
+    };
+
+    window.deleteActiveEvent = async function() {
+        if (!store.activeEvent) return;
+        if (!confirm(`Apakah Anda yakin ingin menghapus event "${store.activeEvent.event_name}" dari sistem? Tindakan ini tidak dapat dibatalkan.`)) {
+            return;
+        }
+
+        const { error } = await supabase
+            .from('sortir_events')
+            .delete()
+            .eq('id', store.activeEvent.id);
+
+        if (error) {
+            showAlert('Error', `Gagal menghapus event: ${error.message}`, '❌');
+            return;
+        }
+
+        // Remove from local tracking list
+        let tracked = JSON.parse(localStorage.getItem('sortir_created_events') || '[]');
+        tracked = tracked.filter(slug => slug !== store.activeEvent.event_slug);
+        localStorage.setItem('sortir_created_events', JSON.stringify(tracked));
+
+        showAlert('Sukses', 'Event berhasil dihapus!', '✅');
+        
+        store.activeEvent = null;
+        document.getElementById('active-event-card').style.display = 'none';
+        initDashboardView();
+    };
+
+    window.handleCreateEvent = async function(event) {
+        event.preventDefault();
+        const name = document.getElementById('event-name-input').value.trim();
+        const driveUrl = document.getElementById('drive-url-input').value.trim();
+        const quota = parseInt(document.getElementById('quota-input').value);
+        let wa = document.getElementById('wa-input').value.trim();
+
+        // Validate Google Drive Folder ID
+        const folderIdRegex = /[-\w]{25,}/;
+        const match = driveUrl.match(folderIdRegex);
+        if (!match) {
+            showAlert('Error', 'Format URL Google Drive tidak valid! Pastikan mengandung Folder ID yang benar.', '⚠️');
+            return;
+        }
+        const folderId = match[0];
+
+        // Format WA
+        wa = wa.replace(/[^\d]/g, ''); // strip formatting
+        if (wa.startsWith('0')) {
+            wa = '62' + wa.substring(1);
+        }
+
+        // Generate unique slug
+        const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').trim('-');
+        const randomString = Math.random().toString(36).substring(2, 7);
+        const slug = `${cleanName}-${randomString}`;
+
+        // Insert into database
+        const { data, error } = await supabase
+            .from('sortir_events')
+            .insert({
+                event_name: name,
+                event_slug: slug,
+                quota_limit: quota,
+                drive_folder_url: driveUrl,
+                drive_folder_id: folderId,
+                whatsapp_admin: wa
+            })
+            .select();
+
+        if (error) {
+            showAlert('Error', `Gagal menyimpan event: ${error.message}`, '❌');
+            return;
+        }
+
+        // Save reference in LocalStorage
+        const trackedSlugs = JSON.parse(localStorage.getItem('sortir_created_events') || '[]');
+        trackedSlugs.push(slug);
+        localStorage.setItem('sortir_created_events', JSON.stringify(trackedSlugs));
+
+        showAlert('Sukses', 'Event culling berhasil dibuat!', '✅');
+        document.getElementById('create-event-form').reset();
+        
+        // Refresh and select
+        await initDashboardView();
+        if (data && data.length > 0) {
+            selectActiveEvent(data[0]);
+        }
+    };
+
+    // PNP Copy Script Generator
+    window.downloadCopyScript = function(platform) {
+        if (!store.activeEvent || store.activeSelections.length === 0) {
+            showAlert('Peringatan', 'Belum ada foto pilihan klien yang dapat diekspor.', '⚠️');
+            return;
+        }
+
+        // Read source path from PnP panel input
+        const sourcePath = (document.getElementById('pnp-source-path')?.value || '').trim();
+        if (!sourcePath) {
+            showAlert('Path Kosong', 'Harap isi path folder sumber RAW/JPG terlebih dahulu.', '📁');
+            return;
+        }
+
+        // Extract clean names without extension
+        const cleanNames = store.activeSelections.map(s => {
+            return s.photo_name.split('.').slice(0, -1).join('.');
+        });
+
+        const fileList = cleanNames;
+        const src = sourcePath;
+        const outDir = src + '\\Selected_by_Client';
+        const outDirMac = src + '/Selected_by_Client';
+
+        let scriptContent = '';
+        let filename = '';
+
+        if (platform === 'windows') {
+            filename = `cull_photos_${store.activeEvent.event_slug}.bat`;
+            // Use wildcard search: for /r finds *FILENAME* regardless of prefix _ or extension
+            let bat = `@echo off\r\nchcp 65001 > nul\r\necho ============================================\r\necho  SapaTamu Sortir - Script Penyalinan Foto\r\necho  Mode: Wildcard (prefix _ dan ekstensi otomatis)\r\necho ============================================\r\necho.\r\n\r\nset "SOURCE=${src}"\r\nset "DEST=${outDir}"\r\nset COPIED=0\r\nset SKIPPED=0\r\n\r\nif not exist "%DEST%" (\r\n    mkdir "%DEST%"\r\n    echo [OK] Folder output dibuat: %DEST%\r\n) else (\r\n    echo [INFO] Folder output sudah ada.\r\n)\r\necho.\r\necho Mencari dan menyalin ${fileList.length} indeks file...\r\necho.\r\n\r\n`;
+
+            fileList.forEach(f => {
+                // for /r loops through all matching files (catches _GSC8846.NEF, _GSC8846.JPG, etc.)
+                bat += `set "FOUND_${f}=0"\r\n`;
+                bat += `for /r "%SOURCE%" %%F in (*${f}*) do (\r\n`;
+                bat += `    copy /Y "%%F" "%DEST%\\%%~nxF" > nul\r\n`;
+                bat += `    echo [COPIED] %%~nxF\r\n`;
+                bat += `    set "FOUND_${f}=1"\r\n`;
+                bat += `    set /a COPIED+=1\r\n`;
+                bat += `)\r\n`;
+                bat += `if "%FOUND_${f}%"=="0" (\r\n    echo [SKIP]   *${f}* tidak ditemukan\r\n    set /a SKIPPED+=1\r\n)\r\n\r\n`;
+            });
+
+            bat += `\r\necho.\r\necho ============================================\r\necho  Selesai! Disalin: %COPIED% file, Tidak ditemukan: %SKIPPED%\r\necho  Output: %DEST%\r\necho ============================================\r\npause\r\n`;
+
+            scriptContent = bat;
+
+        } else {
+            filename = `cull_photos_${store.activeEvent.event_slug}.command`;
+            // macOS: use find -name "*FILENAME*" to catch _GSC8846.NEF etc.
+            let cmd = `#!/bin/bash\n# SapaTamu Sortir - Script Penyalinan Foto (macOS)\n# Mode: Wildcard (*FILENAME*) — menangkap prefix _ dan semua ekstensi\n\nSOURCE="${src}"\nDEST="${outDirMac}"\nCOPIED=0\nSKIPPED=0\n\nmkdir -p "$DEST"\necho "✅ Folder output: $DEST"\necho ""\necho "Mencari dan menyalin ${fileList.length} indeks file..."\necho ""\n\n`;
+
+            fileList.forEach(f => {
+                cmd += `# --- ${f} ---\n`;
+                cmd += `MATCHES=$(find "$SOURCE" -maxdepth 1 -name "*${f}*" 2>/dev/null)\n`;
+                cmd += `if [ -n "$MATCHES" ]; then\n`;
+                cmd += `  while IFS= read -r FILE; do\n`;
+                cmd += `    FNAME=$(basename "$FILE")\n`;
+                cmd += `    cp -n "$FILE" "$DEST/$FNAME" && echo "✅ $FNAME" || echo "❌ Gagal: $FNAME"\n`;
+                cmd += `    COPIED=$((COPIED+1))\n`;
+                cmd += `  done <<< "$MATCHES"\n`;
+                cmd += `else\n`;
+                cmd += `  echo "⚠️  Tidak ditemukan: *${f}*"\n`;
+                cmd += `  SKIPPED=$((SKIPPED+1))\n`;
+                cmd += `fi\n\n`;
+            });
+
+            cmd += `\necho ""\necho "============================================"\necho "Selesai! Disalin: $COPIED file, Tidak ditemukan: $SKIPPED"\necho "Output: $DEST"\necho "============================================"\n`;
+
+            scriptContent = cmd;
+        }
+
+        const blob = new Blob([scriptContent], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    };
+
+    // ----------------------------------------------------
+    // VIEW 2: CLIENT CULLING VIEW LOGIC
+    // ----------------------------------------------------
+    async function initCullingView(slug) {
+        document.getElementById('view-culling').style.display = 'block';
+        
+        // Hide loaders/errors
+        document.getElementById('culling-loading-grid').style.display = 'grid';
+        document.getElementById('culling-photos-grid').style.display = 'none';
+        document.getElementById('culling-empty-state').style.display = 'none';
+        document.getElementById('culling-error-state').style.display = 'none';
+
+        // Fetch Event Details
+        const { data, error } = await supabase
+            .from('sortir_events')
+            .select('*')
+            .eq('event_slug', slug);
+
+        if (error || !data || data.length === 0) {
+            document.getElementById('culling-loading-grid').style.display = 'none';
+            document.getElementById('culling-error-state').style.display = 'block';
+            document.getElementById('client-event-title').innerText = 'Event Tidak Ditemukan';
+            return;
+        }
+
+        const event = data[0];
+        store.cullingEvent = event;
+        document.title = `Pilih Foto: ${event.event_name} — SapaTamu Sortir`;
+        document.getElementById('client-event-title').innerText = event.event_name;
+        document.getElementById('client-event-desc').innerText = `Silakan centang hingga maksimal ${event.quota_limit} foto pilihan terbaik Anda. Pilihan tersimpan secara otomatis.`;
+
+        // Fetch current selections
+        const { data: currentSels } = await supabase
+            .from('sortir_selections')
+            .select('photo_id')
+            .eq('event_id', event.id)
+            .eq('is_selected', true);
+        
+        store.cullingSelections.clear();
+        if (currentSels) {
+            currentSels.forEach(s => store.cullingSelections.add(s.photo_id));
+        }
+
+        updateClientQuotaUI();
+
+        // Fetch Google Drive content using proxy
+        try {
+            const res = await fetch(`api/sortir-list-drive?folderId=${event.drive_folder_id}`);
+            if (!res.ok) throw new Error("Gagal memuat isi Google Drive");
+            store.cullingFiles = await res.json();
+            
+            document.getElementById('culling-loading-grid').style.display = 'none';
+            
+            if (store.cullingFiles.length === 0) {
+                document.getElementById('culling-empty-state').style.display = 'block';
+            } else {
+                const photoGrid = document.getElementById('culling-photos-grid');
+                photoGrid.style.display = 'flex';
+                renderClientPhotosGrid();
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('culling-loading-grid').style.display = 'none';
+            document.getElementById('culling-empty-state').style.display = 'block';
+            document.getElementById('culling-empty-state').querySelector('p').innerText = "Gagal memuat foto. Pastikan folder Google Drive bersifat publik dan dapat diakses.";
+        }
+    }
+
+    function updateClientQuotaUI() {
+        const count = store.cullingSelections.size;
+        const limit = store.cullingEvent ? store.cullingEvent.quota_limit : 0;
+        document.getElementById('client-quota-counter').innerText = `${count} / ${limit}`;
+    }
+
+    // View mode — always pinterest
+    store.viewMode = 'pinterest';
+
+    function renderClientPhotosGrid() {
+        const grid = document.getElementById('culling-photos-grid');
+        grid.innerHTML = '';
+
+        const filtered = store.cullingFiles.filter(f => {
+            const matchesSearch = f.name.toLowerCase().includes(store.clientSearch.toLowerCase());
+            const isSelected = store.cullingSelections.has(f.id);
+
+            if (store.clientFilter === 'selected') return matchesSearch && isSelected;
+            if (store.clientFilter === 'unselected') return matchesSearch && !isSelected;
+            return matchesSearch;
+        });
+
+        if (filtered.length === 0) {
+            grid.innerHTML = `<div style="text-align: center; padding: 48px; color: var(--text-muted); width: 100%;">Tidak ada foto yang sesuai dengan filter/pencarian.</div>`;
+            return;
+        }
+
+        filtered.forEach(file => {
+            const isSelected = store.cullingSelections.has(file.id);
+            const pin = document.createElement('div');
+            pin.className = `pin-card ${isSelected ? 'selected' : ''}`;
+            pin.id = `card-${file.id}`;
+            pin.onclick = () => toggleClientSelection(file.id, file.name);
+
+            const cdnUrl = `https://lh3.googleusercontent.com/d/${file.id}=w800`;
+            pin.innerHTML = `
+                <img src="${cdnUrl}" loading="lazy" alt="${file.name}">
+                <div class="pin-check-badge">✓</div>
+            `;
+            grid.appendChild(pin);
+        });
+    }
+
+
+
+    window.toggleClientSelection = async function(id, name) {
+        const isSelected = store.cullingSelections.has(id);
+
+        if (!isSelected) {
+            if (store.cullingSelections.size >= store.cullingEvent.quota_limit) {
+                showAlert("Limit Kuota Penuh", `Batas maksimal pilihan Anda untuk event ini adalah ${store.cullingEvent.quota_limit} foto. Silakan hapus pilihan pada foto lain terlebih dahulu.`, "⚠️");
+                return;
+            }
+            store.cullingSelections.add(id);
+        } else {
+            store.cullingSelections.delete(id);
+        }
+
+        updateClientQuotaUI();
+
+        // Instant UI update
+        const card = document.getElementById(`card-${id}`);
+        if (store.cullingSelections.has(id)) {
+            if (card) card.classList.add('selected');
+        } else {
+            if (card) card.classList.remove('selected');
+        }
+
+        // Sync to Supabase
+        const isNowSelected = store.cullingSelections.has(id);
+        try {
+            await supabase
+                .from('sortir_selections')
+                .upsert({
+                    event_id: store.cullingEvent.id,
+                    photo_id: id,
+                    photo_name: name,
+                    is_selected: isNowSelected,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'event_id,photo_id' });
+        } catch (e) {
+            console.error("Gagal sinkronisasi data seleksi:", e);
+        }
+
+        // If filtered view, refresh grid
+        if (store.clientFilter !== 'all') {
+            setTimeout(renderClientPhotosGrid, 300);
+        }
+    };
+
+    window.handleClientSearch = function(val) {
+        store.clientSearch = val;
+        renderClientPhotosGrid();
+    };
+
+    window.handleClientFilter = function(type) {
+        store.clientFilter = type;
+        document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+        document.getElementById(`tab-filter-${type}`).classList.add('active');
+        renderClientPhotosGrid();
+    };
+
+    window.submitClientSelection = function() {
+        if (store.cullingSelections.size === 0) {
+            showAlert("Belum Ada Pilihan", "Anda belum memilih satu foto pun.", "📷");
+            return;
+        }
+
+        // Compile selections names
+        const selectedNames = [];
+        store.cullingFiles.forEach(f => {
+            if (store.cullingSelections.has(f.id)) {
+                selectedNames.push(f.name);
+            }
+        });
+
+        const fileListText = selectedNames.map((name, idx) => `${idx + 1}. ${name}`).join('\n');
+        const message = `Halo Kak! Saya telah selesai menyortir foto untuk event *${store.cullingEvent.event_name}*.\n\nBerikut daftar foto pilihan saya (*${store.cullingSelections.size} / ${store.cullingEvent.quota_limit}*):\n\n${fileListText}\n\nTerima kasih!`;
+
+        const waUrl = `https://wa.me/${store.cullingEvent.whatsapp_admin}?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, '_blank');
+    };
+
+    // ----------------------------------------------------
+    // VIEW 3: SUPER ADMIN / OWNER VIEW LOGIC
+    // ----------------------------------------------------
+    async function initOwnerView() {
+        document.getElementById('view-owner').style.display = 'block';
+        document.title = "Event Explorer — SapaTamu Admin";
+
+        // Setup admin back button
+        const headerActions = document.getElementById('header-actions');
+        headerActions.innerHTML = `
+            <a href="sortir.html" class="btn btn-secondary" onclick="event.preventDefault(); window.history.pushState({}, '', 'sortir.html'); router();">
+                ⬅ Kembali ke Dashboard
+            </a>
+        `;
+
+        document.getElementById('owner-loading').style.display = 'block';
+        document.getElementById('owner-events-table').style.display = 'none';
+        document.getElementById('owner-empty-state').style.display = 'none';
+
+        // Load all events in database
+        const { data, error } = await supabase
+            .from('sortir_events')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        document.getElementById('owner-loading').style.display = 'none';
+
+        if (error || !data || data.length === 0) {
+            document.getElementById('owner-empty-state').style.display = 'block';
+            return;
+        }
+
+        store.ownerEvents = data;
+        renderOwnerEventsTable();
+    }
+
+    function renderOwnerEventsTable() {
+        const tbody = document.getElementById('owner-events-tbody');
+        tbody.innerHTML = '';
+
+        const filtered = store.ownerEvents.filter(evt => {
+            return evt.event_name.toLowerCase().includes(store.ownerSearch.toLowerCase()) || 
+                   evt.event_slug.toLowerCase().includes(store.ownerSearch.toLowerCase());
+        });
+
+        if (filtered.length === 0) {
+            document.getElementById('owner-events-table').style.display = 'none';
+            document.getElementById('owner-empty-state').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('owner-events-table').style.display = 'table';
+        document.getElementById('owner-empty-state').style.display = 'none';
+
+        filtered.forEach(evt => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--border)';
+            tr.innerHTML = `
+                <td style="padding: 14px 16px; font-weight: bold; color: var(--text-main);">${evt.event_name}</td>
+                <td style="padding: 14px 16px; font-family: monospace; font-size: 12px; color: var(--text-muted);">${evt.drive_folder_id}</td>
+                <td style="padding: 14px 16px; color: var(--text-main);">+${evt.whatsapp_admin}</td>
+                <td style="padding: 14px 16px; color: var(--text-muted); font-size: 13px;">${new Date(evt.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})}</td>
+                <td style="padding: 14px 16px; text-align: right; display: flex; gap: 8px; justify-content: flex-end;">
+                    <a href="?event=${evt.event_slug}" target="_blank" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px;">Buka ↗</a>
+                    <button onclick="deleteEventByAdmin('${evt.id}', '${evt.event_name}')" class="btn btn-primary" style="padding: 6px 12px; font-size: 11px; background: #E07B7B; box-shadow: none;">Hapus</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.handleOwnerSearch = function(val) {
+        store.ownerSearch = val;
+        renderOwnerEventsTable();
+    };
+
+    window.deleteEventByAdmin = async function(id, name) {
+        if (!confirm(`ADMIN: Apakah Anda yakin ingin menghapus event "${name}" dari seluruh database?`)) {
+            return;
+        }
+
+        const { error } = await supabase
+            .from('sortir_events')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            showAlert('Error', `Gagal menghapus event: ${error.message}`, '❌');
+            return;
+        }
+
+        showAlert('Sukses', 'Event berhasil didelete dari sistem!', '✅');
+        initOwnerView();
+    };
+
+    // ============================================================
+    // MANUAL INDEX TRANSLATOR — 3-STEP WIZARD
+    // ============================================================
+    const wizard = { step: 1, files: [], sourcePath: '', destPath: '', subfolder: 'Selected_by_Client' };
+
+    // --- Step indicator update ---
+    function wizardUpdateIndicator(step) {
+        [1, 2, 3].forEach(n => {
+            const el = document.getElementById(`wstep-${n}`);
+            if (!el) return;
+            el.classList.remove('active', 'done');
+            if (n < step) el.classList.add('done');
+            else if (n === step) el.classList.add('active');
+        });
+        [['wline-12', 2], ['wline-23', 3]].forEach(([id, threshold]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.toggle('done', step >= threshold);
+        });
+    }
+
+    // --- Navigate between panels ---
+    window.wizardGo = function(targetStep) {
+        // Validate before advancing
+        if (targetStep === 3) {
+            wizard.sourcePath = (document.getElementById('manual-source-path')?.value || '').trim();
+            if (!wizard.sourcePath) {
+                showAlert('Path Kosong', 'Harap isi path folder sumber tempat file RAW/JPG Anda berada.', '📁');
+                return;
+            }
+            // Populate step 3
+            document.getElementById('s3-source-display').textContent = wizard.sourcePath;
+            updateStep3Preview();
+        }
+        if (targetStep === 2) {
+            const src = document.getElementById('manual-source-path')?.value.trim();
+            const sep = src && src.includes('/') ? '/' : '\\';
+            if (wizard.files.length > 0 && src) {
+                document.getElementById('s2-path-preview').textContent =
+                    wizard.files.slice(0, 3).map(f => `${src}${sep}${f}`).join('\n') +
+                    (wizard.files.length > 3 ? `\n... dan ${wizard.files.length - 3} file lainnya` : '');
+            }
+        }
+
+        wizard.step = targetStep;
+        [1, 2, 3].forEach(n => {
+            const panel = document.getElementById(`wizard-panel-${n}`);
+            if (panel) panel.style.display = n === targetStep ? 'block' : 'none';
+        });
+        wizardUpdateIndicator(targetStep);
+    };
+
+    // --- Source path live preview ---
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('manual-source-path')?.addEventListener('input', function() {
+            const src = this.value.trim();
+            const sep = src.includes('/') ? '/' : '\\';
+            const preview = document.getElementById('s2-path-preview');
+            if (!src) { preview.textContent = '— Isi path di atas untuk melihat preview —'; return; }
+            preview.textContent = wizard.files.slice(0, 3).map(f => `${src}${sep}${f}`).join('\n') +
+                (wizard.files.length > 3 ? `\n... dan ${wizard.files.length - 3} file lainnya` : '');
+        });
+
+        document.getElementById('manual-dest-path')?.addEventListener('input', updateStep3Preview);
+        document.getElementById('manual-subfolder-name')?.addEventListener('input', updateStep3Preview);
+    });
+
+    function updateStep3Preview() {
+        const src  = (document.getElementById('manual-source-path')?.value || '').trim();
+        const dest = (document.getElementById('manual-dest-path')?.value || '').trim();
+        const sub  = (document.getElementById('manual-subfolder-name')?.value || 'Selected_by_Client').trim();
+        wizard.subfolder = sub;
+        const sep  = src.includes('/') ? '/' : '\\';
+        const base = dest || src;
+        const outputDir = `${base}${sep}${sub}`;
+        let preview = `📂 ${src}\n`;
+        wizard.files.slice(0, 5).forEach(f => { preview += `    📄 ${f}\n`; });
+        if (wizard.files.length > 5) preview += `    ... ${wizard.files.length - 5} file lainnya\n`;
+        preview += `\n📂 ${outputDir}   ← Sub-folder baru (dibuat otomatis)\n`;
+        wizard.files.slice(0, 3).forEach(f => { preview += `    📄 ${f}  (salinan)\n`; });
+        if (wizard.files.length > 3) preview += `    ... dan ${wizard.files.length - 3} salinan lainnya\n`;
+        document.getElementById('s3-output-preview').textContent = preview;
+    }
+
+    // --- STEP 1: Parse filenames from pasted text ---
+    window.parseManualIndex = function() {
+        const raw = document.getElementById('manual-index-textarea').value;
+        if (!raw.trim()) {
+            showAlert('Teks Kosong', 'Tempel dulu teks daftar foto dari klien Anda.', '📋');
+            return;
+        }
+
+        let found = [];
+
+        // Universal regex: matches camera codes with optional underscore prefix,
+        // 2-4 letter prefix, optional separator, digits, optional extension
+        // Examples: _GSC5305, _GSC5305.JPG, DSC_1234.NEF, IMG-2024.arw, KB1234
+        const regexUniversal = /_?[A-Za-z]{2,4}[_-]?\d+(?:\.[A-Za-z0-9]{2,4})?/g;
+        const matches = [...raw.matchAll(regexUniversal)].map(m => m[0].trim());
+        found = [...new Set(matches)];
+
+        // Pass 2: numbered/bulleted list items (e.g. "1. _GSC5305", "2) DSC_1234")
+        if (found.length === 0) {
+            const regexList = /(?:^|\n)\s*(?:\d+[.)]\s*|[-•*]\s*)(_?[A-Za-z]{2,4}[_-]?\d+(?:\.[A-Za-z0-9]{2,4})?)/gim;
+            const listItems = [...raw.matchAll(regexList)].map(m => m[1].trim());
+            found = [...new Set(listItems)];
+        }
+
+        // Pass 3: last resort — uppercase alphanumeric tokens on their own line
+        if (found.length === 0) {
+            const lines = raw.split('\n');
+            const regexBare = /^_?[A-Z][A-Z\d_\-]{3,}$/;
+            lines.forEach(line => {
+                const token = line.replace(/^\s*[\d]+[.)]\s*/, '').trim();
+                if (regexBare.test(token)) found.push(token);
+            });
+            found = [...new Set(found)];
+        }
+
+        wizard.files = found;
+        document.getElementById('manual-parsed-count').textContent = found.length;
+        document.getElementById('s2-count').textContent = found.length;
+
+        if (found.length === 0) {
+            showAlert('Tidak Terdeteksi', 'Tidak ada nama file yang terdeteksi.\n\nTips: Pastikan format berupa daftar bernomor (1. GSC8846) atau nama file lengkap dengan ekstensi (.JPG, .NEF, dll.).', '🔍');
+            return;
+        }
+
+        const preview = document.getElementById('manual-parsed-preview');
+        preview.textContent = found.map((f, i) => `${i + 1}. ${f}`).join('\n');
+        document.getElementById('manual-parse-result').style.display = 'block';
+
+        // Advance to step 2
+        setTimeout(() => wizardGo(2), 400);
+    };
+
+    // --- Reset wizard ---
+    window.clearManualIndex = function() {
+        wizard.files = [];
+        wizard.step = 1;
+        wizard.sourcePath = '';
+        document.getElementById('manual-index-textarea').value = '';
+        document.getElementById('manual-parsed-count').textContent = '0';
+        document.getElementById('manual-parse-result').style.display = 'none';
+        document.getElementById('manual-parsed-preview').textContent = '';
+        if (document.getElementById('manual-source-path')) document.getElementById('manual-source-path').value = '';
+        if (document.getElementById('manual-dest-path')) document.getElementById('manual-dest-path').value = '';
+        if (document.getElementById('manual-subfolder-name')) document.getElementById('manual-subfolder-name').value = 'Selected_by_Client';
+        [1, 2, 3].forEach(n => {
+            const p = document.getElementById(`wizard-panel-${n}`);
+            if (p) p.style.display = n === 1 ? 'block' : 'none';
+        });
+        wizardUpdateIndicator(1);
+    };
+
+    // --- STEP 3: Download script (wildcard mode) ---
+    window.downloadManualScript = function(platform) {
+        const src  = (document.getElementById('manual-source-path')?.value || '').trim();
+        const dest = (document.getElementById('manual-dest-path')?.value || '').trim();
+        const sub  = (document.getElementById('manual-subfolder-name')?.value || 'Selected_by_Client').trim();
+        const outputBase = dest || src;
+
+        if (!src) { showAlert('Path Kosong', 'Harap isi path folder sumber terlebih dahulu.', '📁'); return; }
+        if (wizard.files.length === 0) { showAlert('Tidak Ada File', 'Proses dulu daftar indeks klien di Langkah 1.', '📋'); return; }
+
+        const fileList = wizard.files;
+
+        if (platform === 'windows') {
+            const outDir = `${outputBase}\\${sub}`;
+            // Use wildcard search: for /r finds *FILENAME* regardless of prefix _ or extension
+            let bat = `@echo off\r\nchcp 65001 > nul\r\necho ============================================\r\necho  SapaTamu Sortir - Script Penyalinan Foto\r\necho  Mode: Wildcard (prefix _ dan ekstensi otomatis)\r\necho ============================================\r\necho.\r\n\r\nset "SOURCE=${src}"\r\nset "DEST=${outDir}"\r\nset COPIED=0\r\nset SKIPPED=0\r\n\r\nif not exist "%DEST%" (\r\n    mkdir "%DEST%"\r\n    echo [OK] Folder output dibuat: %DEST%\r\n) else (\r\n    echo [INFO] Folder output sudah ada.\r\n)\r\necho.\r\necho Mencari dan menyalin ${fileList.length} indeks file...\r\necho.\r\n\r\n`;
+
+            fileList.forEach(f => {
+                // for /r loops through all matching files (catches _GSC8846.NEF, _GSC8846.JPG, etc.)
+                bat += `set "FOUND_${f}=0"\r\n`;
+                bat += `for /r "%SOURCE%" %%F in (*${f}*) do (\r\n`;
+                bat += `    copy /Y "%%F" "%DEST%\\%%~nxF" > nul\r\n`;
+                bat += `    echo [COPIED] %%~nxF\r\n`;
+                bat += `    set "FOUND_${f}=1"\r\n`;
+                bat += `    set /a COPIED+=1\r\n`;
+                bat += `)\r\n`;
+                bat += `if "%FOUND_${f}%"=="0" (\r\n    echo [SKIP]   *${f}* tidak ditemukan\r\n    set /a SKIPPED+=1\r\n)\r\n\r\n`;
+            });
+
+            bat += `\r\necho.\r\necho ============================================\r\necho  Selesai! Disalin: %COPIED% file, Tidak ditemukan: %SKIPPED%\r\necho  Output: %DEST%\r\necho ============================================\r\npause\r\n`;
+
+            const blob = new Blob([bat], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `sortir_manual_${sub}.bat`;
+            a.click();
+
+        } else {
+            const outDir = `${outputBase}/${sub}`;
+            // macOS: use find -name "*FILENAME*" to catch _GSC8846.NEF etc.
+            let cmd = `#!/bin/bash\n# SapaTamu Sortir - Script Penyalinan Foto (macOS)\n# Mode: Wildcard (*FILENAME*) — menangkap prefix _ dan semua ekstensi\n\nSOURCE="${src}"\nDEST="${outDir}"\nCOPIED=0\nSKIPPED=0\n\nmkdir -p "$DEST"\necho "✅ Folder output: $DEST"\necho ""\necho "Mencari dan menyalin ${fileList.length} indeks file..."\necho ""\n\n`;
+
+            fileList.forEach(f => {
+                cmd += `# --- ${f} ---\n`;
+                cmd += `MATCHES=$(find "$SOURCE" -maxdepth 1 -name "*${f}*" 2>/dev/null)\n`;
+                cmd += `if [ -n "$MATCHES" ]; then\n`;
+                cmd += `  while IFS= read -r FILE; do\n`;
+                cmd += `    FNAME=$(basename "$FILE")\n`;
+                cmd += `    cp -n "$FILE" "$DEST/$FNAME" && echo "✅ $FNAME" || echo "❌ Gagal: $FNAME"\n`;
+                cmd += `    COPIED=$((COPIED+1))\n`;
+                cmd += `  done <<< "$MATCHES"\n`;
+                cmd += `else\n`;
+                cmd += `  echo "⚠️  Tidak ditemukan: *${f}*"\n`;
+                cmd += `  SKIPPED=$((SKIPPED+1))\n`;
+                cmd += `fi\n\n`;
+            });
+
+            cmd += `\necho ""\necho "============================================"\necho "Selesai! Disalin: $COPIED file, Tidak ditemukan: $SKIPPED"\necho "Output: $DEST"\necho "============================================"\n`;
+
+            const blob = new Blob([cmd], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `sortir_manual_${sub}.command`;
+            a.click();
+        }
+    };
+
+    // ============================================================
+    // LOCAL CULLING & LIGHTROOM INTEGRATION
+    // ============================================================
+    const localStore = {
+        files: [],
+        allFiles: [], // All files from folder (including RAW) for pairing
+        selections: new Set(),
+        directoryHandle: null,
+        // Buffer / Infinite Scroll state
+        renderIndex: 0,
+        chunkSize: 50,
+        isLoadingChunk: false,
+        allRendered: false,
+        observer: null
+    };
+
+    const IMAGE_EXTS = new Set(['jpg','jpeg','png','webp','tiff','tif','heic','bmp']);
+
+    window.handleLocalFolderSelect = async function(event) {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+        processLocalFiles(files);
+    };
+
+    // Drag & drop support
+    const dropZone = document.getElementById('local-drop-zone');
+    if (dropZone) {
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', async e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const items = e.dataTransfer.items;
+            if (items) {
+                const allFiles = [];
+                for (const item of items) {
+                    if (item.kind === 'file') {
+                        const entry = item.webkitGetAsEntry?.() || item.getAsEntry?.();
+                        if (entry) {
+                            await traverseEntry(entry, allFiles);
+                        }
+                    }
+                }
+                if (allFiles.length > 0) processLocalFiles(allFiles);
+            }
+        });
+    }
+
+    async function traverseEntry(entry, results) {
+        if (entry.isFile) {
+            const file = await new Promise(resolve => entry.file(resolve));
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (IMAGE_EXTS.has(ext)) results.push(file);
+        } else if (entry.isDirectory) {
+            const reader = entry.createReader();
+            const entries = await new Promise(resolve => reader.readEntries(resolve));
+            for (const e of entries) await traverseEntry(e, results);
+        }
+    }
+
+    function cleanupLocalBuffer() {
+        // Revoke all object URLs to free memory
+        localStore.files.forEach(f => {
+            if (f.url) {
+                URL.revokeObjectURL(f.url);
+                f.url = null;
+            }
+        });
+        localStore.allFiles = [];
+        // Disconnect observer
+        if (localStore.observer) {
+            localStore.observer.disconnect();
+            localStore.observer = null;
+        }
+        // Clear gallery DOM
+        const grid = document.getElementById('local-gallery');
+        if (grid) grid.innerHTML = '';
+        // Hide load-more indicator
+        const loadMore = document.getElementById('local-load-more');
+        if (loadMore) loadMore.style.display = 'none';
+        const statusEl = document.getElementById('local-buffer-status');
+        if (statusEl) statusEl.textContent = '';
+    }
+
+    function processLocalFiles(files) {
+        // Cleanup previous session if any
+        cleanupLocalBuffer();
+
+        // Store ALL files for RAW pairing during export
+        localStore.allFiles = files;
+
+        const imageFiles = files.filter(f => {
+            const ext = f.name.split('.').pop().toLowerCase();
+            return IMAGE_EXTS.has(ext);
+        });
+
+        localStore.files = imageFiles.map(f => ({
+            id: Math.random().toString(36).substring(2, 10),
+            name: f.name,
+            file: f,
+            url: URL.createObjectURL(f)
+        }));
+        localStore.selections.clear();
+
+        // Reset buffer state
+        localStore.renderIndex = 0;
+        localStore.allRendered = false;
+        localStore.isLoadingChunk = false;
+
+        document.getElementById('local-drop-zone').style.display = 'none';
+        document.getElementById('local-export-panel').style.display = 'block';
+        document.getElementById('local-gallery').style.display = 'flex';
+
+        updateLocalSelectionUI();
+        renderLocalGalleryChunk();
+        setupLocalScrollObserver();
+    }
+
+    function renderLocalGalleryChunk() {
+        if (localStore.isLoadingChunk || localStore.allRendered) return;
+        localStore.isLoadingChunk = true;
+
+        const grid = document.getElementById('local-gallery');
+        const total = localStore.files.length;
+        const start = localStore.renderIndex;
+        const end = Math.min(start + localStore.chunkSize, total);
+
+        if (start >= total) {
+            localStore.allRendered = true;
+            localStore.isLoadingChunk = false;
+            updateLocalBufferStatus();
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        for (let i = start; i < end; i++) {
+            const f = localStore.files[i];
+            const isSelected = localStore.selections.has(f.id);
+            const pin = document.createElement('div');
+            pin.className = `pin-card ${isSelected ? 'selected' : ''}`;
+            pin.id = `local-card-${f.id}`;
+            pin.onclick = () => toggleLocalSelection(f.id, f.name);
+            pin.innerHTML = `
+                <img src="${f.url}" loading="lazy" alt="${f.name}">
+                <div class="pin-check-badge">✓</div>
+            `;
+            fragment.appendChild(pin);
+        }
+        grid.appendChild(fragment);
+
+        localStore.renderIndex = end;
+        localStore.isLoadingChunk = false;
+
+        if (end >= total) {
+            localStore.allRendered = true;
+        }
+
+        updateLocalBufferStatus();
+    }
+
+    function updateLocalBufferStatus() {
+        const total = localStore.files.length;
+        const rendered = localStore.renderIndex;
+        const statusEl = document.getElementById('local-buffer-status');
+        if (!statusEl) return;
+
+        if (localStore.allRendered) {
+            statusEl.textContent = `Semua ${total} foto telah dimuat.`;
+        } else {
+            statusEl.textContent = `Menampilkan ${rendered} dari ${total} foto — scroll ke bawah untuk memuat lebih banyak.`;
+        }
+    }
+
+    function setupLocalScrollObserver() {
+        // Disconnect previous observer
+        if (localStore.observer) {
+            localStore.observer.disconnect();
+        }
+
+        const sentinel = document.getElementById('local-scroll-sentinel');
+        const loadMoreEl = document.getElementById('local-load-more');
+        if (!sentinel) return;
+
+        localStore.observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !localStore.allRendered && !localStore.isLoadingChunk) {
+                    // Show loading indicator
+                    if (loadMoreEl) loadMoreEl.style.display = 'block';
+                    // Use requestAnimationFrame to avoid blocking UI
+                    requestAnimationFrame(() => {
+                        renderLocalGalleryChunk();
+                        if (loadMoreEl) loadMoreEl.style.display = 'none';
+                    });
+                }
+            });
+        }, {
+            root: null,
+            rootMargin: '0px 0px 400px 0px',
+            threshold: 0
+        });
+
+        localStore.observer.observe(sentinel);
+    }
+
+    window.toggleLocalSelection = function(id, name) {
+        if (localStore.selections.has(id)) {
+            localStore.selections.delete(id);
+        } else {
+            localStore.selections.add(id);
+        }
+        const card = document.getElementById(`local-card-${id}`);
+        if (card) card.classList.toggle('selected', localStore.selections.has(id));
+        updateLocalSelectionUI();
+    };
+
+    function updateLocalSelectionUI() {
+        const count = localStore.selections.size;
+        const total = localStore.files.length;
+        document.getElementById('local-selection-count').innerText = `${count} / ${total}`;
+
+        const selectedNames = localStore.files
+            .filter(f => localStore.selections.has(f.id))
+            .map(f => f.name.split('.').slice(0, -1).join('.'));
+
+        document.getElementById('local-file-list-preview').textContent =
+            selectedNames.length > 0 ? selectedNames.join(', ') : 'Belum ada foto yang dipilih.';
+    }
+
+    // Export Option A: Copy filter text
+    window.localCopyFilterText = function() {
+        const selectedNames = localStore.files
+            .filter(f => localStore.selections.has(f.id))
+            .map(f => f.name.split('.').slice(0, -1).join('.'));
+
+        if (selectedNames.length === 0) {
+            showAlert('Peringatan', 'Belum ada foto yang dipilih untuk diekspor.', '⚠️');
+            return;
+        }
+
+        const filterText = selectedNames.join(' ');
+        navigator.clipboard.writeText(filterText).then(() => {
+            showAlert('Tersalin!', `${selectedNames.length} nama file berhasil disalin ke clipboard.`, '✅');
+        }).catch(() => {
+            showAlert('Error', 'Gagal menyalin ke clipboard.', '❌');
+        });
+    };
+
+    // Export Option B: Copy files to new folder (with RAW pairing)
+    const RAW_EXTS = new Set(['arw','cr2','cr3','nef','dng','raf','rw2','orf','raw']);
+
+    window.localExportFiles = async function() {
+        const selected = localStore.files.filter(f => localStore.selections.has(f.id));
+        if (selected.length === 0) {
+            showAlert('Peringatan', 'Belum ada foto yang dipilih untuk diekspor.', '⚠️');
+            return;
+        }
+
+        if (!('showDirectoryPicker' in window)) {
+            showAlert('Tidak Didukung', 'Browser Anda tidak mendukung File System Access API. Gunakan Chrome/Edge terbaru.', '⚠️');
+            return;
+        }
+
+        try {
+            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            let copied = 0;
+            let paired = 0;
+            const logLines = [];
+
+            for (const f of selected) {
+                const baseName = f.name.split('.').slice(0, -1).join('.');
+                const ext = f.name.split('.').pop().toLowerCase();
+
+                // Copy the selected file (JPG/etc)
+                const fileHandle = await dirHandle.getFileHandle(f.name, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(f.file);
+                await writable.close();
+                copied++;
+                let logMsg = `Menyalin ${f.name}`;
+
+                // Find matching RAW files from allFiles by base name
+                const rawMatches = localStore.allFiles.filter(af => {
+                    if (af === f.file) return false;
+                    const afBase = af.name.split('.').slice(0, -1).join('.');
+                    const afExt = af.name.split('.').pop().toLowerCase();
+                    return afBase === baseName && RAW_EXTS.has(afExt);
+                });
+
+                for (const rawFile of rawMatches) {
+                    const rawHandle = await dirHandle.getFileHandle(rawFile.name, { create: true });
+                    const rawWritable = await rawHandle.createWritable();
+                    await rawWritable.write(rawFile);
+                    await rawWritable.close();
+                    copied++;
+                    paired++;
+                }
+
+                if (rawMatches.length > 0) {
+                    logMsg += ` + ${rawMatches.length} RAW`;
+                }
+                logLines.push(logMsg);
+            }
+
+            const summary = paired > 0
+                ? `${copied} file berhasil disalin (${selected.length} foto + ${paired} file RAW pasangan).`
+                : `${copied} foto berhasil disalin ke folder yang dipilih.`;
+            showAlert('Sukses', summary, '✅');
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                showAlert('Error', `Gagal mengekspor file: ${e.message}`, '❌');
+            }
+        }
+    };
+
+    // Lightroom Guide Modal
+    window.localShowGuide = function() {
+        document.getElementById('lr-guide-modal').style.display = 'flex';
+    };
+    window.closeLRGuide = function() {
+        document.getElementById('lr-guide-modal').style.display = 'none';
+    };
+
+</script>
+
+<script src="offline-db.js"></script>
+<script src="sync-engine.js"></script>
+<script>
+(function(){
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+    window.addEventListener('online',function(){document.body.classList.remove('is-offline');});
+    window.addEventListener('offline',function(){document.body.classList.add('is-offline');});
+})();
+</script>
+<style>
+.is-offline::before{content:'⚠️ OFFLINE — Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
+@media(min-width:1024px){.is-offline::before{display:none;}}
+</style>
+
+</body>
+</html>

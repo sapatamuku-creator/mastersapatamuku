@@ -1,0 +1,812 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pusat Akun - SapaTamu.Ku</title>
+    <script src="subdomain_resolver.js?v=3.3"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
+    
+    <style>
+        :root { 
+            --primary: #E07B7B; 
+            --bg: #FFF9F5;      
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --gold: #C8962E;
+            --border: #F0E6DE;
+            --shadow-sm: 0 4px 12px rgba(140, 117, 96, 0.05);
+            --shadow-md: 0 10px 30px rgba(140, 117, 96, 0.08);
+        }
+        * { line-height: normal !important; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* NAVBAR (Copied from Dashboard) */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
+        
+        /* Dynamic Island wrapper */
+        .nav-outer-wrapper {
+            position: relative;
+            display: flex; align-items: center;
+            background: rgba(255, 253, 251, 0.92);
+            backdrop-filter: blur(20px);
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.10);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            width: 180px;
+            transition: width var(--duration-slow) var(--ease-out), box-shadow var(--duration-normal) ease;
+            cursor: pointer;
+        }
+        .nav-outer-wrapper.di-expanded {
+            width: min(960px, 96vw);
+            cursor: default;
+            box-shadow: 0 14px 40px rgba(74, 63, 53, 0.13);
+        }
+        .di-collapsed-label {
+            position: absolute; left: 0; right: 0;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 22px; font-size: 11px; font-weight: 800;
+            color: var(--text-main); white-space: nowrap;
+            opacity: 1; transition: opacity var(--duration-fast) ease;
+            pointer-events: none; z-index: 5;
+        }
+        .di-collapsed-label .di-dot {
+            width: 7px; height: 7px; background: var(--primary);
+            border-radius: 50%; flex-shrink: 0; animation: diPulse 2s infinite;
+        }
+        @keyframes diPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.7); }
+        }
+        .nav-outer-wrapper.di-expanded .di-collapsed-label { opacity: 0; pointer-events: none; }
+        .nav-outer-wrapper:not(.di-expanded) .nav-scroll-container { opacity: 0; pointer-events: none; }
+        .nav-outer-wrapper.di-expanded .nav-scroll-container { opacity: 1; pointer-events: auto; }
+        .nav-scroll-container { display: flex; align-items: center; gap: 5px; padding: 6px 15px; overflow-x: auto; white-space: nowrap; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .nav-scroll-container::-webkit-scrollbar { display: none; }
+        .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: color var(--duration-fast) ease, background-color var(--duration-fast) ease; display: flex; align-items: center; white-space: nowrap; }
+        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+        .nav-link.active { background: var(--primary); color: white !important; }
+
+        /* PROFILE LAYOUT */
+        .profile-wrapper {
+            max-width: 1000px;
+            margin: 100px auto 50px;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 30px;
+        }
+        @media (max-width: 768px) {
+            .profile-wrapper { grid-template-columns: 1fr; }
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 30px 20px;
+            box-shadow: var(--shadow-md);
+            height: fit-content;
+        }
+        .user-avatar-lg {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #d96262);
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 15px;
+            font-family: 'Lora', serif;
+            box-shadow: 0 10px 20px rgba(224, 123, 123, 0.2);
+        }
+        .user-name { text-align: center; font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 5px; }
+        .user-tier { text-align: center; font-size: 11px; font-weight: 700; color: var(--primary); background: rgba(224, 123, 123, 0.1); padding: 4px 12px; border-radius: 20px; display: inline-block; margin: 0 auto 30px; }
+        .menu-list { display: flex; flex-direction: column; gap: 8px; }
+        .menu-item {
+            padding: 15px 20px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, color var(--duration-fast) ease;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .menu-item img { width: 20px; opacity: 0.6; transition: filter var(--duration-fast) ease, opacity var(--duration-fast) ease; }
+        .menu-item:hover { background: rgba(224, 123, 123, 0.05); color: var(--primary); }
+        .menu-item:hover img { opacity: 1; filter: sepia(1) hue-rotate(315deg) saturate(3); }
+        .menu-item:active { transform: scale(0.97); }
+        .menu-item.active img { opacity: 1; filter: brightness(0) invert(1); }
+
+        /* CONTENT AREA */
+        .content-area {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: var(--shadow-md);
+            min-height: 500px;
+        }
+
+        /* MODAL AVATAR */
+        .avatar-modal-overlay {
+            position: fixed; inset: 0; background: rgba(74, 63, 53, 0.5); backdrop-filter: blur(5px);
+            display: none; align-items: center; justify-content: center; z-index: 100000;
+        }
+        .avatar-modal {
+            background: #fff; width: 90%; max-width: 500px; border-radius: 24px; padding: 30px;
+            box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); animation: pop var(--duration-normal) var(--ease-modal); position: relative;
+        }
+        @keyframes pop { from { transform: scale(0.95) translateY(10px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        .avatar-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;
+            max-height: 320px; overflow-y: auto; padding: 15px;
+            scroll-snap-type: y mandatory; scroll-behavior: smooth;
+        }
+        
+        /* Custom Scrollbar yang elegan */
+        .avatar-grid::-webkit-scrollbar { width: 6px; }
+        .avatar-grid::-webkit-scrollbar-thumb { background: rgba(224, 123, 123, 0.5); border-radius: 10px; }
+        .avatar-grid::-webkit-scrollbar-track { background: transparent; }
+
+        .avatar-item {
+            width: 100%; padding-bottom: 100%; /* Trik aman 1:1 Aspect Ratio agar tidak tumpuk */
+            border-radius: 16px; cursor: pointer; border: 3px solid transparent;
+            overflow: hidden; transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) ease, border-color var(--duration-fast) ease; 
+            position: relative; background: #fdfdfd;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            scroll-snap-align: center;
+        }
+        .avatar-item img { 
+            position: absolute; top: 0; left: 0; 
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        .avatar-item:hover { 
+            transform: scale(1.05); 
+            box-shadow: 0 10px 25px rgba(224, 123, 123, 0.3); z-index: 10;
+        }
+        .avatar-item:active { transform: scale(0.95); }
+        .avatar-item.selected { 
+            border-color: var(--primary); transform: scale(1.03);
+            box-shadow: 0 8px 20px rgba(224, 123, 123, 0.4); z-index: 5;
+        }
+        .avatar-item.selected::after {
+            content: "✓"; position: absolute; top: 8px; right: 8px; background: var(--primary);
+            color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .tab-content { display: none; animation: fadeIn var(--duration-normal) var(--ease-out); }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .section-title { font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 5px; }
+        .section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 30px; }
+
+        /* FORMS & CARDS */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .form-input { width: 100%; padding: 15px 20px; border-radius: 12px; border: 1.5px solid var(--border); background: #fafafa; font-size: 14px; color: var(--text-main); transition: border-color var(--duration-fast) ease, background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease; }
+        .form-input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(224, 123, 123, 0.1); }
+        
+        .action-card {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 25px; border-radius: 20px; border: 1.5px solid var(--border);
+            margin-bottom: 15px; transition: border-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) ease; background: #fff;
+        }
+        .action-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+        .action-card:active { transform: translateY(0); }
+        .action-info h4 { font-size: 15px; font-weight: 700; margin-bottom: 5px; color: var(--text-main); }
+        .action-info p { font-size: 12px; color: var(--text-muted); }
+        
+        .btn-action { padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) ease; border: none; }
+        .btn-action:active { transform: scale(0.95); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #d96262; box-shadow: 0 5px 15px rgba(224, 123, 123, 0.3); }
+        .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* -------------------------------------
+           ANIMASI BACKGROUND FLOATING HEARTS
+        ---------------------------------------- */
+        .dynamic-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+            overflow: hidden; pointer-events: none;
+            background: linear-gradient(135deg, #FFF9F5 0%, #FDF2F2 100%);
+            margin: 0; padding: 0;
+        }
+
+        .dynamic-bg li {
+            position: absolute; display: block; list-style: none; width: 30px; height: 30px;
+            background: transparent; animation: floatDiagonal 20s linear infinite; bottom: -150px;
+        }
+
+        .dynamic-bg li::before {
+            content: ''; position: absolute; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E07B7B' opacity='0.2'%3E%3Cpath d='M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z'/%3E%3C/svg%3E");
+            background-size: contain; background-repeat: no-repeat;
+            animation: pulseHeart 4s ease-in-out infinite alternate;
+        }
+
+        .dynamic-bg li:nth-child(1) { left: -10%; width: 40px; height: 40px; animation-delay: 0s; animation-duration: 25s; }
+        .dynamic-bg li:nth-child(2) { left: 5%; width: 20px; height: 20px; animation-delay: 2s; animation-duration: 17s; }
+        .dynamic-bg li:nth-child(3) { left: 15%; width: 60px; height: 60px; animation-delay: 4s; animation-duration: 22s; }
+        .dynamic-bg li:nth-child(4) { left: 25%; width: 35px; height: 35px; animation-delay: 0s; animation-duration: 18s; }
+        .dynamic-bg li:nth-child(5) { left: 40%; width: 25px; height: 25px; animation-delay: 6s; animation-duration: 20s; }
+        .dynamic-bg li:nth-child(6) { left: 55%; width: 50px; height: 50px; animation-delay: 3s; animation-duration: 24s; }
+        .dynamic-bg li:nth-child(7) { left: -20%; width: 30px; height: 30px; animation-delay: 8s; animation-duration: 19s; }
+        .dynamic-bg li:nth-child(8) { left: -5%; width: 45px; height: 45px; animation-delay: 10s; animation-duration: 28s; }
+        .dynamic-bg li:nth-child(9) { left: 45%; width: 20px; height: 20px; animation-delay: 1s; animation-duration: 15s; }
+        .dynamic-bg li:nth-child(10){ left: 10%; width: 55px; height: 55px; animation-delay: 7s; animation-duration: 26s; }
+
+        @keyframes floatDiagonal {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(40vw, -120vh) rotate(260deg); opacity: 0; }
+        }
+        @keyframes pulseHeart {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth_guard.js"></script>
+</head>
+<body>
+
+<!-- Animasi Background -->
+<ul class="dynamic-bg">
+    <li></li><li></li><li></li><li></li><li></li>
+    <li></li><li></li><li></li><li></li><li></li>
+</ul>
+
+<!-- Navbar -->
+<nav class="sapatamu-navbar">
+    <div class="nav-outer-wrapper di-expanded" id="nav-island">
+        <!-- Dynamic Island collapsed label -->
+        <div class="di-collapsed-label" id="di-label">
+            <span class="di-dot"></span>
+            <span id="di-label-text">Menu</span>
+        </div>
+        <div class="nav-scroll-container">
+            <div class="nav-group">
+                <a href="dashboard.html" class="nav-link" id="nav-dashboard">← Kembali ke Dashboard</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="profile-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div style="position:relative; width:fit-content; margin: 0 auto;">
+            <div class="user-avatar-lg" id="sidebar-avatar-container" style="position:relative; overflow:hidden;">
+                <span id="sidebar-avatar">S</span>
+                <img id="sidebar-avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover;">
+            </div>
+            <div onclick="openAvatarModal()" style="position:absolute; bottom:15px; right:-5px; background:white; width:28px; height:28px; border-radius:50%; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center; cursor:pointer; border:1px solid #eee;">
+                <img src="https://img.icons8.com/ios-filled/50/E07B7B/camera.png" style="width:14px;">
+            </div>
+        </div>
+        <div class="user-name" id="sidebar-name">SapaTamu Client</div>
+        <div style="text-align: center;"><div class="user-tier" id="sidebar-tier">PAKET BELUM DIPILIH</div></div>
+
+        <div class="menu-list">
+            <div class="menu-item active" onclick="switchTab('account', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/user.png"/> Data Akun
+            </div>
+            <div class="menu-item" onclick="switchTab('security', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/lock.png"/> Keamanan
+            </div>
+            <div class="menu-item" onclick="switchTab('package', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/rocket.png"/> Layanan & Paket
+            </div>
+            <div class="menu-item" onclick="switchTab('invitation', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/edit.png"/> Undangan Digital
+            </div>
+            <div class="menu-item" onclick="switchTab('display', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/settings.png"/> Layar Acara
+            </div>
+        </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="content-area">
+        
+        <!-- Tab: Account -->
+        <div id="tab-account" class="tab-content active">
+            <h2 class="section-title">Informasi Akun</h2>
+            <p class="section-desc">Lihat dan kelola informasi dasar profil acara Anda.</p>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" id="inp-username" readonly value="Loading...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subdomain Publik (Link Utama)</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" class="form-input" id="inp-subdomain" readonly value="...">
+                        <button class="btn-action btn-outline" onclick="copyLink()">Salin</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- METADATA SUPABASE -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; border-top:1px solid var(--border); padding-top:20px; margin-bottom: 20px;">
+                <h3 class="section-title" style="font-size:18px; margin:0; border:none; padding:0;">Metadata Acara</h3>
+                <button onclick="goToEditMetadata()" style="background:none; border:none; cursor:pointer; color:var(--gold); font-size:14px; display:flex; align-items:center; gap:5px; font-weight:600;" title="Edit Detail Acara">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                    Edit
+                </button>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Nama Pengantin / Acara</label>
+                <input type="text" class="form-input" id="meta-nama-pengantin" readonly value="Memuat...">
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="form-group">
+                    <label class="form-label">Hari & Tanggal</label>
+                    <input type="text" class="form-input" id="meta-hari-tanggal" readonly value="Memuat...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Waktu Acara (Default)</label>
+                    <input type="text" class="form-input" id="meta-waktu-acara" readonly value="Memuat...">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Lokasi Acara</label>
+                <input type="text" class="form-input" id="meta-lokasi-acara" readonly value="Memuat...">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Link Navigasi / Undangan</label>
+                <input type="text" class="form-input" id="meta-link-undangan" readonly value="Memuat...">
+            </div>
+            
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+                <div class="form-group">
+                    <label class="form-label">Sesi 1</label>
+                    <input type="text" class="form-input" id="meta-sesi-1" readonly value="Memuat...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sesi 2</label>
+                    <input type="text" class="form-input" id="meta-sesi-2" readonly value="Memuat...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sesi 3</label>
+                    <input type="text" class="form-input" id="meta-sesi-3" readonly value="Memuat...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Security -->
+        <div id="tab-security" class="tab-content">
+            <h2 class="section-title">Keamanan & Sandi</h2>
+            <p class="section-desc">Pusat keamanan untuk melindungi akun Anda.</p>
+            
+            <div class="action-card">
+                <div class="action-info">
+                    <h4>Ubah Password Akun</h4>
+                    <p>Ganti kata sandi untuk login ke SapaTamu.Ku</p>
+                </div>
+                <button class="btn-action btn-outline" onclick="window.location.href='reset.html'">Ubah Password</button>
+            </div>
+            <div class="action-card" style="border-color: #fca5a5;">
+                <div class="action-info">
+                    <h4 style="color: #ef4444;">Keluar Aplikasi (Sign Out)</h4>
+                    <p>Akhiri sesi Anda pada perangkat ini.</p>
+                </div>
+                <button class="btn-action" style="background:#ef4444; color:#fff;" onclick="window.location.href='logout.html'">Sign Out</button>
+            </div>
+        </div>
+
+        <!-- Tab: Package -->
+        <div id="tab-package" class="tab-content">
+            <h2 class="section-title">Layanan & Paket</h2>
+            <p class="section-desc">Tingkatkan layanan acara Anda ke level premium.</p>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom: 20px;">
+                <!-- E-Invitation Preview -->
+                <div class="action-card" style="display:flex; flex-direction:column; align-items:flex-start; border: 1.5px solid rgba(212, 175, 55, 0.3); background: #FFFDFB; position: relative; overflow: hidden; padding: 25px; gap: 0;">
+                    <div style="position: absolute; top: 15px; right: 15px; background: var(--gold); color: #fff; font-size: 9px; font-weight: 800; padding: 4px 10px; border-radius: 20px;">E-INVITATION</div>
+                    <h4 style="font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 5px;">Premium Edition</h4>
+                    <div style="font-size: 18px; font-weight: 800; color: #E07B7B; margin-bottom: 15px;">Rp 250.000</div>
+                    <ul style="list-style:none; padding:0; margin:0; font-size: 11px; color: var(--text-muted); line-height: 1.8; margin-bottom: 20px; width:100%;">
+                        <li>✓ Formulir Tamu Digital</li>
+                        <li>✓ WA Blast Manager</li>
+                        <li>✓ Galeri Foto Unlimited</li>
+                    </ul>
+                    <button class="btn-action btn-outline" style="width: 100%; border-color: var(--gold); color: var(--gold); justify-content:center; margin-top:auto;" onclick="window.location.href='upgrade.html'">Pilih Paket Ini</button>
+                </div>
+                
+                <!-- Guestbook Preview -->
+                <div class="action-card" style="display:flex; flex-direction:column; align-items:flex-start; border: 1.5px solid rgba(140, 117, 96, 0.3); background: #FFFDFB; position: relative; overflow: hidden; padding: 25px; gap: 0;">
+                    <div style="position: absolute; top: 15px; right: 15px; background: var(--primary); color: #fff; font-size: 9px; font-weight: 800; padding: 4px 10px; border-radius: 20px;">GUESTBOOK</div>
+                    <h4 style="font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 5px;">Paket Silver</h4>
+                    <div style="font-size: 18px; font-weight: 800; color: #E07B7B; margin-bottom: 15px;">Rp 3.500.000</div>
+                    <ul style="list-style:none; padding:0; margin:0; font-size: 11px; color: var(--text-muted); line-height: 1.8; margin-bottom: 20px; width:100%;">
+                        <li>✓ Kapasitas 250-500 Tamu</li>
+                        <li>✓ Cetak Label Nama Instan</li>
+                        <li>✓ Welcome Sign Display</li>
+                    </ul>
+                    <button class="btn-action btn-outline" style="width: 100%; border-color: var(--primary); color: var(--primary); justify-content:center; margin-top:auto;" onclick="window.location.href='upgrade.html'">Pilih Paket Ini</button>
+                </div>
+            </div>
+
+            <div class="action-card" style="background: linear-gradient(135deg, #4A3F35, #2c251f); color: white; border: none; align-items: center;">
+                <div class="action-info">
+                    <h4 style="color:white; font-size: 16px; margin-bottom: 5px;">Eksplorasi Seluruh Paket</h4>
+                    <p style="color:#ccc; font-size: 12px; margin: 0;">Bandingkan fitur dan harga untuk menemukan paket yang paling sesuai.</p>
+                </div>
+                <button class="btn-action" style="background:#fff; color:#4A3F35; padding: 12px 25px; justify-content:center;" onclick="window.location.href='upgrade.html'">Lihat Semua Paket</button>
+            </div>
+        </div>
+
+        <!-- Tab: Invitation -->
+        <div id="tab-invitation" class="tab-content">
+            <h2 class="section-title">Undangan Digital</h2>
+            <p class="section-desc">Kustomisasi tema dan detail undangan E-Invitation Anda.</p>
+
+            <div class="action-card">
+                <div class="action-info">
+                    <h4>Editor Undangan</h4>
+                    <p>Ubah teks, foto, cerita, dan jadwal acara pada undangan Anda.</p>
+                </div>
+                <button class="btn-action btn-primary" onclick="window.location.href='config_invitation.html'">Edit Undangan</button>
+            </div>
+            <div class="action-card">
+                <div class="action-info">
+                    <h4>Katalog Tema</h4>
+                    <p>Eksplorasi dan ganti desain/tema undangan digital Anda.</p>
+                </div>
+                <button class="btn-action btn-outline" onclick="window.location.href='katalog_undangan.html'">Pilih Tema</button>
+            </div>
+        </div>
+
+        <!-- Tab: Display -->
+        <div id="tab-display" class="tab-content">
+            <h2 class="section-title">Layar Acara</h2>
+            <p class="section-desc">Atur tampilan Layar Sapa (Welcome Sign) yang muncul di lokasi acara.</p>
+
+            <div class="action-card">
+                <div class="action-info">
+                    <h4>Konfigurasi Layar Sapa</h4>
+                    <p>Ubah foto background, teks sambutan, dan layout Welcome Screen.</p>
+                </div>
+                <button class="btn-action btn-primary" onclick="checkLayarAccess()">Konfigurasi Layar</button>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- Avatar Modal -->
+<div id="avatarModal" class="avatar-modal-overlay">
+    <div class="avatar-modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="font-family:'Lora',serif; font-size:18px; font-weight:700; color:var(--text-main);">Pilih Foto Profil</h3>
+            <span onclick="closeAvatarModal()" style="cursor:pointer; font-size:20px; color:#aaa;">&times;</span>
+        </div>
+        <p style="font-size:12px; color:var(--text-muted); margin-top:5px;">Pilih salah satu foto yang pernah Anda unggah di konfigurasi Layar Sapa.</p>
+        
+        <div id="avatar-grid" class="avatar-grid">
+            <div style="grid-column: span 3; text-align:center; padding: 20px; font-size:12px; color:#aaa;">Memuat foto...</div>
+        </div>
+        
+        <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn-action btn-outline" onclick="closeAvatarModal()">Batal</button>
+            <button class="btn-action btn-primary" onclick="saveAvatarSelection()" id="btn-save-avatar" disabled>Simpan Foto</button>
+        </div>
+    </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+    function switchTab(tabId, el) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+        
+        document.getElementById('tab-' + tabId).classList.add('active');
+        el.classList.add('active');
+    }
+
+    async function initProfile() {
+        const localData = localStorage.getItem('sapatamu_db');
+        if (localData) {
+            const parsed = JSON.parse(localData);
+            const uname = parsed.username || "Client";
+            
+            // Set initial state
+            renderProfileData(uname, parsed.package);
+
+            // Fetch live data from Supabase to sync package
+            try {
+                const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?username=eq.${uname}&limit=1`, {
+                    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                });
+                const rows = await response.json();
+                if (rows && rows.length > 0) {
+                    const livePkg = rows[0].package;
+                    if (livePkg) {
+                        parsed.package = livePkg;
+                        localStorage.setItem('sapatamu_db', JSON.stringify(parsed));
+                        renderProfileData(uname, livePkg);
+                    }
+                }
+            } catch (e) {
+                console.warn("Live fetch failed", e);
+            }
+
+            // Fetch metadata_client
+            const ssId = window.CURRENT_SS_ID || parsed.ssId;
+            if (ssId) {
+                try {
+                    const resMeta = await fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${ssId}&limit=1`, {
+                        headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                    });
+                    const metaRows = await resMeta.json();
+                    if (metaRows && metaRows.length > 0) {
+                        const m = metaRows[0];
+                        document.getElementById('meta-nama-pengantin').value = m.nama_pengantin || "-";
+                        document.getElementById('meta-hari-tanggal').value = m.hari_tanggal || "-";
+                        document.getElementById('meta-waktu-acara').value = m.waktu_acara || "-";
+                        document.getElementById('meta-lokasi-acara').value = m.lokasi_acara || "-";
+                        document.getElementById('meta-link-undangan').value = m.link_invitation || "-";
+                        document.getElementById('meta-sesi-1').value = m.sesi_1 && m.sesi_1 !== 'EMPTY' ? m.sesi_1 : "-";
+                        document.getElementById('meta-sesi-2').value = m.sesi_2 && m.sesi_2 !== 'EMPTY' ? m.sesi_2 : "-";
+                        document.getElementById('meta-sesi-3').value = m.sesi_3 && m.sesi_3 !== 'EMPTY' ? m.sesi_3 : "-";
+                    } else {
+                        // Fallback ke GAS getMasterData
+                        const gasUrl = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+                        try {
+                            const resGas = await fetch(gasUrl, {
+                                method: 'POST',
+                                body: JSON.stringify({ action: "getMasterData", ssId: ssId })
+                            });
+                            const result = await resGas.json();
+                            if (result && result.eventMeta) {
+                                const meta = result.eventMeta;
+                                document.getElementById('meta-nama-pengantin').value = meta.pengantin || "-";
+                                document.getElementById('meta-hari-tanggal').value = meta.tanggal || "-";
+                                document.getElementById('meta-waktu-acara').value = meta.waktu || "-";
+                                document.getElementById('meta-lokasi-acara').value = meta.lokasi || "-";
+                                document.getElementById('meta-link-undangan').value = meta.link || "-";
+                                
+                                const sOptions = meta.sesiOptions || [];
+                                document.getElementById('meta-sesi-1').value = sOptions[0] || "-";
+                                document.getElementById('meta-sesi-2').value = sOptions[1] || "-";
+                                document.getElementById('meta-sesi-3').value = sOptions[2] || "-";
+                            } else {
+                                document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Data tidak ditemukan");
+                            }
+                        } catch(gasErr) {
+                            console.warn("GAS fallback failed:", gasErr);
+                            document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Data tidak ditemukan");
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Metadata fetch failed", e);
+                    document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Gagal memuat data");
+                }
+            } else {
+                document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Sesi tidak valid");
+            }
+        } else {
+            window.location.href = "login.html";
+        }
+    }
+
+    function renderProfileData(uname, pkg) {
+        document.getElementById('sidebar-name').innerText = uname;
+        document.getElementById('sidebar-tier').innerText = pkg || "PAKET BELUM DIPILIH";
+        
+        const avatarLetter = document.getElementById('sidebar-avatar');
+        const avatarImg = document.getElementById('sidebar-avatar-img');
+        
+        const savedAvatar = localStorage.getItem('sapatamu_avatar');
+        if (savedAvatar) {
+            avatarLetter.style.display = 'none';
+            avatarImg.src = savedAvatar;
+            avatarImg.style.display = 'block';
+        } else {
+            avatarLetter.innerText = uname.charAt(0).toUpperCase();
+            avatarLetter.style.display = 'flex';
+            avatarImg.style.display = 'none';
+        }
+        
+        document.getElementById('inp-username').value = uname;
+        const localData = localStorage.getItem('sapatamu_db');
+        const parsed = localData ? JSON.parse(localData) : {};
+        const sub = (parsed.subdomain || uname).toLowerCase().replace(/[\s&]/g, '');
+        document.getElementById('inp-subdomain').value = "https://" + sub + ".sapatamu.id";
+        
+        // Auto-fetch settings silently in background to populate avatar if none chosen
+        setTimeout(fetchSettingsSilently, 1000);
+    }
+    
+    // --- AVATAR LOGIC ---
+    let welcomePhotos = [];
+    let selectedAvatarUrl = null;
+
+    async function fetchSettingsSilently() {
+        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db')||'{}').ssId);
+        if (!ssId) return;
+        try {
+            const url = (window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec") + "?action=getSettings&ssId=" + ssId;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.status === "success" && data.data && data.data.urlFoto) {
+                welcomePhotos = data.data.urlFoto.split(",").filter(u => u.trim());
+                
+                // If user doesn't have an avatar yet, auto-set to the first picture
+                if (!localStorage.getItem('sapatamu_avatar') && welcomePhotos.length > 0) {
+                    let previewUrl = welcomePhotos[0].trim();
+                    const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+                    const match = previewUrl.match(driveRegex);
+                    if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file"))) {
+                        previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
+                    }
+                    localStorage.setItem('sapatamu_avatar', previewUrl);
+                    renderProfileData(document.getElementById('sidebar-name').innerText, document.getElementById('sidebar-tier').innerText);
+                }
+            }
+        } catch (e) {}
+    }
+
+    async function openAvatarModal() {
+        document.getElementById('avatarModal').style.display = 'flex';
+        const grid = document.getElementById('avatar-grid');
+        
+        if (welcomePhotos.length === 0) {
+            grid.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; font-size:12px; color:#aaa;">Memuat foto... atau Anda belum mengunggah foto di Layar Sapa.</div>';
+            const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db')||'{}').ssId);
+            if(ssId) {
+                const url = (window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec") + "?action=getSettings&ssId=" + ssId;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.status === "success" && data.data && data.data.urlFoto) {
+                    welcomePhotos = data.data.urlFoto.split(",").filter(u => u.trim());
+                }
+            }
+        }
+        
+        if (welcomePhotos.length === 0) {
+            grid.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; font-size:12px; color:#aaa;">Belum ada foto. Silakan unggah di menu Konfigurasi Layar Sapa terlebih dahulu.</div>';
+            return;
+        }
+        
+        grid.innerHTML = welcomePhotos.map((url, idx) => {
+            let previewUrl = url.trim();
+            const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+            const match = previewUrl.match(driveRegex);
+            if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file"))) {
+                previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
+            }
+            
+            const isSelected = localStorage.getItem('sapatamu_avatar') === previewUrl ? 'selected' : '';
+            return `<div class="avatar-item ${isSelected}" onclick="selectAvatarItem(this, '${previewUrl}')">
+                        <img src="${previewUrl}" onerror="this.style.display='none'">
+                    </div>`;
+        }).join('');
+    }
+
+    function selectAvatarItem(el, url) {
+        document.querySelectorAll('.avatar-item').forEach(i => i.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedAvatarUrl = url;
+        document.getElementById('btn-save-avatar').disabled = false;
+    }
+
+    function saveAvatarSelection() {
+        if (selectedAvatarUrl) {
+            localStorage.setItem('sapatamu_avatar', selectedAvatarUrl);
+            renderProfileData(document.getElementById('sidebar-name').innerText, document.getElementById('sidebar-tier').innerText);
+        }
+        closeAvatarModal();
+    }
+
+    function closeAvatarModal() {
+        document.getElementById('avatarModal').style.display = 'none';
+        selectedAvatarUrl = null;
+        document.getElementById('btn-save-avatar').disabled = true;
+    }
+
+    function copyLink() {
+        const link = document.getElementById('inp-subdomain').value;
+        navigator.clipboard.writeText(link);
+        alert("Link tersalin!");
+    }
+
+    function goToEditMetadata() {
+        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db')||'{}').ssId);
+        window.location.href = `formulir_tamu.html?ssId=${ssId}&action=edit_metadata`;
+    }
+
+    function checkLayarAccess() {
+        const sess = JSON.parse(localStorage.getItem('sapatamu_db') || '{}');
+        const pkg = (sess.package || '').toLowerCase().trim();
+        
+        let tier = 0;
+        const PACKAGE_TIER_MAP = {
+            'standard': 1, 'premium': 2,
+            'bronze': 3, 'silver': 4, 'gold': 5,
+            'exclusive': 6, 'deluxe': 7
+        };
+        for (const key of Object.keys(PACKAGE_TIER_MAP)) {
+            if (pkg.includes(key)) { tier = PACKAGE_TIER_MAP[key]; break; }
+        }
+        
+        if (tier === 0 || tier >= 4) {
+            window.location.href = 'config.html';
+        } else {
+            alert('Akses Terbatas 🔒\nUntuk mengakses Layar Sapa, silakan upgrade ke Guestbook Paket Silver atau lebih tinggi.');
+            window.location.href = 'upgrade.html';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof SapaGuard !== 'undefined') SapaGuard.apply('sensitive');
+        // Wait for resolver if needed, or just init directly since data is in localStorage
+        initProfile();
+    });
+
+    function initDynamicIslandNav() {
+        const island = document.getElementById('nav-island');
+        const labelText = document.getElementById('di-label-text');
+        if (!island) return;
+        const activeLink = document.querySelector('.nav-link.active');
+        if (activeLink && labelText) labelText.textContent = activeLink.textContent.trim();
+        let collapseTimer = null;
+        function expandNav() { clearTimeout(collapseTimer); island.classList.add('di-expanded'); }
+        function scheduleCollapse(delay) {
+            clearTimeout(collapseTimer);
+            collapseTimer = setTimeout(function() { island.classList.remove('di-expanded'); }, delay || 3000);
+        }
+        island.addEventListener('mouseenter', expandNav);
+        island.addEventListener('mouseleave', function() { scheduleCollapse(3000); });
+        island.addEventListener('click', function(e) {
+            if (!island.classList.contains('di-expanded')) {
+                e.preventDefault(); expandNav(); scheduleCollapse(4000);
+            }
+        });
+        scheduleCollapse(4000);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDynamicIslandNav);
+    } else { initDynamicIslandNav(); }
+</script>
+<script src="offline-db.js"></script>
+<script src="sync-engine.js"></script>
+<script>
+(function(){
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+    window.addEventListener('online',function(){document.body.classList.remove('is-offline');});
+    window.addEventListener('offline',function(){document.body.classList.add('is-offline');});
+})();
+</script>
+<style>
+.is-offline::before{content:'⚠️ OFFLINE — Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
+@media(min-width:1024px){.is-offline::before{display:none;}}
+</style>

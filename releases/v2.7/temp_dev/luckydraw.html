@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Sapatamu Lucky Draw Console - V10.2 Official</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="subdomain_resolver.js?v=3.3"></script>
+    <script src="auth_guard.js?v=1.0"></script>
+
+    <style>
+        :root { 
+            --primary: #E07B7B; /* Rose */
+            --bg: #FFF9F5;      /* Warm White */
+            --card: #FFFFFF;
+            --text-main: #4A3F35; 
+            --text-muted: #8C7560;
+            --border: #F0E6DE;
+            --input-bg: #FDF8F4;
+            --gold: #C8962E;
+            --success: #10B981;
+            --danger: #E74C3C;
+            --soft-gold: #FFF9F5;
+        }
+
+
+        body { 
+            margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); color: var(--text-main); 
+            height: 100vh; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .main-container { 
+            height: 100vh; overflow-y: auto; 
+            padding: 80px 15px 120px; 
+            display: flex; flex-direction: column; gap: 20px; box-sizing: border-box;
+        }
+
+        .section-panel { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        
+        .monitor-bar { display: flex; justify-content: space-around; padding: 5px 0; }
+        .stat-item { text-align: center; }
+        .stat-label { font-size: 8px; font-weight: 800; color: #aaa; text-transform: uppercase; display: block; }
+        .stat-value { font-size: 20px; font-weight: 900; color: var(--dark); }
+
+        .spin-box { background: var(--dark); border-radius: 24px; padding: 30px 20px; text-align: center; color: white; position: relative; box-shadow: 0 15px 30px rgba(0,0,0,0.2); }
+        .spin-code { font-family: 'Quicksand', sans-serif; font-size: 42px; font-weight: 700; color: var(--gold); letter-spacing: 3px; min-height: 60px; margin: 10px 0; text-shadow: 0 0 20px rgba(212,175,55,0.4); }
+        .winner-name { font-size: 18px; font-weight: 600; opacity: 0; transition: opacity var(--duration-normal) var(--ease-out); text-transform: uppercase; color: #fff; min-height: 24px; }
+        .winner-name.show { opacity: 1; }
+
+        .btn-primary { width: 100%; padding: 16px; border-radius: 15px; border: none; background: var(--gold); color: white; font-weight: 900; font-size: 14px; letter-spacing: 2px; cursor: pointer; box-shadow: 0 8px 20px rgba(212,175,55,0.3); transition: transform var(--duration-fast) var(--ease-out); }
+        .btn-primary:active { transform: scale(0.95); }
+        .btn-primary:disabled { background: #444; box-shadow: none; opacity: 0.7; }
+        .scanner-section { border: 2px solid var(--gold); background: var(--soft-gold); }
+        .scanner-wrapper { width: 100%; max-width: 200px; aspect-ratio: 1; margin: 0 auto 15px; border-radius: 20px; overflow: hidden; border: 2px solid var(--gold); background: #000; position: relative; }
+        
+        .manual-input-box { display: flex; gap: 8px; margin-top: 10px; }
+        .input-text { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #ddd; font-family: 'Quicksand', sans-serif; font-weight: 700; text-transform: uppercase; font-size: 12px; }
+        .btn-check { padding: 0 15px; background: var(--dark); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 10px; cursor: pointer; transition: transform var(--duration-fast) var(--ease-out); }
+        .btn-check:active { transform: scale(0.95); }
+
+        .list-section { background: white; border-radius: 20px; overflow: hidden; border: 1px solid #eee; min-height: 200px; }
+        .list-header { padding: 12px 15px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .winner-item { padding: 12px 15px; border-bottom: 1px solid #f9f9f9; display: flex; align-items: center; gap: 12px; }
+        .winner-info { flex: 1; }
+        .winner-main { font-weight: 700; font-size: 12px; }
+        .winner-sub { font-size: 8px; color: #999; font-weight: 600; }
+        .badge-done { font-size: 7px; font-weight: 900; background: #e8faf0; color: var(--success); padding: 4px 8px; border-radius: 5px; }
+
+        .action-fab {
+            position: fixed; bottom: 25px; width: 45px; height: 45px;
+            background: rgba(26, 26, 26, 0.8); backdrop-filter: blur(5px);
+            color: white; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; cursor: pointer; z-index: 10000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .fullscreen-btn { right: 25px; }
+        .logout-btn { right: 80px; color: var(--danger); }
+        .action-fab:hover { transform: scale(1.05); background: var(--dark); }
+        .action-fab:active { transform: scale(0.95); }
+        .action-fab svg { width: 20px; height: 20px; fill: currentColor; }
+
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .winner-glow { animation: glow 0.5s ease-in-out infinite alternate; color: white !important; }
+        @keyframes glow { from { text-shadow: 0 0 10px var(--gold); } to { text-shadow: 0 0 30px var(--gold); } }
+        
+        #camera-error { display: none; padding: 10px; background: var(--danger); color: white; font-size: 9px; border-radius: 10px; margin-bottom: 10px; text-align: center; }
+
+        /* ADVANCED NAVBAR STYLES (CLONE FROM ONSITE) */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
+        
+        /* Dynamic Island wrapper */
+        .nav-outer-wrapper {
+            position: relative;
+            display: flex; align-items: center;
+            background: rgba(255, 253, 251, 0.92);
+            backdrop-filter: blur(20px);
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.10);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            width: 180px;
+            transition: width var(--duration-slow) var(--ease-out), box-shadow var(--duration-normal) ease;
+            cursor: pointer;
+        }
+        .nav-outer-wrapper.di-expanded {
+            width: min(960px, 96vw);
+            cursor: default;
+            box-shadow: 0 14px 40px rgba(74, 63, 53, 0.13);
+        }
+        .di-collapsed-label {
+            position: absolute; left: 0; right: 0;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 22px; font-size: 11px; font-weight: 800;
+            color: var(--text-main); white-space: nowrap;
+            opacity: 1; transition: opacity var(--duration-fast) ease;
+            pointer-events: none; z-index: 5;
+        }
+        .di-collapsed-label .di-dot {
+            width: 7px; height: 7px; background: var(--primary);
+            border-radius: 50%; flex-shrink: 0; animation: diPulse 2s infinite;
+        }
+        @keyframes diPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.7); }
+        }
+        .nav-outer-wrapper.di-expanded .di-collapsed-label { opacity: 0; pointer-events: none; }
+        .nav-outer-wrapper:not(.di-expanded) .nav-scroll-container { opacity: 0; pointer-events: none; }
+        .nav-outer-wrapper.di-expanded .nav-scroll-container { opacity: 1; pointer-events: auto; }
+        
+        .nav-scroll-container { 
+            display: flex; align-items: center; gap: 5px; padding: 6px 15px;
+            overflow-x: auto; white-space: nowrap; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        }
+        .nav-scroll-container::-webkit-scrollbar { display: none; }
+        
+        .nav-fade { position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none; z-index: 2; transition: opacity var(--duration-fast) ease; opacity: 0; }
+        .nav-fade-left { left: 0; background: linear-gradient(to right, #FFFDFB 20%, transparent); }
+        .nav-fade-right { right: 0; background: linear-gradient(to left, #FFFDFB 20%, transparent); }
+        .nav-fade.visible { opacity: 1; }
+ 
+        .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; font-size: 10px; color: var(--text-muted); opacity: 0.5; pointer-events: none; transition: opacity var(--duration-fast) ease; }
+        .nav-arrow-left { left: 8px; }
+        .nav-arrow-right { right: 8px; }
+ 
+        .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-link { text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted); padding: 10px 18px; border-radius: 30px; transition: color var(--duration-fast) ease, background-color var(--duration-fast) ease; display: flex; align-items: center; white-space: nowrap; }
+        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-link.sign-out { color: #E07B7B !important; }
+        .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
+    </style>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body id="app-body" onload="initLucky()">
+    <nav class="sapatamu-navbar">
+        <div class="nav-outer-wrapper di-expanded" id="nav-island">
+        <!-- Dynamic Island collapsed label -->
+        <div class="di-collapsed-label" id="di-label">
+            <span class="di-dot"></span>
+            <span id="di-label-text">Menu</span>
+        </div>
+            <div class="nav-fade nav-fade-left" id="fade-left"></div>
+            <div class="nav-arrow nav-arrow-left">‹</div>
+            
+            <div class="nav-scroll-container" id="nav-scroll">
+                <div class="nav-group">
+                    <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+                    <div class="nav-divider"></div>
+                    <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Buku Tamu</a>
+                    <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+                    <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+                </div>
+                <div class="nav-divider"></div>
+                <div class="nav-group">
+                    <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                    <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                    <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+                    <a href="luckydraw.html" class="nav-link active" id="nav-lucky">Lucky Draw</a>
+                    <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+                    <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
+                    <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
+                    <div class="nav-divider"></div>
+                    
+                    
+                </div>
+                <div class="nav-divider"></div>
+                <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
+            </div>
+
+            <div class="nav-arrow nav-arrow-right">›</div>
+            <div class="nav-fade nav-fade-right" id="fade-right"></div>
+        </div>
+    </nav>
+    
+    <div id="loading" class="loading-overlay">
+    <div style="width:40px; height:40px; border:4px solid #eee; border-top-color:var(--gold); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+    <p style="font-size:10px; font-weight:900; letter-spacing:1px; margin-top:15px;">MENYINKRONKAN DATABASE...</p>
+</div>
+
+<!-- CUSTOM NOTIFICATION MODAL -->
+<div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+    <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+        <div id="notify-icon" style="font-size: 50px; margin-bottom: 25px;">✨</div>
+        <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px;">Pesan</h2>
+        <p id="notify-msg" style="font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 35px;">Pesan notifikasi akan muncul di sini.</p>
+        <button onclick="closeSapaModal()" class="btn-primary" style="padding: 15px; border-radius: 15px; font-size: 11px; margin-top: 0; background: var(--text-main);">MENGERTI</button>
+    </div>
+</div>
+
+<style>
+    @keyframes modalPop {
+        from { transform: scale(0.8); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+</style>
+
+<div class="action-fab logout-btn" onclick="logout()" title="Keluar">
+    <svg viewBox="0 0 24 24"><path d="M16 13v-2H7V9l-5 3 5 3v-2h9zM20 3H9c-1.1 0-2 .9-2 2v4h2V5h11v14H9v-4H7v4c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+</div>
+
+<div class="action-fab fullscreen-btn" onclick="toggleFullScreen()" title="Toggle Fullscreen">
+    <svg id="fs-icon" viewBox="0 0 24 24">
+        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+    </svg>
+</div>
+
+<div class="main-container">
+    <div style="text-align: center; margin-bottom: -10px;">
+        <span id="user-display" style="font-size: 10px; font-weight: 800; color: #bbb; text-transform: uppercase;">MEMUAT SESI...</span>
+    </div>
+
+    <div class="section-panel" style="background: var(--soft-gold); border: 1px solid var(--gold);">
+        <div class="monitor-bar">
+            <div class="stat-item">
+                <span class="stat-label">Tamu Hadir</span>
+                <span class="stat-value" id="stat-total-hadir">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Pool Undian</span>
+                <span class="stat-value" id="stat-valid" style="color:var(--success)">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="spin-box">
+        <div id="display-code" class="spin-code">000000</div>
+        <div id="display-name" class="winner-name">SIAP DIUNDI</div>
+        <div style="margin-top:30px;">
+            <button id="btn-spin" onclick="runLuckyDraw()" class="btn-primary">PUTAR UNDIAN</button>
+        </div>
+    </div>
+
+    <div class="section-panel scanner-section">
+        <div style="font-size:10px; font-weight:800; color:var(--brand-warm); text-align:center; margin-bottom:15px; letter-spacing:1px;">SCAN QR ATAU INPUT KODE CLAIM</div>
+        <div id="camera-error">Kamera bermasalah. Pastikan izin diberikan.</div>
+        <div class="scanner-wrapper"><div id="qr-reader" style="width: 100%;"></div></div>
+        <div class="manual-input-box">
+            <input type="text" id="manual-code" class="input-text" placeholder="Ketik Kode (STK-xxx)">
+            <button onclick="manualCheck()" class="btn-check">CEK DATA</button>
+        </div>
+        <div id="scan-result-card" style="display:none; padding: 15px; border-radius: 15px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="font-size:24px;">🔍</div>
+                <div style="flex:1;">
+                    <div id="res-name" style="font-weight:900; font-size:14px; color:#1b4332;">NAMA</div>
+                    <div id="res-code" style="font-size:10px; font-weight:700; color:#52b788;">KODE</div>
+                    <div id="res-status-label" style="font-size:9px; color:#666;">Status: -</div>
+                </div>
+            </div>
+            <button id="confirm-btn" onclick="claimReward()" style="width:100%; margin-top:12px; padding:12px; background:var(--success); color:white; border:none; border-radius:10px; font-weight:800; cursor:pointer; font-size:11px;">KONFIRMASI PEMENANG</button>
+            <button onclick="document.getElementById('scan-result-card').style.display='none'" style="width:100%; margin-top:8px; background:none; border:none; font-size:9px; font-weight:700; color:#999; cursor:pointer;">TUTUP</button>
+        </div>
+    </div>
+
+    <div class="list-section">
+        <div class="list-header">
+            <span style="font-size:9px; font-weight:900; color:#bbb;">RIWAYAT PEMENANG</span>
+            <span id="win-count" style="font-size:9px; font-weight:900; color:var(--gold);">0 PEMENANG</span>
+        </div>
+        <div id="winner-history-list"></div>
+    </div>
+</div>
+
+<script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+ 
+
+    function syncNavbar() {
+        const ssId = window.CURRENT_SS_ID || "";
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            const baseHref = link.getAttribute('href').split('?')[0];
+            link.href = `${baseHref}?ssId=${ssId}`;
+        });
+    }
+
+    async function initLucky() {
+        if (window.SAPATAMU_RESOLVED) {
+            CURRENT_SS_ID = window.CURRENT_SS_ID;
+            // RBAC Guard: client tidak bisa mengoperasikan lucky draw (hanya admin/usher)
+            if (typeof SapaGuard !== 'undefined') SapaGuard.apply('field');
+            syncNavbar();
+            initNavScroll();
+            await refreshData(true);
+            initScanner();
+        } else {
+            setTimeout(initLucky, 100);
+        }
+    }
+
+    function initNavScroll() {
+        const container = document.getElementById('nav-scroll');
+        const fLeft = document.getElementById('fade-left');
+        const fRight = document.getElementById('fade-right');
+        if(!container) return;
+        
+        const updateFades = () => {
+            const scrollLeft = container.scrollLeft;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            if(fLeft) fLeft.classList.toggle('visible', scrollLeft > 10);
+            if(fRight) fRight.classList.toggle('visible', scrollLeft < maxScroll - 10);
+        };
+        
+        container.addEventListener('scroll', updateFades);
+        window.addEventListener('resize', updateFades);
+        setTimeout(updateFades, 500);
+
+        // Auto-scroll to active link
+        const active = container.querySelector('.nav-link.active');
+        if (active) {
+            container.scrollLeft = active.offsetLeft - (container.clientWidth / 2) + (active.clientWidth / 2);
+        }
+    }
+
+    // --- CUSTOM NOTIFICATION SYSTEM ---
+    window.showSapaModal = function(title, msg, icon = "✨") {
+        document.getElementById('notify-title').innerText = title;
+        document.getElementById('notify-msg').innerText = msg;
+        document.getElementById('notify-icon').innerText = icon;
+        document.getElementById('sapa-notify-modal').style.display = 'flex';
+    };
+
+    window.closeSapaModal = function() {
+        document.getElementById('sapa-notify-modal').style.display = 'none';
+    };
+
+    let masterData = [];
+    let isSpinning = false;
+    let html5QrScanner = null;
+    let lastScannedGuest = null;
+
+    const getActiveSession = () => {
+        const session = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
+        const parsed = session ? JSON.parse(session) : null;
+        if (window.CURRENT_SS_ID) {
+            if (!parsed) return { ssId: window.CURRENT_SS_ID };
+            parsed.ssId = window.CURRENT_SS_ID;
+        }
+        return parsed;
+    };
+
+    window.logout = function() {
+        if(confirm("Apakah Anda yakin ingin keluar?")) {
+            sessionStorage.removeItem('sapatamu_session');
+            window.location.href = "login.html";
+        }
+    };
+
+    window.toggleFullScreen = function() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            document.getElementById('fs-icon').innerHTML = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
+        } else {
+            document.exitFullscreen();
+            document.getElementById('fs-icon').innerHTML = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
+        }
+    };
+
+    async function refreshData(showLoader = false) {
+        const session = getActiveSession();
+        if(!session || !session.ssId) {
+            window.location.href = "login.html";
+            return;
+        }
+
+        document.getElementById('user-display').innerText = "CLIENT: " + (session.username || session.clientName || "USER");
+
+        if(showLoader) document.getElementById('loading').style.display = 'flex';
+        try {
+            const SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+            const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + session.ssId + "&order=row.desc";
+            const response = await fetch(supabaseUrl, {
+                headers: {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY
+                }
+            });
+            const sbData = await response.json();
+            
+            // Map data snake_case Supabase ke format camelCase frontend
+            masterData = (sbData || []).map(item => ({
+                row: item.row,
+                nama: item.nama,
+                whatsapp: item.whatsapp,
+                kategori: item.kategori,
+                kode: item.kode,
+                barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
+                rencanaHadir: item.rencana_hadir,
+                statusHadir: String(item.status_hadir),
+                jamDatang: item.jam_datang,
+                souvenir: item.souvenir,
+                pihakPengundang: item.pihak_pengundang,
+                alamat: item.alamat,
+                realHadir: item.real_hadir,
+                statusWA: item.status_wa,
+                statusHadiah: item.status_hadiah,
+                statusUndian: item.status_undian || "-",
+                tandaKasih: item.tanda_kasih,
+                sesi: item.sesi
+            }));
+            
+            updatePoolStats();
+            renderWinnerHistory(); 
+        } catch (e) { 
+            console.error("Sinkron gagal:", e); 
+        } finally { 
+            if(showLoader) document.getElementById('loading').style.display = 'none'; 
+        }
+    }
+
+    function updatePoolStats() {
+        // Hanya tamu yang SUDAH HADIR (status_hadir = "1") yang masuk pool
+        const hadir = masterData.filter(g => String(g.statusHadir).trim() === "1");
+        
+        const valid = hadir.filter(g => {
+            const undian = String(g.statusUndian || "").toUpperCase();
+            return !undian.includes("WINNER");
+        }); 
+        
+        document.getElementById('stat-total-hadir').innerText = hadir.length;
+        document.getElementById('stat-valid').innerText = valid.length;
+    }
+
+    function renderWinnerHistory() {
+        const container = document.getElementById('winner-history-list');
+        container.innerHTML = "";
+        const winners = masterData.filter(g => {
+            const undian = String(g.statusUndian || "").toUpperCase();
+            return undian.includes("WINNER");
+        });
+        
+        winners.forEach(g => {
+            const html = `<div class="winner-item">
+                <div class="winner-info">
+                    <div class="winner-main">${g.nama}</div>
+                    <div class="winner-sub">${g.kode} • Status: ${g.statusUndian}</div>
+                </div>
+                <span class="badge-done">LUCKY WINNER</span>
+            </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+        document.getElementById('win-count').innerText = winners.length + " PEMENANG";
+    }
+
+    window.runLuckyDraw = function() {
+        if(isSpinning) return;
+        
+        // Filter HANYA tamu yang status_hadir === "1" (konfirmasi hadir) dan belum menang
+        const validCandidates = masterData.filter(g => {
+            const isHadir = String(g.statusHadir).trim() === "1";
+            const isNoGift = !String(g.statusUndian || "").toUpperCase().includes("WINNER");
+            return isHadir && isNoGift;
+        });
+        
+        if(validCandidates.length === 0) {
+            showSapaModal("Perhatian", "Tidak ada kandidat valid! Pastikan tamu sudah check-in (Status Hadir = 1) dan belum menang.", "⚠️");
+            return;
+        }
+        
+        isSpinning = true;
+        const codeDiv = document.getElementById('display-code');
+        const nameDiv = document.getElementById('display-name');
+        const btn = document.getElementById('btn-spin');
+        
+        btn.disabled = true;
+        codeDiv.classList.remove('winner-glow');
+        nameDiv.classList.remove('show');
+
+        let startTime = Date.now();
+        const spinEffect = setInterval(() => {
+            codeDiv.innerText = Math.random().toString(36).substr(2, 6).toUpperCase();
+            
+            if(Date.now() - startTime > 2500) {
+                clearInterval(spinEffect);
+                const winner = validCandidates[Math.floor(Math.random() * validCandidates.length)];
+                
+                codeDiv.innerText = winner.kode; 
+                codeDiv.classList.add('winner-glow');
+                nameDiv.innerText = winner.nama; 
+                nameDiv.classList.add('show');
+                
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.3 } });
+                
+                isSpinning = false;
+                btn.disabled = false;
+                
+                document.getElementById('manual-code').value = winner.kode;
+                manualCheck(); 
+            }
+        }, 50);
+    };
+
+    window.manualCheck = function() {
+        const val = document.getElementById('manual-code').value.trim().toUpperCase();
+        if(!val) return;
+        
+        const guest = masterData.find(g => String(g.kode).toUpperCase() === val);
+        if(guest) {
+            lastScannedGuest = guest;
+            document.getElementById('res-name').innerText = guest.nama;
+            document.getElementById('res-code').innerText = guest.kode;
+            
+            const isWinner = String(guest.statusUndian || "").toUpperCase().includes("WINNER");
+            document.getElementById('res-status-label').innerText = "Status: " + (isWinner ? "SUDAH TERKLAIM (" + guest.statusUndian + ")" : "Belum Konfirmasi");
+            
+            const btn = document.getElementById('confirm-btn');
+            btn.disabled = isWinner;
+            btn.style.background = isWinner ? "#ccc" : "var(--success)";
+            btn.innerText = isWinner ? "DATA SUDAH TERKONFIRMASI" : "KONFIRMASI PEMENANG";
+            
+            document.getElementById('scan-result-card').style.display = 'block';
+            document.getElementById('scan-result-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else { 
+            showSapaModal("Kode Tidak Valid", "Maaf, kode yang Anda masukkan tidak ditemukan di database.", "❌"); 
+        }
+    };
+
+    window.claimReward = async function() {
+        const session = getActiveSession();
+        if(!lastScannedGuest || !session) return;
+        
+        if(!confirm("Konfirmasi " + lastScannedGuest.nama + " sebagai pemenang?")) return;
+
+        document.getElementById('loading').style.display = 'flex';
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    action: "claim_lucky_draw", 
+                    kode: lastScannedGuest.kode,
+                    ssId: session.ssId
+                })
+            });
+            const result = await response.json();
+            
+            if(result.status === "success") {
+                showSapaModal("Selamat!", "Pemenang resmi dicatat di Spreadsheet. Semoga beruntung!", "🎉");
+                document.getElementById('scan-result-card').style.display = 'none';
+                document.getElementById('manual-code').value = "";
+                await refreshData(true);
+            } else {
+                showSapaModal("Gagal", result.message || "Gagal mencatat pemenang.", "❌");
+                document.getElementById('loading').style.display = 'none';
+            }
+        } catch (e) {
+            showSapaModal("Kesalahan", "Terjadi gangguan koneksi ke server SapaTamu.", "⚠️");
+            document.getElementById('loading').style.display = 'none';
+        }
+    };
+
+    async function initScanner() {
+        if (html5QrScanner) { try { await html5QrScanner.clear(); } catch(e) {} }
+        html5QrScanner = new Html5QrcodeScanner("qr-reader", { 
+            fps: 10, 
+            qrbox: 150, 
+            aspectRatio: 1.0 
+        });
+        html5QrScanner.render((txt) => {
+            document.getElementById('manual-code').value = txt;
+            manualCheck();
+        }, (err) => {
+            if (err && String(err).includes("NotReadableError")) {
+                document.getElementById('camera-error').style.display = 'block';
+            }
+        });
+    }
+
+    window.onload = () => {
+        initLucky();
+    };
+
+    function initDynamicIslandNav() {
+        const island = document.getElementById('nav-island');
+        const labelText = document.getElementById('di-label-text');
+        if (!island) return;
+        const activeLink = document.querySelector('.nav-link.active');
+        if (activeLink && labelText) labelText.textContent = activeLink.textContent.trim();
+        let collapseTimer = null;
+        function expandNav() { clearTimeout(collapseTimer); island.classList.add('di-expanded'); }
+        function scheduleCollapse(delay) {
+            clearTimeout(collapseTimer);
+            collapseTimer = setTimeout(function() { island.classList.remove('di-expanded'); }, delay || 3000);
+        }
+        island.addEventListener('mouseenter', expandNav);
+        island.addEventListener('mouseleave', function() { scheduleCollapse(3000); });
+        island.addEventListener('click', function(e) {
+            if (!island.classList.contains('di-expanded')) {
+                e.preventDefault(); expandNav(); scheduleCollapse(4000);
+            }
+        });
+        scheduleCollapse(4000);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDynamicIslandNav);
+    } else { initDynamicIslandNav(); }
+</script>
+<script src="offline-db.js"></script>
+<script src="sync-engine.js"></script>
+<script>
+(function(){
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+    window.addEventListener('online',function(){document.body.classList.remove('is-offline');});
+    window.addEventListener('offline',function(){document.body.classList.add('is-offline');});
+})();
+</script>
+<style>
+.is-offline::before{content:'⚠️ OFFLINE — Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
+@media(min-width:1024px){.is-offline::before{display:none;}}
+</style>
