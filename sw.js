@@ -69,18 +69,9 @@ self.addEventListener('fetch', (event) => {
   // Skip non-http/https requests (e.g. chrome-extension://)
   if (!url.protocol.startsWith('http')) return;
 
-  // Skip Supabase & external API calls / CDNs (always go directly to network, do not attempt background caching)
-  if (url.hostname.includes('supabase.co') ||
-      url.hostname.includes('script.google.com') ||
-      url.hostname.includes('api.qrserver.com') ||
-      url.hostname.includes('googleapis.com') ||
-      url.hostname.includes('gstatic.com') ||
-      url.hostname.includes('tailwindcss.com') ||
-      url.hostname.includes('jsdelivr.net') ||
-      url.hostname.includes('icons8.com')) {
-    event.respondWith(
-      fetch(request).catch(() => caches.match(request))
-    );
+  // Skip cross-origin requests (Google Drive, Googleusercontent, Supabase, CDNs)
+  // Biarkan browser memuatnya secara native via pipeline img-src tanpa interupsi Service Worker
+  if (url.origin !== self.location.origin) {
     return;
   }
 
