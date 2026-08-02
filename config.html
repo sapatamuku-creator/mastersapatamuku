@@ -215,17 +215,21 @@
             </header>
 
             <section class="mb-12">
-                <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <div class="flex flex-col md:flex-row gap-3 mb-4">
                     <div class="relative flex-grow">
                         <input type="text" id="new_photo" class="sapatamu-input"
-                            placeholder="Paste link foto / video MP4 / Google Drive di sini...">
-                        <button onclick="convertDriveLink()"
-                            class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-500 bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-500 hover:text-white transition-all uppercase tracking-wider">Auto-Convert
-                            Drive</button>
+                            placeholder="Paste link Google Drive atau URL media di sini...">
                     </div>
-                    <button onclick="addPhoto()" class="sapatamu-btn btn-primary whitespace-nowrap">Tambah Media</button>
+                    <button onclick="addMedia('photo')" class="sapatamu-btn bg-[#4A3F35] text-white hover:bg-[#352c25] whitespace-nowrap font-bold px-5 py-3 rounded-2xl shadow transition-all">
+                        📷 + Tambah Foto
+                    </button>
+                    <button onclick="addMedia('video')" class="sapatamu-btn bg-red-600 text-white hover:bg-red-700 whitespace-nowrap font-bold px-5 py-3 rounded-2xl shadow transition-all">
+                        🎥 + Tambah Video MP4
+                    </button>
                 </div>
-                <p class="text-[10px] text-[#8C7560]/70 mt-4 text-center italic mb-8">Tips: Masukkan URL foto (.jpg, .png) atau video MP4 (.mp4, Google Drive). Sistem akan otomatis memutarnya secara bergantian.</p>
+                <p class="text-[11px] text-[#8C7560] text-center italic mb-8">
+                    <strong>Cara Penggunaan:</strong> Paste link Google Drive / URL media, lalu klik tombol <strong>📷 + Tambah Foto</strong> atau <strong>🎥 + Tambah Video MP4</strong> sesuai tipe media yang Anda masukkan.
+                </p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -326,8 +330,42 @@
                 url.includes('.m4v') ||
                 url.includes('type=video') ||
                 url.includes('format=video') ||
-                url.includes('#video')
+                url.includes('#video') ||
+                url.includes('export=download')
             );
+        }
+
+        function addMedia(type = 'photo') {
+            const input = document.getElementById('new_photo');
+            let rawUrl = input.value.trim();
+            if (!rawUrl) {
+                alert("Silakan paste link Google Drive atau URL media terlebih dahulu.");
+                return;
+            }
+
+            const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+            const match = rawUrl.match(driveRegex);
+            let finalUrl = rawUrl;
+
+            if (match && match[1] && (rawUrl.includes("drive.google.com") || rawUrl.includes("google.com/file"))) {
+                const fileId = match[1];
+                if (type === 'video') {
+                    finalUrl = `https://drive.google.com/uc?export=download&id=${fileId}#video`;
+                } else {
+                    finalUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
+                }
+            } else if (type === 'video' && !isVideoUrl(finalUrl)) {
+                finalUrl = finalUrl + '#video';
+            }
+
+            currentPhotos.push(finalUrl);
+            input.value = "";
+            renderGallery();
+            markUnsaved();
+        }
+
+        function addPhoto() {
+            addMedia('photo');
         }
 
         function renderGallery() {
@@ -376,44 +414,11 @@
             }).join('');
         }
 
-        function addPhoto() {
-            const input = document.getElementById('new_photo');
-            const url = input.value.trim();
-            if (url) {
-                currentPhotos.push(url);
-                input.value = "";
-                renderGallery();
-                markUnsaved();
-            }
-        }
-
         function removePhoto(idx) {
-            if (confirm("Hapus foto ini dari galeri?")) {
+            if (confirm("Hapus media ini dari galeri?")) {
                 currentPhotos.splice(idx, 1);
                 renderGallery();
                 markUnsaved();
-            }
-        }
-
-        function convertDriveLink() {
-            const input = document.getElementById('new_photo');
-            let url = input.value.trim();
-            if (!url) return;
-
-            const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
-            const match = url.match(driveRegex);
-
-            if (match && match[1]) {
-                const fileId = match[1];
-                input.value = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
-                // Optional visual feedback
-                const btn = document.querySelector('button[onclick="convertDriveLink()"]');
-                btn.innerText = "SUCCESS ✓";
-                btn.className = btn.className.replace('text-blue-500', 'text-green-500').replace('bg-blue-50', 'bg-green-50');
-                setTimeout(() => {
-                    btn.innerText = "Auto-Convert Drive";
-                    btn.className = btn.className.replace('text-green-500', 'text-blue-500').replace('bg-green-50', 'bg-blue-50');
-                }, 2000);
             }
         }
 
