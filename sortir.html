@@ -1776,21 +1776,17 @@
             pin.id = `card-${file.id}`;
             pin.onclick = () => toggleClientSelection(file.id, file.name);
 
-            // wsrv.nl (Images.weserv.nl) — Free Global Image Cache & CORS Proxy powered by Cloudflare
-            // Mengubah URL Drive direct ke format CDN publik gratisan tanpa beban server Vercel Anda.
-            const driveThumb = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
-            const cdnUrl = `https://wsrv.nl/?url=${encodeURIComponent(driveThumb)}&w=800&output=webp`;
-            
-            const fallback1 = file.thumbnailLink 
-                ? file.thumbnailLink.replace(/=s\d+/, '=s800') 
-                : `https://lh3.googleusercontent.com/d/${file.id}=w800`;
-            const fallback2 = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+            // Pemuatan instan tanpa cold-start: drive.google.com/thumbnail dengan referrerpolicy="no-referrer"
+            // referrerpolicy="no-referrer" menyembunyikan header origin dari Google sehingga gambar 100% langsung muncul tanpa perlu refresh/terkena blokir CORB.
+            const primaryUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+            const fallbackWsrv = `https://wsrv.nl/?url=${encodeURIComponent(primaryUrl)}&w=800&output=webp`;
 
             pin.innerHTML = `
-                <img src="${cdnUrl}" 
+                <img src="${primaryUrl}" 
                      loading="lazy" 
+                     referrerpolicy="no-referrer"
                      alt="${file.name}"
-                     onerror="if(this.src!=='${fallback1}'){this.src='${fallback1}';}else if(this.src!=='${fallback2}'){this.src='${fallback2}';}else{this.onerror=null;}">
+                     onerror="if(!this.dataset.triedWsrv){this.dataset.triedWsrv='1';this.src='${fallbackWsrv}';}else{this.onerror=null;}">
                 <div class="pin-check-badge">✓</div>
             `;
             grid.appendChild(pin);
