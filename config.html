@@ -443,10 +443,19 @@
 
                 let mediaHtml = '';
                 if (isVideo) {
-                    if (isDriveVideo || isYT) {
+                    if (isYT) {
                         mediaHtml = `
-                            <iframe src="${previewUrl}" class="w-full h-full object-cover border-0 scale-125"></iframe>
-                            <span class="absolute top-3 left-3 bg-red-600/90 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider shadow z-10">🎥 Video ${isYT ? 'YouTube' : 'Drive'}</span>
+                            <iframe src="${previewUrl}" class="w-full h-full object-cover border-0 scale-125 pointer-events-none"></iframe>
+                            <span class="absolute top-3 left-3 bg-red-600/90 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider shadow z-10">🎥 Video YouTube</span>
+                        `;
+                    } else if (isDriveVideo && match && match[1]) {
+                        const fileId = match[1];
+                        mediaHtml = `
+                            <video autoplay muted loop playsinline class="w-full h-full object-cover">
+                                <source src="/api/drive-video?id=${fileId}" type="video/mp4">
+                                <source src="https://drive.usercontent.google.com/download?id=${fileId}&confirm=t" type="video/mp4">
+                            </video>
+                            <span class="absolute top-3 left-3 bg-red-600/90 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider shadow z-10">🎥 Video Drive</span>
                         `;
                     } else {
                         mediaHtml = `
