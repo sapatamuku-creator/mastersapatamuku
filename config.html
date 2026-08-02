@@ -350,7 +350,7 @@
             if (match && match[1] && (rawUrl.includes("drive.google.com") || rawUrl.includes("google.com/file"))) {
                 const fileId = match[1];
                 if (type === 'video') {
-                    finalUrl = `https://drive.google.com/uc?export=download&id=${fileId}#video`;
+                    finalUrl = `https://drive.google.com/file/d/${fileId}/preview#video`;
                 } else {
                     finalUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
                 }
@@ -378,12 +378,14 @@
             container.innerHTML = currentPhotos.map((url, idx) => {
                 const isVideo = isVideoUrl(url);
                 let previewUrl = url;
+                let isDriveVideo = false;
                 const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
                 const match = url.match(driveRegex);
                 if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file"))) {
                     const fileId = match[1];
                     if (isVideo) {
-                        previewUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                        isDriveVideo = true;
+                        previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
                     } else {
                         previewUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
                     }
@@ -391,10 +393,17 @@
 
                 let mediaHtml = '';
                 if (isVideo) {
-                    mediaHtml = `
-                        <video src="${previewUrl}" class="w-full h-full object-cover" autoplay muted loop playsinline></video>
-                        <span class="absolute top-3 left-3 bg-red-600/90 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider shadow z-10">🎥 Video MP4</span>
-                    `;
+                    if (isDriveVideo) {
+                        mediaHtml = `
+                            <iframe src="${previewUrl}" class="w-full h-full object-cover border-0 pointer-events-none scale-125"></iframe>
+                            <span class="absolute top-3 left-3 bg-red-600/90 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider shadow z-10">🎥 Video Drive</span>
+                        `;
+                    } else {
+                        mediaHtml = `
+                            <video src="${previewUrl}" class="w-full h-full object-cover" autoplay muted loop playsinline></video>
+                            <span class="absolute top-3 left-3 bg-red-600/90 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider shadow z-10">🎥 Video MP4</span>
+                        `;
+                    }
                 } else {
                     mediaHtml = `
                         <img src="${previewUrl}" onerror="this.src='https://via.placeholder.com/800x450?text=Invalid+Image+URL'" alt="Background ${idx + 1}" class="w-full h-full object-cover">
