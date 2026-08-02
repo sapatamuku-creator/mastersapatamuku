@@ -1059,20 +1059,19 @@
                 const match = rawUrl.match(driveRegex);
                 let finalUrl = rawUrl;
                 let isDriveVideo = false;
-                let driveFileId = null;
 
                 if (isYT) {
                     finalUrl = getYouTubeEmbedUrl(rawUrl);
                 } else if (match && match[1] && (rawUrl.includes("drive.google.com") || rawUrl.includes("google.com/file"))) {
-                    driveFileId = match[1];
+                    const driveFileId = match[1];
                     if (isVideo) {
                         isDriveVideo = true;
-                        finalUrl = `/api/drive-video?id=${driveFileId}`;
+                        finalUrl = `https://drive.google.com/file/d/${driveFileId}/preview`;
                     } else {
                         finalUrl = `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w1920`;
                     }
                 }
-                return { rawUrl, finalUrl, isVideo, isDriveVideo, isYT, driveFileId };
+                return { rawUrl, finalUrl, isVideo, isDriveVideo, isYT };
             });
 
             parsedItems.forEach((item, i) => {
@@ -1083,10 +1082,10 @@
 
                 if (item.isVideo) {
                     slideDiv.classList.add('video-slide');
-                    if (item.isYT) {
+                    if (item.isDriveVideo || item.isYT) {
                         const iframe = document.createElement('iframe');
                         iframe.src = item.finalUrl;
-                        iframe.className = "w-full h-full object-cover pointer-events-none scale-125 border-0";
+                        iframe.className = "w-full h-full object-cover border-0 scale-125";
                         iframe.allow = "autoplay; encrypted-media";
                         slideDiv.appendChild(iframe);
                     } else {
@@ -1097,16 +1096,7 @@
                         videoEl.playsInline = true;
                         videoEl.preload = "auto";
                         videoEl.className = "w-full h-full object-cover pointer-events-none";
-
-                        if (item.isDriveVideo) {
-                            videoEl.innerHTML = `
-                                <source src="/api/drive-video?id=${item.driveFileId}" type="video/mp4">
-                                <source src="https://drive.usercontent.google.com/download?id=${item.driveFileId}&confirm=t" type="video/mp4">
-                            `;
-                        } else {
-                            videoEl.src = item.finalUrl;
-                        }
-
+                        videoEl.src = item.finalUrl;
                         slideDiv.appendChild(videoEl);
                     }
                 } else {
