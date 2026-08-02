@@ -492,7 +492,6 @@
             padding: 0 calc(50vw - 50%);
         }
 
-        /* Pin card — all cards grow proportionally to fill row */
         .pin-card {
             position: relative;
             cursor: pointer;
@@ -500,6 +499,8 @@
             flex: 1 1 auto;
             min-width: 100px;
             overflow: hidden;
+            background-color: #F0E6DE;
+            border-radius: 6px;
         }
         .pin-card img {
             width: 100%;
@@ -507,7 +508,11 @@
             display: block;
             object-fit: cover;
             image-rendering: -webkit-optimize-contrast;
-            transition: filter 0.2s ease;
+            opacity: 0;
+            transition: opacity 0.3s ease, filter 0.2s ease;
+        }
+        .pin-card img.loaded {
+            opacity: 1;
         }
         .pin-card.selected img {
             filter: brightness(0.72);
@@ -1753,6 +1758,8 @@
     // View mode — always pinterest
     store.viewMode = 'pinterest';
 
+    let photoObserver = null;
+
     function renderClientPhotosGrid() {
         const grid = document.getElementById('culling-photos-grid');
         grid.innerHTML = '';
@@ -1771,49 +1778,81 @@
             return;
         }
 
-        filtered.forEach(file => {
+        if (photoObserver) {
+            photoObserver.disconnect();
+        }
+
+        if ('IntersectionObserver' in window) {
+            photoObserver = new IntersectionObserver((entries, obs) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        if (img.dataset.src) {
+                            img.src = img.dataset.src;
+                            delete img.dataset.src;
+                        }
+                        obs.unobserve(img);
+                    }
+                });
+            }, { rootMargin: '300px 0px' });
+        }
+
+        filtered.forEach((file, index) => {
             const isSelected = store.cullingSelections.has(file.id);
             const pin = document.createElement('div');
             pin.className = `pin-card ${isSelected ? 'selected' : ''}`;
             pin.id = `card-${file.id}`;
             pin.onclick = () => toggleClientSelection(file.id, file.name);
 
-            const cdnUrl = `https://lh3.googleusercontent.com/d/${file.id}=w800`;
-            const altUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+            // Primary URL: Signed thumbnailLink dari Google Drive API jika ada, atau official thumbnail endpoint
+            const signedLink = file.thumbnailLink 
+                ? file.thumbnailLink.replace(/=s\d+/, '=w800') 
+                : null;
+            const primaryUrl = signedLink || `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
 
-            pin.innerHTML = `
-                <img src="${cdnUrl}" 
-                     loading="lazy" 
-                     alt="${file.name}"
-                     data-id="${file.id}"
-                     onerror="handleImgError(this)">
-                <div class="pin-check-badge">✓</div>
-            `;
+            const img = document.createElement('img');
+            img.alt = file.name;
+            img.dataset.id = file.id;
+            img.setAttribute('referrerpolicy', 'no-referrer');
+            
+            img.onload = function() {
+                this.classList.add('loaded');
+            };
+            img.onerror = function() {
+                handleImgError(this);
+            };
+
+            // Load 12 foto pertama langsung, sisa foto diload bertahap via IntersectionObserver
+            if (photoObserver && index >= 12) {
+                img.dataset.src = primaryUrl;
+                photoObserver.observe(img);
+            } else {
+                img.src = primaryUrl;
+            }
+
+            pin.appendChild(img);
+
+            const badge = document.createElement('div');
+            badge.className = 'pin-check-badge';
+            badge.innerText = '✓';
+            pin.appendChild(badge);
+
             grid.appendChild(pin);
         });
     }
 
     window.handleImgError = function(img) {
-        let retries = parseInt(img.dataset.retries || '0');
         const fileId = img.dataset.id;
-        
-        if (retries < 3) {
-            img.dataset.retries = retries + 1;
-            setTimeout(() => {
-                if (retries % 2 === 0) {
-                    img.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800&t=` + Date.now();
-                } else {
-                    img.src = `https://lh3.googleusercontent.com/d/${fileId}=w800?t=` + Date.now();
-                }
-            }, 600);
+        let stage = parseInt(img.dataset.errorStage || '0');
+
+        if (stage === 0) {
+            img.dataset.errorStage = '1';
+            img.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+        } else if (stage === 1) {
+            img.dataset.errorStage = '2';
+            img.src = `https://lh3.googleusercontent.com/d/${fileId}=w800`;
         } else {
-            // Auto Page Soft Reload sekali jika browser memblokir total koneksi pertama
-            if (!sessionStorage.getItem('sortir_auto_reloaded')) {
-                sessionStorage.setItem('sortir_auto_reloaded', 'true');
-                setTimeout(() => {
-                    window.location.reload(true);
-                }, 500);
-            }
+            img.onerror = null;
         }
     };
 
