@@ -210,24 +210,22 @@
             <header class="text-center mb-12">
                 <span class="text-xs font-black tracking-[4px] uppercase text-[#C8962E]/60 mb-2 block">Display
                     Configuration</span>
-                <h1 class="text-4xl font-extrabold text-[#4A3F35]">Gallery Background</h1>
-                <p class="text-[#8C7560] mt-3 text-sm font-medium">Kelola koleksi foto untuk slideshow Welcome Sign
-                    Anda.</p>
+                <h1 class="text-4xl font-extrabold text-[#4A3F35]">Gallery & Video Background</h1>
+                <p class="text-[#8C7560] mt-3 text-sm font-medium">Kelola koleksi foto & video MP4 untuk slideshow sinematik Welcome Sign Anda.</p>
             </header>
 
             <section class="mb-12">
                 <div class="flex flex-col md:flex-row gap-4 mb-6">
                     <div class="relative flex-grow">
                         <input type="text" id="new_photo" class="sapatamu-input"
-                            placeholder="Paste link foto / Google Drive di sini...">
+                            placeholder="Paste link foto / video MP4 / Google Drive di sini...">
                         <button onclick="convertDriveLink()"
                             class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-500 bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-500 hover:text-white transition-all uppercase tracking-wider">Auto-Convert
                             Drive</button>
                     </div>
-                    <button onclick="addPhoto()" class="sapatamu-btn btn-primary whitespace-nowrap">Tambah Foto</button>
+                    <button onclick="addPhoto()" class="sapatamu-btn btn-primary whitespace-nowrap">Tambah Media</button>
                 </div>
-                <p class="text-[10px] text-[#8C7560]/70 mt-4 text-center italic mb-8">Tips: Gunakan link Google Drive
-                    yang sudah diset "Anyone with the link can view" dan klik tombol Auto-Convert.</p>
+                <p class="text-[10px] text-[#8C7560]/70 mt-4 text-center italic mb-8">Tips: Masukkan URL foto (.jpg, .png) atau video MP4 (.mp4, Google Drive). Sistem akan otomatis memutarnya secara bergantian.</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -318,28 +316,60 @@
             }
         }
 
+        function isVideoUrl(rawUrl) {
+            if (!rawUrl) return false;
+            const url = rawUrl.toLowerCase();
+            return (
+                url.includes('.mp4') ||
+                url.includes('.webm') ||
+                url.includes('.mov') ||
+                url.includes('.m4v') ||
+                url.includes('type=video') ||
+                url.includes('format=video') ||
+                url.includes('#video')
+            );
+        }
+
         function renderGallery() {
             const container = document.getElementById('photo_gallery');
             if (currentPhotos.length === 0) {
-                container.innerHTML = '<div class="col-span-full py-12 text-center text-gray-400 font-medium italic">Koleksi foto kosong.</div>';
+                container.innerHTML = '<div class="col-span-full py-12 text-center text-gray-400 font-medium italic">Koleksi media (foto/video) kosong.</div>';
                 return;
             }
 
             container.innerHTML = currentPhotos.map((url, idx) => {
-                // Fix URL on the fly for preview
+                const isVideo = isVideoUrl(url);
                 let previewUrl = url;
                 const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
                 const match = url.match(driveRegex);
                 if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file"))) {
-                    previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1920`;
+                    const fileId = match[1];
+                    if (isVideo) {
+                        previewUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                    } else {
+                        previewUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
+                    }
+                }
+
+                let mediaHtml = '';
+                if (isVideo) {
+                    mediaHtml = `
+                        <video src="${previewUrl}" class="w-full h-full object-cover" autoplay muted loop playsinline></video>
+                        <span class="absolute top-3 left-3 bg-red-600/90 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider shadow z-10">🎥 Video MP4</span>
+                    `;
+                } else {
+                    mediaHtml = `
+                        <img src="${previewUrl}" onerror="this.src='https://via.placeholder.com/800x450?text=Invalid+Image+URL'" alt="Background ${idx + 1}" class="w-full h-full object-cover">
+                        <span class="absolute top-3 left-3 bg-black/60 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider shadow z-10">📷 Foto</span>
+                    `;
                 }
 
                 return `
-                <div class="photo-card group">
-                    <img src="${previewUrl}" onerror="this.src='https://via.placeholder.com/800x450?text=Invalid+Image+URL'" alt="Background ${idx + 1}">
+                <div class="photo-card group relative overflow-hidden rounded-2xl border border-[#F0E6DE] aspect-video">
+                    ${mediaHtml}
                     <div class="delete-btn" onclick="removePhoto(${idx})">×</div>
-                    <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p class="text-[9px] text-white/80 font-medium truncate">${url}</p>
+                    <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p class="text-[9px] text-white/90 font-medium truncate">${url}</p>
                     </div>
                 </div>
             `;

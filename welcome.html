@@ -166,6 +166,13 @@
             z-index: 3;
         }
 
+        .slide video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+
         .content-wrapper {
             position: relative;
             z-index: 10;
@@ -991,65 +998,149 @@
             }
         }
 
-        let currentPhotos = [];
+        let currentMediaList = [];
         let slideIdx = 0;
-        let slideInterval;
+        let slideTimer = null;
 
-        function initSlideshow(urls) {
-            // Auto-fix Google Drive links to direct thumbnail links for reliability
-            urls = urls.map(url => {
-                const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
-                const match = url.match(driveRegex);
-                if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file"))) {
-                    return `https://lh3.googleusercontent.com/d/${match[1]}=w1920`;
-                }
-                return url;
-            });
+        function isVideoUrl(rawUrl) {
+            if (!rawUrl) return false;
+            const url = rawUrl.toLowerCase();
+            return (
+                url.includes('.mp4') ||
+                url.includes('.webm') ||
+                url.includes('.mov') ||
+                url.includes('.m4v') ||
+                url.includes('type=video') ||
+                url.includes('format=video') ||
+                url.includes('#video')
+            );
+        }
 
-            // Only re-init if the photo list actually changed
-            const newStr = urls.join(",");
-            if (newStr === currentPhotos.join(",")) return;
-            currentPhotos = urls;
+        function initSlideshow(rawUrls) {
+            if (!rawUrls || !Array.isArray(rawUrls)) rawUrls = [];
 
-            console.log("Slideshow initialized with:", urls);
+            const urls = rawUrls.map(u => String(u).trim()).filter(u => u !== "");
+            const newKey = urls.join(",");
+            if (newKey === currentMediaList.join(",")) return;
+            currentMediaList = urls;
+
+            console.log("🎬 Hybrid Carousel initialized with:", urls);
 
             const container = document.getElementById('slideshow-container');
             container.innerHTML = "";
-            clearInterval(slideInterval);
+            clearTimeout(slideTimer);
 
-            if (!urls || urls.length === 0) {
+            if (urls.length === 0) {
                 container.style.background = `linear-gradient(135deg, #1A1A24 0%, #0F0F14 100%)`;
                 return;
             }
 
-            urls.forEach((url, i) => {
-                const div = document.createElement('div');
-                div.className = `slide ${i === 0 ? 'active' : ''}`;
-                
-                // Preload image to test if valid
-                const img = new Image();
-                img.onload = () => {
-                    div.style.backgroundImage = `url('${url}')`;
-                };
-                img.onerror = () => {
-                    // Fallback to elegant dark gradient background if image fails to load
-                    div.style.background = `linear-gradient(135deg, #1A1A24 0%, #0F0F14 100%)`;
-                };
-                img.src = url;
+            const parsedItems = urls.map((rawUrl) => {
+                const isVideo = isVideoUrl(rawUrl);
+                const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+                const match = rawUrl.match(driveRegex);
+                let finalUrl = rawUrl;
 
-                container.appendChild(div);
+                if (match && match[1] && (rawUrl.includes("drive.google.com") || rawUrl.includes("google.com/file"))) {
+                    const fileId = match[1];
+                    if (isVideo) {
+                        finalUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                    } else {
+                        finalUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
+                    }
+                }
+                return { rawUrl, finalUrl, isVideo };
             });
 
-            if (urls.length > 1) {
-                slideIdx = 0;
-                slideInterval = setInterval(() => {
-                    const slides = document.querySelectorAll('.slide');
-                    if (slides.length < 2) return;
-                    slides[slideIdx].classList.remove('active');
-                    slideIdx = (slideIdx + 1) % slides.length;
-                    slides[slideIdx].classList.add('active');
-                }, 11000);
+            parsedItems.forEach((item, i) => {
+                const slideDiv = document.createElement('div');
+                slideDiv.className = `slide ${i === 0 ? 'active' : ''}`;
+                slideDiv.dataset.index = i;
+                slideDiv.dataset.isVideo = item.isVideo ? "true" : "false";
+
+                if (item.isVideo) {
+                    slideDiv.classList.add('video-slide');
+                    const videoEl = document.createElement('video');
+                    videoEl.autoplay = true;
+                    videoEl.muted = true;
+                    videoEl.playsInline = true;
+                    videoEl.preload = "metadata";
+                    videoEl.className = "w-full h-full object-cover pointer-events-none";
+                    videoEl.src = item.finalUrl;
+
+                    slideDiv.appendChild(videoEl);
+                } else {
+                    slideDiv.classList.add('photo-slide');
+                    const img = new Image();
+                    img.onload = () => {
+                        slideDiv.style.backgroundImage = `url('${item.finalUrl}')`;
+                    };
+                    img.onerror = () => {
+                        slideDiv.style.background = `linear-gradient(135deg, #1A1A24 0%, #0F0F14 100%)`;
+                    };
+                    img.src = item.finalUrl;
+                }
+
+                container.appendChild(slideDiv);
+            });
+
+            slideIdx = 0;
+            playCurrentSlide();
+        }
+
+        function playCurrentSlide() {
+            clearTimeout(slideTimer);
+            const slides = document.querySelectorAll('#slideshow-container .slide');
+            if (!slides || slides.length === 0) return;
+
+            slides.forEach((s, idx) => {
+                const video = s.querySelector('video');
+                if (idx === slideIdx) {
+                    s.classList.add('active');
+                    if (video) {
+                        video.currentTime = 0;
+                        const playPromise = video.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(e => console.warn("Auto-play video notice:", e));
+                        }
+                    }
+                } else {
+                    s.classList.remove('active');
+                    if (video) {
+                        video.pause();
+                    }
+                }
+            });
+
+            if (slides.length <= 1) return;
+
+            const currentSlide = slides[slideIdx];
+            const isVideo = currentSlide.dataset.isVideo === "true";
+            const videoEl = currentSlide.querySelector('video');
+
+            if (isVideo && videoEl) {
+                let durationMs = 15000;
+                const onEnded = () => {
+                    videoEl.removeEventListener('ended', onEnded);
+                    advanceSlide();
+                };
+                videoEl.addEventListener('ended', onEnded, { once: true });
+
+                if (!isNaN(videoEl.duration) && videoEl.duration > 0) {
+                    durationMs = Math.min(videoEl.duration * 1000, 30000);
+                }
+                slideTimer = setTimeout(advanceSlide, durationMs);
+            } else {
+                // Photo slide display duration: 8 seconds
+                slideTimer = setTimeout(advanceSlide, 8000);
             }
+        }
+
+        function advanceSlide() {
+            const slides = document.querySelectorAll('#slideshow-container .slide');
+            if (slides.length < 2) return;
+            slideIdx = (slideIdx + 1) % slides.length;
+            playCurrentSlide();
         }
 
         window.toggleFS = function () {
