@@ -299,24 +299,54 @@
             const gallery = document.getElementById('photo_gallery');
             gallery.innerHTML = '<div class="col-span-full h-40 loading-shimmer rounded-3xl"></div>';
 
+            let loaded = false;
+            const ssId = window.CURRENT_SS_ID;
+
+            // Fast path: load from Supabase config_welcome (<300ms)
             try {
-                const response = await fetch(window.SCRIPT_URL + "?action=getSettings&ssId=" + window.CURRENT_SS_ID);
-                const res = await response.json();
-                if (res.status === "success") {
-                    if (res.data.urlFoto) {
-                        currentPhotos = res.data.urlFoto.split(",").map(url => url.trim()).filter(url => url !== "");
-                        renderGallery();
-                    } else {
-                        gallery.innerHTML = '<div class="col-span-full py-12 text-center text-gray-400 font-medium italic">Belum ada foto. Silakan tambahkan foto pertama Anda.</div>';
+                if (ssId && window.SB_URL && window.SB_KEY) {
+                    const sbRes = await fetch(
+                        `${SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data&limit=1`,
+                        { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                    );
+                    if (sbRes.ok) {
+                        const rows = await sbRes.json();
+                        if (rows && rows.length > 0 && rows[0].data) {
+                            const data = rows[0].data;
+                            if (data.urlFoto) {
+                                currentPhotos = data.urlFoto.split(",").map(url => url.trim()).filter(url => url !== "");
+                                renderGallery();
+                            } else {
+                                gallery.innerHTML = '<div class="col-span-full py-12 text-center text-gray-400 font-medium italic">Belum ada media. Silakan tambahkan media pertama Anda.</div>';
+                            }
+                            if (data.teksSambutan1) document.getElementById('teks_sambutan_1').value = data.teksSambutan1;
+                            if (data.teksSambutan2) document.getElementById('teks_sambutan_2').value = data.teksSambutan2;
+                            loaded = true;
+                        }
                     }
-                    if (res.data.teksSambutan1) document.getElementById('teks_sambutan_1').value = res.data.teksSambutan1;
-                    if (res.data.teksSambutan2) document.getElementById('teks_sambutan_2').value = res.data.teksSambutan2;
-                } else {
-                    throw new Error(res.message || "Gagal memuat pengaturan");
                 }
             } catch (e) {
-                console.error("Load Gagal:", e);
-                gallery.innerHTML = '<div class="col-span-full py-12 text-center text-red-400 font-bold">Gagal memuat data dari server.</div>';
+                console.warn("Supabase loadGallery notice:", e);
+            }
+
+            if (!loaded) {
+                try {
+                    const response = await fetch(window.SCRIPT_URL + "?action=getSettings&ssId=" + ssId);
+                    const res = await response.json();
+                    if (res.status === "success" && res.data) {
+                        if (res.data.urlFoto) {
+                            currentPhotos = res.data.urlFoto.split(",").map(url => url.trim()).filter(url => url !== "");
+                            renderGallery();
+                        } else {
+                            gallery.innerHTML = '<div class="col-span-full py-12 text-center text-gray-400 font-medium italic">Belum ada foto/video. Silakan tambahkan media pertama Anda.</div>';
+                        }
+                        if (res.data.teksSambutan1) document.getElementById('teks_sambutan_1').value = res.data.teksSambutan1;
+                        if (res.data.teksSambutan2) document.getElementById('teks_sambutan_2').value = res.data.teksSambutan2;
+                    }
+                } catch (e) {
+                    console.error("Load Gagal:", e);
+                    gallery.innerHTML = '<div class="col-span-full py-12 text-center text-red-400 font-bold">Gagal memuat data dari server.</div>';
+                }
             }
         }
 
@@ -457,30 +487,78 @@
             btn.disabled = true;
             btn.innerText = "SEDANG SINKRONISASI...";
 
-            const payload = {
-                action: "saveWelcomePhotos",
-                ssId: window.CURRENT_SS_ID,
-                urlFoto: currentPhotos.join(","),
-                teks1: document.getElementById('teks_sambutan_1').value.trim(),
-                teks2: document.getElementById('teks_sambutan_2').value.trim()
-            };
+            const ssId = window.CURRENT_SS_ID;
+            const urlFoto = currentPhotos.join(",");
+            const teks1 = document.getElementById('teks_sambutan_1').value.trim();
+            const teks2 = document.getElementById('teks_sambutan_2').value.trim();
 
+            let sbSuccess = false;
+
+            // 1. Direct Update Supabase config_welcome table for INSTANT <300ms sync with welcome.html
             try {
+                if (ssId && window.SB_URL && window.SB_KEY) {
+                    const getRes = await fetch(
+                        `${SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data`,
+                        { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                    );
+                    let existingData = {};
+                    if (getRes.ok) {
+                        const rows = await getRes.json();
+                        if (rows && rows.length > 0 && rows[0].data) existingData = rows[0].data;
+                    }
+
+                    existingData.urlFoto = urlFoto;
+                    existingData.teksSambutan1 = teks1;
+                    existingData.teksSambutan2 = teks2;
+
+                    const upsertRes = await fetch(`${SB_URL}/rest/v1/config_welcome`, {
+                        method: "POST",
+                        headers: {
+                            "apikey": SB_KEY,
+                            "Authorization": "Bearer " + SB_KEY,
+                            "Content-Type": "application/json",
+                            "Prefer": "resolution=merge-duplicates"
+                        },
+                        body: JSON.stringify({ ssid: ssId, data: existingData, updated_at: new Date().toISOString() })
+                    });
+                    if (upsertRes.ok) {
+                        sbSuccess = true;
+                        console.log("⚡ Supabase config_welcome updated instantly!");
+                    }
+                }
+            } catch (sbErr) {
+                console.warn("Supabase direct save notice:", sbErr);
+            }
+
+            // 2. Backup Update to GAS
+            try {
+                const payload = {
+                    action: "saveWelcomePhotos",
+                    ssId: ssId,
+                    urlFoto: urlFoto,
+                    teks1: teks1,
+                    teks2: teks2
+                };
                 const res = await fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
                 const data = await res.json();
-                if (data.status === "success") {
-                    status.innerText = "Berhasil disimpan ke server Google.";
+                if (data.status === "success" || sbSuccess) {
+                    status.innerText = "Berhasil disimpan & disinkronkan ke TV!";
                     status.className = "text-xs font-semibold text-green-500";
                     setTimeout(() => {
                         status.innerText = "Siap untuk sinkronisasi.";
                     }, 3000);
                 } else {
-                    throw new Error(data.message);
+                    throw new Error(data.message || "Gagal simpan");
                 }
             } catch (e) {
-                showSapaModal("Gagal", "Gagal menyimpan: " + e.toString(), "❌");
-                status.innerText = "Gagal menyimpan!";
-                status.className = "text-xs font-semibold text-red-500";
+                if (sbSuccess) {
+                    status.innerText = "Berhasil disimpan ke Supabase TV!";
+                    status.className = "text-xs font-semibold text-green-500";
+                } else {
+                    showSapaModal("Gagal", "Gagal menyimpan: " + e.toString(), "❌");
+                    status.innerText = "Gagal menyimpan!";
+                    status.className = "text-xs font-semibold text-red-500";
+                }
             }
             btn.disabled = false;
             btn.innerText = "Simpan ke Server";
