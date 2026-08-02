@@ -1680,6 +1680,7 @@
     // ----------------------------------------------------
     async function initCullingView(slug) {
         document.getElementById('view-culling').style.display = 'block';
+        sessionStorage.removeItem('sortir_auto_reloaded');
         
         // Hide loaders/errors
         document.getElementById('culling-loading-grid').style.display = 'grid';
@@ -1784,20 +1785,37 @@
                 <img src="${cdnUrl}" 
                      loading="lazy" 
                      alt="${file.name}"
-                     onerror="
-                        let retries = parseInt(this.dataset.retries || '0');
-                        if (retries < 3) {
-                            this.dataset.retries = retries + 1;
-                            setTimeout(() => {
-                                this.src = (retries % 2 === 0 ? '${altUrl}' : '${cdnUrl}') + '&retry=' + Date.now();
-                            }, 800);
-                        }
-                     ">
+                     data-id="${file.id}"
+                     onerror="handleImgError(this)">
                 <div class="pin-check-badge">✓</div>
             `;
             grid.appendChild(pin);
         });
     }
+
+    window.handleImgError = function(img) {
+        let retries = parseInt(img.dataset.retries || '0');
+        const fileId = img.dataset.id;
+        
+        if (retries < 3) {
+            img.dataset.retries = retries + 1;
+            setTimeout(() => {
+                if (retries % 2 === 0) {
+                    img.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800&t=` + Date.now();
+                } else {
+                    img.src = `https://lh3.googleusercontent.com/d/${fileId}=w800?t=` + Date.now();
+                }
+            }, 600);
+        } else {
+            // Auto Page Soft Reload sekali jika browser memblokir total koneksi pertama
+            if (!sessionStorage.getItem('sortir_auto_reloaded')) {
+                sessionStorage.setItem('sortir_auto_reloaded', 'true');
+                setTimeout(() => {
+                    window.location.reload(true);
+                }, 500);
+            }
+        }
+    };
 
 
 
