@@ -1778,8 +1778,21 @@
             pin.onclick = () => toggleClientSelection(file.id, file.name);
 
             const cdnUrl = `https://lh3.googleusercontent.com/d/${file.id}=w800`;
+            const altUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+
             pin.innerHTML = `
-                <img src="${cdnUrl}" loading="lazy" alt="${file.name}">
+                <img src="${cdnUrl}" 
+                     loading="lazy" 
+                     alt="${file.name}"
+                     onerror="
+                        let retries = parseInt(this.dataset.retries || '0');
+                        if (retries < 3) {
+                            this.dataset.retries = retries + 1;
+                            setTimeout(() => {
+                                this.src = (retries % 2 === 0 ? '${altUrl}' : '${cdnUrl}') + '&retry=' + Date.now();
+                            }, 800);
+                        }
+                     ">
                 <div class="pin-check-badge">✓</div>
             `;
             grid.appendChild(pin);
