@@ -1776,11 +1776,15 @@
             pin.id = `card-${file.id}`;
             pin.onclick = () => toggleClientSelection(file.id, file.name);
 
-            const cdnUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+            // wsrv.nl (Images.weserv.nl) — Free Global Image Cache & CORS Proxy powered by Cloudflare
+            // Mengubah URL Drive direct ke format CDN publik gratisan tanpa beban server Vercel Anda.
+            const driveThumb = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+            const cdnUrl = `https://wsrv.nl/?url=${encodeURIComponent(driveThumb)}&w=800&output=webp`;
+            
             const fallback1 = file.thumbnailLink 
                 ? file.thumbnailLink.replace(/=s\d+/, '=s800') 
                 : `https://lh3.googleusercontent.com/d/${file.id}=w800`;
-            const fallback2 = `https://drive.google.com/uc?export=view&id=${file.id}`;
+            const fallback2 = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
 
             pin.innerHTML = `
                 <img src="${cdnUrl}" 
