@@ -1776,17 +1776,9 @@
             pin.id = `card-${file.id}`;
             pin.onclick = () => toggleClientSelection(file.id, file.name);
 
-            // Pemuatan instan tanpa cold-start: drive.google.com/thumbnail dengan referrerpolicy="no-referrer"
-            // referrerpolicy="no-referrer" menyembunyikan header origin dari Google sehingga gambar 100% langsung muncul tanpa perlu refresh/terkena blokir CORB.
-            const primaryUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
-            const fallbackWsrv = `https://wsrv.nl/?url=${encodeURIComponent(primaryUrl)}&w=800&output=webp`;
-
+            const cdnUrl = `https://lh3.googleusercontent.com/d/${file.id}=w800`;
             pin.innerHTML = `
-                <img src="${primaryUrl}" 
-                     loading="lazy" 
-                     referrerpolicy="no-referrer"
-                     alt="${file.name}"
-                     onerror="if(!this.dataset.triedWsrv){this.dataset.triedWsrv='1';this.src='${fallbackWsrv}';}else{this.onerror=null;}">
+                <img src="${cdnUrl}" loading="lazy" alt="${file.name}">
                 <div class="pin-check-badge">✓</div>
             `;
             grid.appendChild(pin);
