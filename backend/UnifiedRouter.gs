@@ -71,6 +71,8 @@ function doPost(e) {
       case 'sendOTP':
       case 'savePendingClient':
       case 'registerAndActivate':
+      case 'sendOwnerOtp':
+      case 'verifyOwnerOtp':
       case 'getOwnerClients':
       case 'updateOwnerClient':
       case 'deleteOwnerClient':
