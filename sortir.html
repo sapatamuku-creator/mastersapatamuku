@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="theme-color" content="#C8962E">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
@@ -1779,13 +1780,10 @@
             pin.id = `card-${file.id}`;
             pin.onclick = () => toggleClientSelection(file.id, file.name);
 
-            // Primary URL: Signed thumbnailLink dari Google Drive API jika ada (scaled =s800)
-            const signedLink = file.thumbnailLink 
-                ? file.thumbnailLink.replace(/=s\d+/, '=s800') 
-                : null;
-            const primaryUrl = signedLink || `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
-            const altUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
-            const altUrl2 = `https://lh3.googleusercontent.com/d/${file.id}=w800`;
+            // Endpoint resmi drive.google.com/thumbnail yang menyajikan binary JPEG langsung (bebas 302 redirect & net::ERR_FAILED CORB Chromium)
+            const primaryUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+            const altUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=s800`;
+            const altUrl2 = `https://drive.google.com/uc?export=view&id=${file.id}`;
 
             pin.innerHTML = `
                 <img src="${primaryUrl}" 
