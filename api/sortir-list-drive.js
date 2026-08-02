@@ -10,7 +10,7 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 // Helper: fetch one page of Drive files with given query
 async function driveList(q, pageToken = null) {
-  const fields = 'nextPageToken,files(id,name,mimeType,parents,thumbnailLink)';
+  const fields = 'nextPageToken,files(id,name,mimeType,parents)';
   let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&key=${GOOGLE_API_KEY}&fields=${encodeURIComponent(fields)}&pageSize=1000&orderBy=name`;
   if (pageToken) url += `&pageToken=${pageToken}`;
   const res = await fetch(url);
