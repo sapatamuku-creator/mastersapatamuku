@@ -909,13 +909,18 @@
                             </p>
                         </div>
                         
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <button onclick="downloadCopyScript('windows')" id="btn-pnp-win" class="btn btn-primary" style="background: #4A3F35; box-shadow: none;">
-                                💻 Unduh Script Windows (.bat)
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <button onclick="directExportActiveSelections()" class="btn btn-primary" style="background: linear-gradient(135deg, #2E7D32, #4CAF50); border: none; box-shadow: 0 4px 14px rgba(76,175,80,0.3); font-weight: 700; padding: 12px 16px;">
+                                ⚡ Ekspor Instan via Browser (Tanpa Script)
                             </button>
-                            <button onclick="downloadCopyScript('mac')" id="btn-pnp-mac" class="btn btn-secondary">
-                                🍎 Unduh Script macOS (.command)
-                            </button>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="downloadCopyScript('windows')" id="btn-pnp-win" class="btn btn-secondary" style="flex: 1; font-size: 11px;">
+                                    💻 Script .bat
+                                </button>
+                                <button onclick="downloadCopyScript('mac')" id="btn-pnp-mac" class="btn btn-secondary" style="flex: 1; font-size: 11px;">
+                                    🍎 Script .command
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1035,12 +1040,15 @@
 
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <button onclick="wizardGo(2)" class="btn btn-secondary" style="padding: 10px 20px;">← Kembali</button>
-                    <div style="display: flex; gap: 12px;">
-                        <button onclick="downloadManualScript('windows')" id="btn-download-manual-win" class="btn btn-primary" style="background: #4A3F35; box-shadow: none;">
-                            💻 Script Windows (.bat)
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="directExportManualIndex()" class="btn btn-primary" style="background: linear-gradient(135deg, #2E7D32, #4CAF50); border: none; box-shadow: 0 4px 14px rgba(76,175,80,0.3); font-weight: 700; padding: 10px 18px;">
+                            ⚡ Ekspor Instan via Browser (Tanpa Script)
                         </button>
-                        <button onclick="downloadManualScript('mac')" id="btn-download-manual-mac" class="btn btn-secondary">
-                            🍎 Script macOS (.command)
+                        <button onclick="downloadManualScript('windows')" id="btn-download-manual-win" class="btn btn-secondary" style="font-size: 12px;">
+                            💻 Script .bat
+                        </button>
+                        <button onclick="downloadManualScript('mac')" id="btn-download-manual-mac" class="btn btn-secondary" style="font-size: 12px;">
+                            🍎 Script .command
                         </button>
                     </div>
                 </div>
@@ -1673,6 +1681,107 @@
         link.download = filename;
         link.click();
         URL.revokeObjectURL(link.href);
+    };
+
+    // ----------------------------------------------------
+    // DIRECT BROWSER EXPORT (ZERO-SCRIPT INSTANT COPY)
+    // ----------------------------------------------------
+    window.directBrowserExport = async function(fileList, subfolderName = 'Selected_by_Client') {
+        if (!fileList || fileList.length === 0) {
+            showAlert('Peringatan', 'Tidak ada daftar foto yang dapat diekspor.', '⚠️');
+            return;
+        }
+
+        if (!('showDirectoryPicker' in window)) {
+            showAlert('Browser Tidak Mendukung', 'Fitur Ekspor Instan tanpa script memerlukan browser Chrome, Edge, atau Opera versi terbaru.\n\nUntuk browser lain, silakan gunakan tombol Unduh Script (.bat / .command).', '⚠️');
+            return;
+        }
+
+        try {
+            showAlert('Pilih Folder Master', 'Silakan pilih folder master foto (RAW/JPG) di PC Anda.', '📁');
+            const sourceHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            if (!sourceHandle) return;
+
+            const destHandle = await sourceHandle.getDirectoryHandle(subfolderName, { create: true });
+
+            const cleanTargets = fileList.map(name => {
+                let s = String(name).trim();
+                if (s.includes('.')) s = s.split('.').slice(0, -1).join('.');
+                return s.toLowerCase();
+            }).filter(Boolean);
+
+            let copiedCount = 0;
+            let matchedTargets = new Set();
+
+            async function scanAndCopyDir(dirHandle) {
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file') {
+                        const fileName = entry.name;
+                        const fileNameLower = fileName.toLowerCase();
+                        const baseNameLower = fileNameLower.includes('.') 
+                            ? fileNameLower.split('.').slice(0, -1).join('.') 
+                            : fileNameLower;
+
+                        const matched = cleanTargets.find(target => {
+                            return baseNameLower.includes(target) || target.includes(baseNameLower);
+                        });
+
+                        if (matched) {
+                            try {
+                                const fileObj = await entry.getFile();
+                                const destFileHandle = await destHandle.getFileHandle(fileName, { create: true });
+                                const writable = await destFileHandle.createWritable();
+                                await writable.write(fileObj);
+                                await writable.close();
+                                copiedCount++;
+                                matchedTargets.add(matched);
+                            } catch (err) {
+                                console.error(`Gagal menyalin ${fileName}:`, err);
+                            }
+                        }
+                    } else if (entry.kind === 'directory' && entry.name !== subfolderName) {
+                        await scanAndCopyDir(entry);
+                    }
+                }
+            }
+
+            await scanAndCopyDir(sourceHandle);
+
+            const notFoundCount = cleanTargets.length - matchedTargets.size;
+
+            if (copiedCount > 0) {
+                let msg = `${copiedCount} file foto berhasil ditemukan dan disalin ke subfolder "${sourceHandle.name}\\${subfolderName}".`;
+                if (notFoundCount > 0) {
+                    msg += `\n\n⚠️ ${notFoundCount} foto dari daftar indeks tidak ditemukan di folder ini.`;
+                }
+                showAlert('Ekspor Instan Sukses! 🎉', msg, '✅');
+            } else {
+                showAlert('File Tidak Ditemukan', `Tidak ada file foto di folder "${sourceHandle.name}" yang cocok dengan daftar indeks (${cleanTargets.length} foto).\n\nPastikan Anda memilih folder master foto yang benar.`, '⚠️');
+            }
+
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                showAlert('Error Ekspor', `Gagal mengekspor file: ${err.message}`, '❌');
+            }
+        }
+    };
+
+    window.directExportActiveSelections = function() {
+        if (!store.activeEvent || store.activeSelections.length === 0) {
+            showAlert('Peringatan', 'Belum ada foto pilihan klien yang dapat diekspor.', '⚠️');
+            return;
+        }
+        const cleanNames = store.activeSelections.map(s => s.photo_name);
+        directBrowserExport(cleanNames, 'Selected_by_Client');
+    };
+
+    window.directExportManualIndex = function() {
+        if (!wizard.files || wizard.files.length === 0) {
+            showAlert('Tidak Ada File', 'Proses dulu daftar indeks klien di Langkah 1.', '📋');
+            return;
+        }
+        const subfolder = (document.getElementById('manual-subfolder-name')?.value || 'Selected_by_Client').trim();
+        directBrowserExport(wizard.files, subfolder);
     };
 
     // ----------------------------------------------------
