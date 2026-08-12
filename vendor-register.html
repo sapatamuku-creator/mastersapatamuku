@@ -115,6 +115,17 @@
           <label>Kategori Vendor *</label>
           <select id="categoryId" required>
             <option value="">Pilih Kategori...</option>
+            <option value="cat-wo">Wedding Organizer &amp; Planner</option>
+            <option value="cat-foto">Fotografi &amp; Videografi</option>
+            <option value="cat-katering">Katering (Catering)</option>
+            <option value="cat-venue">Venue &amp; Gedung Pernikahan</option>
+            <option value="cat-dekorasi">Dekorasi &amp; Florist</option>
+            <option value="cat-makeup">Rias Pengantin &amp; Gaun (Makeup &amp; Attire)</option>
+            <option value="cat-entertainment">Musik, MC &amp; Entertainment</option>
+            <option value="cat-undangan">Undangan &amp; Souvenir</option>
+            <option value="cat-jewellery">Perhiasan &amp; Cincin Kawin</option>
+            <option value="cat-photobooth">Photobooth &amp; Interactive</option>
+            <option value="cat-honeymoon">Honeymoon &amp; Travel</option>
           </select>
         </div>
         <div class="form-group">
@@ -159,13 +170,16 @@
         const res = await fetch('/api/mp/categories');
         const data = await res.json();
         const cats = Array.isArray(data) ? data : (data.categories || data.data || []);
-        const select = $('categoryId');
-        cats.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = c.id;
-          opt.textContent = c.name;
-          select.appendChild(opt);
-        });
+        if (cats && cats.length > 0) {
+          const select = $('categoryId');
+          select.innerHTML = '<option value="">Pilih Kategori...</option>';
+          cats.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.name;
+            select.appendChild(opt);
+          });
+        }
       } catch (e) {}
     }
 

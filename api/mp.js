@@ -86,23 +86,42 @@ export default async function handler(req, res) {
       // ── 1. CATEGORIES ──
       case 'categories': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-        const catRes = await sbFetch(`/mp_categories?is_active=eq.true&order=sort_order.asc&select=id,name,slug,icon,description`);
-        if (!catRes.ok) return res.status(502).json({ error: 'Database error' });
-        const categories = await catRes.json();
-
-        if (req.query.with_count === 'true') {
-          const countRes = await sbFetch(`/mp_vendors?is_active=eq.true&select=category_id`);
-          if (countRes.ok) {
-            const vendors = await countRes.json();
-            const countMap = vendors.reduce((acc, v) => {
-              acc[v.category_id] = (acc[v.category_id] || 0) + 1;
-              return acc;
-            }, {});
-            return res.status(200).json(categories.map(c => ({ ...c, vendor_count: countMap[c.id] || 0 })));
+        try {
+          const catRes = await sbFetch(`/mp_categories?is_active=eq.true&order=sort_order.asc&select=id,name,slug,icon,description`);
+          if (catRes.ok) {
+            const categories = await catRes.json();
+            if (Array.isArray(categories) && categories.length > 0) {
+              if (req.query.with_count === 'true') {
+                const countRes = await sbFetch(`/mp_vendors?is_active=eq.true&select=category_id`);
+                if (countRes.ok) {
+                  const vendors = await countRes.json();
+                  const countMap = (vendors || []).reduce((acc, v) => {
+                    acc[v.category_id] = (acc[v.category_id] || 0) + 1;
+                    return acc;
+                  }, {});
+                  return res.status(200).json(categories.map(c => ({ ...c, vendor_count: countMap[c.id] || 0 })));
+                }
+              }
+              res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600');
+              return res.status(200).json(categories);
+            }
           }
-        }
-        res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600');
-        return res.status(200).json(categories);
+        } catch (e) {}
+
+        const fallbackCats = [
+          { id: 'cat-wo', name: 'Wedding Organizer & Planner', slug: 'wedding-organizer', icon: '📋' },
+          { id: 'cat-foto', name: 'Fotografi & Videografi', slug: 'foto-video', icon: '📸' },
+          { id: 'cat-katering', name: 'Katering (Catering)', slug: 'katering', icon: '🍽️' },
+          { id: 'cat-venue', name: 'Venue & Gedung Pernikahan', slug: 'venue', icon: '🏰' },
+          { id: 'cat-dekorasi', name: 'Dekorasi & Florist', slug: 'dekorasi', icon: '🌸' },
+          { id: 'cat-makeup', name: 'Rias Pengantin & Gaun (Makeup & Attire)', slug: 'makeup-attire', icon: '💄' },
+          { id: 'cat-entertainment', name: 'Musik, MC & Entertainment', slug: 'music-entertainment', icon: '🎵' },
+          { id: 'cat-undangan', name: 'Undangan & Souvenir', slug: 'undangan-souvenir', icon: '💌' },
+          { id: 'cat-jewellery', name: 'Perhiasan & Cincin Kawin', slug: 'jewellery-rings', icon: '💍' },
+          { id: 'cat-photobooth', name: 'Photobooth & Interactive', slug: 'photobooth', icon: '📷' },
+          { id: 'cat-honeymoon', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: '✈️' }
+        ];
+        return res.status(200).json(fallbackCats);
       }
 
       // ── 2. VENDORS BROWSE ──
