@@ -422,11 +422,123 @@
       `).join('');
     }
 
+    const WILAYAH_API = 'https://www.emsifa.com/api-wilayah-indonesia/api';
+    const WILAYAH_FALLBACK = 'https://emsifa.github.io/api-wilayah-indonesia/api';
+
+    function formatTitleCase(str) {
+      if (!str) return '';
+      return str.toLowerCase().split(' ').map(w => {
+        if (w === 'kabupaten') return 'Kab.';
+        if (w === 'kecamatan') return 'Kec.';
+        return w.charAt(0).toUpperCase() + w.slice(1);
+      }).join(' ');
+    }
+
+    async function initRegionFilters() {
+      const provSel = document.getElementById('filterProvinsi');
+      if (!provSel) return;
+      provSel.innerHTML = '<option value="">Semua Provinsi</option>';
+      try {
+        let res = await fetch(`${WILAYAH_API}/provinces.json`);
+        if (!res.ok) res = await fetch(`${WILAYAH_FALLBACK}/provinces.json`);
+        const data = await res.json();
+        data.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.dataset.name = formatTitleCase(p.name);
+          opt.textContent = formatTitleCase(p.name);
+          provSel.appendChild(opt);
+        });
+      } catch(e) {}
+    }
+
+    async function onProvinsiChange(provId) {
+      const kotaSel = document.getElementById('filterKota');
+      const kecSel  = document.getElementById('filterKecamatan');
+      const provSel = document.getElementById('filterProvinsi');
+
+      selectedProvName = provSel.options[provSel.selectedIndex]?.dataset.name || '';
+      selectedKotaName = '';
+      selectedKecName  = '';
+
+      kecSel.innerHTML = '<option value="">Semua Kecamatan</option>';
+      kecSel.disabled = true;
+
+      if (!provId) {
+        kotaSel.innerHTML = '<option value="">Semua Kab / Kota</option>';
+        kotaSel.disabled = true;
+        applyFilters();
+        return;
+      }
+
+      kotaSel.innerHTML = '<option value="">Memuat Kota...</option>';
+      kotaSel.disabled = true;
+
+      try {
+        let res = await fetch(`${WILAYAH_API}/regencies/${provId}.json`);
+        if (!res.ok) res = await fetch(`${WILAYAH_FALLBACK}/regencies/${provId}.json`);
+        const data = await res.json();
+        kotaSel.innerHTML = '<option value="">Semua Kab / Kota</option>';
+        data.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.id;
+          opt.dataset.name = formatTitleCase(r.name);
+          opt.textContent = formatTitleCase(r.name);
+          kotaSel.appendChild(opt);
+        });
+        kotaSel.disabled = false;
+      } catch(e) {}
+      applyFilters();
+    }
+
+    async function onKotaChange(regId) {
+      const kecSel  = document.getElementById('filterKecamatan');
+      const kotaSel = document.getElementById('filterKota');
+
+      selectedKotaName = kotaSel.options[kotaSel.selectedIndex]?.dataset.name || '';
+      selectedKecName  = '';
+
+      if (!regId) {
+        kecSel.innerHTML = '<option value="">Semua Kecamatan</option>';
+        kecSel.disabled = true;
+        applyFilters();
+        return;
+      }
+
+      kecSel.innerHTML = '<option value="">Memuat Kecamatan...</option>';
+      kecSel.disabled = true;
+
+      try {
+        let res = await fetch(`${WILAYAH_API}/districts/${regId}.json`);
+        if (!res.ok) res = await fetch(`${WILAYAH_FALLBACK}/districts/${regId}.json`);
+        const data = await res.json();
+        kecSel.innerHTML = '<option value="">Semua Kecamatan</option>';
+        data.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.id;
+          opt.dataset.name = formatTitleCase(d.name);
+          opt.textContent = formatTitleCase(d.name);
+          kecSel.appendChild(opt);
+        });
+        kecSel.disabled = false;
+      } catch(e) {}
+      applyFilters();
+    }
+
+    function onKecamatanChange() {
+      const kecSel = document.getElementById('filterKecamatan');
+      selectedKecName = kecSel.options[kecSel.selectedIndex]?.dataset.name || '';
+      applyFilters();
+    }
+
     function applyFilters() { currentPage = 1; loadVendors(); }
     function resetFilters() { searchInput.value = ''; selectedCat = ''; applyFilters(); }
     function quickSelectCat(slug) { selectedCat = slug; applyFilters(); }
 
-    document.addEventListener('DOMContentLoaded', loadVendors);
+    document.addEventListener('DOMContentLoaded', () => {
+      loadVendors();
+      initRegionFilters();
+    });
   </script>
 </body>
 </html>

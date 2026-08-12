@@ -275,11 +275,18 @@ export default async function handler(req, res) {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         const { business_name, category_id, city, province, owner_name, whatsapp, email, instagram, website, description, cover_image_url, logo_url } = req.body;
 
-        if (!business_name || !category_id || !city || !province || !owner_name || !whatsapp || !email) {
-          return res.status(400).json({ error: 'Field wajib belum diisi' });
+        const finalBusinessName = (business_name || '').trim();
+        const finalCity = (city || '').trim();
+        const finalProvince = (province || 'Indonesia').trim();
+        const finalOwnerName = (owner_name || finalBusinessName).trim();
+        const finalEmail = (email || '').toLowerCase().trim();
+        const finalWA = (whatsapp || '').trim();
+
+        if (!finalBusinessName || !category_id || !finalCity || !finalWA || !finalEmail) {
+          return res.status(400).json({ error: 'Field wajib belum diisi (Nama Bisnis, Kategori, Wilayah, WhatsApp, Email)' });
         }
 
-        let baseSlug = generateSlug(business_name);
+        let baseSlug = generateSlug(finalBusinessName);
         let slug = baseSlug;
         let attempt = 0;
         while (attempt < 10) {
@@ -291,15 +298,22 @@ export default async function handler(req, res) {
         }
 
         const insertPayload = {
-          slug, business_name: business_name.trim(), category_id,
-          city: city.trim(), province: province.trim(), owner_name: owner_name.trim(),
-          whatsapp: normalizeWA(whatsapp), email: email.toLowerCase().trim(),
+          slug,
+          business_name: finalBusinessName,
+          category_id,
+          city: finalCity,
+          province: finalProvince,
+          owner_name: finalOwnerName,
+          whatsapp: normalizeWA(finalWA),
+          email: finalEmail,
           ...(instagram && { instagram: instagram.replace(/^@/, '') }),
           ...(website && { website }),
           ...(description && { description: description.trim() }),
           ...(cover_image_url && { cover_image_url }),
           ...(logo_url && { logo_url }),
-          is_active: false, is_verified: false, commission_rate: 5.00
+          is_active: false,
+          is_verified: false,
+          commission_rate: 5.00
         };
 
         const insertRes = await sbServiceFetch('/mp_vendors', {
