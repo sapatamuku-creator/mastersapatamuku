@@ -33,6 +33,30 @@ function sbServiceFetch(path, options = {}) {
   });
 }
 
+function sbAuthSignup(email, password) {
+  const url = `${SB_URL}/auth/v1/signup`;
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_ANON_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ email, password })
+  });
+}
+
+function sbAuthLogin(email, password) {
+  const url = `${SB_URL}/auth/v1/token?grant_type=password`;
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_ANON_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ email, password })
+  });
+}
+
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
