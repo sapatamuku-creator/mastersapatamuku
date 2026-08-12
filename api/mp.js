@@ -295,6 +295,55 @@ export default async function handler(req, res) {
         });
       }
 
+const DEFAULT_CATEGORIES = [
+  { id: 'cat-wo', name: 'Wedding Organizer & Planner', slug: 'wedding-organizer', icon: '📋', is_active: true, sort_order: 1 },
+  { id: 'cat-foto', name: 'Fotografi & Videografi', slug: 'foto-video', icon: '📸', is_active: true, sort_order: 2 },
+  { id: 'cat-katering', name: 'Katering (Catering)', slug: 'katering', icon: '🍽️', is_active: true, sort_order: 3 },
+  { id: 'cat-venue', name: 'Venue & Gedung Pernikahan', slug: 'venue', icon: '🏰', is_active: true, sort_order: 4 },
+  { id: 'cat-dekorasi', name: 'Dekorasi & Florist', slug: 'dekorasi', icon: '🌸', is_active: true, sort_order: 5 },
+  { id: 'cat-makeup', name: 'Rias Pengantin & Gaun (Makeup & Attire)', slug: 'makeup-attire', icon: '💄', is_active: true, sort_order: 6 },
+  { id: 'cat-entertainment', name: 'Musik, MC & Entertainment', slug: 'music-entertainment', icon: '🎵', is_active: true, sort_order: 7 },
+  { id: 'cat-undangan', name: 'Undangan & Souvenir', slug: 'undangan-souvenir', icon: '💌', is_active: true, sort_order: 8 },
+  { id: 'cat-jewellery', name: 'Perhiasan & Cincin Kawin', slug: 'jewellery-rings', icon: '💍', is_active: true, sort_order: 9 },
+  { id: 'cat-photobooth', name: 'Photobooth & Interactive', slug: 'photobooth', icon: '📸', is_active: true, sort_order: 10 },
+  { id: 'cat-honeymoon', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: '✈️', is_active: true, sort_order: 11 }
+];
+
+async function ensureCategoryInDB(catId) {
+  if (!catId) catId = 'cat-foto';
+  try {
+    const checkRes = await sbFetch(`/mp_categories?id=eq.${encodeURIComponent(catId)}&select=id&limit=1`);
+    const checkRows = checkRes.ok ? await checkRes.json() : [];
+    if (checkRows && checkRows.length > 0) return checkRows[0].id;
+  } catch(e) {}
+
+  const targetCat = DEFAULT_CATEGORIES.find(c => c.id === catId) || 
+                    DEFAULT_CATEGORIES.find(c => c.id === `cat-${catId}`) || 
+                    DEFAULT_CATEGORIES[1];
+
+  try {
+    const upsertRes = await sbServiceFetch('/mp_categories', {
+      method: 'POST',
+      body: JSON.stringify(targetCat),
+      headers: {
+        'Prefer': 'resolution=merge-duplicates,return=representation'
+      }
+    });
+    if (upsertRes.ok) {
+      const inserted = await upsertRes.json();
+      if (Array.isArray(inserted) && inserted.length > 0) return inserted[0].id;
+    }
+  } catch(e) {}
+
+  try {
+    const anyRes = await sbFetch(`/mp_categories?select=id&limit=1`);
+    const anyRows = anyRes.ok ? await anyRes.json() : [];
+    if (anyRows && anyRows.length > 0) return anyRows[0].id;
+  } catch(e) {}
+
+  return targetCat.id;
+}
+
       // ── 6. REGISTER VENDOR ──
       case 'register-vendor': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -311,28 +360,7 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'Field wajib belum diisi (Nama Bisnis, Kategori, Wilayah, WhatsApp, Email)' });
         }
 
-        // Resolve Category ID against mp_categories table to prevent UUID/FK errors
-        let validCategoryId = null;
-        if (category_id) {
-          try {
-            const catRes = await sbFetch(`/mp_categories?id=eq.${encodeURIComponent(category_id)}&select=id&limit=1`);
-            const catRows = catRes.ok ? await catRes.json() : [];
-            if (catRows && catRows.length > 0) {
-              validCategoryId = catRows[0].id;
-            } else {
-              const slugKey = category_id.replace(/^cat-/, '');
-              const searchRes = await sbFetch(`/mp_categories?slug=ilike.%${encodeURIComponent(slugKey)}%&select=id&limit=1`);
-              const searchRows = searchRes.ok ? await searchRes.json() : [];
-              if (searchRows && searchRows.length > 0) {
-                validCategoryId = searchRows[0].id;
-              } else {
-                const firstCat = await sbFetch(`/mp_categories?is_active=eq.true&select=id&limit=1`);
-                const firstRows = firstCat.ok ? await firstCat.json() : [];
-                if (firstRows && firstRows.length > 0) validCategoryId = firstRows[0].id;
-              }
-            }
-          } catch (e) {}
-        }
+        const validCategoryId = await ensureCategoryInDB(category_id);
 
         let baseSlug = generateSlug(finalBusinessName);
         let slug = baseSlug;
@@ -348,12 +376,12 @@ export default async function handler(req, res) {
         const insertPayload = {
           slug,
           business_name: finalBusinessName,
+          category_id: validCategoryId,
           city: finalCity,
           province: finalProvince,
           owner_name: finalOwnerName,
           whatsapp: normalizeWA(finalWA),
           email: finalEmail,
-          ...(validCategoryId && { category_id: validCategoryId }),
           ...(instagram && { instagram: instagram.replace(/^@/, '') }),
           ...(website && { website }),
           ...(description && { description: description.trim() }),
