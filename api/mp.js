@@ -578,24 +578,34 @@ export default async function handler(req, res) {
         }
 
         if (req.method === 'POST') {
-          const { name, price, description, image_url, badge_tag } = req.body;
+          const { name, price, description, image_url, cover_image_url, badge_tag } = req.body;
           if (!name || !price) return res.status(400).json({ error: 'Nama paket dan harga wajib diisi' });
+
+          const slug = generateSlug(name) + '-' + Date.now().toString(36);
+          const finalImage = image_url || cover_image_url || null;
+          const finalPrice = Math.round(parseFloat(price)) || 0;
 
           const insertRes = await sbServiceFetch('/mp_products', {
             method: 'POST',
             body: JSON.stringify({
               vendor_id: vendor.id,
               name: name.trim(),
-              price: parseFloat(price) || 0,
+              slug: slug,
+              price: finalPrice,
               description: description ? description.trim() : '',
-              image_url: image_url || null,
-              badge_tag: badge_tag || null,
+              cover_image_url: finalImage,
+              price_label: badge_tag ? badge_tag.trim() : null,
               is_active: true
             }),
             headers: { 'Prefer': 'return=representation' }
           });
-          const inserted = await insertRes.json().catch(() => []);
-          const product = Array.isArray(inserted) ? inserted[0] : inserted;
+          const insertedJson = await insertRes.json().catch(() => null);
+          if (!insertRes.ok || !insertedJson) {
+            console.error('Insert product error:', insertedJson);
+            const errMsg = (insertedJson && insertedJson.message) ? insertedJson.message : 'Gagal menyimpan paket ke database';
+            return res.status(400).json({ error: errMsg });
+          }
+          const product = Array.isArray(insertedJson) ? insertedJson[0] : insertedJson;
           return res.status(201).json({ success: true, product });
         }
 
