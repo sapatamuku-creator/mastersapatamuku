@@ -161,6 +161,23 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .loader-status-msg { font-size: 0.84rem; font-weight: 600; color: var(--text-main); }
 
+    /* CURRENCY & AUTO-DOT INPUT FIELD */
+    .currency-input-wrap { display: flex; align-items: center; gap: 8px; }
+    .currency-select {
+      width: 110px !important; flex-shrink: 0; font-weight: 700;
+      background: var(--bg) !important; border: 1.5px solid var(--surface-border) !important;
+      border-radius: var(--radius-md) !important; font-size: 0.88rem !important; cursor: pointer;
+    }
+    .currency-input-field { flex: 1; position: relative; display: flex; align-items: center; }
+    .currency-prefix {
+      position: absolute; left: 14px; font-weight: 700; color: var(--primary-dark);
+      font-size: 0.92rem; pointer-events: none; z-index: 2;
+    }
+    .currency-input-field input {
+      padding-left: 44px !important; font-family: 'Outfit', sans-serif !important;
+      font-size: 1.05rem !important; font-weight: 700 !important; letter-spacing: 0.5px;
+    }
+
     /* PACKAGE GRID & CARDS */
     .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
     .pkg-card {
@@ -273,7 +290,7 @@
       </div>
     </aside>
 
-    <!-- MAIN DISPLAY CONTENT -->
+    <!-- MAIN CONTENT AREA -->
     <main class="main-content">
       <div class="top-bar">
         <div>
@@ -508,8 +525,22 @@
           <input type="text" id="pkgName" required placeholder="misal: Paket Foto &amp; Video Complete Akad Resepsi">
         </div>
         <div class="form-group">
-          <label>Harga Paket (Rp) *</label>
-          <input type="number" id="pkgPrice" required placeholder="misal: 12500000">
+          <label>Harga Paket *</label>
+          <div class="currency-input-wrap">
+            <select id="pkgCurrency" class="currency-select" onchange="updateCurrencyPrefix()">
+              <option value="IDR" selected>IDR (Rp)</option>
+              <option value="USD">USD ($)</option>
+              <option value="SGD">SGD (S$)</option>
+              <option value="MYR">MYR (RM)</option>
+            </select>
+            <div class="currency-input-field">
+              <span class="currency-prefix" id="pkgCurrencyPrefix">Rp</span>
+              <input type="text" id="pkgPrice" required placeholder="1.900.000" autocomplete="off" oninput="handlePriceFormatting(this)">
+            </div>
+          </div>
+          <small style="font-size:0.78rem;color:var(--text-muted);margin-top:5px;display:block">
+            💡 Total Harga: <strong id="pkgPricePreview" style="color:var(--primary-dark)">Rp 0</strong> (Ribuan otomatis dititik, tanpa desimal)
+          </small>
         </div>
         <div class="form-group">
           <label>Highlight Tag / Label</label>
@@ -624,8 +655,54 @@
       showLogin();
     }
 
+    function getCurrencySymbol(curr) {
+      switch(curr) {
+        case 'USD': return '$';
+        case 'SGD': return 'S$';
+        case 'MYR': return 'RM';
+        default: return 'Rp';
+      }
+    }
+
+    function updateCurrencyPrefix() {
+      const curr = $('pkgCurrency') ? $('pkgCurrency').value : 'IDR';
+      const prefix = getCurrencySymbol(curr);
+      if ($('pkgCurrencyPrefix')) $('pkgCurrencyPrefix').textContent = prefix;
+      handlePriceFormatting($('pkgPrice'));
+    }
+
+    function handlePriceFormatting(inputEl) {
+      if (!inputEl) return;
+      let rawValue = inputEl.value.replace(/[^0-9]/g, '');
+      const curr = $('pkgCurrency') ? $('pkgCurrency').value : 'IDR';
+      const prefix = getCurrencySymbol(curr);
+
+      if (!rawValue) {
+        inputEl.value = '';
+        if ($('pkgPricePreview')) $('pkgPricePreview').textContent = `${prefix} 0`;
+        return;
+      }
+
+      const numberVal = parseInt(rawValue, 10);
+      const formatted = new Intl.NumberFormat('id-ID').format(numberVal);
+      inputEl.value = formatted;
+
+      if ($('pkgPricePreview')) {
+        $('pkgPricePreview').textContent = `${prefix} ${formatted}`;
+      }
+    }
+
+    function getRawPriceValue() {
+      if (!$('pkgPrice')) return 0;
+      const raw = $('pkgPrice').value.replace(/[^0-9]/g, '');
+      return raw ? parseInt(raw, 10) : 0;
+    }
+
     function openModalAddPackage() {
       $('formAddPackage').reset();
+      if ($('pkgCurrency')) $('pkgCurrency').value = 'IDR';
+      if ($('pkgCurrencyPrefix')) $('pkgCurrencyPrefix').textContent = 'Rp';
+      if ($('pkgPricePreview')) $('pkgPricePreview').textContent = 'Rp 0';
       $('filledPkg').style.display = 'none';
       $('phPkg').style.display = 'flex';
       $('loaderPkg').style.display = 'none';
@@ -1093,13 +1170,20 @@
 
     $('formAddPackage').addEventListener('submit', async e => {
       e.preventDefault();
+      const rawPrice = getRawPriceValue();
+      if (!rawPrice || rawPrice <= 0) {
+        showToast('Mohon masukkan harga paket yang valid');
+        return;
+      }
+
       const btn = $('btnSubmitPkg');
       btn.disabled = true;
       btn.textContent = 'Menyimpan...';
 
       const payload = {
         name: $('pkgName').value.trim(),
-        price: $('pkgPrice').value,
+        price: rawPrice,
+        currency: $('pkgCurrency') ? $('pkgCurrency').value : 'IDR',
         badge_tag: $('pkgTag').value.trim(),
         image_url: $('pkgImage').value.trim(),
         description: $('pkgDesc').value.trim()
@@ -1141,7 +1225,6 @@
         city: $('pfCity').value.trim(),
         whatsapp: $('pfWA').value.trim(),
         logo_url: $('pfLogo').value.trim() || undefined,
-        cover_image: $('pfCover').value.trim() || undefined,
         cover_image_url: $('pfCover').value.trim() || undefined,
         description: $('pfDesc').value.trim()
       };
