@@ -151,7 +151,7 @@
     }
     .btn-price-preset:hover, .btn-price-preset.active { border-color: var(--primary); color: var(--primary); background: rgba(224,123,123,.08); }
 
-    .price-custom-wrap { display: flex; items-center: center; gap: 6px; margin-top: 10px; }
+    .price-custom-wrap { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
     .price-custom-input { flex: 1; position: relative; }
     .price-custom-input span { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: .75rem; color: var(--text-muted); font-weight: 600; }
     .price-custom-input input { width: 100%; padding: 7px 6px 7px 28px; border: 1.5px solid var(--border); border-radius: 6px; font-size: .78rem; background: var(--bg); }
@@ -194,29 +194,11 @@
 
     .skel { animation: skel-anim 1.5s ease-in-out infinite; background: linear-gradient(90deg,var(--bg-alt) 25%,#f0ebe6 50%,var(--bg-alt) 75%); background-size: 200% 100%; border-radius: var(--radius-sm); }
     @keyframes skel-anim { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .sk-card { background: var(--white); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
-    .sk-card .sk-cover { height: 170px; }
-    .sk-card .sk-body { padding: 14px; }
 
     .empty { text-align: center; padding: 60px 20px; grid-column: 1/-1; }
     .empty .ico { font-size: 3rem; margin-bottom: 12px; }
     .empty h3 { font-size: 1.2rem; margin-bottom: 8px; }
     .empty p { color: var(--text-light); font-size: .9rem; margin-bottom: 20px; }
-    .empty .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 22px; background: var(--primary); color: #fff; border-radius: 50px; font-weight: 600; font-size: .85rem; }
-
-    .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
-    .pagination button { width: 38px; height: 38px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--white); font-size: .85rem; font-weight: 600; color: var(--text-main); transition: var(--transition); }
-    .pagination button:hover { border-color: var(--primary); color: var(--primary); }
-    .pagination button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .pagination button:disabled { opacity: .4; cursor: not-allowed; }
-
-    .filter-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; }
-    .filter-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 24px 20px 32px; z-index: 201; max-height: 85vh; overflow-y: auto; transform: translateY(100%); transition: transform .3s ease; }
-    .filter-sheet.open { transform: translateY(0); }
-    .filter-sheet .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .sheet-actions { display: flex; gap: 12px; margin-top: 24px; }
-    .btn-reset { flex: 1; padding: 12px; border: 1.5px solid var(--border); border-radius: 50px; font-weight: 600; color: var(--text-light); text-align: center; }
-    .btn-apply { flex: 2; padding: 12px; background: var(--primary); color: #fff; border-radius: 50px; font-weight: 700; text-align: center; }
 
     .footer { margin-top: 80px; padding: 32px 0; border-top: 1px solid var(--border); background: var(--white); font-size: .85rem; color: var(--text-light); }
     .footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
@@ -269,10 +251,6 @@
 
     <div class="active-filters-bar" id="activeFiltersBar"></div>
 
-    <button class="filter-mobile-btn" onclick="openFilterSheet()">
-      Filter &amp; Urutkan <span class="filter-count-badge" id="filterCountBadge" style="display:none">0</span>
-    </button>
-
     <div class="layout">
       <aside class="sidebar">
         <div class="filter-group">
@@ -295,40 +273,6 @@
           </div>
         </div>
 
-        <div class="filter-group">
-          <h4>Rentang Budget (Rp)</h4>
-          <div class="price-preset-grid">
-            <button class="btn-price-preset" onclick="setPricePreset(0, 5000000)">&lt; 5 Juta</button>
-            <button class="btn-price-preset" onclick="setPricePreset(5000000, 15000000)">5 - 15 Jt</button>
-            <button class="btn-price-preset" onclick="setPricePreset(15000000, 30000000)">15 - 30 Jt</button>
-            <button class="btn-price-preset" onclick="setPricePreset(30000000, 0)">&gt; 30 Jt</button>
-          </div>
-          <div class="price-custom-wrap">
-            <div class="price-custom-input">
-              <span>Rp</span>
-              <input type="text" id="minPriceInput" placeholder="Min" oninput="formatPriceInput(this)">
-            </div>
-            <span style="font-size:.8rem;color:var(--text-muted)">-</span>
-            <div class="price-custom-input">
-              <span>Rp</span>
-              <input type="text" id="maxPriceInput" placeholder="Max" oninput="formatPriceInput(this)">
-            </div>
-          </div>
-          <button class="btn-apply-price" onclick="applyCustomPrice()">Terapkan Harga</button>
-        </div>
-
-        <div class="filter-group">
-          <h4>Rating Minimum</h4>
-          <label><input type="radio" name="filterRating" value="" checked onchange="applyFilters()"> Semua Rating</label>
-          <label><input type="radio" name="filterRating" value="4.5" onchange="applyFilters()"> ★ 4.5 ke atas</label>
-          <label><input type="radio" name="filterRating" value="4.0" onchange="applyFilters()"> ★ 4.0 ke atas</label>
-        </div>
-
-        <div class="filter-group">
-          <h4>Verifikasi</h4>
-          <label><input type="checkbox" id="filterVerified" onchange="applyFilters()"> Hanya Terverifikasi</label>
-        </div>
-
         <a href="javascript:void(0)" class="filter-reset" onclick="resetFilters()">↺ Reset Semua Filter</a>
       </aside>
 
@@ -348,7 +292,6 @@
         </div>
 
         <div class="vendor-grid" id="vendorGrid"></div>
-        <div class="pagination" id="pagination" style="display:none"></div>
       </main>
     </div>
   </div>
@@ -364,11 +307,7 @@
   </footer>
 
   <script>
-    let currentPage = 1;
-    let totalPages  = 1;
     let selectedCat = '';
-    let minPrice    = 0;
-    let maxPrice    = 0;
     let selectedProvName = '';
     let selectedKotaName = '';
     let selectedKecName  = '';
@@ -376,218 +315,82 @@
     const searchInput = document.getElementById('searchInput');
     const btnClearSearch = document.getElementById('btnClearSearch');
 
-    searchInput.addEventListener('input', () => {
-      btnClearSearch.style.display = searchInput.value ? 'block' : 'none';
-    });
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        if (btnClearSearch) btnClearSearch.style.display = searchInput.value ? 'block' : 'none';
+      });
+    }
+
     function clearSearch() {
-      searchInput.value = '';
-      btnClearSearch.style.display = 'none';
+      if (searchInput) searchInput.value = '';
+      if (btnClearSearch) btnClearSearch.style.display = 'none';
       applyFilters();
     }
 
     async function loadVendors() {
-      const q = searchInput.value.trim();
-      const sort = document.getElementById('sortSelect').value;
+      const q = searchInput ? searchInput.value.trim() : '';
       const params = new URLSearchParams();
       if (q) params.set('q', q);
       if (selectedCat) params.set('kategori', selectedCat);
-      params.set('limit', '16');
+      params.set('limit', '24');
 
       try {
-        const res = await fetch('/api/mp/vendors?' + params);
+        const res = await fetch('/api/mp/vendors?' + params.toString());
         const json = await res.json();
         if (json.data) {
           renderVendors(json.data);
-          document.getElementById('resultCount').textContent = json.data.length;
+          const rc = document.getElementById('resultCount');
+          if (rc) rc.textContent = json.data.length;
         }
       } catch(e) {}
     }
 
     function renderVendors(vendors) {
       const grid = document.getElementById('vendorGrid');
+      if (!grid) return;
       if (!vendors || !vendors.length) {
-        grid.innerHTML = `<div class="empty"><h3>Belum ada vendor terdaftar</h3><p>Vendor di kategori ini akan segera hadir!</p></div>`;
-        return;
-      }
-      grid.innerHTML = vendors.map(v => `
-        <a href="/vendor/${v.slug}" class="vendor-card fade-in">
-          <div class="vendor-cover">
-            ${v.cover_image_url ? `<img src="${v.cover_image_url}">` : ''}
+        grid.innerHTML = `
+          <div class="empty" style="grid-column:1/-1;text-align:center;padding:48px 20px">
+            <div style="font-size:2.5rem;margin-bottom:12px">🏪</div>
+            <h3>Belum Ada Vendor Terdaftar</h3>
+            <p style="color:var(--text-muted);font-size:0.9rem">Vendor di kategori ini akan segera hadir!</p>
           </div>
-          <div class="vendor-info">
-            <span class="vendor-cat">${v.category_name||'Vendor'}</span>
-            <h3 class="vendor-name">${v.business_name}</h3>
-            <div class="vendor-meta"><span class="loc">📍 ${v.city}</span></div>
-          </div>
-        </a>
-      `).join('');
-    }
-
-    const STATIC_PROVINCES = [
-      { id: '11', name: 'Aceh' },
-      { id: '12', name: 'Sumatera Utara' },
-      { id: '13', name: 'Sumatera Barat' },
-      { id: '14', name: 'Riau' },
-      { id: '15', name: 'Jambi' },
-      { id: '16', name: 'Sumatera Selatan' },
-      { id: '17', name: 'Bengkulu' },
-      { id: '18', name: 'Lampung' },
-      { id: '19', name: 'Kepulauan Bangka Belitung' },
-      { id: '21', name: 'Kepulauan Riau' },
-      { id: '31', name: 'DKI Jakarta' },
-      { id: '32', name: 'Jawa Barat' },
-      { id: '33', name: 'Jawa Tengah' },
-      { id: '34', name: 'DI Yogyakarta' },
-      { id: '35', name: 'Jawa Timur' },
-      { id: '36', name: 'Banten' },
-      { id: '51', name: 'Bali' },
-      { id: '52', name: 'Nusa Tenggara Barat' },
-      { id: '53', name: 'Nusa Tenggara Timur' },
-      { id: '61', name: 'Kalimantan Barat' },
-      { id: '62', name: 'Kalimantan Tengah' },
-      { id: '63', name: 'Kalimantan Selatan' },
-      { id: '64', name: 'Kalimantan Timur' },
-      { id: '65', name: 'Kalimantan Utara' },
-      { id: '71', name: 'Sulawesi Utara' },
-      { id: '72', name: 'Sulawesi Tengah' },
-      { id: '73', name: 'Sulawesi Selatan' },
-      { id: '74', name: 'Sulawesi Tenggara' },
-      { id: '75', name: 'Gorontalo' },
-      { id: '76', name: 'Sulawesi Barat' },
-      { id: '81', name: 'Maluku' },
-      { id: '82', name: 'Maluku Utara' },
-      { id: '91', name: 'Papua Barat' },
-      { id: '92', name: 'Papua' },
-      { id: '93', name: 'Papua Selatan' },
-      { id: '94', name: 'Papua Tengah' },
-      { id: '95', name: 'Papua Pegunungan' },
-      { id: '96', name: 'Papua Barat Daya' }
-    ];
-
-    function formatTitleCase(str) {
-      if (!str) return '';
-      return str.toLowerCase().split(' ').map(w => {
-        if (w === 'kabupaten') return 'Kab.';
-        if (w === 'kecamatan') return 'Kec.';
-        return w.charAt(0).toUpperCase() + w.slice(1);
-      }).join(' ');
-    }
-
-    async function fetchRegionData(urlCDN, urlProxy) {
-      try {
-        let res = await fetch(urlCDN);
-        if (res.ok) return await res.json();
-      } catch (e) {}
-      try {
-        let res = await fetch(urlProxy);
-        if (res.ok) return await res.json();
-      } catch (e) {}
-      return [];
-    }
-
-    function initRegionFilters() {
-      const provSel = document.getElementById('filterProvinsi');
-      if (!provSel) return;
-      provSel.innerHTML = '<option value="">Semua Provinsi</option>';
-      STATIC_PROVINCES.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.dataset.name = p.name;
-        opt.textContent = p.name;
-        provSel.appendChild(opt);
-      });
-    }
-
-    async function onProvinsiChange(provId) {
-      const kotaSel = document.getElementById('filterKota');
-      const kecSel  = document.getElementById('filterKecamatan');
-      const provSel = document.getElementById('filterProvinsi');
-
-      selectedProvName = provSel.options[provSel.selectedIndex]?.dataset.name || '';
-      selectedKotaName = '';
-      selectedKecName  = '';
-
-      kecSel.innerHTML = '<option value="">Semua Kecamatan</option>';
-      kecSel.disabled = true;
-
-      if (!provId) {
-        kotaSel.innerHTML = '<option value="">Semua Kab / Kota</option>';
-        kotaSel.disabled = true;
-        applyFilters();
+        `;
         return;
       }
-
-      kotaSel.innerHTML = '<option value="">Memuat Kota...</option>';
-      kotaSel.disabled = true;
-
-      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/regencies/${provId}.json`;
-      const urlProxy = `/api/mp/regions?type=regencies&provId=${provId}`;
-
-      const data = await fetchRegionData(urlCDN, urlProxy);
-      if (data && data.length > 0) {
-        kotaSel.innerHTML = '<option value="">Semua Kab / Kota</option>';
-        data.forEach(r => {
-          const opt = document.createElement('option');
-          opt.value = r.id;
-          const formatted = formatTitleCase(r.name);
-          opt.dataset.name = formatted;
-          opt.textContent = formatted;
-          kotaSel.appendChild(opt);
-        });
-        kotaSel.disabled = false;
-      }
-      applyFilters();
+      grid.innerHTML = vendors.map(v => {
+        const init = v.business_name ? v.business_name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase() : 'V';
+        const coverImg = v.cover_image_url || v.cover_image || null;
+        const price = v.price_from > 0 ? `Mulai Rp ${Number(v.price_from).toLocaleString('id-ID')}` : `Hubungi Vendor`;
+        return `
+          <a href="/vendor/${v.slug}" class="vendor-card fade-in">
+            <div class="vendor-cover" style="background:linear-gradient(135deg,var(--primary),var(--gold));position:relative;height:160px;overflow:hidden">
+              ${coverImg ? `<img src="${coverImg}" style="width:100%;height:100%;object-fit:cover" alt="${v.business_name}">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:2.2rem;font-weight:700">${init}</div>`}
+            </div>
+            <div class="vendor-info" style="padding:18px">
+              <span class="vendor-cat" style="font-size:0.78rem;color:var(--primary-dark);font-weight:600">${v.category_name || 'Vendor Wedding'}</span>
+              <h3 class="vendor-name" style="font-family:'Lora',serif;font-size:1.1rem;font-weight:700;margin:4px 0 8px">${v.business_name}</h3>
+              <div class="vendor-meta" style="display:flex;justify-content:space-between;align-items:center;font-size:0.84rem;color:var(--text-muted)">
+                <span class="loc">📍 ${v.city || 'Indonesia'}</span>
+                <span style="font-weight:700;color:var(--text-main)">${price}</span>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join('');
     }
 
-    async function onKotaChange(regId) {
-      const kecSel  = document.getElementById('filterKecamatan');
-      const kotaSel = document.getElementById('filterKota');
-
-      selectedKotaName = kotaSel.options[kotaSel.selectedIndex]?.dataset.name || '';
-      selectedKecName  = '';
-
-      if (!regId) {
-        kecSel.innerHTML = '<option value="">Semua Kecamatan</option>';
-        kecSel.disabled = true;
-        applyFilters();
-        return;
-      }
-
-      kecSel.innerHTML = '<option value="">Memuat Kecamatan...</option>';
-      kecSel.disabled = true;
-
-      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/districts/${regId}.json`;
-      const urlProxy = `/api/mp/regions?type=districts&regId=${regId}`;
-
-      const data = await fetchRegionData(urlCDN, urlProxy);
-      if (data && data.length > 0) {
-        kecSel.innerHTML = '<option value="">Semua Kecamatan</option>';
-        data.forEach(d => {
-          const opt = document.createElement('option');
-          opt.value = d.id;
-          const formatted = formatTitleCase(d.name);
-          opt.dataset.name = formatted;
-          opt.textContent = formatted;
-          kecSel.appendChild(opt);
-        });
-        kecSel.disabled = false;
-      }
-      applyFilters();
-    }
-
-    function onKecamatanChange() {
-      const kecSel = document.getElementById('filterKecamatan');
-      selectedKecName = kecSel.options[kecSel.selectedIndex]?.dataset.name || '';
-      applyFilters();
-    }
-
-    function applyFilters() { currentPage = 1; loadVendors(); }
-    function resetFilters() { searchInput.value = ''; selectedCat = ''; applyFilters(); }
+    function applyFilters() { loadVendors(); }
+    function resetFilters() { if (searchInput) searchInput.value = ''; selectedCat = ''; applyFilters(); }
     function quickSelectCat(slug) { selectedCat = slug; applyFilters(); }
 
     document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('q') && searchInput) searchInput.value = urlParams.get('q');
+      if (urlParams.get('kategori')) selectedCat = urlParams.get('kategori');
+      if (urlParams.get('cat')) selectedCat = urlParams.get('cat');
+      if (urlParams.get('kota')) selectedKotaName = urlParams.get('kota');
       loadVendors();
-      initRegionFilters();
     });
   </script>
 </body>

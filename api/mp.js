@@ -256,22 +256,39 @@ export default async function handler(req, res) {
       // ── 3. VENDORS BROWSE & SEARCH ──
       case 'vendors': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-        const { category_id, city, search, page = 1, limit = 12 } = req.query;
+        const { category_id, city, search, q, page = 1, limit = 12, kategori } = req.query;
 
-        let query = `/mp_vendors?is_active=eq.true&select=id,slug,business_name,category_id,city,province,rating,review_count,min_price,cover_image_url,logo_url,is_verified`;
+        // Use sbServiceFetch to bypass RLS so all active vendors are visible to public
+        let query = `/mp_vendors?is_active=eq.true&select=id,slug,business_name,category_id,city,province,rating,review_count,price_from,cover_image_url,logo_url,is_verified`;
 
-        if (category_id) query += `&category_id=eq.${encodeURIComponent(category_id)}`;
+        // category filter — supports both category_id UUID and kategori slug
+        if (category_id) {
+          query += `&category_id=eq.${encodeURIComponent(category_id)}`;
+        } else if (kategori) {
+          // match by category slug via DEFAULT_CATEGORIES lookup
+          const catObj = DEFAULT_CATEGORIES.find(c => c.slug === kategori);
+          if (catObj) query += `&category_id=eq.${encodeURIComponent(catObj.id)}`;
+        }
+
+        const searchTerm = search || q;
         if (city) query += `&city=ilike.*${encodeURIComponent(city)}*`;
-        if (search) query += `&or=(business_name.ilike.*${encodeURIComponent(search)}*,description.ilike.*${encodeURIComponent(search)}*)`;
+        if (searchTerm) query += `&or=(business_name.ilike.*${encodeURIComponent(searchTerm)}*,description.ilike.*${encodeURIComponent(searchTerm)}*,city.ilike.*${encodeURIComponent(searchTerm)}*)`;
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
         query += `&order=is_verified.desc,rating.desc,created_at.desc&range=${offset}-${offset + parseInt(limit) - 1}`;
 
-        const vRes = await sbFetch(query);
+        const vRes = await sbServiceFetch(query);
         if (!vRes.ok) return res.status(502).json({ error: 'Failed to fetch vendors' });
 
         const vendors = await vRes.json();
-        return res.status(200).json({ data: vendors, page: parseInt(page), limit: parseInt(limit) });
+
+        // Resolve category_name from DEFAULT_CATEGORIES for each vendor
+        const enriched = (vendors || []).map(v => ({
+          ...v,
+          category_name: (DEFAULT_CATEGORIES.find(c => c.id === v.category_id) || {}).name || 'Vendor Wedding'
+        }));
+
+        return res.status(200).json({ data: enriched, page: parseInt(page), limit: parseInt(limit) });
       }
 
       // ── 4. VENDOR PROFILE ──

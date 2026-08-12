@@ -387,14 +387,13 @@
 
     async function loadVendors() {
       const q = searchInput.value.trim();
-      const sort = document.getElementById('sortSelect').value;
       const params = new URLSearchParams();
       if (q) params.set('q', q);
       if (selectedCat) params.set('kategori', selectedCat);
-      params.set('limit', '16');
+      params.set('limit', '24');
 
       try {
-        const res = await fetch('/api/mp/vendors?' + params);
+        const res = await fetch('/api/mp/vendors?' + params.toString());
         const json = await res.json();
         if (json.data) {
           renderVendors(json.data);
@@ -406,21 +405,35 @@
     function renderVendors(vendors) {
       const grid = document.getElementById('vendorGrid');
       if (!vendors || !vendors.length) {
-        grid.innerHTML = `<div class="empty"><h3>Belum ada vendor terdaftar</h3><p>Vendor di kategori ini akan segera hadir!</p></div>`;
+        grid.innerHTML = `
+          <div class="empty" style="grid-column:1/-1;text-align:center;padding:48px 20px">
+            <div style="font-size:2.5rem;margin-bottom:12px">🏪</div>
+            <h3>Belum Ada Vendor Terdaftar</h3>
+            <p style="color:var(--text-muted);font-size:0.9rem">Vendor di kategori ini akan segera hadir!</p>
+          </div>
+        `;
         return;
       }
-      grid.innerHTML = vendors.map(v => `
-        <a href="/vendor/${v.slug}" class="vendor-card fade-in">
-          <div class="vendor-cover">
-            ${v.cover_image_url ? `<img src="${v.cover_image_url}">` : ''}
-          </div>
-          <div class="vendor-info">
-            <span class="vendor-cat">${v.category_name||'Vendor'}</span>
-            <h3 class="vendor-name">${v.business_name}</h3>
-            <div class="vendor-meta"><span class="loc">📍 ${v.city}</span></div>
-          </div>
-        </a>
-      `).join('');
+      grid.innerHTML = vendors.map(v => {
+        const init = v.business_name ? v.business_name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase() : 'V';
+        const coverImg = v.cover_image_url || v.cover_image || null;
+        const price = v.price_from > 0 ? `Mulai Rp ${Number(v.price_from).toLocaleString('id-ID')}` : `Hubungi Vendor`;
+        return `
+          <a href="/vendor/${v.slug}" class="vendor-card fade-in">
+            <div class="vendor-cover" style="background:linear-gradient(135deg,var(--primary),var(--gold));position:relative;height:160px;overflow:hidden">
+              ${coverImg ? `<img src="${coverImg}" style="width:100%;height:100%;object-fit:cover" alt="${v.business_name}">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:2.2rem;font-weight:700">${init}</div>`}
+            </div>
+            <div class="vendor-info" style="padding:18px">
+              <span class="vendor-cat" style="font-size:0.78rem;color:var(--primary-dark);font-weight:600">${v.category_name || 'Vendor Wedding'}</span>
+              <h3 class="vendor-name" style="font-family:'Lora',serif;font-size:1.1rem;font-weight:700;margin:4px 0 8px">${v.business_name}</h3>
+              <div class="vendor-meta" style="display:flex;justify-content:space-between;align-items:center;font-size:0.84rem;color:var(--text-muted)">
+                <span class="loc">📍 ${v.city || 'Indonesia'}</span>
+                <span style="font-weight:700;color:var(--text-main)">${price}</span>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join('');
     }
 
     const STATIC_PROVINCES = [
@@ -586,6 +599,11 @@
     function quickSelectCat(slug) { selectedCat = slug; applyFilters(); }
 
     document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('q')) searchInput.value = urlParams.get('q');
+      if (urlParams.get('kategori')) selectedCat = urlParams.get('kategori');
+      if (urlParams.get('cat')) selectedCat = urlParams.get('cat');
+      if (urlParams.get('kota')) selectedKotaName = urlParams.get('kota');
       loadVendors();
       initRegionFilters();
     });

@@ -399,20 +399,7 @@
         </button>
       </div>
 
-      <div class="hero-stats">
-        <div class="hero-stat">
-          <div class="number">500+</div>
-          <div class="label">Vendor Terpercaya</div>
-        </div>
-        <div class="hero-stat">
-          <div class="number">50+</div>
-          <div class="label">Kota di Indonesia</div>
-        </div>
-        <div class="hero-stat">
-          <div class="number">10K+</div>
-          <div class="label">Happy Couples</div>
-        </div>
-      </div>
+
     </div>
   </section>
 
@@ -433,52 +420,15 @@
     </div>
   </section>
 
-  <!-- BROWSE BY KOTA -->
-  <section class="section" id="kota">
+  <!-- BROWSE BY KOTA — hanya tampil jika ada data real dari API -->
+  <section class="section" id="kota" style="display:none">
     <div class="container">
       <div class="section-header fade-in">
         <span class="overline">Lokasi</span>
-        <h2>Brosur Berdasarkan Kota</h2>
-        <p>Vendor wedding terbaik di kota-kota besar Indonesia</p>
+        <h2>Temukan Vendor di Kotamu</h2>
+        <p>Vendor wedding terpercaya dari berbagai kota di Indonesia</p>
       </div>
-
-      <div class="kota-grid fade-in">
-        <a href="/kota/jakarta" class="kota-card">
-          <div class="kota-bg" style="background-image: url('https://images.unsplash.com/photo-1555899434-94d1368aa7af?w=600&q=80')"></div>
-          <div class="kota-content">
-            <div class="kota-name">Jakarta</div>
-            <div class="kota-count">120+ vendor</div>
-          </div>
-        </a>
-        <a href="/kota/surabaya" class="kota-card">
-          <div class="kota-bg" style="background-image: url('https://images.unsplash.com/photo-1583245708663-28ac8d1b43d7?w=600&q=80')"></div>
-          <div class="kota-content">
-            <div class="kota-name">Surabaya</div>
-            <div class="kota-count">85+ vendor</div>
-          </div>
-        </a>
-        <a href="/kota/bandung" class="kota-card">
-          <div class="kota-bg" style="background-image: url('https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=600&q=80')"></div>
-          <div class="kota-content">
-            <div class="kota-name">Bandung</div>
-            <div class="kota-count">72+ vendor</div>
-          </div>
-        </a>
-        <a href="/kota/bali" class="kota-card">
-          <div class="kota-bg" style="background-image: url('https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=80')"></div>
-          <div class="kota-content">
-            <div class="kota-name">Bali</div>
-            <div class="kota-count">95+ vendor</div>
-          </div>
-        </a>
-        <a href="/kota/yogyakarta" class="kota-card">
-          <div class="kota-bg" style="background-image: url('https://images.unsplash.com/photo-1596402184320-417e7178b2cd?w=600&q=80')"></div>
-          <div class="kota-content">
-            <div class="kota-name">Yogyakarta</div>
-            <div class="kota-count">58+ vendor</div>
-          </div>
-        </a>
-      </div>
+      <div class="kota-grid fade-in" id="kotaGrid"></div>
     </div>
   </section>
 
@@ -624,22 +574,48 @@
         </div></a>`;
     }
 
+    async function loadCategories() {
+      const grid = document.getElementById('kategoriGrid');
+      if (!grid) return;
+      try {
+        const res = await fetch('/api/mp/categories?with_count=true');
+        const categories = await res.json();
+        if (Array.isArray(categories) && categories.length > 0) {
+          grid.innerHTML = categories.map(c => `
+            <a href="/marketplace?kategori=${c.slug}" class="kategori-card">
+              <div class="kategori-icon">${c.icon || '✨'}</div>
+              <div class="kategori-name">${c.name}</div>
+              <div class="kategori-count" style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">${c.vendor_count ? c.vendor_count + ' vendor' : 'Jelajahi ↗'}</div>
+            </a>
+          `).join('');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     async function loadFeaturedVendors() {
       const grid = document.getElementById('featuredVendors');
       if (!grid) return;
       try {
-        const res = await fetch('/api/mp/vendors?featured=true&limit=6');
-        const json = await res.json();
-        if (json.data && json.data.length) {
-          grid.innerHTML = json.data.map(renderVendorCard).join('');
+        let res = await fetch('/api/mp/vendors?limit=6');
+        let json = await res.json();
+        let vendors = json.data || [];
+
+        if (vendors.length > 0) {
+          grid.innerHTML = vendors.map(renderVendorCard).join('');
         } else {
-          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted)">Belum ada vendor unggulan saat ini.</div>';
+          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:32px 20px;color:var(--text-muted);background:var(--bg);border-radius:16px"><div style="font-size:2rem;margin-bottom:8px">💍</div><strong>Belum Ada Vendor Terdaftar</strong><p style="font-size:0.85rem;margin-top:4px">Jadilah vendor pertama yang bergabung di Sapatamu.id!</p></div>';
         }
       } catch (e) {
         grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted)">Gagal memuat vendor.</div>';
       }
     }
-    document.addEventListener('DOMContentLoaded', loadFeaturedVendors);
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCategories();
+      loadFeaturedVendors();
+    });
   </script>
 </body>
 </html>
