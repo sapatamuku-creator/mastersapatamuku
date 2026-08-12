@@ -1,7 +1,7 @@
 // api/marketplace.js
 // Consolidated Serverless Function for Sapatamu Marketplace (Vercel Hobby 12-Function Limit Optimization)
 
-import { sbFetch, sbServiceFetch, setCors, handleOptions, normalizeWA, generateSlug } from '../lib/mp-config.js';
+const { sbFetch, sbServiceFetch, setCors, handleOptions, normalizeWA, generateSlug } = require('../lib/mp-config.js');
 
 const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
 
@@ -20,7 +20,7 @@ async function verifyAuth(req) {
   return await res.json();
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
   setCors(res);
 
