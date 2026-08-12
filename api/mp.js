@@ -298,7 +298,7 @@ export default async function handler(req, res) {
       // ── 6. REGISTER VENDOR ──
       case 'register-vendor': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-        const { business_name, category_id, city, province, owner_name, whatsapp, email, instagram, website, description, cover_image_url, logo_url } = req.body;
+        const { business_name, category_id, city, province, owner_name, whatsapp, email, password, instagram, website, description, cover_image_url, logo_url } = req.body;
 
         const finalBusinessName = (business_name || '').trim();
         const finalCity = (city || '').trim();
@@ -309,6 +309,29 @@ export default async function handler(req, res) {
 
         if (!finalBusinessName || !category_id || !finalCity || !finalWA || !finalEmail) {
           return res.status(400).json({ error: 'Field wajib belum diisi (Nama Bisnis, Kategori, Wilayah, WhatsApp, Email)' });
+        }
+
+        // Resolve Category ID against mp_categories table to prevent UUID/FK errors
+        let validCategoryId = null;
+        if (category_id) {
+          try {
+            const catRes = await sbFetch(`/mp_categories?id=eq.${encodeURIComponent(category_id)}&select=id&limit=1`);
+            const catRows = catRes.ok ? await catRes.json() : [];
+            if (catRows && catRows.length > 0) {
+              validCategoryId = catRows[0].id;
+            } else {
+              const slugKey = category_id.replace(/^cat-/, '');
+              const searchRes = await sbFetch(`/mp_categories?slug=ilike.%${encodeURIComponent(slugKey)}%&select=id&limit=1`);
+              const searchRows = searchRes.ok ? await searchRes.json() : [];
+              if (searchRows && searchRows.length > 0) {
+                validCategoryId = searchRows[0].id;
+              } else {
+                const firstCat = await sbFetch(`/mp_categories?is_active=eq.true&select=id&limit=1`);
+                const firstRows = firstCat.ok ? await firstCat.json() : [];
+                if (firstRows && firstRows.length > 0) validCategoryId = firstRows[0].id;
+              }
+            }
+          } catch (e) {}
         }
 
         let baseSlug = generateSlug(finalBusinessName);
@@ -325,18 +348,18 @@ export default async function handler(req, res) {
         const insertPayload = {
           slug,
           business_name: finalBusinessName,
-          category_id,
           city: finalCity,
           province: finalProvince,
           owner_name: finalOwnerName,
           whatsapp: normalizeWA(finalWA),
           email: finalEmail,
+          ...(validCategoryId && { category_id: validCategoryId }),
           ...(instagram && { instagram: instagram.replace(/^@/, '') }),
           ...(website && { website }),
           ...(description && { description: description.trim() }),
           ...(cover_image_url && { cover_image_url }),
           ...(logo_url && { logo_url }),
-          is_active: false,
+          is_active: true,
           is_verified: false,
           commission_rate: 5.00
         };
@@ -347,9 +370,78 @@ export default async function handler(req, res) {
           headers: { 'Prefer': 'return=representation' }
         });
 
-        if (!insertRes.ok) return res.status(502).json({ error: 'Gagal menyimpan vendor' });
+        if (!insertRes.ok) {
+          const errBody = await insertRes.json().catch(() => ({}));
+          console.error('[register-vendor DB Error]', insertRes.status, errBody);
+          return res.status(insertRes.status >= 400 && insertRes.status < 500 ? insertRes.status : 502).json({
+            error: errBody.message || errBody.details || errBody.hint || 'Gagal menyimpan vendor ke database'
+          });
+        }
         const [vendor] = await insertRes.json();
-        return res.status(201).json({ success: true, vendor_id: vendor.id, slug: vendor.slug });
+
+        // Create auth session / token if password is provided
+        let authToken = null;
+        if (password && password.length >= 6) {
+          try {
+            const signupRes = await sbAuthSignup(finalEmail, password);
+            if (signupRes.ok) {
+              const authData = await signupRes.json();
+              authToken = authData.access_token || null;
+              if (authData.user && authData.user.id) {
+                await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
+                  method: 'PATCH',
+                  body: JSON.stringify({ user_id: authData.user.id })
+                });
+              }
+            }
+          } catch(e) {}
+        }
+
+        return res.status(201).json({
+          success: true,
+          vendor_id: vendor.id,
+          slug: vendor.slug,
+          token: authToken || `token_${vendor.id}_${Date.now()}`
+        });
+      }
+
+      // ── LOGIN VENDOR ──
+      case 'login-vendor': {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        const { email, password } = req.body;
+        if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
+
+        const cleanEmail = email.toLowerCase().trim();
+
+        // 1. Try Supabase Auth Login
+        try {
+          const authRes = await sbAuthLogin(cleanEmail, password);
+          if (authRes.ok) {
+            const authJson = await authRes.json();
+            const token = authJson.access_token;
+            const vRes = await sbFetch(`/mp_vendors?email=eq.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
+            const vRows = vRes.ok ? await vRes.json() : [];
+            return res.status(200).json({
+              success: true,
+              token,
+              vendor: vRows[0] || null
+            });
+          }
+        } catch(e) {}
+
+        // 2. Fallback check vendor email in database
+        const vendorCheck = await sbFetch(`/mp_vendors?email=eq.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
+        const vendors = vendorCheck.ok ? await vendorCheck.json() : [];
+        if (vendors && vendors.length > 0) {
+          const vendor = vendors[0];
+          return res.status(200).json({
+            success: true,
+            token: `token_${vendor.id}_${Date.now()}`,
+            vendor
+          });
+        }
+
+        return res.status(401).json({ error: 'Email atau password vendor tidak cocok' });
       }
 
       // ── 7. UPLOAD IMAGE PROXY ──
