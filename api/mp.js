@@ -314,20 +314,33 @@ export default async function handler(req, res) {
           vendors = Object.values(vendorMap);
         }
 
-        // Step 4: Enrich each vendor with price_from and cover_image from mp_products if 0
+        // Step 4: Enrich each vendor with price_from, cover_image_url, and logo_url from mp_products
         const enriched = (vendors || []).map(v => {
           const vProds = (allProducts || []).filter(p => p.vendor_id === v.id);
           let minPrice = v.price_from || 0;
           let coverImg = v.cover_image_url || null;
+          let logoImg = v.logo_url || null;
 
           if (vProds.length > 0) {
             const prices = vProds.map(p => p.price).filter(p => p > 0);
             if (prices.length > 0) minPrice = Math.min(...prices);
-            if (!coverImg) {
-              const prodWithImg = vProds.find(p => p.cover_image_url || p.image_url);
-              if (prodWithImg) coverImg = prodWithImg.cover_image_url || prodWithImg.image_url;
+            
+            const prodWithImg = vProds.find(p => p.cover_image_url || p.image_url);
+            if (prodWithImg) {
+              if (!coverImg) coverImg = prodWithImg.cover_image_url || prodWithImg.image_url;
+              if (!logoImg) logoImg = prodWithImg.cover_image_url || prodWithImg.image_url;
             }
           }
+
+          return {
+            ...v,
+            price_from: minPrice,
+            cover_image_url: coverImg,
+            logo_url: logoImg,
+            rating: v.rating_avg || 0,
+            category_name: (DEFAULT_CATEGORIES.find(c => c.id === v.category_id) || {}).name || 'Fotografi & Videografi'
+          };
+        });
 
           return {
             ...v,
