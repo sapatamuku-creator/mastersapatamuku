@@ -6,11 +6,12 @@ Metode ini memisahkan pemuatan data teks tercepat (Supabase) dengan pemuatan gam
 
 ---
 
-## 🎯 Manfaat Arsitektur
+## 🎯 Manfaat Arsitektur & Prinsip Utama
 
-1. **Perceived Performance Super Cepat (0ms Delay)**: Kartu skeleton langsung tampil di detik ke-0 saat pengguna pertama kali membuka halaman.
-2. **Tanpa Blocking Coldstart**: Foto/gambar yang membutuhkan waktu 1-3 detik dari Google Drive / GAS di-load secara *background async*.
-3. **Smooth UI Transition**: Efek animasi *grey shimmer* memudar halus (*fade-in 450ms*) setelah gambar selesai di-load.
+1. **Perceived Performance Super Cepat (0ms Delay)**: Komponen dan balok skeleton langsung tampil di detik ke-0 saat pengguna pertama kali membuka halaman (tanpa teks mentah "Loading...").
+2. **Instant Text Hydration (<120ms)**: Teks (Nama Vendor, Harga, Lokasi, Deskripsi) langsung di-inject dari Supabase dan muncul di layar dalam **~120ms**.
+3. **Tanpa Blocking Coldstart**: Foto/gambar yang membutuhkan waktu 1-3 detik dari Google Drive / GAS di-load secara *background async*.
+4. **Smooth UI Transition**: Efek animasi *grey shimmer* memudar halus (*fade-in 450ms*) setelah gambar selesai di-load.
 
 ---
 
@@ -62,10 +63,20 @@ Salin CSS ini ke dalam tag `<style>` pada halaman target:
 
 ---
 
-### Langkah 2: Buat Fungsi Render Skeleton Instan di Frontend (0ms Load)
+### Langkah 2: Set Skeleton Container pada HTML Awal (Detik ke-0) & Fungsi Skeleton JS
 
-Panggil fungsi skeleton **segera** saat fungsi pemuat data pertama kali dieksekusi:
+**A. HTML awal tanpa teks "Loading...":**
+```html
+<!-- ❌ HINDARI: Teks mentah yang kedip -->
+<!-- <h1 id="vendorName">Loading Vendor...</h1> -->
 
+<!-- ✅ GUNAKAN: Container Skeleton Shimmer Instan -->
+<h1 id="vendorName">
+  <div class="img-skeleton-container" style="width:220px;height:28px;border-radius:6px;display:inline-block"></div>
+</h1>
+```
+
+**B. Fungsi Skeleton Generator JS:**
 ```javascript
 function renderSkeletons(containerId, count = 6) {
   const container = document.getElementById(containerId);
@@ -95,12 +106,12 @@ async function loadData() {
   // 1. Tampilkan Skeleton Segera (Detik ke-0)
   renderSkeletons('dataGrid', 6);
   
-  // 2. Fetch API Data
+  // 2. Fetch API Data (Sub-150ms Response)
   try {
     const res = await fetch('/api/data-endpoint');
     const json = await res.json();
     if (json.data) {
-      // 3. Ganti Skeleton dengan Data Asli
+      // 3. Ganti Skeleton dengan Data Asli & Teks Langsung Muncul
       renderRealCards(json.data);
     }
   } catch(e) {
@@ -161,8 +172,8 @@ return res.status(200).json({ data: vendors });
 
 ## 📌 Checklist Pengujian Kualitas UI/UX
 
-- [x] Detik ke-0: Kartu skeleton grey shimmer langsung muncul di layar.
-- [x] Detik ke-0.1 (~120ms): Data teks (Nama, Harga, Kategori, Lokasi) langsung terisi tanpa merusak tata letak.
+- [x] Detik ke-0: Kartu skeleton grey shimmer langsung muncul di layar (bebas dari tulisan "Loading...").
+- [x] Detik ke-0.1 (~120ms): Data teks (Nama, Harga, Kategori, Lokasi) langsung terisi dan tampil seketika tanpa merusak tata letak.
 - [x] Detik ke 1-2: Foto/gambar selesai dimuat di background dan memudar halus (*fade-in*).
 - [x] Penanganan Error: Jika URL gambar mati/error, shimmer memudar dan menyembunyikan gambar tanpa merusak layout.
 
