@@ -196,6 +196,8 @@
     .pkg-actions { display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--surface-border); padding-top: 14px; }
     .btn-delete-pkg { padding: 6px 14px; border-radius: var(--radius-sm); color: #dc2626; font-weight: 600; font-size: 0.8rem; background: rgba(220,38,38,0.08); transition: var(--transition); }
     .btn-delete-pkg:hover { background: #dc2626; color: #fff; }
+    .btn-edit-pkg { padding: 6px 14px; border-radius: var(--radius-sm); color: var(--primary-dark); font-weight: 600; font-size: 0.8rem; background: var(--primary-soft); transition: var(--transition); }
+    .btn-edit-pkg:hover { background: var(--primary); color: #fff; }
 
     /* EMPTY STATE */
     .empty-state { text-align: center; padding: 48px 24px; background: var(--surface); border-radius: var(--radius-lg); border: 2px dashed var(--surface-border); }
@@ -514,11 +516,12 @@
   <div class="modal-overlay" id="modalAddPackage">
     <div class="modal-box">
       <div class="modal-title">
-        <span>📦 Tambah Paket Wedding Baru</span>
+        <span id="modalAddPackageTitle">📦 Tambah Paket Wedding Baru</span>
         <button onclick="closeModalAddPackage()" style="font-size:1.2rem;color:var(--text-muted)">&times;</button>
       </div>
 
       <form id="formAddPackage">
+        <input type="hidden" id="pkgId">
         <div class="form-group">
           <label>Nama Paket *</label>
           <input type="text" id="pkgName" required placeholder="misal: Paket Foto &amp; Video Complete Akad Resepsi">
@@ -699,9 +702,13 @@
 
     function openModalAddPackage() {
       $('formAddPackage').reset();
+      if ($('pkgId')) $('pkgId').value = '';
+      if ($('modalAddPackageTitle')) $('modalAddPackageTitle').textContent = '📦 Tambah Paket Wedding Baru';
+      if ($('btnSubmitPkg')) $('btnSubmitPkg').textContent = '🚀 Simpan & Publiskan Paket';
       if ($('pkgCurrency')) $('pkgCurrency').value = 'IDR';
       if ($('pkgCurrencyPrefix')) $('pkgCurrencyPrefix').textContent = 'Rp';
       if ($('pkgPricePreview')) $('pkgPricePreview').textContent = 'Rp 0';
+      $('pkgImage').value = '';
       $('filledPkg').style.display = 'none';
       $('phPkg').style.display = 'flex';
       $('loaderPkg').style.display = 'none';
@@ -1113,6 +1120,7 @@
               <div class="pkg-price">${formatRupiah(p.price)}</div>
               <div class="pkg-desc">${p.description || '-'}</div>
               <div class="pkg-actions">
+                <button class="btn-edit-pkg" onclick="editPackage('${p.id}')">✏️ Edit Paket</button>
                 <button class="btn-delete-pkg" onclick="deletePackage('${p.id}')">🗑️ Hapus Paket</button>
               </div>
             </div>
@@ -1122,6 +1130,43 @@
 
       container.innerHTML = html;
       previewContainer.innerHTML = html;
+    }
+
+    function editPackage(id) {
+      const p = _packages.find(item => item.id === id);
+      if (!p) return;
+
+      $('formAddPackage').reset();
+      if ($('pkgId')) $('pkgId').value = p.id;
+      if ($('modalAddPackageTitle')) $('modalAddPackageTitle').textContent = '✏️ Edit Paket Wedding';
+      if ($('btnSubmitPkg')) $('btnSubmitPkg').textContent = '💾 Simpan Perubahan Paket';
+
+      $('pkgName').value = p.name || '';
+      const curr = p.currency || 'IDR';
+      if ($('pkgCurrency')) $('pkgCurrency').value = curr;
+      if ($('pkgCurrencyPrefix')) $('pkgCurrencyPrefix').textContent = getCurrencySymbol(curr);
+
+      if ($('pkgPrice')) {
+        $('pkgPrice').value = new Intl.NumberFormat('id-ID').format(p.price || 0);
+        handlePriceFormatting($('pkgPrice'));
+      }
+
+      $('pkgTag').value = p.price_label || p.badge_tag || '';
+      $('pkgDesc').value = p.description || '';
+
+      const imgUrl = p.cover_image_url || p.image_url || '';
+      $('pkgImage').value = imgUrl;
+      if (imgUrl) {
+        $('imgPkgPreview').src = imgUrl;
+        $('filledPkg').style.display = 'block';
+        $('phPkg').style.display = 'none';
+      } else {
+        $('filledPkg').style.display = 'none';
+        $('phPkg').style.display = 'flex';
+      }
+
+      $('loaderPkg').style.display = 'none';
+      $('modalAddPackage').classList.add('active');
     }
 
     async function loadPackages() {
@@ -1191,9 +1236,12 @@
         return;
       }
 
+      const pkgId = $('pkgId') ? $('pkgId').value.trim() : '';
+      const isEdit = Boolean(pkgId);
+
       const btn = $('btnSubmitPkg');
       btn.disabled = true;
-      btn.textContent = 'Menyimpan...';
+      btn.textContent = isEdit ? 'Menyimpan Perubahan...' : 'Menyimpan...';
 
       const payload = {
         name: $('pkgName').value.trim(),
@@ -1204,9 +1252,12 @@
         description: $('pkgDesc').value.trim()
       };
 
+      const endpoint = isEdit ? `/api/mp/vendor-products?id=${encodeURIComponent(pkgId)}` : '/api/mp/vendor-products';
+      const method = isEdit ? 'PATCH' : 'POST';
+
       try {
-        const res = await fetch('/api/mp/vendor-products', {
-          method: 'POST',
+        const res = await fetch(endpoint, {
+          method: method,
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${_token}`
@@ -1215,7 +1266,7 @@
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          showToast('Paket berhasil dipublikasikan!');
+          showToast(isEdit ? 'Paket berhasil diperbarui!' : 'Paket berhasil dipublikasikan!');
           closeModalAddPackage();
           loadPackages();
         } else {
@@ -1225,7 +1276,7 @@
         showToast('Terjadi kesalahan koneksi.');
       } finally {
         btn.disabled = false;
-        btn.textContent = '🚀 Simpan & Publiskan Paket';
+        btn.textContent = isEdit ? '💾 Simpan Perubahan Paket' : '🚀 Simpan & Publiskan Paket';
       }
     });
 
