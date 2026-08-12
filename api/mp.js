@@ -280,7 +280,7 @@ export default async function handler(req, res) {
         const { slug } = req.query;
         if (!slug) return res.status(400).json({ error: 'Missing vendor slug' });
 
-        const vRes = await sbFetch(`/mp_vendors?slug=eq.${encodeURIComponent(slug)}&select=*&limit=1`);
+        const vRes = await sbServiceFetch(`/mp_vendors?slug=eq.${encodeURIComponent(slug)}&select=*&limit=1`);
         if (!vRes.ok) return res.status(502).json({ error: 'Database error' });
 
         const vendors = await vRes.json();
@@ -289,8 +289,8 @@ export default async function handler(req, res) {
         const vendor = vendors[0];
 
         const [pRes, rRes] = await Promise.all([
-          sbFetch(`/mp_products?vendor_id=eq.${vendor.id}&is_active=eq.true&order=sort_order.asc`),
-          sbFetch(`/mp_reviews?vendor_id=eq.${vendor.id}&order=created_at.desc&limit=10`)
+          sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&is_active=eq.true&order=sort_order.asc`),
+          sbServiceFetch(`/mp_reviews?vendor_id=eq.${vendor.id}&order=created_at.desc&limit=10`)
         ]);
 
         const products = pRes.ok ? await pRes.json() : [];
