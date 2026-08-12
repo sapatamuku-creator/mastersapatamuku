@@ -386,10 +386,12 @@
     }
 
     async function loadVendors() {
-      const q = searchInput.value.trim();
+      const q = searchInput ? searchInput.value.trim() : '';
       const params = new URLSearchParams();
       if (q) params.set('q', q);
       if (selectedCat) params.set('kategori', selectedCat);
+      if (selectedKotaName) params.set('city', selectedKotaName);
+      else if (selectedProvName) params.set('city', selectedProvName);
       params.set('limit', '24');
 
       try {
@@ -397,19 +399,21 @@
         const json = await res.json();
         if (json.data) {
           renderVendors(json.data);
-          document.getElementById('resultCount').textContent = json.data.length;
+          const rc = document.getElementById('resultCount');
+          if (rc) rc.textContent = json.data.length;
         }
       } catch(e) {}
     }
 
     function renderVendors(vendors) {
       const grid = document.getElementById('vendorGrid');
+      if (!grid) return;
       if (!vendors || !vendors.length) {
         grid.innerHTML = `
           <div class="empty" style="grid-column:1/-1;text-align:center;padding:48px 20px">
             <div style="font-size:2.5rem;margin-bottom:12px">🏪</div>
             <h3>Belum Ada Vendor Terdaftar</h3>
-            <p style="color:var(--text-muted);font-size:0.9rem">Vendor di kategori ini akan segera hadir!</p>
+            <p style="color:var(--text-muted);font-size:0.9rem">Vendor di kategori atau wilayah ini akan segera hadir!</p>
           </div>
         `;
         return;
@@ -437,44 +441,7 @@
     }
 
     const STATIC_PROVINCES = [
-      { id: '11', name: 'Aceh' },
-      { id: '12', name: 'Sumatera Utara' },
-      { id: '13', name: 'Sumatera Barat' },
-      { id: '14', name: 'Riau' },
-      { id: '15', name: 'Jambi' },
-      { id: '16', name: 'Sumatera Selatan' },
-      { id: '17', name: 'Bengkulu' },
-      { id: '18', name: 'Lampung' },
-      { id: '19', name: 'Kepulauan Bangka Belitung' },
-      { id: '21', name: 'Kepulauan Riau' },
-      { id: '31', name: 'DKI Jakarta' },
-      { id: '32', name: 'Jawa Barat' },
-      { id: '33', name: 'Jawa Tengah' },
-      { id: '34', name: 'DI Yogyakarta' },
-      { id: '35', name: 'Jawa Timur' },
-      { id: '36', name: 'Banten' },
-      { id: '51', name: 'Bali' },
-      { id: '52', name: 'Nusa Tenggara Barat' },
-      { id: '53', name: 'Nusa Tenggara Timur' },
-      { id: '61', name: 'Kalimantan Barat' },
-      { id: '62', name: 'Kalimantan Tengah' },
-      { id: '63', name: 'Kalimantan Selatan' },
-      { id: '64', name: 'Kalimantan Timur' },
-      { id: '65', name: 'Kalimantan Utara' },
-      { id: '71', name: 'Sulawesi Utara' },
-      { id: '72', name: 'Sulawesi Tengah' },
-      { id: '73', name: 'Sulawesi Selatan' },
-      { id: '74', name: 'Sulawesi Tenggara' },
-      { id: '75', name: 'Gorontalo' },
-      { id: '76', name: 'Sulawesi Barat' },
-      { id: '81', name: 'Maluku' },
-      { id: '82', name: 'Maluku Utara' },
-      { id: '91', name: 'Papua Barat' },
-      { id: '92', name: 'Papua' },
-      { id: '93', name: 'Papua Selatan' },
-      { id: '94', name: 'Papua Tengah' },
-      { id: '95', name: 'Papua Pegunungan' },
-      { id: '96', name: 'Papua Barat Daya' }
+      { id: '11', name: 'Aceh' }, { id: '12', name: 'Sumatera Utara' }, { id: '13', name: 'Sumatera Barat' }, { id: '14', name: 'Riau' }, { id: '15', name: 'Jambi' }, { id: '16', name: 'Sumatera Selatan' }, { id: '17', name: 'Bengkulu' }, { id: '18', name: 'Lampung' }, { id: '19', name: 'Kepulauan Bangka Belitung' }, { id: '21', name: 'Kepulauan Riau' }, { id: '31', name: 'DKI Jakarta' }, { id: '32', name: 'Jawa Barat' }, { id: '33', name: 'Jawa Tengah' }, { id: '34', name: 'DI Yogyakarta' }, { id: '35', name: 'Jawa Timur' }, { id: '36', name: 'Banten' }, { id: '51', name: 'Bali' }, { id: '52', name: 'Nusa Tenggara Barat' }, { id: '53', name: 'Nusa Tenggara Timur' }, { id: '61', name: 'Kalimantan Barat' }, { id: '62', name: 'Kalimantan Tengah' }, { id: '63', name: 'Kalimantan Selatan' }, { id: '64', name: 'Kalimantan Timur' }, { id: '65', name: 'Kalimantan Utara' }, { id: '71', name: 'Sulawesi Utara' }, { id: '72', name: 'Sulawesi Tengah' }, { id: '73', name: 'Sulawesi Selatan' }, { id: '74', name: 'Sulawesi Tenggara' }, { id: '75', name: 'Gorontalo' }, { id: '76', name: 'Sulawesi Barat' }, { id: '81', name: 'Maluku' }, { id: '82', name: 'Maluku Utara' }, { id: '91', name: 'Papua Barat' }, { id: '92', name: 'Papua' }, { id: '93', name: 'Papua Selatan' }, { id: '94', name: 'Papua Tengah' }, { id: '95', name: 'Papua Pegunungan' }, { id: '96', name: 'Papua Barat Daya' }
     ];
 
     function formatTitleCase(str) {
@@ -486,14 +453,27 @@
       }).join(' ');
     }
 
-    async function fetchRegionData(urlCDN, urlProxy) {
-      try {
-        let res = await fetch(urlCDN);
-        if (res.ok) return await res.json();
-      } catch (e) {}
+    async function fetchRegionData(urlProxy, urlCDN, urlEmsifa) {
       try {
         let res = await fetch(urlProxy);
-        if (res.ok) return await res.json();
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) return data;
+        }
+      } catch (e) {}
+      try {
+        let res = await fetch(urlCDN);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) return data;
+        }
+      } catch (e) {}
+      try {
+        let res = await fetch(urlEmsifa);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) return data;
+        }
       } catch (e) {}
       return [];
     }
@@ -533,10 +513,11 @@
       kotaSel.innerHTML = '<option value="">Memuat Kota...</option>';
       kotaSel.disabled = true;
 
-      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/regencies/${provId}.json`;
       const urlProxy = `/api/mp/regions?type=regencies&provId=${provId}`;
+      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/regencies/${provId}.json`;
+      const urlEmsifa = `https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${provId}.json`;
 
-      const data = await fetchRegionData(urlCDN, urlProxy);
+      const data = await fetchRegionData(urlProxy, urlCDN, urlEmsifa);
       if (data && data.length > 0) {
         kotaSel.innerHTML = '<option value="">Semua Kab / Kota</option>';
         data.forEach(r => {
@@ -547,6 +528,9 @@
           opt.textContent = formatted;
           kotaSel.appendChild(opt);
         });
+        kotaSel.disabled = false;
+      } else {
+        kotaSel.innerHTML = '<option value="">Gagal memuat kab/kota</option>';
         kotaSel.disabled = false;
       }
       applyFilters();
@@ -569,10 +553,11 @@
       kecSel.innerHTML = '<option value="">Memuat Kecamatan...</option>';
       kecSel.disabled = true;
 
-      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/districts/${regId}.json`;
       const urlProxy = `/api/mp/regions?type=districts&regId=${regId}`;
+      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/districts/${regId}.json`;
+      const urlEmsifa = `https://www.emsifa.com/api-wilayah-indonesia/api/districts/${regId}.json`;
 
-      const data = await fetchRegionData(urlCDN, urlProxy);
+      const data = await fetchRegionData(urlProxy, urlCDN, urlEmsifa);
       if (data && data.length > 0) {
         kecSel.innerHTML = '<option value="">Semua Kecamatan</option>';
         data.forEach(d => {
@@ -583,6 +568,9 @@
           opt.textContent = formatted;
           kecSel.appendChild(opt);
         });
+        kecSel.disabled = false;
+      } else {
+        kecSel.innerHTML = '<option value="">Gagal memuat kecamatan</option>';
         kecSel.disabled = false;
       }
       applyFilters();
