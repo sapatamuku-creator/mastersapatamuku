@@ -353,38 +353,38 @@ export default async function handler(req, res) {
         const { slug } = req.query;
         if (!slug) return res.status(400).json({ error: 'Missing vendor slug' });
 
-        let vRes = await sbServiceFetch(`/mp_vendors?slug=eq.${encodeURIComponent(slug)}&select=*&limit=1`);
-        let vendors = vRes.ok ? await vRes.json() : [];
+        const [vRes, allProdsRes] = await Promise.all([
+          sbServiceFetch(`/mp_vendors?slug=eq.${encodeURIComponent(slug)}&select=*&limit=1`),
+          sbServiceFetch(`/mp_products?select=*&order=created_at.desc`)
+        ]);
 
+        let vendors = vRes.ok ? await vRes.json() : [];
         if (!Array.isArray(vendors) || !vendors.length) {
-          vRes = await sbServiceFetch(`/mp_vendors?or=(slug.ilike.*${encodeURIComponent(slug)}*,business_name.ilike.*${encodeURIComponent(slug.replace(/-/g, ' '))}*)&select=*&limit=1`);
-          vendors = vRes.ok ? await vRes.json() : [];
+          const vSearchRes = await sbServiceFetch(`/mp_vendors?or=(slug.ilike.*${encodeURIComponent(slug)}*,business_name.ilike.*${encodeURIComponent(slug.replace(/-/g, ' '))}*)&select=*&limit=1`);
+          vendors = vSearchRes.ok ? await vSearchRes.json() : [];
         }
 
         let vendor = (Array.isArray(vendors) && vendors.length > 0) ? vendors[0] : null;
+        const allProds = allProdsRes.ok ? await allProdsRes.json() : [];
 
         // Fallback: If vendor record is missing from mp_vendors but products exist in mp_products
-        if (!vendor) {
-          const allProdsRes = await sbServiceFetch(`/mp_products?select=*`);
-          const allProds = allProdsRes.ok ? await allProdsRes.json() : [];
-          if (Array.isArray(allProds) && allProds.length > 0) {
-            vendor = {
-              id: allProds[0].vendor_id,
-              business_name: 'Knowhere Studio',
-              slug: 'knowhere-studio',
-              city: 'Kota Cirebon',
-              province: 'Jawa Barat',
-              whatsapp: '6281234567890',
-              description: 'Vendor Fotografi & Videografi Pernikahan Profesional',
-              cover_image_url: allProds[0].cover_image_url || allProds[0].image_url,
-              logo_url: allProds[0].cover_image_url || allProds[0].image_url,
-              category_id: DEFAULT_CATEGORIES[1].id,
-              category_name: 'Fotografi & Videografi',
-              rating_avg: 0,
-              review_count: 0,
-              is_verified: true
-            };
-          }
+        if (!vendor && allProds.length > 0) {
+          vendor = {
+            id: allProds[0].vendor_id,
+            business_name: 'Knowhere Studio',
+            slug: 'knowhere-studio',
+            city: 'Kab. Cirebon (Weru)',
+            province: 'Jawa Barat',
+            whatsapp: '6287864752163',
+            description: 'Vendor Fotografi & Videografi Pernikahan Profesional',
+            cover_image_url: allProds[0].cover_image_url || allProds[0].image_url,
+            logo_url: allProds[0].cover_image_url || allProds[0].image_url,
+            category_id: DEFAULT_CATEGORIES[1].id,
+            category_name: 'Fotografi & Videografi',
+            rating_avg: 0,
+            review_count: 0,
+            is_verified: true
+          };
         }
 
         if (!vendor) return res.status(404).json({ error: 'Vendor tidak ditemukan' });
@@ -401,8 +401,8 @@ export default async function handler(req, res) {
         const reviews = rRes.ok ? await rRes.json() : [];
 
         if (!Array.isArray(products) || products.length === 0) {
-          const fallbackProds = await sbServiceFetch(`/mp_products?select=*&order=created_at.desc`);
-          if (fallbackProds.ok) products = await fallbackProds.json();
+          products = allProds.filter(p => p.vendor_id === vendor.id);
+          if (products.length === 0) products = allProds;
         }
 
         return res.status(200).json({
