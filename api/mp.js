@@ -487,11 +487,11 @@ export default async function handler(req, res) {
       // ── 7. UPLOAD IMAGE PROXY ──
       case 'upload-image': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-        const { image, type, vendorId, filename } = req.body;
+        const { image, type, vendorId, filename, gasUrl } = req.body;
         if (!image || !type || !vendorId) return res.status(400).json({ error: 'Missing parameters' });
 
-        const GAS_URL = process.env.GAS_MARKETPLACE_URL;
-        if (!GAS_URL) return res.status(500).json({ error: 'GAS_MARKETPLACE_URL environment variable not configured' });
+        const GAS_URL = gasUrl || process.env.GAS_MARKETPLACE_URL || process.env.GAS_URL;
+        if (!GAS_URL) return res.status(500).json({ error: 'GAS_MARKETPLACE_URL environment variable not configured. Mohon berikan Web App URL dari MarketplaceUpload.gs' });
 
         const gasRes = await fetch(GAS_URL, {
           method: 'POST',
