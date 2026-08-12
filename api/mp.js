@@ -429,18 +429,21 @@ async function ensureCategoryInDB(catId) {
             error: errBody.message || errBody.details || errBody.hint || 'Gagal menyimpan vendor ke database'
           });
         }
-        const [vendor] = await insertRes.json();
+        const insertedArr = await insertRes.json().catch(() => []);
+        const vendor = Array.isArray(insertedArr) ? insertedArr[0] : (insertedArr || {});
+        const vendorId = vendor?.id || null;
+        const vendorSlug = vendor?.slug || slug;
 
         // Create auth session / token if password is provided
         let authToken = null;
         if (password && password.length >= 6) {
           try {
             const signupRes = await sbAuthSignup(finalEmail, password);
-            if (signupRes.ok) {
+            if (signupRes && signupRes.ok) {
               const authData = await signupRes.json();
               authToken = authData.access_token || null;
-              if (authData.user && authData.user.id) {
-                await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
+              if (authData.user && authData.user.id && vendorId) {
+                await sbServiceFetch(`/mp_vendors?id=eq.${vendorId}`, {
                   method: 'PATCH',
                   body: JSON.stringify({ user_id: authData.user.id })
                 });
@@ -451,9 +454,9 @@ async function ensureCategoryInDB(catId) {
 
         return res.status(201).json({
           success: true,
-          vendor_id: vendor.id,
-          slug: vendor.slug,
-          token: authToken || `token_${vendor.id}_${Date.now()}`
+          vendor_id: vendorId,
+          slug: vendorSlug,
+          token: authToken || `token_${vendorId || Date.now()}_${Date.now()}`
         });
       }
 
