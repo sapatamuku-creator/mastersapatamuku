@@ -1,9 +1,64 @@
 // api/marketplace.js
 // Consolidated Serverless Function for Sapatamu Marketplace (Vercel Hobby 12-Function Limit Optimization)
 
-const { sbFetch, sbServiceFetch, setCors, handleOptions, normalizeWA, generateSlug } = require('../lib/mp-config.js');
-
 const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
+const SB_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SB_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+function sbFetch(path, options = {}) {
+  const url = `${SB_URL}/rest/v1${path}`;
+  return fetch(url, {
+    ...options,
+    headers: {
+      'apikey': SB_ANON_KEY,
+      'Authorization': `Bearer ${SB_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+      ...options.headers
+    }
+  });
+}
+
+function sbServiceFetch(path, options = {}) {
+  const url = `${SB_URL}/rest/v1${path}`;
+  return fetch(url, {
+    ...options,
+    headers: {
+      'apikey': SB_SERVICE_KEY,
+      'Authorization': `Bearer ${SB_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+      ...options.headers
+    }
+  });
+}
+
+function setCors(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
+
+function handleOptions(req, res) {
+  if (req.method === 'OPTIONS') {
+    setCors(res);
+    res.status(204).end();
+    return true;
+  }
+  return false;
+}
+
+function normalizeWA(raw) {
+  if (!raw) return '';
+  raw = raw.replace(/[^0-9]/g, '');
+  if (raw.startsWith('0')) return '62' + raw.slice(1);
+  if (raw.startsWith('8')) return '62' + raw;
+  return raw;
+}
+
+function generateSlug(text) {
+  return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
+}
 
 async function verifyAuth(req) {
   const authHeader = req.headers['authorization'];
