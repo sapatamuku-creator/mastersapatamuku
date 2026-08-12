@@ -437,7 +437,7 @@ export default async function handler(req, res) {
           if (authRes.ok) {
             const authJson = await authRes.json();
             const token = authJson.access_token;
-            const vRes = await sbFetch(`/mp_vendors?email=eq.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
+            const vRes = await sbFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
             const vRows = vRes.ok ? await vRes.json() : [];
             return res.status(200).json({
               success: true,
@@ -447,8 +447,8 @@ export default async function handler(req, res) {
           }
         } catch(e) {}
 
-        // 2. Fallback check vendor email in database
-        const vendorCheck = await sbFetch(`/mp_vendors?email=eq.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
+        // 2. Fallback check vendor email in database (case-insensitive)
+        const vendorCheck = await sbFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
         const vendors = vendorCheck.ok ? await vendorCheck.json() : [];
         if (vendors && vendors.length > 0) {
           const vendor = vendors[0];
@@ -459,7 +459,7 @@ export default async function handler(req, res) {
           });
         }
 
-        return res.status(401).json({ error: 'Email atau password vendor tidak cocok' });
+        return res.status(404).json({ error: `Email "${cleanEmail}" belum terdaftar. Silakan lakukan pendaftaran vendor terlebih dahulu.` });
       }
 
       // ── 7. UPLOAD IMAGE PROXY ──
