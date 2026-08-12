@@ -1071,9 +1071,9 @@
         });
         if (res.ok) {
           const inqs = await res.json();
-          $('stInq').textContent = inqs.length;
+          $('stInq').textContent = Array.isArray(inqs) ? inqs.length : 0;
           const container = $('inquiryList');
-          if (inqs.length === 0) return;
+          if (!Array.isArray(inqs) || inqs.length === 0) return;
 
           container.innerHTML = inqs.map(iq => `
             <div class="inq-card">
@@ -1142,6 +1142,7 @@
         whatsapp: $('pfWA').value.trim(),
         logo_url: $('pfLogo').value.trim() || undefined,
         cover_image: $('pfCover').value.trim() || undefined,
+        cover_image_url: $('pfCover').value.trim() || undefined,
         description: $('pfDesc').value.trim()
       };
 
@@ -1214,7 +1215,8 @@
       $('pfCity').value = v.city || '';
       $('pfWA').value = v.whatsapp || '';
       $('pfLogo').value = v.logo_url || '';
-      $('pfCover').value = v.cover_image || '';
+      const coverUrl = v.cover_image_url || v.cover_image || '';
+      $('pfCover').value = coverUrl;
       $('pfDesc').value = v.description || '';
 
       if (v.logo_url) {
@@ -1226,8 +1228,8 @@
         $('phLogo').style.display = 'flex';
       }
 
-      if (v.cover_image) {
-        $('imgCoverPreview').src = v.cover_image;
+      if (coverUrl) {
+        $('imgCoverPreview').src = coverUrl;
         $('filledCover').style.display = 'block';
         $('phCover').style.display = 'none';
       } else {
