@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://fonts.googleapis.com https://*.supabase.co https://script.google.com https://script.googleusercontent.com https://app.sandbox.midtrans.com https://app.midtrans.com https://api.qrserver.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: https://img.icons8.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://script.google.com https://script.googleusercontent.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://fonts.googleapis.com https://fonts.gstatic.com https://img.icons8.com https://api.midtrans.com https://api.sandbox.midtrans.com https://app.midtrans.com https://app.sandbox.midtrans.com;">
+    <title>SapaTamu Digital Guestbook — Sistem Buku Tamu & Registrasi Event Professional</title>
+    <script src="subdomain_resolver.js?v=3.5"></script>
+    <meta name="description" content="Sistem Buku Tamu Digital, Instant QR Check-in, Print Thermal Label, Kiosk Selfie & Rekap Kehadiran Real-time dari SapaTamu.">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <link rel="apple-touch-icon" href="assets/favicon.png">
+
+    <!-- Seamless Auto-Redirect for Logged-In Users -->
+    <script>
+        (function() {
+            if (new URLSearchParams(window.location.search).get('signout') === 'true') {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.history.replaceState({}, '', window.location.pathname);
+                return;
+            }
+            const SESSION_KEY = 'sapatamu_session';
+            const LOCAL_DB = 'sapatamu_db';
+            const session = sessionStorage.getItem(SESSION_KEY);
+            const localData = localStorage.getItem(LOCAL_DB);
+
+            if (session) {
+                try {
+                    const data = JSON.parse(session);
+                    if (data.ssId) {
+                        window.location.replace("dashboard.html");
+                        return;
+                    }
+                } catch(e){}
+            } else if (localData) {
+                try {
+                    const data = JSON.parse(localData);
+                    if (data.ssId) {
+                        sessionStorage.setItem(SESSION_KEY, localData);
+                        window.location.replace("dashboard.html");
+                        return;
+                    }
+                } catch(e){}
+            }
+        })();
+    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
+    
+    <style>
+        :root {
+            --primary: #E07B7B;       /* Elegant Rose */
+            --primary-light: #FDF2F2;
+            --bg: #FFFBF9;            /* Warm Soft Cream */
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --text-main: #4A3F35;     /* Luxury Warm Dark Brown */
+            --text-muted: #8C7560;    /* Muted Warm Gold-Brown */
+            --gold: #C8962E;          /* Luxury Gold */
+            --border: #F3EAE3;
+            --accent: #E8A89B;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+            max-width: 100%;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(224, 123, 123, 0.03) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(200, 150, 46, 0.03) 0%, transparent 40%);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Nav Bar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px 8%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background: rgba(255, 251, 249, 0.75);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(74, 63, 53, 0.05);
+            transition: background-color var(--duration-normal) ease, border-color var(--duration-normal) ease, padding var(--duration-normal) ease;
+        }
+
+        .logo {
+            font-family: 'Lora', serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .logo span {
+            color: var(--primary);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 35px;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 600;
+            transition: color var(--duration-fast) ease;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .nav-link:hover {
+                color: var(--primary);
+            }
+        }
+
+        .btn-navbar-login {
+            padding: 10px 24px;
+            border-radius: 50px;
+            background: transparent;
+            border: 2px solid var(--text-main);
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .btn-navbar-login:hover {
+                transform: translateY(-2px);
+                background: var(--text-main);
+                color: #fff;
+                box-shadow: 0 8px 20px rgba(74, 63, 53, 0.15);
+            }
+        }
+        .btn-navbar-login:active {
+            transform: translateY(0) scale(0.97);
+        }
+
+        .btn-navbar-register {
+            padding: 10px 24px;
+            border-radius: 50px;
+            background: var(--primary);
+            border: 2px solid var(--primary);
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(224, 123, 123, 0.15);
+            transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .btn-navbar-register:hover {
+                transform: translateY(-2px);
+                background: #d46f6f;
+                border-color: #d46f6f;
+                box-shadow: 0 8px 25px rgba(224, 123, 123, 0.3);
+            }
+        }
+        .btn-navbar-register:active {
+            transform: translateY(0) scale(0.97);
+        }
+
+        /* Dynamic Background Hearts */
+        .dynamic-bg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0; overflow: hidden;
+            pointer-events: none;
+            margin: 0; padding: 0;
+        }
+
+        .dynamic-bg li {
+            position: absolute; display: block;
+            list-style: none; width: 30px; height: 30px;
+            background: transparent;
+            animation: floatDiagonal 20s linear infinite;
+            bottom: -150px;
+        }
+
+        .dynamic-bg li::before {
+            content: ''; position: absolute;
+            width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E07B7B' opacity='0.2'%3E%3Cpath d='M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z'/%3E%3C/svg%3E");
+            background-size: contain; background-repeat: no-repeat;
+            animation: pulseHeart 4s ease-in-out infinite alternate;
+        }
+
+        .dynamic-bg li:nth-child(1) { left: -10%; width: 40px; height: 40px; animation-delay: 0s; animation-duration: 25s; }
+        .dynamic-bg li:nth-child(2) { left: 5%; width: 20px; height: 20px; animation-delay: 2s; animation-duration: 17s; }
+        .dynamic-bg li:nth-child(3) { left: 15%; width: 60px; height: 60px; animation-delay: 4s; animation-duration: 22s; }
+        .dynamic-bg li:nth-child(4) { left: 25%; width: 35px; height: 35px; animation-delay: 0s; animation-duration: 18s; }
+        .dynamic-bg li:nth-child(5) { left: 40%; width: 25px; height: 25px; animation-delay: 6s; animation-duration: 20s; }
+        .dynamic-bg li:nth-child(6) { left: 55%; width: 50px; height: 50px; animation-delay: 3s; animation-duration: 24s; }
+        .dynamic-bg li:nth-child(7) { left: -20%; width: 30px; height: 30px; animation-delay: 8s; animation-duration: 19s; }
+        .dynamic-bg li:nth-child(8) { left: -5%; width: 45px; height: 45px; animation-delay: 10s; animation-duration: 28s; }
+        .dynamic-bg li:nth-child(9) { left: 45%; width: 20px; height: 20px; animation-delay: 1s; animation-duration: 15s; }
+        .dynamic-bg li:nth-child(10){ left: 10%; width: 55px; height: 55px; animation-delay: 7s; animation-duration: 26s; }
+
+        @keyframes floatDiagonal {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(40vw, -120vh) rotate(260deg); opacity: 0; }
+        }
+
+        @keyframes pulseHeart {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 160px 8% 100px;
+            display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 60px;
+            align-items: center; max-width: 1400px; margin: 0 auto;
+            position: relative; overflow: hidden;
+        }
+
+        .hero-text h1 {
+            font-family: 'Lora', serif; font-size: 54px; font-weight: 700;
+            line-height: 1.15; margin-bottom: 25px; color: var(--text-main);
+        }
+
+        .hero-text h1 span { color: var(--primary); position: relative; }
+        .hero-text p { font-size: 16px; line-height: 1.7; color: var(--text-muted); margin-bottom: 40px; font-weight: 500; }
+        .hero-cta { display: flex; gap: 20px; }
+
+        .btn-primary {
+            padding: 18px 40px; border-radius: 50px;
+            background: var(--primary); color: #fff; text-decoration: none;
+            font-size: 14px; font-weight: 700; letter-spacing: 1px;
+            text-transform: uppercase; box-shadow: 0 8px 25px rgba(224, 123, 123, 0.2);
+            transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) ease;
+            display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+        }
+        @media (hover: hover) and (pointer: fine) {
+            .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(224, 123, 123, 0.35); }
+        }
+        .btn-primary:active { transform: translateY(0) scale(0.97); }
+
+        .btn-secondary {
+            padding: 18px 40px; border-radius: 50px; background: #fff;
+            color: var(--text-main); text-decoration: none; font-size: 14px;
+            font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+            border: 2px solid var(--border); transition: transform var(--duration-fast) var(--ease-out), border-color var(--duration-fast) ease, color var(--duration-fast) ease;
+            display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+        }
+        @media (hover: hover) and (pointer: fine) {
+            .btn-secondary:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-3px); }
+        }
+        .btn-secondary:active { transform: translateY(0) scale(0.97); }
+
+        .hero-visual { position: relative; display: flex; justify-content: center; align-items: center; }
+        .visual-card {
+            background: #fff; border-radius: 35px; padding: 40px; border: 1px solid var(--border);
+            box-shadow: 0 30px 70px rgba(74, 63, 53, 0.08); width: 100%; max-width: 480px;
+            position: relative; z-index: 2; overflow: hidden;
+        }
+        .visual-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px;
+            background: linear-gradient(90deg, var(--primary), var(--gold));
+        }
+
+        /* Simulator Styles */
+        .simulator {
+            padding: 100px 8%; background: #FFF;
+            border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+        }
+        @media (max-width: 768px) { .simulator { display: none !important; } }
+        .sim-container { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: flex-start; max-width: 1300px; margin: 50px auto 0; }
+        .sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .sim-card {
+            background: #FFFDFB; border: 1px solid var(--border); border-radius: 20px;
+            padding: 22px; cursor: pointer; display: flex; align-items: center; gap: 16px;
+            transition: border-color var(--duration-normal) ease, background-color var(--duration-normal) ease, box-shadow var(--duration-normal) ease, transform var(--duration-normal) var(--ease-out);
+            box-shadow: 0 4px 12px rgba(74, 63, 53, 0.02); position: relative; overflow: hidden;
+        }
+        .sim-card.active { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 10px 25px rgba(224, 123, 123, 0.12); transform: translateY(-2px); }
+        .sim-card.active::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--primary); }
+        .sim-card:hover:not(.active) { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(74, 63, 53, 0.05); border-color: var(--primary); }
+        .sim-icon-box {
+            width: 46px; height: 46px; background: #fff; border-radius: 14px; display: flex;
+            align-items: center; justify-content: center; font-size: 20px; border: 1px solid var(--border); flex-shrink: 0;
+        }
+        .sim-card-info { display: flex; flex-direction: column; gap: 4px; }
+        .sim-card-title { font-size: 12.5px; font-weight: 800; color: var(--text-main); letter-spacing: 0.5px; text-transform: uppercase; }
+        .sim-card-desc { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+        .sim-screen-container { background: #fff; border: 1px solid var(--border); border-radius: 35px; padding: 30px; box-shadow: 0 35px 80px rgba(74, 63, 53, 0.07); position: sticky; top: 120px; }
+        .sim-screen { width: 100%; aspect-ratio: 4/3; background: #FAF8F6; border-radius: 24px; overflow: hidden; position: relative; border: 1px solid var(--border); display: flex; justify-content: center; align-items: center; }
+        .screen-content { width: 100%; height: 100%; display: none; animation: fadeIn var(--duration-normal) var(--ease-out); position: absolute; top: 0; left: 0; }
+        .screen-content.active { display: block; }
+        .screen-img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Showcase Grid */
+        .showcase-fitur { padding: 100px 8%; background: #181111; color: #FFF; border-top: 1px solid var(--border); }
+        .showcase-tagline { font-size: 12px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 15px; display: block; }
+        .showcase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; max-width: 1300px; margin: 0 auto; }
+        .showcase-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 28px; transition: transform var(--duration-normal) ease, border-color var(--duration-normal) ease; }
+        .showcase-card:hover { transform: translateY(-6px); border-color: var(--primary); }
+        .showcase-card.card-featured { grid-column: span 2; background: linear-gradient(135deg, rgba(224, 123, 123, 0.1) 0%, rgba(200, 150, 46, 0.05) 100%); border-color: var(--primary); }
+        @media (max-width: 900px) { .showcase-card.card-featured { grid-column: span 1; } }
+        .showcase-badge { display: inline-block; font-size: 10px; font-weight: 800; padding: 4px 12px; border-radius: 50px; background: rgba(255,255,255,0.1); color: #FFF; text-transform: uppercase; margin-bottom: 18px; }
+        .showcase-badge.gold { background: var(--gold); color: #000; }
+        .showcase-badge.green { background: #10B981; color: #FFF; }
+        .showcase-img-box { width: 100%; height: 200px; border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
+        .showcase-img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Pricing Section */
+        .pricing { padding: 100px 8%; background: #FDF8F4; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .pricing-tabs { display: flex; justify-content: center; gap: 15px; margin-bottom: 60px; }
+        .pricing-tab { padding: 14px 28px; border-radius: 50px; border: 2px solid var(--border); background: #fff; color: var(--text-muted); font-weight: 700; font-size: 13px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        .pricing-tab.active { background: var(--text-main); color: #fff; border-color: var(--text-main); }
+        .pricing-container { max-width: 1200px; margin: 0 auto; }
+        .pricing-panel { display: none; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 40px; justify-content: center; }
+        .pricing-panel.active { display: grid; animation: fadeIn var(--duration-normal) var(--ease-out); }
+        .price-card { background: #fff; border-radius: 35px; padding: 50px 40px; border: 1px solid var(--border); position: relative; display: flex; flex-direction: column; transition: 0.3s; }
+        .price-card.featured { border-color: var(--gold); box-shadow: 0 20px 45px rgba(200, 150, 46, 0.08); }
+        .price-card.featured::after { content: 'POPULER / REKOMENDASI'; position: absolute; top: 24px; right: 30px; background: var(--gold); color: #fff; font-size: 9px; font-weight: 800; padding: 5px 12px; border-radius: 50px; letter-spacing: 1px; }
+        .price-name { font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; }
+        .price-value { font-family: 'Lora', serif; font-size: 40px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+        .price-desc { font-size: 13px; line-height: 1.6; color: var(--text-muted); margin-bottom: 35px; min-height: 40px; }
+        .price-features { list-style: none; margin-bottom: 40px; flex-grow: 1; display: flex; flex-direction: column; gap: 15px; }
+        .price-features li { font-size: 13.5px; font-weight: 600; color: var(--text-main); display: flex; align-items: flex-start; gap: 12px; }
+        .price-features li::before { content: '✓'; color: var(--primary); font-weight: 800; }
+        .price-features li.disabled { color: #BBB; text-decoration: line-through; }
+        .price-features li.disabled::before { content: '×'; color: #BBB; }
+        .btn-price { width: 100%; padding: 16px; border-radius: 50px; border: 2px solid var(--border); background: #fff; color: var(--text-main); font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; text-align: center; text-decoration: none; transition: 0.3s; }
+        .price-card.featured .btn-price { background: var(--text-main); color: #fff; border-color: var(--text-main); }
+        .price-card:hover .btn-price { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+        /* Custom CTA */
+        .cta-custom { padding: 100px 8%; background: #1A0D0D; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        .cta-box { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 40px; padding: 80px 40px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35); }
+        .cta-box h2 { font-family: 'Lora', serif; font-size: 38px; color: #FFF; margin-bottom: 20px; }
+        .cta-box p { font-size: 15px; color: rgba(255, 255, 255, 0.7); max-width: 650px; margin: 0 auto 40px; line-height: 1.7; }
+        .btn-whatsapp { padding: 18px 45px; border-radius: 50px; background: #25D366; color: #fff; text-decoration: none; font-size: 14px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3); transition: 0.3s; }
+        .btn-whatsapp:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(37, 211, 102, 0.4); }
+
+        /* Marquee Ticker */
+        .instagram-marquee { width: 100%; background: #8C7560; color: #FAF6F0; overflow: hidden; white-space: nowrap; display: flex; align-items: center; padding: 18px 0; cursor: pointer; text-decoration: none; }
+        .marquee-track { display: flex; animation: marqueeScroll 25s linear infinite; }
+        .marquee-content { display: flex; align-items: center; }
+        .marquee-item { font-size: 13px; font-weight: 800; letter-spacing: 2px; padding: 0 25px; display: inline-flex; align-items: center; gap: 15px; }
+        @keyframes marqueeScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+        /* Footer */
+        footer { padding: 80px 8% 40px; background: #FFFBF9; text-align: center; position: relative; overflow: hidden; border-top: 1px solid var(--border); }
+        .footer-logo { font-family: 'Lora', serif; font-size: 28px; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 15px; }
+        .footer-logo span { color: var(--primary); }
+        .footer-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 30px; }
+        .footer-copy { font-size: 12px; color: var(--text-muted); opacity: 0.7; }
+
+        /* Reveal Animation System */
+        .reveal-element { opacity: 0; transform: translateY(40px); transition: opacity 1.8s cubic-bezier(0.25, 1, 0.5, 1), transform 1.8s cubic-bezier(0.25, 1, 0.5, 1); will-change: transform, opacity; }
+        .reveal-element.reveal-visible { opacity: 1; transform: translateY(0); }
+
+        /* Modal Styles */
+        #demo-modal-overlay { position: fixed; inset: 0; background: rgba(8,6,4,0.78); backdrop-filter: blur(14px); display: none; align-items: center; justify-content: center; z-index: 10000001; padding: 20px; opacity: 0; transition: 0.3s; }
+        #demo-modal-overlay[style*="display: flex"] { opacity: 1; }
+        #demo-modal-box { background: #fff; border-radius: 34px; padding: 44px 36px 36px; max-width: 510px; width: 100%; max-height: 88vh; overflow-y: auto; box-shadow: 0 50px 100px rgba(0,0,0,0.3); border: 1px solid var(--border); }
+        .demo-modal-header { text-align: center; margin-bottom: 28px; }
+        .demo-modal-header .dm-icon { font-size: 44px; display: block; margin-bottom: 14px; }
+        .demo-modal-header h2 { font-family: 'Lora', serif; font-size: 22px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+        .demo-modal-header p { font-size: 12px; color: var(--text-muted); line-height: 1.7; max-width: 340px; margin: 0 auto; }
+        .demo-tab-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
+        .demo-tab-btn { padding: 8px 16px; border-radius: 30px; font-size: 11px; font-weight: 800; border: 1.5px solid var(--border); background: #fff; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .demo-tab-btn.active { background: var(--text-main); color: #fff; border-color: var(--text-main); }
+        .demo-card { border: 2px solid var(--border); border-radius: 18px; padding: 18px 20px; background: #fff; cursor: pointer; transition: all 0.25s; margin-bottom: 10px; position: relative; text-align: left; }
+        .demo-card:hover { border-color: var(--primary); box-shadow: 0 8px 24px rgba(224,123,123,0.1); }
+        .demo-card.selected { border-color: var(--primary) !important; background: #FFF9F6; box-shadow: 0 10px 28px rgba(224,123,123,0.13); }
+        .demo-card-name { font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 2px; }
+        .demo-card-tier { font-size: 9px; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+        .demo-card-features { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+        .demo-card-features li { font-size: 11px; color: var(--text-muted); }
+        .demo-card-features li.locked { opacity: 0.5; text-decoration: line-through; }
+        #btn-demo-submit { width: 100%; padding: 16px; border-radius: 50px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 800; border: none; cursor: pointer; margin-top: 15px; transition: 0.3s; }
+        #btn-demo-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+        .demo-cancel-link { display: block; text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 15px; cursor: pointer; text-decoration: underline; }
+        .demo-modal-footer-note { font-size: 9px; color: var(--text-muted); text-align: center; margin-top: 15px; opacity: 0.7; }
+    </style>
+</head>
+<body>
+
+    <!-- Nav Bar -->
+    <nav class="navbar">
+        <a href="https://sapatamu.id/" class="logo">
+            Sapa<span>Tamu</span>.ku 
+            <span style="font-size: 10px; background: rgba(224,123,123,0.12); color: var(--primary); padding: 3px 10px; border-radius: 20px; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; border: 1px solid rgba(224,123,123,0.3); margin-left: 8px;">Guestbook</span>
+        </a>
+        
+        <!-- Desktop Nav Links -->
+        <div class="nav-links">
+            <a href="https://sapatamu.id/" class="nav-link" style="color: var(--primary); font-weight: 800;">Marketplace Home ↗</a>
+            <a href="#simulator" class="nav-link">Fitur Guestbook</a>
+            <a href="#services" class="nav-link">Layanan</a>
+            <a href="#pricing" class="nav-link">Harga & Paket</a>
+            <a href="#custom" class="nav-link">Hubungi Kami</a>
+            <div style="display: flex; align-items: center; gap: 12px; margin-left: 10px;">
+                <button onclick="openDemoModal()" class="btn-navbar-demo" style="padding: 10px 20px; border-radius: 50px; background: rgba(224,123,123,0.1); border: 2.5px solid var(--primary); color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; transition: 0.3s;">🎮 Coba Demo</button>
+                <a href="login.html" class="btn-navbar-login">Masuk</a>
+                <a href="login.html#register" class="btn-navbar-register">Daftar</a>
+            </div>
+        </div>
+
+        <!-- Mobile Quick Login & Menu Button -->
+        <div class="nav-mobile-actions" style="display: none; align-items: center; gap: 10px;">
+            <button onclick="openDemoModal()" class="btn-navbar-demo" style="padding: 6px 12px; font-size: 10px; border-radius: 50px; background: rgba(224,123,123,0.1); border: 2px solid var(--primary); color: var(--primary); font-weight: 800; text-transform: uppercase; cursor: pointer; margin-right: 5px;">🎮 Demo</button>
+            <a href="login.html" class="btn-navbar-login" style="padding: 6px 14px; font-size: 11px; border-radius: 50px;">Masuk</a>
+            <button id="mobile-nav-toggle" style="background: none; border: none; cursor: pointer; color: var(--text-main); display: flex; align-items: center; justify-content: center; padding: 5px;" aria-label="Toggle Menu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Drawer Menu -->
+    <div id="mobile-drawer" style="position: fixed; top: 56px; left: 0; width: 100%; background: var(--bg); border-bottom: 1px solid var(--border); box-shadow: 0 15px 30px rgba(74, 63, 53, 0.08); z-index: 999; display: none; flex-direction: column; padding: 25px; gap: 15px; transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1); transform: translateY(-10px); opacity: 0;">
+        <a href="https://sapatamu.id/" class="nav-link" style="font-size: 14px; font-weight: 800; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 10px;">Marketplace Home ↗</a>
+        <a href="#simulator" class="nav-link" style="font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 10px;" onclick="closeMobileDrawer()">Fitur Guestbook</a>
+        <a href="#services" class="nav-link" style="font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 10px;" onclick="closeMobileDrawer()">Layanan</a>
+        <a href="#pricing" class="nav-link" style="font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 10px;" onclick="closeMobileDrawer()">Harga & Paket</a>
+        <a href="#custom" class="nav-link" style="font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 10px;" onclick="closeMobileDrawer()">Hubungi Kami</a>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 5px;">
+            <button onclick="closeMobileDrawer(); openDemoModal();" style="text-align: center; width: 100%; padding: 12px 24px; border-radius: 50px; background: rgba(224,123,123,0.1); border: 2px solid var(--primary); color: var(--primary); font-size: 13px; font-weight: 800; text-transform: uppercase; cursor: pointer; outline: none;">🎮 Coba Akun Gratis!</button>
+            <a href="login.html" class="btn-navbar-login" style="text-align: center; width: 100%; padding: 12px 24px;">Masuk</a>
+            <a href="login.html#register" class="btn-navbar-register" style="text-align: center; width: 100%; padding: 12px 24px;">Daftar</a>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <header class="hero" id="home">
+        <ul class="dynamic-bg">
+            <li></li><li></li><li></li><li></li><li></li>
+            <li></li><li></li><li></li><li></li><li></li>
+        </ul>
+        <div class="hero-text">
+            <span class="section-tag reveal-element">✦ SapaTamu Digital Guestbook Ecosystem</span>
+            <h1 class="reveal-element">Buku Tamu Digital & QR Check-in <span>Tercepat untuk Event Anda</span>.</h1>
+            <p class="reveal-element">Bebaskan acara Anda dari antrean panjang meja registrasi. SapaTamu Digital Guestbook menghadirkan QR Scan instan, cetak stiker label thermal otomatis, Kiosk Selfie Mandiri, serta rekapitulasi kehadiran real-time yang presisi.</p>
+            <div class="hero-cta reveal-element" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <a href="javascript:void(0)" onclick="openDemoModal()" class="btn-primary" style="background: linear-gradient(135deg, #e05e5e 0%, #c83c3c 100%); box-shadow: 0 8px 25px rgba(224, 94, 94, 0.35); font-weight: 800; display: inline-flex; align-items: center; gap: 8px;">🎮 COBA DEMO GUESTBOOK</a>
+                <a href="daftar.html" class="btn-secondary">Buat Buku Tamu Event →</a>
+                <a href="#pricing" class="btn-secondary" style="border-style: dashed;">Diskusikan Paket Impianmu</a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="visual-deco-1"></div>
+            <div class="visual-card reveal-element" style="padding: 0 !important; width: 100%; max-width: 420px; aspect-ratio: 4/5; height: auto; margin: 0 auto; overflow: hidden; border-radius: 35px; position: relative; box-shadow: 0 30px 70px rgba(74, 63, 53, 0.15);">
+                <img src="assets/hero_alface.jpg" alt="Digital Guestbook AI - SapaTamu" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;">
+            </div>
+        </div>
+    </header>
+
+    <!-- Interactive Dashboard Simulator -->
+    <section class="simulator" id="simulator">
+        <div class="section-header">
+            <span class="section-tag reveal-element">Coba Sendiri — Gratis</span>
+            <h2 class="section-title-large reveal-element">Jelajahi Fitur Keajaiban Kami</h2>
+            <p class="reveal-element" style="font-size: 14px; color: var(--text-muted); margin-top: 10px; max-width: 600px; margin-left: auto; margin-right: auto; font-weight: 500;">
+                Klik fitur apapun di bawah dan lihat tampilan nyatanya — persis seperti yang digunakan tim usher Anda di hari H.
+            </p>
+        </div>
+
+        <div class="sim-container reveal-element">
+            <div class="sim-grid">
+                <div class="sim-card active" onclick="activateSim(0)">
+                    <div class="sim-icon-box">🖥️</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">Welcome Sign</span>
+                        <span class="sim-card-desc">Layar sambutan tamu di TV utama</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(1)">
+                    <div class="sim-icon-box">📟</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">Kiosk & Selfie</span>
+                        <span class="sim-card-desc">Check-in dengan foto selfie</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(2)">
+                    <div class="sim-icon-box">🔍</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">QR Scanner</span>
+                        <span class="sim-card-desc">Scan QR + selfie otomatis</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(3)">
+                    <div class="sim-icon-box">📓</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">Digital Guestbook</span>
+                        <span class="sim-card-desc">Tamu daftar sendiri, langsung tercatat</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(4)">
+                    <div class="sim-icon-box">💬</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">WA Blast & Auto Response</span>
+                        <span class="sim-card-desc">Balas otomatis via WhatsApp</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(5)">
+                    <div class="sim-icon-box">📊</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">Grafik Kehadiran</span>
+                        <span class="sim-card-desc">Pantau arus tamu secara real-time</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(6)">
+                    <div class="sim-icon-box">➕</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">On-Site Entry</span>
+                        <span class="sim-card-desc">Input tamu walk-in saat acara</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(7)">
+                    <div class="sim-icon-box">💼</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">Input Angpao</span>
+                        <span class="sim-card-desc">Catat angpao & kado secara aman</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(8)">
+                    <div class="sim-icon-box">🏆</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">Lucky Draw</span>
+                        <span class="sim-card-desc">Undi doorprize dari tamu hadir</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(9)">
+                    <div class="sim-icon-box">🖨️</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">Mesin Stiker Cerdas</span>
+                        <span class="sim-card-desc">Cetak label nama otomatis</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(10)">
+                    <div class="sim-icon-box">⭐</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">AI Pencari Foto Cantik</span>
+                        <span class="sim-card-desc">Alface Recognition - Knowhere Studio</span>
+                    </div>
+                </div>
+
+                <div class="sim-card" onclick="activateSim(11)">
+                    <div class="sim-icon-box">⚙️</div>
+                    <div class="sim-card-info">
+                        <span class="sim-card-title">Pengaturan Acara</span>
+                        <span class="sim-card-desc">Atur semua konfigurasi acara Anda</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sim-screen-container">
+                <div class="sim-screen">
+                    <div class="screen-content active" id="sim-screen-0">
+                        <img src="assets/feature_kiosk.png" alt="Welcome Sign" class="screen-img">
+                    </div>
+                    <div class="screen-content" id="sim-screen-1">
+                        <div class="screen-inner-html" style="background: #FAF6F0; padding: 15px; height: 100%; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+                            <div style="background: #FFF; width: 100%; height: 100%; border-radius: 16px; padding: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.06); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: #4A3F35; font-family: 'Plus Jakarta Sans', sans-serif;">
+                                <div style="font-family: 'Lora', serif; font-size: 7.5px; font-style: italic; color: #8C7560; margin-bottom: 1px;">Welcome,</div>
+                                <div style="font-family: 'Lora', serif; font-size: 15px; font-weight: 800; color: #4A3F35; margin-bottom: 2px;">DIANITA</div>
+                                <div style="font-size: 6px; font-weight: 800; color: #C8962E; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">UMUM</div>
+                                <div style="background: #F3ECE6; padding: 4px 10px; border-radius: 20px; font-size: 6px; font-weight: 700; color: #8C7560; display: flex; align-items: center; gap: 3px; margin-bottom: 10px; border: 1px solid rgba(200, 150, 46, 0.15);">
+                                    <span>📷</span> TAMBAHKAN FOTO SELFIE
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-content" id="sim-screen-2">
+                        <img src="assets/feature_checkin.png" alt="QR Scanner" class="screen-img">
+                    </div>
+                    <div class="screen-content" id="sim-screen-3">
+                        <img src="assets/feature_formulirtamu.png" alt="Digital Guestbook" class="screen-img">
+                    </div>
+                    <div class="screen-content" id="sim-screen-4">
+                        <img src="assets/feature_wa_blast.png" alt="WhatsApp Blast Manager" class="screen-img">
+                    </div>
+                    <div class="screen-content" id="sim-screen-5">
+                        <img src="assets/feature_dashboard.png" alt="Client Dashboard" class="screen-img">
+                    </div>
+                    <div class="screen-content" id="sim-screen-6">
+                        <img src="assets/feature_onsite.png" alt="On-Site Entry" class="screen-img">
+                    </div>
+                    <div class="screen-content" id="sim-screen-7">
+                        <img src="assets/feature_angpao.png" alt="Digital Gift Ledger" class="screen-img">
+                    </div>
+                    <div class="screen-content" id="sim-screen-8">
+                        <img src="assets/feature_luckydraw.png" alt="Lucky Draw System" class="screen-img">
+                    </div>
+                    <div class="screen-content" id="sim-screen-9">
+                        <div class="screen-inner-html" style="align-items: center; justify-content: center; text-align: center; gap: 8px; padding: 25px;">
+                            <div style="width: 170px; background: #FFF; border: 1px solid var(--border); padding: 12px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); text-align: center; font-family: monospace; font-size: 9px; color: #111;">
+                                <div style="font-weight: bold; font-size: 11px; margin-bottom: 3px;">SAPATAMU.KU</div>
+                                =========================<br>
+                                GUEST CHECK-IN RECEIPT<br>
+                                =========================<br>
+                                NAMA: Bp. Nana Herna S.<br>
+                                STATUS: VIP KELUARGA<br>
+                                MEJA: TABLE 1 (MAIN VIP)<br>
+                                HARI: Senin, 25 Mei 2026<br>
+                                =========================<br>
+                                *Selamat Menikmati Acara*
+                            </div>
+                        </div>
+                    </div>
+                    <div class="screen-content" id="sim-screen-10">
+                        <div class="screen-inner-html" style="background: #1C0F0F; text-align: center; gap: 8px; padding: 20px; color: #FFF; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <div style="font-size: 6px; font-weight: 800; color: var(--primary); letter-spacing: 1px;">KNOWHERE STUDIO COLLAB</div>
+                            <div style="font-family: 'Lora', serif; font-size: 14px; font-weight: bold; color: #FAF6F0;">AI Face Finder Gallery</div>
+                            <button disabled style="padding: 4px 10px; background: #10B981; border: none; border-radius: 50px; font-size: 7px; font-weight: 800; color: #fff; margin-top: 5px;">✓ 14 FOTO DITEMUKAN</button>
+                        </div>
+                    </div>
+                    <div class="screen-content" id="sim-screen-11">
+                        <img src="assets/feature_config.png" alt="Event Config" class="screen-img">
+                    </div>
+                </div>
+                <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px; text-align: center;">
+                    <div id="sim-info-text" style="font-size: 12.5px; font-weight: 700; color: var(--text-main); line-height: 1.6;">
+                        Welcome Sign Mode: Menyambut tamu VIP dengan nama personal secara instan di layar TV utama venue pernikahan!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Showcase -->
+    <section class="showcase-fitur" id="services">
+        <div class="section-header" style="text-align: center; margin-bottom: 60px;">
+            <span class="showcase-tagline reveal-element">Semua yang Anda Butuhkan di Hari H</span>
+            <h2 class="section-title-large reveal-element" style="color: #FDF9F6; margin-bottom: 20px;">Satu Platform untuk Semua Kebutuhan Guestbook</h2>
+            <p class="reveal-element" style="font-size: 15px; color: rgba(255,255,255,0.6); max-width: 700px; margin: 0 auto 40px; font-weight: 500; line-height: 1.7;">
+                Dari daftar tamu sampai angpao digital, semuanya tercatat rapi dan aman dalam satu platform yang mudah digunakan siapapun.
+            </p>
+        </div>
+
+        <div class="showcase-grid">
+            <div class="showcase-card reveal-element card-featured">
+                <span class="showcase-badge gold">Keajaiban Kecil</span>
+                <div class="showcase-img-box">
+                    <img src="assets/hero_alface.jpg" alt="Gallery AI" class="showcase-img">
+                </div>
+                <div class="showcase-info">
+                    <h3 style="font-size: 26px; line-height: 1.3; margin-bottom: 20px;">Cari Foto Cantik Tamu, Cukup Modal Foto Wajah!</h3>
+                    <p style="font-size: 15px; line-height: 1.7;">Bekerja sama dengan Knowhere Studio, tamu Anda tidak perlu pusing mencari foto di antara ribuan dokumentasi. Cukup scan wajah, AI kami akan otomatis mengumpulkan foto mereka selama pesta.</p>
+                </div>
+            </div>
+
+            <div class="showcase-card reveal-element">
+                <span class="showcase-badge">Fitur Utama</span>
+                <div class="showcase-img-box">
+                    <img src="assets/showcase_qr.jpg" alt="Selfie Check-In" class="showcase-img">
+                </div>
+                <div class="showcase-info">
+                    <h3>Datang, Senyum, Langsung Masuk!</h3>
+                    <p>Nama mereka langsung tersapa di layar monitor, dan mereka bisa langsung masuk menikmati pesta tanpa perlu antre nulis di buku kertas lagi.</p>
+                </div>
+            </div>
+
+            <div class="showcase-card reveal-element">
+                <span class="showcase-badge gold">Real-Time</span>
+                <div class="showcase-img-box">
+                    <img src="assets/showcase_dashboard.jpg" alt="Pantau Kehadiran" class="showcase-img">
+                </div>
+                <div class="showcase-info">
+                    <h3>Pantau Kehadiran Kerabat (Real-Time)</h3>
+                    <p>Halaman Pantau merangkum jumlah kehadiran tamu secara instan detik itu juga. Memastikan pengantin dan keluarga tenang acaranya ramai.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing" id="pricing">
+        <div class="section-header">
+            <span class="section-tag reveal-element">Pricelist Investasi</span>
+            <h2 class="section-title-large reveal-element">Paket Layanan Digital Guestbook</h2>
+        </div>
+
+        <div class="pricing-tabs reveal-element">
+            <button class="pricing-tab active" onclick="switchTab(0)">Digital Guestbook</button>
+            <button class="pricing-tab" onclick="switchTab(1)">All-in Collaboration</button>
+        </div>
+
+        <div class="pricing-container">
+            <div class="pricing-panel active" id="panel-0">
+                <div class="price-card reveal-element">
+                    <span class="price-name">Paket Bronze (&lt;250 Tamu)</span>
+                    <div class="price-value">Rp2.500.000</div>
+                    <p class="price-desc">Pilihan tepat untuk kelancaran check-in di pesta skala kecil/intim.</p>
+                    <ul class="price-features">
+                        <li>Kapasitas &lt;250 Tamu</li>
+                        <li>Self-Registration & Real-Time Check-In</li>
+                        <li>1 Station Kiosk QR Scanner</li>
+                        <li>1 Station Onsite Usher</li>
+                        <li>Secure Digital Gift (Angpao) Logger</li>
+                        <li>Instant Attendance Report (Excel)</li>
+                    </ul>
+                    <a href="https://wa.me/6285111567829?text=Halo%20SapaTamu.ku,%20saya%20tertarik%20dengan%20Guestbook%20Paket%20Bronze" class="btn-price" target="_blank">PILIH BRONZE</a>
+                </div>
+
+                <div class="price-card featured reveal-element">
+                    <span class="price-name" style="color: var(--gold);">Paket Silver (250-500 Tamu)</span>
+                    <div class="price-value">Rp3.500.000</div>
+                    <p class="price-desc">Sistem lengkap dengan TV greeting display dan cetak label nama instan.</p>
+                    <ul class="price-features">
+                        <li>Kapasitas 250-500 Tamu</li>
+                        <li>Seluruh Manfaat Paket Bronze</li>
+                        <li>1 Station Kiosk QR Scanner + 2 Onsite Usher</li>
+                        <li>Welcome Sign Display (Greeting Otomatis)</li>
+                        <li>Lucky Draw System (Undian Digital)</li>
+                        <li>1 Unit Mesin Stiker Cerdas (Cetak label instan)</li>
+                    </ul>
+                    <a href="https://wa.me/6285111567829?text=Halo%20SapaTamu.ku,%20saya%20tertarik%20dengan%20Guestbook%20Paket%20Silver" class="btn-price" target="_blank">PILIH SILVER</a>
+                </div>
+
+                <div class="price-card reveal-element">
+                    <span class="price-name">Paket Gold (&gt;500 Tamu)</span>
+                    <div class="price-value">Rp4.500.000</div>
+                    <p class="price-desc">Eksklusivitas penuh untuk pesta akbar dengan analisis data real-time dan AI.</p>
+                    <ul class="price-features">
+                        <li>Kapasitas &gt;500 Tamu (Skala Besar)</li>
+                        <li>Seluruh Manfaat Paket Silver</li>
+                        <li>2 Kiosk QR Scanners + 2+1 VIP Ushers</li>
+                        <li>AI Pencari Foto (Cari foto via wajah)</li>
+                        <li>Halaman Pantau Kehadiran (Grafik real-time)</li>
+                    </ul>
+                    <a href="https://wa.me/6285111567829?text=Halo%20SapaTamu.ku,%20saya%20tertarik%20dengan%20Guestbook%20Paket%20Gold" class="btn-price" target="_blank">PILIH GOLD</a>
+                </div>
+            </div>
+
+            <div class="pricing-panel" id="panel-1">
+                <div class="price-card reveal-element">
+                    <span class="price-name">Exclusive Package (Knowhere Premium)</span>
+                    <div class="price-value">Rp7.500.000</div>
+                    <p class="price-desc">Kolaborasi eksklusif SapaTamu.ku dengan Knowhere Studio Photo & Video.</p>
+                    <ul class="price-features">
+                        <li>Undangan Tipe Premium + Guestbook Paket Silver</li>
+                        <li>Layanan Foto & Video Paket Premium Knowhere Studio</li>
+                        <li>On-site Team: 3 Orang Usher Profesional</li>
+                    </ul>
+                    <a href="https://wa.me/6285111567829?text=Halo%20SapaTamu.ku,%20saya%20tertarik%20dengan%20Exclusive%20Package" class="btn-price" target="_blank">PILIH EXCLUSIVE</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Custom Deal CTA -->
+    <section class="cta-custom" id="custom">
+        <div class="cta-box">
+            <h2 class="reveal-element">Butuh Paket Kustomisasi Khusus?</h2>
+            <p class="reveal-element">Atur kapasitas tamu, printer, tim usher, serta layanan foto & video sesuai dengan kebutuhan unik hari bahagia Anda.</p>
+            <a href="https://wa.me/6285111567829?text=Halo%20SapaTamu.ku,%20saya%20ingin%20berdiskusi%20mengenai%20paket%20guestbook" class="btn-whatsapp reveal-element" target="_blank">
+                Ngobrol Bareng Wedding Consultant
+            </a>
+        </div>
+    </section>
+
+    <!-- Marquee Ticker -->
+    <a href="https://www.instagram.com/sapatamu.ku" target="_blank" class="instagram-marquee">
+        <div class="marquee-track">
+            <div class="marquee-content">
+                <div class="marquee-item">SAPATAMU DIGITAL GUESTBOOK <span class="marquee-star">✦</span></div>
+                <div class="marquee-item">FOLLOW US ON INSTAGRAM @SAPATAMU.KU <span class="marquee-star">✦</span></div>
+                <div class="marquee-item">SAPATAMU DIGITAL GUESTBOOK <span class="marquee-star">✦</span></div>
+                <div class="marquee-item">FOLLOW US ON INSTAGRAM @SAPATAMU.KU <span class="marquee-star">✦</span></div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Footer -->
+    <footer>
+        <span class="footer-logo reveal-element">Sapa<span>Tamu</span>.ku Guestbook</span>
+        <p class="footer-desc reveal-element">Digital Guestbook & Event Management Platform under SapaTamu Ecosystem.</p>
+        <p class="footer-copy reveal-element">© 2026 Sapatamu.ku & Knowhere Studio. All Rights Reserved.</p>
+    </footer>
+
+    <!-- Interactive Scripts -->
+    <script>
+        function switchTab(index) {
+            document.querySelectorAll('.pricing-tab').forEach((tab, idx) => {
+                tab.classList.toggle('active', idx === index);
+            });
+            document.querySelectorAll('.pricing-panel').forEach((panel, idx) => {
+                panel.classList.toggle('active', idx === index);
+            });
+        }
+
+        const simDescriptions = [
+            "Welcome Sign Mode: Menyambut tamu VIP dengan nama personal secara instan di layar TV utama venue!",
+            "Kiosk & Selfie Check-In: Tamu melakukan check-in mandiri dengan foto selfie seru.",
+            "QR Scanner Console: Usher memindai QR Code tamu dari WhatsApp undangan untuk proses check-in < 2 detik.",
+            "Digital Guestbook Log: Pencatatan otomatis daftar tamu hadir secara digital & rapi.",
+            "WA Blast Manager: Mengirim pesan ucapan terima kasih otomatis begitu tamu selesai check-in.",
+            "Analytics Dashboard: Monitor grafik statistik kehadiran tamu secara real-time dari mana saja.",
+            "On-Site Entry Console: Memudahkan usher memasukkan tamu walk-in / tanpa undangan sebelumnya.",
+            "Digital Gift Logger: Catat nominal angpao & kado fisik secara rahasia dan aman.",
+            "Lucky Draw System: Undian doorprize otomatis khusus bagi tamu yang telah hadir di lokasi.",
+            "Mesin Stiker Cerdas: Cetak stiker label nama tamu secara instan begitu scan QR berhasil.",
+            "AI Face Finder Gallery: Tamu temukan semua foto cantiknya di acara cukup dengan scan wajah.",
+            "Pengaturan Acara: Kustomisasi penuh layout, warna, & fitur sesuai preferensi acara Anda."
+        ];
+
+        let simAutoTimer = null;
+        let simCurrentIndex = 0;
+
+        function activateSim(index) {
+            simCurrentIndex = index;
+            document.querySelectorAll('.sim-card').forEach((card, idx) => {
+                card.classList.toggle('active', idx === index);
+            });
+            document.querySelectorAll('.screen-content').forEach((screen, idx) => {
+                screen.classList.toggle('active', idx === index);
+            });
+            const infoText = document.getElementById('sim-info-text');
+            if (infoText) {
+                infoText.textContent = simDescriptions[index] || "";
+            }
+        }
+
+        function startSimAutoCycle() {
+            if (simAutoTimer) clearInterval(simAutoTimer);
+            simAutoTimer = setInterval(() => {
+                simCurrentIndex = (simCurrentIndex + 1) % 12;
+                activateSim(simCurrentIndex);
+            }, 4500);
+        }
+
+        function stopSimAutoCycle() {
+            if (simAutoTimer) clearInterval(simAutoTimer);
+        }
+
+        const mobileNavToggle = document.getElementById('mobile-nav-toggle');
+        const mobileDrawer = document.getElementById('mobile-drawer');
+        if (mobileNavToggle && mobileDrawer) {
+            mobileNavToggle.addEventListener('click', () => {
+                const isOpen = mobileDrawer.style.display === 'flex';
+                mobileDrawer.style.display = isOpen ? 'none' : 'flex';
+                mobileDrawer.style.opacity = isOpen ? '0' : '1';
+                mobileDrawer.style.transform = isOpen ? 'translateY(-10px)' : 'translateY(0)';
+            });
+        }
+        function closeMobileDrawer() {
+            if (mobileDrawer) {
+                mobileDrawer.style.display = 'none';
+                mobileDrawer.style.opacity = '0';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            startSimAutoCycle();
+
+            const sections = document.querySelectorAll('header, section, footer');
+            const revealObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const reveals = entry.target.querySelectorAll('.reveal-element');
+                        reveals.forEach((el, index) => {
+                            setTimeout(() => {
+                                el.classList.add('reveal-visible');
+                            }, index * 150);
+                        });
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.05 });
+
+            sections.forEach(sec => revealObserver.observe(sec));
+        });
+    </script>
+
+    <!-- Modal Demo -->
+    <div id="demo-modal-overlay" onclick="handleDemoOverlayClick(event)">
+        <div id="demo-modal-box">
+            <div class="demo-modal-header">
+                <span class="dm-icon">🎊</span>
+                <h2>Pilih Paket Demo Guestbook</h2>
+                <p>Eksplorasi fitur Digital Guestbook secara langsung dengan akun demo interaktif.</p>
+            </div>
+            <div class="demo-tab-row">
+                <button class="demo-tab-btn active" id="demo-tab-guestbook" onclick="filterDemoCat('guestbook')">Digital Guestbook</button>
+            </div>
+            <div id="demo-cards-container"></div>
+            <button id="btn-demo-submit" onclick="startDemoSession()" disabled>Mulai Eksplorasi Sekarang →</button>
+            <span class="demo-cancel-link" onclick="closeDemoModal()">Batalkan</span>
+        </div>
+    </div>
+
+    <script>
+        const DEMO_PACKAGES = [
+            { key: 'bronze guestbook', name: 'Bronze Guestbook', cat: 'guestbook', tier: 'Tier 3', desc: 'Buku tamu digital dasar, scanner QR.', features: ['Buku Tamu Digital', 'Scanner QR', 'On-Site Display'] },
+            { key: 'silver guestbook', name: 'Silver Guestbook', cat: 'guestbook', tier: 'Tier 4', desc: 'Fitur lengkap, welcome screen TV & custom greeting.', features: ['Buku Tamu Digital', 'Welcome Screen TV', 'WA Blast OTP'] },
+            { key: 'gold guestbook', name: 'Gold Guestbook', cat: 'guestbook', tier: 'Tier 5', desc: 'Paket super lengkap dengan undian Lucky Draw.', features: ['Buku Tamu Digital', 'Welcome Screen TV', 'WA Blast OTP', 'Lucky Draw Undian'] }
+        ];
+
+        let selectedDemoPackage = null;
+        function openDemoModal() {
+            const overlay = document.getElementById('demo-modal-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                filterDemoCat('guestbook');
+            }
+        }
+        function closeDemoModal() {
+            const overlay = document.getElementById('demo-modal-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+        function handleDemoOverlayClick(e) {
+            if (e.target.id === 'demo-modal-overlay') closeDemoModal();
+        }
+        function filterDemoCat(cat) {
+            const container = document.getElementById('demo-cards-container');
+            if (!container) return;
+            container.innerHTML = DEMO_PACKAGES.map(p => `
+                <div class="demo-card ${selectedDemoPackage === p.name ? 'selected' : ''}" onclick="selectDemoPackage('${p.name}')">
+                    <div class="demo-card-name">${p.name}</div>
+                    <div class="demo-card-tier">${p.tier}</div>
+                    <p style="font-size: 11px; color: var(--text-muted);">${p.desc}</p>
+                </div>
+            `).join('');
+        }
+        function selectDemoPackage(packageName) {
+            selectedDemoPackage = packageName;
+            filterDemoCat('guestbook');
+            const submitBtn = document.getElementById('btn-demo-submit');
+            if (submitBtn) submitBtn.disabled = false;
+        }
+        function startDemoSession() {
+            if (!selectedDemoPackage) return;
+            const pkgEncoded = encodeURIComponent(selectedDemoPackage);
+            window.location.href = `dashboard.html?demo=true&pkg=${pkgEncoded}`;
+        }
+    </script>
+</body>
+</html>

@@ -266,7 +266,7 @@ async function resolveSapatamuSubdomain() {
 
         // 3. SATPAM AKHIR (Hanya di Subdomain): Jika masih kosong, tendang ke login
         // KECUALI untuk halaman publik / auth (undangan, welcome, worker, login)
-        const publicPages = ["undangan.html", "welcome.html", "worker.html", "invitation.html", "rsvp.html", "login.html", "login"];
+        const publicPages = ["undangan.html", "welcome.html", "worker.html", "invitation.html", "rsvp.html", "login.html", "login", "guestbook.html", "guestbook"];
         const isPublicPage = publicPages.some(page => window.location.pathname.includes(page));
 
         if (!window.CURRENT_SS_ID && !isPublicPage) {
