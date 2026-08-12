@@ -184,20 +184,43 @@
   <div class="main-wrap">
     <div>
       <div class="tabs">
+        <!-- REORDERED TABS: PAKET & LAYANAN (LEFT), ULASAN (CENTER), TENTANG VENDOR (RIGHT) -->
         <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('tentang', this)">Tentang Vendor</button>
-          <button class="tab-btn" onclick="switchTab('paket', this)">Paket &amp; Layanan</button>
+          <button class="tab-btn active" onclick="switchTab('paket', this)">Paket &amp; Layanan</button>
+          <button class="tab-btn" onclick="switchTab('ulasan', this)">Ulasan &amp; Review</button>
+          <button class="tab-btn" onclick="switchTab('tentang', this)">Tentang Vendor</button>
         </div>
         <div class="tab-content">
-          <div class="tab-panel active" id="tab-tentang">
-            <h2 style="font-family:'Lora',serif;font-size:1.25rem;margin-bottom:14px">Deskripsi &amp; Profil Vendor</h2>
-            <p class="about-desc" id="aboutDesc">Loading deskripsi vendor...</p>
-          </div>
-          <div class="tab-panel" id="tab-paket">
+          <!-- TAB 1: PAKET & LAYANAN (DEFAULT ACTIVE) -->
+          <div class="tab-panel active" id="tab-paket">
             <h2 style="font-family:'Lora',serif;font-size:1.25rem;margin-bottom:18px">Daftar Paket &amp; Price List</h2>
             <div class="pkg-grid" id="paketGrid">
               <p style="color:var(--text-muted)">Memuat paket vendor...</p>
             </div>
+          </div>
+
+          <!-- TAB 2: ULASAN & REVIEW (CENTER) -->
+          <div class="tab-panel" id="tab-ulasan">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+              <h2 style="font-family:'Lora',serif;font-size:1.25rem">Ulasan &amp; Rating Pengantin</h2>
+              <div style="font-size:0.9rem;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:6px" id="reviewScoreHeader">
+                <span>⭐ 5.0</span>
+                <span style="color:var(--text-muted);font-weight:400" id="reviewCountHeader">(0 ulasan)</span>
+              </div>
+            </div>
+            <div id="reviewsContainer">
+              <div style="text-align:center;padding:36px 20px;background:var(--bg);border-radius:var(--radius);border:1px dashed var(--border)">
+                <div style="font-size:2rem;margin-bottom:8px">💬</div>
+                <div style="font-family:'Lora',serif;font-weight:700;font-size:1.1rem;margin-bottom:4px">Belum Ada Ulasan</div>
+                <p style="font-size:0.85rem;color:var(--text-muted);max-width:360px;margin:0 auto">Jadilah pengantin pertama yang memberikan ulasan untuk vendor ini setelah menggunakan jasanya.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: TENTANG VENDOR (RIGHT) -->
+          <div class="tab-panel" id="tab-tentang">
+            <h2 style="font-family:'Lora',serif;font-size:1.25rem;margin-bottom:14px">Deskripsi &amp; Profil Vendor</h2>
+            <p class="about-desc" id="aboutDesc">Loading deskripsi vendor...</p>
           </div>
         </div>
       </div>
@@ -257,6 +280,7 @@
         const data = await res.json();
         const v = data.vendor;
         const products = data.products || [];
+        const reviews = data.reviews || [];
 
         if (v) {
           document.title = `${v.business_name} — Marketplace Sapatamu.id`;
@@ -296,8 +320,9 @@
             pkgContainer.innerHTML = `<p style="color:var(--text-muted);grid-column:1/-1">Belum ada paket yang dipublikasikan oleh vendor ini.</p>`;
           } else {
             pkgContainer.innerHTML = products.map(p => {
-              const img = p.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
-              const tag = p.badge_tag ? `<span class="pkg-tag">${p.badge_tag}</span>` : '';
+              const img = p.cover_image_url || p.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
+              const tagLabel = p.price_label || p.badge_tag;
+              const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
               const pkgWaUrl = `https://wa.me/${waNum}?text=Halo%20${encodeURIComponent(v.business_name)},%20saya%20tertarik%20dengan%20paket%20"${encodeURIComponent(p.name)}"%20seharga%20${encodeURIComponent(formatRupiah(p.price))}`;
               return `
                 <div class="pkg-card">
@@ -315,10 +340,27 @@
               `;
             }).join('');
           }
+
+          // RENDER REVIEWS & RATINGS
+          $('reviewCountHeader').textContent = `(${reviews.length} ulasan)`;
+          if (reviews.length > 0) {
+            const avgRating = (reviews.reduce((acc, r) => acc + (r.rating || 5), 0) / reviews.length).toFixed(1);
+            $('reviewScoreHeader').innerHTML = `<span>⭐ ${avgRating}</span><span style="color:var(--text-muted);font-weight:400">(${reviews.length} ulasan)</span>`;
+            $('reviewsContainer').innerHTML = reviews.map(r => `
+              <div style="background:var(--bg);border-radius:var(--radius);padding:18px;margin-bottom:14px;border:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <strong style="font-size:0.95rem">${r.client_name || 'Pengantin Sapatamu'}</strong>
+                  <span style="color:var(--gold);font-weight:700">⭐ ${r.rating || 5}.0</span>
+                </div>
+                <p style="font-size:0.88rem;color:var(--text-light);line-height:1.6">${r.comment || ''}</p>
+                <small style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;display:block">${new Date(r.created_at).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })}</small>
+              </div>
+            `).join('');
+          }
         }
       } catch (e) {
         console.error(e);
-        $('vendorName').textContent = 'Terjadi Kesalahan Kategori';
+        $('vendorName').textContent = 'Terjadi Kesalahan Vendor';
       }
     }
 

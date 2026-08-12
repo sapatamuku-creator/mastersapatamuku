@@ -494,15 +494,39 @@ export default async function handler(req, res) {
         if (!image || !type || !vendorId) return res.status(400).json({ error: 'Missing parameters' });
 
         const GAS_URL = gasUrl || process.env.GAS_MARKETPLACE_URL || process.env.GAS_URL;
-        if (!GAS_URL) return res.status(500).json({ error: 'GAS_MARKETPLACE_URL environment variable not configured. Mohon berikan Web App URL dari MarketplaceUpload.gs' });
+        if (!GAS_URL) return res.status(500).json({ error: 'GAS_MARKETPLACE_URL environment variable not configured.' });
 
-        const gasRes = await fetch(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image, type, vendorId, filename: filename || `${vendorId}_${type}_${Date.now()}.webp` })
+        let gasData = null;
+        try {
+          const gasRes = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image, type, vendorId, filename: filename || `${vendorId}_${type}_${Date.now()}.webp` })
+          });
+          gasData = await gasRes.json();
+        } catch (e) {
+          return res.status(502).json({ error: 'Gagal terhubung ke GAS upload endpoint' });
+        }
+
+        // Normalize fileId from various GAS response shapes:
+        // { fileId }, { id }, { data: { fileId } }, { file_id }, { url }, { proxyUrl }
+        const rawFileId = gasData?.fileId || gasData?.id || gasData?.file_id ||
+          gasData?.data?.fileId || gasData?.data?.id || null;
+
+        // Extract fileId from a Google Drive URL if returned as URL string
+        let fileId = rawFileId;
+        if (!fileId && gasData?.url) {
+          const m = (gasData.url).match(/(?:id=|d\/)([A-Za-z0-9_-]{25,})/i);
+          if (m) fileId = m[1];
+        }
+
+        const proxyUrl = fileId ? `/api/mp-img?id=${fileId}` : (gasData?.proxyUrl || null);
+
+        return res.status(200).json({
+          ...gasData,
+          fileId: fileId || gasData?.fileId,
+          proxyUrl
         });
-        const data = await gasRes.json();
-        return res.status(200).json(data);
       }
 
       // ── 8. VENDOR PROFILE (AUTH) ──

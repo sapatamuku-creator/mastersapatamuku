@@ -1041,25 +1041,36 @@
         });
 
         const json = await res.json();
-        const uploadedUrl = (res.ok && (json.proxyUrl || json.fileId)) ? (json.proxyUrl || `https://sapatamu.id/api/mp-img?id=${json.fileId}`) : dataUrl;
+        const uploadedUrl = (res.ok && json.proxyUrl)
+          ? json.proxyUrl
+          : (res.ok && json.fileId)
+            ? `/api/mp-img?id=${json.fileId}`
+            : null;
 
         setTimeout(() => {
           loaderEl.style.display = 'none';
-          hiddenInput.value = uploadedUrl;
-          imgEl.src = uploadedUrl;
+          if (uploadedUrl) {
+            hiddenInput.value = uploadedUrl;
+            imgEl.src = uploadedUrl;
+          } else {
+            // Fallback: store base64 in hidden input but don't save to DB until re-uploaded
+            hiddenInput.value = dataUrl;
+            imgEl.src = dataUrl;
+          }
           filledEl.style.display = 'block';
           phEl.style.display = 'none';
-          showToast('✅ Foto berhasil dipotong, dikompres WebP &amp; diunggah!');
+          showToast(uploadedUrl ? '✅ Foto berhasil dipotong & diunggah ke Drive!' : '⚠️ Foto tersimpan lokal, ulangi untuk sinkronkan ke Drive');
         }, 400);
 
       } catch (err) {
         setTimeout(() => {
           loaderEl.style.display = 'none';
-          hiddenInput.value = dataUrl;
+          // Even on upload error, show preview but indicate it needs re-upload
+          hiddenInput.value = '';
           imgEl.src = dataUrl;
           filledEl.style.display = 'block';
           phEl.style.display = 'none';
-          showToast('Foto tersimpan!');
+          showToast('⚠️ Gagal unggah ke Drive, coba lagi sebelum simpan paket');
         }, 400);
       }
     }
@@ -1084,13 +1095,17 @@
       }
 
       const html = _packages.map(p => {
-        const img = p.cover_image_url || p.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
+        const img = p.cover_image_url || p.image_url || null;
+        const fallbackImg = 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
+        const imgTag = img
+          ? `<img src="${img}" class="pkg-img" alt="${p.name}" onerror="this.onerror=null;this.src='${fallbackImg}'">`
+          : `<img src="${fallbackImg}" class="pkg-img" alt="${p.name}">`;
         const tagLabel = p.price_label || p.badge_tag;
         const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
         return `
           <div class="pkg-card">
             <div style="position:relative">
-              <img src="${img}" class="pkg-img" alt="${p.name}">
+              ${imgTag}
               ${tag}
             </div>
             <div class="pkg-body">
