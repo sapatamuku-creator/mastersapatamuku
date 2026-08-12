@@ -378,8 +378,8 @@ export default async function handler(req, res) {
               logo_url: allProds[0].cover_image_url || allProds[0].image_url,
               category_id: DEFAULT_CATEGORIES[1].id,
               category_name: 'Fotografi & Videografi',
-              rating_avg: 5.0,
-              review_count: 1,
+              rating_avg: 0,
+              review_count: 0,
               is_verified: true
             };
           }

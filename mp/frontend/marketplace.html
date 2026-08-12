@@ -325,31 +325,29 @@
         const coverImg = v.cover_image_url || v.cover_image || null;
         const logoImg = v.logo_url || v.logo || coverImg || null;
         const price = v.price_from > 0 ? `Rp ${Number(v.price_from).toLocaleString('id-ID')}` : `Hubungi Vendor`;
-        const ratingVal = v.rating > 0 ? Number(v.rating).toFixed(1) : '5.0';
+        const ratingVal = v.rating > 0 ? Number(v.rating).toFixed(1) : '0';
         const reviewsCount = v.review_count || 0;
 
         return `
           <a href="/vendor/${v.slug}" class="vendor-card fade-in" style="background:#ffffff;border-radius:20px;border:1.5px solid var(--border);padding:22px 18px 18px;display:flex;flex-direction:column;align-items:center;text-align:center;transition:var(--transition);text-decoration:none;position:relative;box-shadow:var(--shadow-sm)">
             
-            <!-- 1. LARGE CIRCULAR HERO IMAGE WITH VERIFIED BLUE CHECKMARK BADGE -->
+            <!-- 1. CLEAN LARGE CIRCULAR HERO IMAGE -->
             <div style="position:relative;width:160px;height:160px;margin-bottom:16px;flex-shrink:0">
               <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;border:2.5px solid #ffffff;box-shadow:0 8px 20px rgba(74,63,53,0.12);background:linear-gradient(135deg,var(--primary-light),var(--bg-alt));display:flex;align-items:center;justify-content:center">
                 ${logoImg ? `<img src="${logoImg}" style="width:100%;height:100%;object-fit:cover" alt="${v.business_name}">` : `<div style="font-size:2.8rem;font-weight:800;color:var(--primary)">${init}</div>`}
               </div>
-              
-              <!-- VERIFIED BLUE CHECKMARK BADGE OVERLAY AT BOTTOM CENTER -->
-              <div style="position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 6px rgba(37,99,235,0.25))">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="10" fill="#2563EB" stroke="#FFFFFF" stroke-width="2"/>
-                  <path d="M8.5 12.5L10.8 14.8L15.5 9.5" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
             </div>
 
             <!-- 2. TYPOGRAPHIC HIERARCHY -->
-            <!-- Brand / Business Name (Primary Bold) -->
-            <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.08rem;font-weight:800;color:var(--primary);margin-bottom:4px;line-height:1.3;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-              ${v.business_name}
+            <!-- Brand / Business Name (Primary Bold) + Verified Blue Checkmark -->
+            <h3 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.08rem;font-weight:800;color:var(--primary);margin-bottom:4px;line-height:1.3;max-width:100%;display:flex;align-items:center;justify-content:center;gap:6px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.business_name}</span>
+              ${v.is_verified !== false ? `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0" title="Terverifikasi">
+                  <circle cx="12" cy="12" r="10" fill="#2563EB"/>
+                  <path d="M8.5 12.5L10.8 14.8L15.5 9.5" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              ` : ''}
             </h3>
 
             <!-- Category (Dark Charcoal Semi-Bold) -->
@@ -358,16 +356,18 @@
             </div>
 
             <!-- Location (Secondary Muted) -->
-            <div style="font-size:0.82rem;font-weight:600;color:#6B7280;margin-bottom:8px">
+            <div style="font-size:0.82rem;font-weight:600;color:#6B7280;margin-bottom:${reviewsCount > 0 ? '8px' : '16px'}">
               ${v.city || 'Indonesia'}
             </div>
 
-            <!-- Rating & Review Count -->
-            <div style="font-size:0.8rem;font-weight:600;color:#4B5563;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:14px">
-              <span style="color:#F59E0B">⭐⭐⭐⭐⭐</span>
-              <span style="font-weight:700">${ratingVal}/5</span>
-              <span style="color:#9CA3AF">(${reviewsCount} ulasan)</span>
-            </div>
+            <!-- Rating & Review Count (ONLY SHOWN IF REVIEWS EXIST AND COUNT > 0) -->
+            ${(reviewsCount > 0 && v.rating > 0) ? `
+              <div style="font-size:0.8rem;font-weight:600;color:#4B5563;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:14px">
+                <span style="color:#F59E0B">⭐</span>
+                <span style="font-weight:700">${Number(v.rating).toFixed(1)}/5</span>
+                <span style="color:#9CA3AF">(${reviewsCount} ulasan)</span>
+              </div>
+            ` : ''}
 
             <!-- Action Button / Price List -->
             <div style="width:100%;margin-top:auto">
