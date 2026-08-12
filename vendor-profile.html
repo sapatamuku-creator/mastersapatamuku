@@ -298,8 +298,28 @@
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
     }
 
+    function renderVendorProfileSkeletons() {
+      const pkgContainer = $('paketGrid');
+      if (!pkgContainer) return;
+      let skelHTML = '';
+      for (let i = 0; i < 3; i++) {
+        skelHTML += `
+          <div class="pkg-card" style="background:#ffffff;border-radius:16px;border:1px solid var(--border);overflow:hidden;pointer-events:none">
+            <div class="img-skeleton-container" style="height:200px;width:100%"></div>
+            <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
+              <div class="img-skeleton-container" style="width:140px;height:20px;border-radius:6px"></div>
+              <div class="img-skeleton-container" style="width:100px;height:16px;border-radius:4px"></div>
+              <div class="img-skeleton-container" style="width:100%;height:40px;border-radius:8px;margin-top:12px"></div>
+            </div>
+          </div>
+        `;
+      }
+      pkgContainer.innerHTML = skelHTML;
+    }
+
     async function loadVendor() {
       if (!slug) return;
+      renderVendorProfileSkeletons();
       try {
         const res = await fetch(`/api/mp/vendor-detail?slug=${encodeURIComponent(slug)}`);
         if (!res.ok) {
@@ -319,10 +339,10 @@
           
           // CATEGORY SUBTITLE TAGLINE
           if (v.category_name) {
-            $('vendorCategory').textContent = `✨ ${v.category_name}`;
+            $('vendorCategory').textContent = v.category_name;
           }
 
-          $('vendorCity').textContent = `📍 ${v.city || 'Indonesia'}`;
+          $('vendorCity').textContent = v.city || 'Indonesia';
           $('sbCity').textContent = v.city || 'Indonesia';
           $('aboutDesc').textContent = v.description || 'Vendor ini belum menyertakan deskripsi rinci.';
 

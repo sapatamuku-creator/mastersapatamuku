@@ -38,6 +38,39 @@
     a { text-decoration: none; color: inherit; }
     button { cursor: pointer; border: none; background: none; font-family: inherit; }
 
+    /* PROGRESSIVE ASYNC SHIMMER ANIMATION */
+    @keyframes shimmerPulse {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .img-skeleton-container {
+      position: relative;
+      overflow: hidden;
+      background: #F2EFEA;
+    }
+    .img-skeleton-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(90deg, rgba(242,239,234,0.4) 0%, rgba(255,255,255,0.9) 50%, rgba(242,239,234,0.4) 100%);
+      background-size: 200% 100%;
+      animation: shimmerPulse 1.4s ease-in-out infinite;
+      z-index: 1;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .img-skeleton-container.img-loaded::before {
+      opacity: 0;
+      animation: none;
+    }
+    .async-img {
+      opacity: 0;
+      transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .async-img.img-loaded {
+      opacity: 1;
+    }
+
     /* AUTH STATE (LOGIN FORM) */
     .auth-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; background: radial-gradient(circle at top right, #fcf4f4, var(--bg)); }
     .auth-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--surface-border); padding: 40px; width: 100%; max-width: 440px; box-shadow: var(--shadow-lg); text-align: center; }
@@ -1102,14 +1135,25 @@
       const html = _packages.map(p => {
         const img = p.cover_image_url || p.image_url || null;
         const fallbackImg = 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
-        const imgTag = img
-          ? `<img src="${img}" class="pkg-img" alt="${p.name}" onerror="this.onerror=null;this.src='${fallbackImg}'">`
-          : `<img src="${fallbackImg}" class="pkg-img" alt="${p.name}">`;
+        const imgTag = img ? `
+          <div class="img-skeleton-container" style="width:100%;height:180px">
+            <img src="${img}" 
+                 class="pkg-img async-img" 
+                 style="width:100%;height:100%;object-fit:cover"
+                 alt="${p.name}" 
+                 onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')"
+                 onerror="this.onerror=null;this.src='${fallbackImg}';this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')">
+          </div>
+        ` : `
+          <div class="img-skeleton-container" style="width:100%;height:180px">
+            <img src="${fallbackImg}" class="pkg-img async-img img-loaded" style="width:100%;height:100%;object-fit:cover" alt="${p.name}">
+          </div>
+        `;
         const tagLabel = p.price_label || p.badge_tag;
         const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
         return `
           <div class="pkg-card">
-            <div style="position:relative">
+            <div style="position:relative;height:180px">
               ${imgTag}
               ${tag}
             </div>
@@ -1118,8 +1162,8 @@
               <div class="pkg-price">${formatRupiah(p.price)}</div>
               <div class="pkg-desc">${p.description || '-'}</div>
               <div class="pkg-actions">
-                <button class="btn-edit-pkg" onclick="editPackage('${p.id}')">✏️ Edit Paket</button>
-                <button class="btn-delete-pkg" onclick="deletePackage('${p.id}')">🗑️ Hapus Paket</button>
+                <button class="btn-edit-pkg" onclick="editPackage('${p.id}')">Edit Paket</button>
+                <button class="btn-delete-pkg" onclick="deletePackage('${p.id}')">Hapus Paket</button>
               </div>
             </div>
           </div>

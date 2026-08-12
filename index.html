@@ -85,6 +85,39 @@
       --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
+    /* PROGRESSIVE ASYNC SHIMMER ANIMATION */
+    @keyframes shimmerPulse {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .img-skeleton-container {
+      position: relative;
+      overflow: hidden;
+      background: #F2EFEA;
+    }
+    .img-skeleton-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(90deg, rgba(242,239,234,0.4) 0%, rgba(255,255,255,0.9) 50%, rgba(242,239,234,0.4) 100%);
+      background-size: 200% 100%;
+      animation: shimmerPulse 1.4s ease-in-out infinite;
+      z-index: 1;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .img-skeleton-container.img-loaded::before {
+      opacity: 0;
+      animation: none;
+    }
+    .async-img {
+      opacity: 0;
+      transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .async-img.img-loaded {
+      opacity: 1;
+    }
+
     *, *::before, *::after {
       margin: 0;
       padding: 0;
@@ -563,7 +596,16 @@
       const price = v.price_from > 0 ? `<span class="amount">Rp ${Number(v.price_from).toLocaleString('id-ID')}</span>` : `<span class="amount">Hubungi Vendor</span>`;
       return `<a href="/vendor/${v.slug}" class="vendor-card fade-in">
         <div class="vendor-cover" style="background:linear-gradient(135deg,var(--primary),var(--gold))">
-          ${v.cover_image_url ? `<img src="${v.cover_image_url}" alt="${v.business_name}">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:2rem">${init}</div>`}
+          ${v.cover_image_url ? `
+            <div class="img-skeleton-container" style="width:100%;height:100%">
+              <img src="${v.cover_image_url}" 
+                   alt="${v.business_name}"
+                   class="async-img"
+                   style="width:100%;height:100%;object-fit:cover"
+                   onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')"
+                   onerror="this.style.display='none';this.parentElement.classList.add('img-loaded')">
+            </div>
+          ` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:2rem">${init}</div>`}
           <div class="vendor-logo-wrap"><div class="vendor-logo" style="background:linear-gradient(135deg,var(--primary),var(--gold))"></div></div>
         </div>
         <div class="vendor-info">
@@ -571,6 +613,25 @@
           <h3 class="vendor-name">${v.business_name}</h3>
           <div class="vendor-price">${price}</div>
         </div></a>`;
+    }
+
+    function renderFeaturedVendorSkeletons(count = 4) {
+      const grid = document.getElementById('featuredVendors');
+      if (!grid) return;
+      let skelHTML = '';
+      for (let i = 0; i < count; i++) {
+        skelHTML += `
+          <div class="vendor-card" style="background:#ffffff;border-radius:16px;border:1px solid var(--border);overflow:hidden;pointer-events:none">
+            <div class="img-skeleton-container" style="height:170px;width:100%"></div>
+            <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+              <div class="img-skeleton-container" style="width:90px;height:12px;border-radius:4px"></div>
+              <div class="img-skeleton-container" style="width:140px;height:18px;border-radius:6px"></div>
+              <div class="img-skeleton-container" style="width:100px;height:14px;border-radius:4px;margin-top:8px"></div>
+            </div>
+          </div>
+        `;
+      }
+      grid.innerHTML = skelHTML;
     }
 
     async function loadCategories() {
@@ -582,7 +643,6 @@
         if (Array.isArray(categories) && categories.length > 0) {
           grid.innerHTML = categories.map(c => `
             <a href="/marketplace?kategori=${c.slug}" class="kategori-card">
-              <div class="kategori-icon">${c.icon || '✨'}</div>
               <div class="kategori-name">${c.name}</div>
               <div class="kategori-count" style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">${c.vendor_count ? c.vendor_count + ' vendor' : 'Jelajahi ↗'}</div>
             </a>
@@ -596,6 +656,7 @@
     async function loadFeaturedVendors() {
       const grid = document.getElementById('featuredVendors');
       if (!grid) return;
+      renderFeaturedVendorSkeletons(4);
       try {
         let res = await fetch('/api/mp/vendors?limit=6');
         let json = await res.json();
@@ -604,7 +665,7 @@
         if (vendors.length > 0) {
           grid.innerHTML = vendors.map(renderVendorCard).join('');
         } else {
-          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:32px 20px;color:var(--text-muted);background:var(--bg);border-radius:16px"><div style="font-size:2rem;margin-bottom:8px">💍</div><strong>Belum Ada Vendor Terdaftar</strong><p style="font-size:0.85rem;margin-top:4px">Jadilah vendor pertama yang bergabung di Sapatamu.id!</p></div>';
+          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:32px 20px;color:var(--text-muted);background:var(--bg);border-radius:16px"><strong>Belum Ada Vendor Terdaftar</strong><p style="font-size:0.85rem;margin-top:4px">Jadilah vendor pertama yang bergabung di Sapatamu.id!</p></div>';
         }
       } catch (e) {
         grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted)">Gagal memuat vendor.</div>';
