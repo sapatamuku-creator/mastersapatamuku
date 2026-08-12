@@ -288,6 +288,9 @@ export default async function handler(req, res) {
 
         const vendor = vendors[0];
 
+        const catObj = DEFAULT_CATEGORIES.find(c => c.id === vendor.category_id);
+        vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
+
         const [pRes, rRes] = await Promise.all([
           sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&is_active=eq.true&order=sort_order.asc`),
           sbServiceFetch(`/mp_reviews?vendor_id=eq.${vendor.id}&order=created_at.desc&limit=10`)
@@ -530,11 +533,35 @@ export default async function handler(req, res) {
 
         if (req.method === 'GET') return res.status(200).json({ vendor });
         if (req.method === 'PATCH') {
+          const allowedFields = [
+            'business_name', 'city', 'province', 'owner_name',
+            'whatsapp', 'email', 'instagram', 'website',
+            'description', 'cover_image_url', 'logo_url'
+          ];
+          const cleanBody = {};
+          for (const key of allowedFields) {
+            if (req.body[key] !== undefined && req.body[key] !== null) {
+              cleanBody[key] = req.body[key];
+            }
+          }
+          if (req.body.cover_image && !cleanBody.cover_image_url) {
+            cleanBody.cover_image_url = req.body.cover_image;
+          }
+
           const patchRes = await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
-            method: 'PATCH', body: JSON.stringify(req.body), headers: { 'Prefer': 'return=representation' }
+            method: 'PATCH',
+            body: JSON.stringify(cleanBody),
+            headers: { 'Prefer': 'return=representation' }
           });
-          const [updated] = await patchRes.json();
-          return res.status(200).json({ success: true, vendor: updated });
+
+          const patchJson = await patchRes.json().catch(() => null);
+          if (!patchRes.ok || !patchJson) {
+            const errMsg = (patchJson && patchJson.message) ? patchJson.message : 'Gagal memperbarui profil vendor';
+            return res.status(400).json({ error: errMsg });
+          }
+
+          const updated = Array.isArray(patchJson) ? patchJson[0] : patchJson;
+          return res.status(200).json({ success: true, vendor: updated || vendor });
         }
         return res.status(405).json({ error: 'Method not allowed' });
       }

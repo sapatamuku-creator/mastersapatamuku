@@ -64,7 +64,7 @@
     .vendor-cover-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .cover-overlay {
       position: absolute; inset: 0;
-      background: linear-gradient(to bottom, transparent 40%, rgba(44,36,32,0.45));
+      background: linear-gradient(to bottom, transparent 30%, rgba(44,36,32,0.55));
     }
 
     /* VENDOR HEADER CARD */
@@ -86,8 +86,16 @@
     .vendor-head-info { flex: 1; min-width: 240px; }
     .vendor-head h1 {
       font-family: 'Lora', serif; font-size: clamp(1.4rem, 2.5vw, 1.8rem); font-weight: 700;
-      color: var(--text-main); margin-bottom: 4px; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      color: var(--text-main); margin-bottom: 2px; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
     }
+
+    /* CATEGORY SUBTITLE TAGLINE UNDER BRAND NAME */
+    .vendor-category-sub {
+      font-size: 0.84rem; font-weight: 600; color: var(--primary-dark);
+      margin-bottom: 6px; display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(224, 123, 123, 0.1); padding: 3px 12px; border-radius: 50px;
+    }
+
     .vendor-meta-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 0.88rem; color: var(--text-light); margin-top: 4px; }
 
     /* ELEGANT 10% ACCENT WHATSAPP BUTTON (NO NEON GLARE!) */
@@ -159,6 +167,9 @@
       <div class="vendor-logo-big" id="vendorLogo">💍</div>
       <div class="vendor-head-info">
         <h1 id="vendorName">Loading Vendor...</h1>
+        <div>
+          <span class="vendor-category-sub" id="vendorCategory">📸 Fotografi &amp; Videografi</span>
+        </div>
         <div class="vendor-meta-row" id="vendorMeta">
           <span id="vendorCity">📍 Loading...</span>
         </div>
@@ -253,14 +264,19 @@
           // INSTAGRAM STYLE VERIFIED BADGE DIRECTLY BESIDE BUSINESS NAME
           $('vendorName').innerHTML = `${v.business_name} ${igVerifiedBadge}`;
           
+          // CATEGORY SUBTITLE TAGLINE
+          if (v.category_name) {
+            $('vendorCategory').textContent = `✨ ${v.category_name}`;
+          }
+
           $('vendorCity').textContent = `📍 ${v.city || 'Indonesia'}`;
           $('sbCity').textContent = v.city || 'Indonesia';
           $('aboutDesc').textContent = v.description || 'Vendor ini belum menyertakan deskripsi rinci.';
 
-          const coverUrl = v.cover_image_url || v.cover_image || '';
-          if (coverUrl) {
-            $('coverHero').innerHTML = `<img src="${coverUrl}" alt="${v.business_name} Cover"><div class="cover-overlay"></div>`;
-          }
+          // COVER HERO BANNER WITH LUXURY DEFAULT FALLBACK
+          const defaultCover = 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1400&q=80';
+          const coverUrl = v.cover_image_url || v.cover_image || defaultCover;
+          $('coverHero').innerHTML = `<img src="${coverUrl}" alt="${v.business_name} Cover"><div class="cover-overlay"></div>`;
 
           if (v.logo_url) {
             $('vendorLogo').innerHTML = `<img src="${v.logo_url}" alt="${v.business_name} Logo">`;
