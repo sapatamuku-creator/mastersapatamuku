@@ -1,7 +1,7 @@
 // api/marketplace.js
 // Consolidated Serverless Function for Sapatamu Marketplace (Vercel Hobby 12-Function Limit Optimization)
 
-import { sbFetch, sbServiceFetch, setCors, handleOptions, normalizeWA, generateSlug } from './marketplace/mp-config.js';
+import { sbFetch, sbServiceFetch, setCors, handleOptions, normalizeWA, generateSlug } from '../lib/mp-config.js';
 
 const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
 
