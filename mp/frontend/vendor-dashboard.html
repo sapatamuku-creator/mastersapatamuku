@@ -123,17 +123,38 @@
       outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(224,123,123,0.15);
     }
 
-    /* UPLOAD BOX STYLES */
+    /* ADVANCED DRAG & DROP UPLOADER WITH LOADER & PREVIEW */
+    .upload-card-wrap { position: relative; width: 100%; margin-top: 6px; }
     .upload-dropzone {
-      border: 2px dashed var(--surface-border); border-radius: var(--radius-md); padding: 20px;
+      border: 2px dashed var(--surface-border); border-radius: var(--radius-md); padding: 24px 20px;
       text-align: center; background: var(--bg); cursor: pointer; transition: var(--transition);
       position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     }
-    .upload-dropzone:hover { border-color: var(--primary); background: #fff; }
-    .upload-dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-    .upload-preview-cover { width: 100%; height: 140px; object-fit: cover; border-radius: var(--radius-md); margin-top: 8px; display: none; border: 1px solid var(--surface-border); }
-    .upload-preview-logo { width: 80px; height: 80px; object-fit: cover; border-radius: 50%; margin-top: 8px; display: none; border: 2px solid var(--primary); }
-    .upload-status { font-size: 0.8rem; font-weight: 600; color: var(--primary-dark); }
+    .upload-dropzone:hover, .upload-dropzone.drag-over { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(224,123,123,0.12); }
+    .upload-dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 5; }
+
+    /* PREVIEW CONTAINER INSIDE DROPZONE */
+    .upload-preview-wrap { position: relative; width: 100%; display: none; margin-top: 10px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--surface-border); }
+    .upload-preview-wrap img { width: 100%; height: 160px; object-fit: cover; display: block; }
+    .upload-preview-wrap.logo-mode img { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; margin: 10px auto; border: 3px solid var(--primary); }
+    .upload-controls-overlay {
+      position: absolute; inset: 0; background: rgba(44,36,32,0.65); backdrop-filter: blur(2px);
+      display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0; transition: var(--transition);
+    }
+    .upload-preview-wrap:hover .upload-controls-overlay { opacity: 1; }
+
+    /* CIRCULAR SVG PROGRESS LOADER OVERLAY */
+    .upload-loader-overlay {
+      position: absolute; inset: 0; background: rgba(255,255,255,0.92); backdrop-filter: blur(4px);
+      z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+      border-radius: var(--radius-md); animation: fadeIn 0.2s ease;
+    }
+    .loader-circle-wrap { position: relative; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; }
+    .loader-svg { width: 64px; height: 64px; transform: rotate(-90deg); }
+    .loader-bg { fill: none; stroke: var(--surface-border); stroke-width: 4; }
+    .loader-progress { fill: none; stroke: var(--primary); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 125.6; stroke-dashoffset: 125.6; transition: stroke-dashoffset 0.2s ease; }
+    .loader-text { position: absolute; font-size: 0.82rem; font-weight: 700; color: var(--primary-dark); }
+    .loader-status-msg { font-size: 0.8rem; font-weight: 600; color: var(--text-main); }
 
     /* PACKAGE GRID & CARDS */
     .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
@@ -169,7 +190,7 @@
     .inq-date { font-size: 0.78rem; color: var(--text-light); }
     .inq-msg { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
 
-    /* MODAL */
+    /* MODALS */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(44, 36, 32, 0.45); backdrop-filter: blur(4px);
       z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px;
@@ -342,7 +363,7 @@
         </div>
       </div>
 
-      <!-- TAB 4: EDIT PROFIL BISNIS (WITH WEBP IMAGE UPLOADER) -->
+      <!-- TAB 4: EDIT PROFIL BISNIS (WITH LUXURY CROPPER & PROGRESS LOADER) -->
       <div class="panel" id="tab-profile">
         <div class="card-panel" style="max-width:680px">
           <h2 class="panel-title" style="margin-bottom:20px">Edit Profil Bisnis Vendor</h2>
@@ -352,29 +373,71 @@
               <input type="text" id="pfName" required placeholder="misal: Knowhere Studio">
             </div>
 
+            <!-- FOTO LOGO UPLOADER -->
             <div class="form-group">
-              <label>Foto Logo / Profil Vendor (Upload Foto)</label>
-              <div class="upload-dropzone" onclick="$('fileLogoInput').click()">
-                <input type="file" id="fileLogoInput" accept="image/*" onchange="handleImageUpload(this, 'logo')">
-                <span style="font-size:1.5rem">📷</span>
-                <span style="font-weight:600;font-size:0.86rem">Klik / Drag Foto Logo di Sini</span>
-                <span style="font-size:0.75rem;color:var(--text-muted)">Otomatis dikompresi ke format WebP &amp; disimpan ke Google Drive</span>
+              <label>Foto Logo / Profil Vendor (Format 1:1)</label>
+              <div class="upload-card-wrap">
+                <div class="upload-dropzone" onclick="$('fileLogoInput').click()">
+                  <input type="file" id="fileLogoInput" accept="image/*" onchange="startCropFlow(this, 'logo')">
+                  <span style="font-size:1.6rem">📷</span>
+                  <span style="font-weight:600;font-size:0.88rem">Pilih / Drag Foto Logo di Sini</span>
+                  <span style="font-size:0.75rem;color:var(--text-muted)">Dapat dipotong (Crop), Zoom, Putar, &amp; Dikompres WebP</span>
+                </div>
+
+                <!-- LOADER OVERLAY -->
+                <div class="upload-loader-overlay" id="loaderLogo">
+                  <div class="loader-circle-wrap">
+                    <svg class="loader-svg" viewBox="0 0 50 50">
+                      <circle class="loader-bg" cx="25" cy="25" r="20"></circle>
+                      <circle class="loader-progress" id="progressLogoCircle" cx="25" cy="25" r="20"></circle>
+                    </svg>
+                    <div class="loader-text" id="progressLogoText">0%</div>
+                  </div>
+                  <div class="loader-status-msg" id="progressLogoMsg">Mengompresi WebP...</div>
+                </div>
+
+                <!-- PREVIEW WRAPPER WITH EDIT CONTROLS -->
+                <div class="upload-preview-wrap logo-mode" id="wrapLogoPreview">
+                  <img id="imgLogoPreview" src="" alt="Logo Preview">
+                  <div class="upload-controls-overlay">
+                    <button type="button" class="btn-primary-add" style="padding:6px 14px;font-size:0.78rem" onclick="$('fileLogoInput').click()">✏️ Ganti Foto</button>
+                  </div>
+                </div>
               </div>
-              <img id="imgLogoPreview" class="upload-preview-logo" alt="Logo Preview">
-              <div id="statusLogoUpload" class="upload-status"></div>
               <input type="hidden" id="pfLogo">
             </div>
 
+            <!-- COVER BANNER UPLOADER -->
             <div class="form-group">
-              <label>Gambar Cover Banner / Sampul Profil (Upload Foto)</label>
-              <div class="upload-dropzone" onclick="$('fileCoverInput').click()">
-                <input type="file" id="fileCoverInput" accept="image/*" onchange="handleImageUpload(this, 'cover')">
-                <span style="font-size:1.5rem">🖼️</span>
-                <span style="font-weight:600;font-size:0.86rem">Klik / Drag Foto Cover Banner di Sini</span>
-                <span style="font-size:0.75rem;color:var(--text-muted)">Otomatis dikompresi ke format WebP &amp; disimpan ke Google Drive</span>
+              <label>Gambar Cover Banner / Sampul Profil (Format Landscape 3:1)</label>
+              <div class="upload-card-wrap">
+                <div class="upload-dropzone" onclick="$('fileCoverInput').click()">
+                  <input type="file" id="fileCoverInput" accept="image/*" onchange="startCropFlow(this, 'cover')">
+                  <span style="font-size:1.6rem">🖼️</span>
+                  <span style="font-weight:600;font-size:0.88rem">Pilih / Drag Foto Cover Banner di Sini</span>
+                  <span style="font-size:0.75rem;color:var(--text-muted)">Atur posisi tampilan banner agar pas di layar pengantin</span>
+                </div>
+
+                <!-- LOADER OVERLAY -->
+                <div class="upload-loader-overlay" id="loaderCover">
+                  <div class="loader-circle-wrap">
+                    <svg class="loader-svg" viewBox="0 0 50 50">
+                      <circle class="loader-bg" cx="25" cy="25" r="20"></circle>
+                      <circle class="loader-progress" id="progressCoverCircle" cx="25" cy="25" r="20"></circle>
+                    </svg>
+                    <div class="loader-text" id="progressCoverText">0%</div>
+                  </div>
+                  <div class="loader-status-msg" id="progressCoverMsg">Mengompresi WebP...</div>
+                </div>
+
+                <!-- PREVIEW WRAPPER WITH EDIT CONTROLS -->
+                <div class="upload-preview-wrap" id="wrapCoverPreview">
+                  <img id="imgCoverPreview" src="" alt="Cover Preview">
+                  <div class="upload-controls-overlay">
+                    <button type="button" class="btn-primary-add" style="padding:6px 14px;font-size:0.78rem" onclick="$('fileCoverInput').click()">✏️ Ganti Banner</button>
+                  </div>
+                </div>
               </div>
-              <img id="imgCoverPreview" class="upload-preview-cover" alt="Cover Preview">
-              <div id="statusCoverUpload" class="upload-status"></div>
               <input type="hidden" id="pfCover">
             </div>
 
@@ -397,7 +460,40 @@
     </main>
   </div>
 
-  <!-- MODAL TAMBAH PAKET (WITH IMAGE WEBP UPLOADER) -->
+  <!-- MODAL CROP & IMAGE EDITOR -->
+  <div class="modal-overlay" id="modalCropImage">
+    <div class="modal-box" style="max-width:620px">
+      <div class="modal-title">
+        <span id="cropModalTitle">✂️ Potong &amp; Atur Posisi Foto</span>
+        <button onclick="closeModalCrop()" style="font-size:1.2rem;color:var(--text-muted)">&times;</button>
+      </div>
+
+      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:14px">Geser foto untuk menyesuaikan posisi center. Gunakan slider untuk Zoom &amp; tombol untuk memutar foto.</p>
+
+      <div id="cropViewport" style="position:relative;width:100%;height:320px;background:#181513;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:grab;user-select:none">
+        <canvas id="cropCanvas" style="display:block"></canvas>
+      </div>
+
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px;background:var(--bg);padding:10px 14px;border-radius:12px;border:1px solid var(--surface-border)">
+          <span style="font-size:0.85rem;font-weight:600">🔍 Zoom:</span>
+          <input type="range" id="cropZoomRange" min="0.5" max="3" step="0.05" value="1" style="flex:1" oninput="updateCropZoom(this.value)">
+          <span id="cropZoomVal" style="font-size:0.82rem;font-weight:700;width:40px;text-align:right">1.0x</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn-action-outline" onclick="rotateCrop(-90)">🔄 -90°</button>
+            <button type="button" class="btn-action-outline" onclick="rotateCrop(90)">🔁 +90°</button>
+            <button type="button" class="btn-action-outline" onclick="resetCrop()">↺ Reset</button>
+          </div>
+          <button type="button" class="btn-primary-add" onclick="confirmCropAndUpload()">✨ Potong &amp; Unggah WebP 🚀</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TAMBAH PAKET -->
   <div class="modal-overlay" id="modalAddPackage">
     <div class="modal-box">
       <div class="modal-title">
@@ -421,14 +517,34 @@
 
         <div class="form-group">
           <label>Foto Sampul Paket (Upload Foto)</label>
-          <div class="upload-dropzone" onclick="$('filePkgInput').click()">
-            <input type="file" id="filePkgInput" accept="image/*" onchange="handleImageUpload(this, 'product')">
-            <span style="font-size:1.5rem">📸</span>
-            <span style="font-weight:600;font-size:0.86rem">Klik / Drag Foto Sampul Paket di Sini</span>
-            <span style="font-size:0.75rem;color:var(--text-muted)">Otomatis dikompresi ke WebP</span>
+          <div class="upload-card-wrap">
+            <div class="upload-dropzone" onclick="$('filePkgInput').click()">
+              <input type="file" id="filePkgInput" accept="image/*" onchange="startCropFlow(this, 'product')">
+              <span style="font-size:1.5rem">📸</span>
+              <span style="font-weight:600;font-size:0.86rem">Pilih / Drag Foto Sampul Paket</span>
+              <span style="font-size:0.75rem;color:var(--text-muted)">Otomatis dikompresi ke WebP</span>
+            </div>
+
+            <!-- LOADER OVERLAY -->
+            <div class="upload-loader-overlay" id="loaderPkg">
+              <div class="loader-circle-wrap">
+                <svg class="loader-svg" viewBox="0 0 50 50">
+                  <circle class="loader-bg" cx="25" cy="25" r="20"></circle>
+                  <circle class="loader-progress" id="progressPkgCircle" cx="25" cy="25" r="20"></circle>
+                </svg>
+                <div class="loader-text" id="progressPkgText">0%</div>
+              </div>
+              <div class="loader-status-msg" id="progressPkgMsg">Mengompresi WebP...</div>
+            </div>
+
+            <!-- PREVIEW WRAPPER -->
+            <div class="upload-preview-wrap" id="wrapPkgPreview">
+              <img id="imgPkgPreview" src="" alt="Package Preview">
+              <div class="upload-controls-overlay">
+                <button type="button" class="btn-primary-add" style="padding:6px 14px;font-size:0.78rem" onclick="$('filePkgInput').click()">✏️ Ganti Sampul</button>
+              </div>
+            </div>
           </div>
-          <img id="imgPkgPreview" class="upload-preview-cover" alt="Package Preview">
-          <div id="statusPkgUpload" class="upload-status"></div>
           <input type="hidden" id="pkgImage">
         </div>
 
@@ -452,6 +568,19 @@
     let _token = localStorage.getItem('mp_vendor_token');
     let _currentVendor = null;
     let _packages = [];
+
+    /* CROPPER STATE */
+    let _cropState = {
+      type: 'logo',
+      image: null,
+      zoom: 1.0,
+      rotation: 0,
+      offsetX: 0,
+      offsetY: 0,
+      isDragging: false,
+      startX: 0,
+      startY: 0
+    };
 
     function showToast(msg, type = 'info') {
       const t = $('toast');
@@ -480,8 +609,8 @@
 
     function openModalAddPackage() {
       $('formAddPackage').reset();
-      $('imgPkgPreview').style.display = 'none';
-      $('statusPkgUpload').textContent = '';
+      $('wrapPkgPreview').style.display = 'none';
+      $('loaderPkg').style.display = 'none';
       $('modalAddPackage').classList.add('active');
     }
 
@@ -489,100 +618,221 @@
       $('modalAddPackage').classList.remove('active');
     }
 
+    function closeModalCrop() {
+      $('modalCropImage').classList.remove('active');
+    }
+
     function formatRupiah(num) {
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
     }
 
-    /* WEBP CLIENT-SIDE COMPRESSION & GDRIVE UPLOAD HELPER */
-    async function compressAndUploadImage(file, type) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (e) => {
-          const img = new Image();
-          img.src = e.target.result;
-          img.onload = async () => {
-            const canvas = document.createElement('canvas');
-            let maxDim = type === 'cover' ? 1200 : (type === 'logo' ? 600 : 800);
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-              if (width > maxDim) {
-                height = Math.round((height * maxDim) / width);
-                width = maxDim;
-              }
-            } else {
-              if (height > maxDim) {
-                width = Math.round((width * maxDim) / height);
-                height = maxDim;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            const dataUrl = canvas.toDataURL('image/webp', 0.8);
-            const base64 = dataUrl.split(',')[1];
-
-            try {
-              const res = await fetch('/api/mp/upload-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  image: base64,
-                  type: type,
-                  vendorId: _currentVendor ? _currentVendor.id : 'vendor_temp',
-                  filename: `${type}_${Date.now()}.webp`
-                })
-              });
-
-              const json = await res.json();
-              if (res.ok && (json.proxyUrl || json.fileId)) {
-                const finalUrl = json.proxyUrl || `https://sapatamu.id/api/mp-img?id=${json.fileId}`;
-                resolve(finalUrl);
-              } else {
-                resolve(dataUrl);
-              }
-            } catch (err) {
-              resolve(dataUrl);
-            }
-          };
-        };
-      });
-    }
-
-    async function handleImageUpload(inputEl, type) {
+    /* ── ADVANCED CROP & CANVAS ENGINE ── */
+    function startCropFlow(inputEl, type) {
       if (!inputEl.files || !inputEl.files[0]) return;
       const file = inputEl.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = () => {
+          _cropState = {
+            type: type,
+            image: img,
+            zoom: 1.0,
+            rotation: 0,
+            offsetX: 0,
+            offsetY: 0,
+            isDragging: false,
+            startX: 0,
+            startY: 0
+          };
+          $('cropZoomRange').value = 1.0;
+          $('cropZoomVal').textContent = '1.0x';
+          $('cropModalTitle').textContent = type === 'logo' ? '✂️ Potong Logo (Rasio 1:1)' : (type === 'cover' ? '✂️ Potong Banner (Rasio 3:1)' : '✂️ Potong Foto Sampul Paket');
+          $('modalCropImage').classList.add('active');
+          initCropEvents();
+          drawCropCanvas();
+        };
+      };
+      reader.readAsDataURL(file);
+    }
 
-      let statusEl, previewEl, hiddenInput;
+    function initCropEvents() {
+      const viewport = $('cropViewport');
+      viewport.onmousedown = (e) => {
+        _cropState.isDragging = true;
+        _cropState.startX = e.clientX - _cropState.offsetX;
+        _cropState.startY = e.clientY - _cropState.offsetY;
+        viewport.style.cursor = 'grabbing';
+      };
+      window.onmousemove = (e) => {
+        if (!_cropState.isDragging) return;
+        _cropState.offsetX = e.clientX - _cropState.startX;
+        _cropState.offsetY = e.clientY - _cropState.startY;
+        drawCropCanvas();
+      };
+      window.onmouseup = () => {
+        _cropState.isDragging = false;
+        if (viewport) viewport.style.cursor = 'grab';
+      };
+
+      // Touch events for mobile
+      viewport.ontouchstart = (e) => {
+        if (e.touches.length === 1) {
+          _cropState.isDragging = true;
+          _cropState.startX = e.touches[0].clientX - _cropState.offsetX;
+          _cropState.startY = e.touches[0].clientY - _cropState.offsetY;
+        }
+      };
+      window.ontouchmove = (e) => {
+        if (!_cropState.isDragging || !e.touches[0]) return;
+        _cropState.offsetX = e.touches[0].clientX - _cropState.startX;
+        _cropState.offsetY = e.touches[0].clientY - _cropState.startY;
+        drawCropCanvas();
+      };
+      window.ontouchend = () => {
+        _cropState.isDragging = false;
+      };
+    }
+
+    function updateCropZoom(val) {
+      _cropState.zoom = parseFloat(val);
+      $('cropZoomVal').textContent = `${_cropState.zoom.toFixed(1)}x`;
+      drawCropCanvas();
+    }
+
+    function rotateCrop(deg) {
+      _cropState.rotation = (_cropState.rotation + deg) % 360;
+      drawCropCanvas();
+    }
+
+    function resetCrop() {
+      _cropState.zoom = 1.0;
+      _cropState.rotation = 0;
+      _cropState.offsetX = 0;
+      _cropState.offsetY = 0;
+      $('cropZoomRange').value = 1.0;
+      $('cropZoomVal').textContent = '1.0x';
+      drawCropCanvas();
+    }
+
+    function drawCropCanvas() {
+      const canvas = $('cropCanvas');
+      if (!canvas || !_cropState.image) return;
+      const ctx = canvas.getContext('2d');
+
+      const vpW = 540;
+      const vpH = 320;
+      canvas.width = vpW;
+      canvas.height = vpH;
+
+      ctx.clearRect(0, 0, vpW, vpH);
+      ctx.save();
+
+      ctx.translate(vpW / 2 + _cropState.offsetX, vpH / 2 + _cropState.offsetY);
+      ctx.rotate((_cropState.rotation * Math.PI) / 180);
+      ctx.scale(_cropState.zoom, _cropState.zoom);
+
+      const img = _cropState.image;
+      ctx.drawImage(img, -img.width / 2, -img.height / 2, img.width, img.height);
+
+      ctx.restore();
+    }
+
+    async function confirmCropAndUpload() {
+      closeModalCrop();
+      const type = _cropState.type;
+
+      // Show Animated Circular Loader
+      let loaderEl, circleEl, textEl, msgEl, previewWrap, imgEl, hiddenInput;
       if (type === 'logo') {
-        statusEl = $('statusLogoUpload');
-        previewEl = $('imgLogoPreview');
-        hiddenInput = $('pfLogo');
+        loaderEl = $('loaderLogo'); circleEl = $('progressLogoCircle'); textEl = $('progressLogoText'); msgEl = $('progressLogoMsg');
+        previewWrap = $('wrapLogoPreview'); imgEl = $('imgLogoPreview'); hiddenInput = $('pfLogo');
       } else if (type === 'cover') {
-        statusEl = $('statusCoverUpload');
-        previewEl = $('imgCoverPreview');
-        hiddenInput = $('pfCover');
+        loaderEl = $('loaderCover'); circleEl = $('progressCoverCircle'); textEl = $('progressCoverText'); msgEl = $('progressCoverMsg');
+        previewWrap = $('wrapCoverPreview'); imgEl = $('imgCoverPreview'); hiddenInput = $('pfCover');
       } else if (type === 'product') {
-        statusEl = $('statusPkgUpload');
-        previewEl = $('imgPkgPreview');
-        hiddenInput = $('pkgImage');
+        loaderEl = $('loaderPkg'); circleEl = $('progressPkgCircle'); textEl = $('progressPkgText'); msgEl = $('progressPkgMsg');
+        previewWrap = $('wrapPkgPreview'); imgEl = $('imgPkgPreview'); hiddenInput = $('pkgImage');
       }
 
-      statusEl.textContent = '⏳ Mengompres WebP & Mengunggah ke Drive...';
+      loaderEl.style.display = 'flex';
+      setLoaderProgress(circleEl, textEl, 15, 'Mengompresi WebP...');
+
+      // Export cropped canvas to high resolution WebP
+      const exportCanvas = document.createElement('canvas');
+      const maxDim = type === 'cover' ? 1200 : (type === 'logo' ? 600 : 800);
+      exportCanvas.width = maxDim;
+      exportCanvas.height = type === 'cover' ? Math.round(maxDim / 3) : (type === 'logo' ? maxDim : Math.round(maxDim * 0.75));
+
+      const ctx = exportCanvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+      ctx.save();
+      ctx.translate(exportCanvas.width / 2, exportCanvas.height / 2);
+      ctx.rotate((_cropState.rotation * Math.PI) / 180);
+      ctx.scale(_cropState.zoom, _cropState.zoom);
+
+      const scaleRatio = Math.min(exportCanvas.width / _cropState.image.width, exportCanvas.height / _cropState.image.height);
+      ctx.drawImage(
+        _cropState.image,
+        -_cropState.image.width / 2 + _cropState.offsetX,
+        -_cropState.image.height / 2 + _cropState.offsetY,
+        _cropState.image.width * scaleRatio,
+        _cropState.image.height * scaleRatio
+      );
+      ctx.restore();
+
+      const dataUrl = exportCanvas.toDataURL('image/webp', 0.8);
+      const base64 = dataUrl.split(',')[1];
+
+      setLoaderProgress(circleEl, textEl, 45, 'Mengunggah ke Drive...');
+
       try {
-        const uploadedUrl = await compressAndUploadImage(file, type);
-        hiddenInput.value = uploadedUrl;
-        previewEl.src = uploadedUrl;
-        previewEl.style.display = 'block';
-        statusEl.textContent = '✅ Berhasil Diunggah & Dikompres WebP!';
-      } catch(e) {
-        statusEl.textContent = '❌ Gagal mengunggah foto.';
+        const res = await fetch('/api/mp/upload-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: base64,
+            type: type,
+            vendorId: _currentVendor ? _currentVendor.id : 'vendor_temp',
+            filename: `${type}_${Date.now()}.webp`
+          })
+        });
+
+        setLoaderProgress(circleEl, textEl, 85, 'Memverifikasi URL...');
+        const json = await res.json();
+        const uploadedUrl = (res.ok && (json.proxyUrl || json.fileId)) ? (json.proxyUrl || `https://sapatamu.id/api/mp-img?id=${json.fileId}`) : dataUrl;
+
+        setLoaderProgress(circleEl, textEl, 100, 'Selesai!');
+
+        setTimeout(() => {
+          loaderEl.style.display = 'none';
+          hiddenInput.value = uploadedUrl;
+          imgEl.src = uploadedUrl;
+          previewWrap.style.display = 'block';
+          showToast('✅ Foto berhasil dipotong, dikompres WebP &amp; diunggah!');
+        }, 400);
+
+      } catch (err) {
+        setLoaderProgress(circleEl, textEl, 100, 'Tersimpan lokal');
+        setTimeout(() => {
+          loaderEl.style.display = 'none';
+          hiddenInput.value = dataUrl;
+          imgEl.src = dataUrl;
+          previewWrap.style.display = 'block';
+          showToast('Foto tersimpan!');
+        }, 400);
       }
+    }
+
+    function setLoaderProgress(circleEl, textEl, pct, msg) {
+      if (!circleEl || !textEl) return;
+      const circumference = 125.6; // 2 * PI * 20
+      const offset = circumference - (pct / 100) * circumference;
+      circleEl.style.strokeDashoffset = offset;
+      textEl.textContent = `${pct}%`;
     }
 
     function renderPackages() {
@@ -816,11 +1066,11 @@
 
       if (v.logo_url) {
         $('imgLogoPreview').src = v.logo_url;
-        $('imgLogoPreview').style.display = 'block';
+        $('wrapLogoPreview').style.display = 'block';
       }
       if (v.cover_image) {
         $('imgCoverPreview').src = v.cover_image;
-        $('imgCoverPreview').style.display = 'block';
+        $('wrapCoverPreview').style.display = 'block';
       }
 
       if (v.slug) {
