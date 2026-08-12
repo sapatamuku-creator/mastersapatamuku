@@ -124,6 +124,31 @@ export default async function handler(req, res) {
         return res.status(200).json(fallbackCats);
       }
 
+      // ── 1B. REGIONS PROXY ──
+      case 'regions': {
+        const { type, provId, regId } = req.query;
+        let targetUrl = '';
+        if (type === 'provinces') {
+          targetUrl = 'https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/provinces.json';
+        } else if (type === 'regencies' && provId) {
+          targetUrl = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/regencies/${provId}.json`;
+        } else if (type === 'districts' && regId) {
+          targetUrl = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/districts/${regId}.json`;
+        } else {
+          return res.status(400).json({ error: 'Invalid parameters' });
+        }
+
+        try {
+          let r = await fetch(targetUrl);
+          if (!r.ok) r = await fetch(targetUrl.replace('cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api', 'raw.githubusercontent.com/emsifa/api-wilayah-indonesia/api'));
+          const data = await r.json();
+          res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+          return res.status(200).json(data);
+        } catch (err) {
+          return res.status(502).json({ error: 'Failed to fetch region data' });
+        }
+      }
+
       // ── 2. VENDORS BROWSE ──
       case 'vendors': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });

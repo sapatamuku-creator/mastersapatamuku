@@ -422,8 +422,46 @@
       `).join('');
     }
 
-    const WILAYAH_API = 'https://www.emsifa.com/api-wilayah-indonesia/api';
-    const WILAYAH_FALLBACK = 'https://emsifa.github.io/api-wilayah-indonesia/api';
+    const STATIC_PROVINCES = [
+      { id: '11', name: 'Aceh' },
+      { id: '12', name: 'Sumatera Utara' },
+      { id: '13', name: 'Sumatera Barat' },
+      { id: '14', name: 'Riau' },
+      { id: '15', name: 'Jambi' },
+      { id: '16', name: 'Sumatera Selatan' },
+      { id: '17', name: 'Bengkulu' },
+      { id: '18', name: 'Lampung' },
+      { id: '19', name: 'Kepulauan Bangka Belitung' },
+      { id: '21', name: 'Kepulauan Riau' },
+      { id: '31', name: 'DKI Jakarta' },
+      { id: '32', name: 'Jawa Barat' },
+      { id: '33', name: 'Jawa Tengah' },
+      { id: '34', name: 'DI Yogyakarta' },
+      { id: '35', name: 'Jawa Timur' },
+      { id: '36', name: 'Banten' },
+      { id: '51', name: 'Bali' },
+      { id: '52', name: 'Nusa Tenggara Barat' },
+      { id: '53', name: 'Nusa Tenggara Timur' },
+      { id: '61', name: 'Kalimantan Barat' },
+      { id: '62', name: 'Kalimantan Tengah' },
+      { id: '63', name: 'Kalimantan Selatan' },
+      { id: '64', name: 'Kalimantan Timur' },
+      { id: '65', name: 'Kalimantan Utara' },
+      { id: '71', name: 'Sulawesi Utara' },
+      { id: '72', name: 'Sulawesi Tengah' },
+      { id: '73', name: 'Sulawesi Selatan' },
+      { id: '74', name: 'Sulawesi Tenggara' },
+      { id: '75', name: 'Gorontalo' },
+      { id: '76', name: 'Sulawesi Barat' },
+      { id: '81', name: 'Maluku' },
+      { id: '82', name: 'Maluku Utara' },
+      { id: '91', name: 'Papua Barat' },
+      { id: '92', name: 'Papua' },
+      { id: '93', name: 'Papua Selatan' },
+      { id: '94', name: 'Papua Tengah' },
+      { id: '95', name: 'Papua Pegunungan' },
+      { id: '96', name: 'Papua Barat Daya' }
+    ];
 
     function formatTitleCase(str) {
       if (!str) return '';
@@ -434,22 +472,29 @@
       }).join(' ');
     }
 
-    async function initRegionFilters() {
+    async function fetchRegionData(urlCDN, urlProxy) {
+      try {
+        let res = await fetch(urlCDN);
+        if (res.ok) return await res.json();
+      } catch (e) {}
+      try {
+        let res = await fetch(urlProxy);
+        if (res.ok) return await res.json();
+      } catch (e) {}
+      return [];
+    }
+
+    function initRegionFilters() {
       const provSel = document.getElementById('filterProvinsi');
       if (!provSel) return;
       provSel.innerHTML = '<option value="">Semua Provinsi</option>';
-      try {
-        let res = await fetch(`${WILAYAH_API}/provinces.json`);
-        if (!res.ok) res = await fetch(`${WILAYAH_FALLBACK}/provinces.json`);
-        const data = await res.json();
-        data.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.id;
-          opt.dataset.name = formatTitleCase(p.name);
-          opt.textContent = formatTitleCase(p.name);
-          provSel.appendChild(opt);
-        });
-      } catch(e) {}
+      STATIC_PROVINCES.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.dataset.name = p.name;
+        opt.textContent = p.name;
+        provSel.appendChild(opt);
+      });
     }
 
     async function onProvinsiChange(provId) {
@@ -474,20 +519,22 @@
       kotaSel.innerHTML = '<option value="">Memuat Kota...</option>';
       kotaSel.disabled = true;
 
-      try {
-        let res = await fetch(`${WILAYAH_API}/regencies/${provId}.json`);
-        if (!res.ok) res = await fetch(`${WILAYAH_FALLBACK}/regencies/${provId}.json`);
-        const data = await res.json();
+      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/regencies/${provId}.json`;
+      const urlProxy = `/api/mp/regions?type=regencies&provId=${provId}`;
+
+      const data = await fetchRegionData(urlCDN, urlProxy);
+      if (data && data.length > 0) {
         kotaSel.innerHTML = '<option value="">Semua Kab / Kota</option>';
         data.forEach(r => {
           const opt = document.createElement('option');
           opt.value = r.id;
-          opt.dataset.name = formatTitleCase(r.name);
-          opt.textContent = formatTitleCase(r.name);
+          const formatted = formatTitleCase(r.name);
+          opt.dataset.name = formatted;
+          opt.textContent = formatted;
           kotaSel.appendChild(opt);
         });
         kotaSel.disabled = false;
-      } catch(e) {}
+      }
       applyFilters();
     }
 
@@ -508,20 +555,22 @@
       kecSel.innerHTML = '<option value="">Memuat Kecamatan...</option>';
       kecSel.disabled = true;
 
-      try {
-        let res = await fetch(`${WILAYAH_API}/districts/${regId}.json`);
-        if (!res.ok) res = await fetch(`${WILAYAH_FALLBACK}/districts/${regId}.json`);
-        const data = await res.json();
+      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/districts/${regId}.json`;
+      const urlProxy = `/api/mp/regions?type=districts&regId=${regId}`;
+
+      const data = await fetchRegionData(urlCDN, urlProxy);
+      if (data && data.length > 0) {
         kecSel.innerHTML = '<option value="">Semua Kecamatan</option>';
         data.forEach(d => {
           const opt = document.createElement('option');
           opt.value = d.id;
-          opt.dataset.name = formatTitleCase(d.name);
-          opt.textContent = formatTitleCase(d.name);
+          const formatted = formatTitleCase(d.name);
+          opt.dataset.name = formatted;
+          opt.textContent = formatted;
           kecSel.appendChild(opt);
         });
         kecSel.disabled = false;
-      } catch(e) {}
+      }
       applyFilters();
     }
 
