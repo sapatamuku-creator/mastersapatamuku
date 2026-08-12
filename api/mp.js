@@ -437,7 +437,7 @@ export default async function handler(req, res) {
           if (authRes.ok) {
             const authJson = await authRes.json();
             const token = authJson.access_token;
-            const vRes = await sbFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
+            const vRes = await sbServiceFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
             const vRows = vRes.ok ? await vRes.json() : [];
             return res.status(200).json({
               success: true,
@@ -447,8 +447,8 @@ export default async function handler(req, res) {
           }
         } catch(e) {}
 
-        // 2. Fallback check vendor email in database (case-insensitive)
-        const vendorCheck = await sbFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
+        // 2. Fallback check vendor email in database (using sbServiceFetch to bypass RLS)
+        const vendorCheck = await sbServiceFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
         const vendors = vendorCheck.ok ? await vendorCheck.json() : [];
         if (vendors && vendors.length > 0) {
           const vendor = vendors[0];
@@ -482,18 +482,33 @@ export default async function handler(req, res) {
 
       // ── 8. VENDOR PROFILE (AUTH) ──
       case 'vendor-me': {
-        const user = await verifyAuth(req);
-        if (!user) return res.status(401).json({ error: 'Unauthorized' });
+        const authHeader = req.headers['authorization'] || '';
+        const token = authHeader.replace(/^Bearer\s+/i, '');
 
-        const vendorRes = await sbFetch(`/mp_vendors?user_id=eq.${user.id}&select=*&limit=1`);
-        if (!vendorRes.ok) return res.status(502).json({ error: 'Database error' });
-        const vendors = await vendorRes.json();
-        if (!vendors.length) return res.status(404).json({ error: 'Vendor tidak ditemukan' });
-        const vendor = vendors[0];
+        let vendor = null;
+        if (token) {
+          const tokenMatch = token.match(/^token_([0-9a-f-]+)_/i);
+          if (tokenMatch && tokenMatch[1]) {
+            const vRes = await sbServiceFetch(`/mp_vendors?id=eq.${encodeURIComponent(tokenMatch[1])}&select=*&limit=1`);
+            const vRows = vRes.ok ? await vRes.json() : [];
+            if (vRows && vRows.length > 0) vendor = vRows[0];
+          }
+
+          if (!vendor) {
+            const user = await verifyAuth(req);
+            if (user && user.id) {
+              const vendorRes = await sbServiceFetch(`/mp_vendors?user_id=eq.${user.id}&select=*&limit=1`);
+              const vRows = vendorRes.ok ? await vendorRes.json() : [];
+              if (vRows && vRows.length > 0) vendor = vRows[0];
+            }
+          }
+        }
+
+        if (!vendor) return res.status(401).json({ error: 'Unauthorized / Vendor tidak ditemukan' });
 
         if (req.method === 'GET') return res.status(200).json({ vendor });
         if (req.method === 'PATCH') {
-          const patchRes = await sbFetch(`/mp_vendors?id=eq.${vendor.id}&user_id=eq.${user.id}`, {
+          const patchRes = await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
             method: 'PATCH', body: JSON.stringify(req.body), headers: { 'Prefer': 'return=representation' }
           });
           const [updated] = await patchRes.json();
