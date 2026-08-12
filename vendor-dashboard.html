@@ -378,20 +378,18 @@
               <input type="text" id="pfName" required placeholder="misal: Knowhere Studio">
             </div>
 
-            <!-- FOTO LOGO UPLOADER (INLINE REPLACEMENT DIRECTLY INSIDE DROPZONE!) -->
+            <!-- FOTO LOGO UPLOADER -->
             <div class="form-group">
               <label>Foto Logo / Profil Vendor (Format 1:1)</label>
               <div class="upload-dropzone logo-mode" id="dropzoneLogo" onclick="$('fileLogoInput').click()">
                 <input type="file" id="fileLogoInput" accept="image/*" onchange="startCropFlow(this, 'logo')">
                 
-                <!-- PLACEHOLDER UNUPLOADED STATE -->
                 <div class="upload-placeholder" id="phLogo">
                   <span style="font-size:1.6rem">📷</span>
                   <span style="font-weight:600;font-size:0.88rem">Pilih / Drag Foto Logo di Sini</span>
-                  <span style="font-size:0.75rem;color:var(--text-muted)">Fit 100%, Drag Posisi, Zoom 0.1x - 5x, &amp; Kemiringan</span>
+                  <span style="font-size:0.75rem;color:var(--text-muted)">Auto-Snap Edge, Zoom 1.0x-5x, &amp; Kemiringan</span>
                 </div>
 
-                <!-- FILLED STATE (REPLACES PLACEHOLDER DIRECTLY INSIDE BOX!) -->
                 <div class="upload-filled" id="filledLogo">
                   <img id="imgLogoPreview" src="" alt="Logo Preview">
                   <div class="upload-filled-overlay">
@@ -400,7 +398,6 @@
                   </div>
                 </div>
 
-                <!-- LUXURY SPINNER LOADER (NO PERCENTAGE NUMBERS!) -->
                 <div class="upload-loader-overlay" id="loaderLogo">
                   <div class="luxury-spinner"></div>
                   <div class="loader-status-msg" id="msgLogo">Mengompresi WebP &amp; Mengunggah...</div>
@@ -409,20 +406,18 @@
               <input type="hidden" id="pfLogo">
             </div>
 
-            <!-- COVER BANNER UPLOADER (INLINE REPLACEMENT DIRECTLY INSIDE DROPZONE!) -->
+            <!-- COVER BANNER UPLOADER -->
             <div class="form-group">
               <label>Gambar Cover Banner / Sampul Profil (Format Landscape 3:1)</label>
               <div class="upload-dropzone" id="dropzoneCover" onclick="$('fileCoverInput').click()">
                 <input type="file" id="fileCoverInput" accept="image/*" onchange="startCropFlow(this, 'cover')">
                 
-                <!-- PLACEHOLDER UNUPLOADED STATE -->
                 <div class="upload-placeholder" id="phCover">
                   <span style="font-size:1.6rem">🖼️</span>
                   <span style="font-weight:600;font-size:0.88rem">Pilih / Drag Foto Cover Banner di Sini</span>
                   <span style="font-size:0.75rem;color:var(--text-muted)">Atur posisi tampilan banner agar pas di layar pengantin</span>
                 </div>
 
-                <!-- FILLED STATE (REPLACES PLACEHOLDER DIRECTLY INSIDE BOX!) -->
                 <div class="upload-filled" id="filledCover">
                   <img id="imgCoverPreview" src="" alt="Cover Preview">
                   <div class="upload-filled-overlay">
@@ -431,7 +426,6 @@
                   </div>
                 </div>
 
-                <!-- LUXURY SPINNER LOADER -->
                 <div class="upload-loader-overlay" id="loaderCover">
                   <div class="luxury-spinner"></div>
                   <div class="loader-status-msg" id="msgCover">Mengompresi WebP &amp; Mengunggah...</div>
@@ -459,7 +453,7 @@
     </main>
   </div>
 
-  <!-- MODAL CROP & LIGHTROOM CC IMAGE EDITOR -->
+  <!-- MODAL CROP & LIGHTROOM CC IMAGE EDITOR WITH EDGE BOUNDARY CLAMPING -->
   <div class="modal-overlay" id="modalCropImage">
     <div class="modal-box" style="max-width:640px">
       <div class="modal-title">
@@ -467,17 +461,17 @@
         <button onclick="closeModalCrop()" style="font-size:1.2rem;color:var(--text-muted)">&times;</button>
       </div>
 
-      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:14px">Geser foto untuk menyesuaikan posisi center. Gunakan slider Zoom &amp; Kemiringan Angle untuk presisi tinggi.</p>
+      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:14px">Geser foto untuk menyesuaikan posisi center. Foto terkunci presisi pada batas ujung (Auto Edge Snap).</p>
 
       <div id="cropViewport" style="position:relative;width:100%;height:340px;background:#12100e;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:grab;user-select:none;box-shadow:inset 0 0 20px rgba(0,0,0,0.8)">
         <canvas id="cropCanvas" style="display:block"></canvas>
       </div>
 
       <div style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
-        <!-- ZOOM SLIDER (UNLIMITED 0.1x to 5.0x) -->
+        <!-- ZOOM SLIDER (1.0x to 5.0x WITH AUTO-COVER FLOOR) -->
         <div style="display:flex;align-items:center;gap:12px;background:var(--bg);padding:10px 14px;border-radius:12px;border:1px solid var(--surface-border)">
           <span style="font-size:0.85rem;font-weight:600;width:70px">🔍 Zoom:</span>
-          <input type="range" id="cropZoomRange" min="0.1" max="5.0" step="0.02" value="1.0" style="flex:1" oninput="updateCropZoom(this.value)">
+          <input type="range" id="cropZoomRange" min="1.0" max="5.0" step="0.02" value="1.0" style="flex:1" oninput="updateCropZoom(this.value)">
           <span id="cropZoomVal" style="font-size:0.82rem;font-weight:700;width:50px;text-align:right">1.00x</span>
         </div>
 
@@ -570,7 +564,7 @@
     let _currentVendor = null;
     let _packages = [];
 
-    /* ADVANCED LIGHTROOM CC CROPPER STATE */
+    /* ADVANCED LIGHTROOM CC CROPPER STATE WITH EDGE BOUNDARY CLAMPING */
     let _cropState = {
       type: 'logo',
       image: null,
@@ -650,7 +644,7 @@
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
     }
 
-    /* ── ADVANCED LIGHTROOM CC CROP & CANVAS ENGINE ── */
+    /* ── ADVANCED LIGHTROOM CC CROP & BOUNDARY CLAMPING ENGINE ── */
     function startCropFlow(inputEl, type) {
       if (!inputEl.files || !inputEl.files[0]) return;
       const file = inputEl.files[0];
@@ -678,6 +672,7 @@
           $('cropModalTitle').textContent = type === 'logo' ? '✂️ Potong Logo (Rasio 1:1)' : (type === 'cover' ? '✂️ Potong Banner (Rasio 3:1)' : '✂️ Potong Foto Sampul Paket');
           $('modalCropImage').classList.add('active');
           initCropEvents();
+          clampCropState();
           drawCropCanvas();
         };
       };
@@ -696,6 +691,7 @@
         if (!_cropState.isDragging) return;
         _cropState.offsetX = e.clientX - _cropState.startX;
         _cropState.offsetY = e.clientY - _cropState.startY;
+        clampCropState();
         drawCropCanvas();
       };
       window.onmouseup = () => {
@@ -715,6 +711,7 @@
         if (!_cropState.isDragging || !e.touches[0]) return;
         _cropState.offsetX = e.touches[0].clientX - _cropState.startX;
         _cropState.offsetY = e.touches[0].clientY - _cropState.startY;
+        clampCropState();
         drawCropCanvas();
       };
       window.ontouchend = () => {
@@ -725,17 +722,20 @@
     function updateCropZoom(val) {
       _cropState.zoom = parseFloat(val);
       $('cropZoomVal').textContent = `${_cropState.zoom.toFixed(2)}x`;
+      clampCropState();
       drawCropCanvas();
     }
 
     function updateCropAngle(val) {
       _cropState.fineAngle = parseFloat(val);
       $('cropAngleVal').textContent = `${_cropState.fineAngle.toFixed(1)}°`;
+      clampCropState();
       drawCropCanvas();
     }
 
     function rotateCrop(deg) {
       _cropState.baseRotation = (_cropState.baseRotation + deg) % 360;
+      clampCropState();
       drawCropCanvas();
     }
 
@@ -749,7 +749,48 @@
       $('cropZoomVal').textContent = '1.00x';
       $('cropAngleRange').value = 0;
       $('cropAngleVal').textContent = '0.0°';
+      clampCropState();
       drawCropCanvas();
+    }
+
+    /* MATEMATIS EDGE BOUNDARY CLAMPING (LOCKED TO CROP BOX EDGES!) */
+    function clampCropState() {
+      if (!_cropState.image) return;
+      const img = _cropState.image;
+      const type = _cropState.type;
+
+      let boxW = type === 'cover' ? 460 : (type === 'logo' ? 210 : 380);
+      let boxH = type === 'cover' ? 153 : (type === 'logo' ? 210 : 280);
+
+      // Scale calculations based on orientation & rotation
+      const totalAngle = Math.abs(_cropState.baseRotation + _cropState.fineAngle) % 180;
+      const isRotated90 = totalAngle > 45 && totalAngle < 135;
+
+      const effImgW = isRotated90 ? img.height : img.width;
+      const effImgH = isRotated90 ? img.width : img.height;
+
+      // Cover scale guarantees 100% crop box coverage with zero black gaps
+      const coverScale = Math.max(boxW / effImgW, boxH / effImgH);
+      const totalScale = coverScale * _cropState.zoom;
+
+      const drawW = effImgW * totalScale;
+      const drawH = effImgH * totalScale;
+
+      // Clamp X Offset
+      if (drawW >= boxW) {
+        const maxOffsetW = (drawW - boxW) / 2;
+        _cropState.offsetX = Math.max(-maxOffsetW, Math.min(maxOffsetW, _cropState.offsetX));
+      } else {
+        _cropState.offsetX = 0;
+      }
+
+      // Clamp Y Offset
+      if (drawH >= boxH) {
+        const maxOffsetH = (drawH - boxH) / 2;
+        _cropState.offsetY = Math.max(-maxOffsetH, Math.min(maxOffsetH, _cropState.offsetY));
+      } else {
+        _cropState.offsetY = 0;
+      }
     }
 
     function drawCropCanvas() {
@@ -763,11 +804,20 @@
       canvas.height = vpH;
 
       const img = _cropState.image;
+      const type = _cropState.type;
 
-      // Calculate baseline scale so full image fits 100% inside viewport on load!
-      const baseScale = Math.min((vpW * 0.85) / img.width, (vpH * 0.85) / img.height);
-      const totalScale = baseScale * _cropState.zoom;
+      let boxW = type === 'cover' ? 460 : (type === 'logo' ? 210 : 380);
+      let boxH = type === 'cover' ? 153 : (type === 'logo' ? 210 : 280);
+
       const totalAngle = _cropState.baseRotation + _cropState.fineAngle;
+      const absAngle = Math.abs(totalAngle) % 180;
+      const isRotated90 = absAngle > 45 && absAngle < 135;
+
+      const effImgW = isRotated90 ? img.height : img.width;
+      const effImgH = isRotated90 ? img.width : img.height;
+
+      const coverScale = Math.max(boxW / effImgW, boxH / effImgH);
+      const totalScale = coverScale * _cropState.zoom;
 
       ctx.clearRect(0, 0, vpW, vpH);
 
@@ -783,7 +833,7 @@
       ctx.restore();
 
       // Draw Lightroom CC Crop Mask Guide Overlay
-      drawCropGuideOverlay(ctx, vpW, vpH, _cropState.type);
+      drawCropGuideOverlay(ctx, vpW, vpH, type);
     }
 
     function drawCropGuideOverlay(ctx, vpW, vpH, type) {
@@ -800,7 +850,7 @@
       const boxX = (vpW - boxW) / 2;
       const boxY = (vpH - boxH) / 2;
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.68)';
       ctx.beginPath();
       ctx.rect(0, 0, vpW, vpH);
 
@@ -873,6 +923,7 @@
       const vpW = 540;
       const vpH = 340;
       let boxW = type === 'cover' ? 460 : (type === 'logo' ? 210 : 380);
+      let boxH = type === 'cover' ? 153 : (type === 'logo' ? 210 : 280);
 
       const scaleMultiplier = targetW / boxW;
 
@@ -883,8 +934,14 @@
       ctx.rotate((totalAngle * Math.PI) / 180);
 
       const img = _cropState.image;
-      const baseScale = Math.min((vpW * 0.85) / img.width, (vpH * 0.85) / img.height);
-      const totalScale = baseScale * _cropState.zoom * scaleMultiplier;
+      const absAngle = Math.abs(totalAngle) % 180;
+      const isRotated90 = absAngle > 45 && absAngle < 135;
+
+      const effImgW = isRotated90 ? img.height : img.width;
+      const effImgH = isRotated90 ? img.width : img.height;
+
+      const coverScale = Math.max(boxW / effImgW, boxH / effImgH);
+      const totalScale = coverScale * _cropState.zoom * scaleMultiplier;
 
       ctx.scale(totalScale, totalScale);
       ctx.drawImage(img, -img.width / 2 + (_cropState.offsetX * scaleMultiplier) / totalScale, -img.height / 2 + (_cropState.offsetY * scaleMultiplier) / totalScale, img.width, img.height);
