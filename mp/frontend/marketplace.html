@@ -8,7 +8,7 @@
   <link rel="canonical" href="https://sapatamu.id/marketplace">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/animations.css">
 
   <script type="application/ld+json">
@@ -62,7 +62,7 @@
       content: '';
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(90deg, rgba(242,239,244,0.4) 0%, rgba(255,255,255,0.9) 50%, rgba(242,239,244,0.4) 100%);
+      background: linear-gradient(90deg, rgba(242,239,234,0.4) 0%, rgba(255,255,255,0.9) 50%, rgba(242,239,234,0.4) 100%);
       background-size: 200% 100%;
       animation: shimmerPulse 1.4s ease-in-out infinite;
       z-index: 1;
@@ -103,6 +103,7 @@
     }
     .navbar .container { display: flex; align-items: center; justify-content: space-between; height: 100%; }
     .nav-logo { display: flex; align-items: center; gap: 8px; font-family: 'Lora', serif; font-size: 1.35rem; font-weight: 700; }
+    .nav-logo .ico { width: 32px; height: 32px; background: linear-gradient(135deg,var(--primary),var(--gold)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: .95rem; }
     .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
     .nav-links a { font-size: .88rem; font-weight: 500; color: var(--text-light); }
     .nav-links a:hover { color: var(--primary); }
@@ -155,6 +156,13 @@
 
     /* ACTIVE FILTER CHIPS */
     .active-filters-bar { display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .filter-chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
+      background: var(--white); border: 1px solid var(--primary); border-radius: 50px;
+      font-size: .78rem; font-weight: 600; color: var(--primary);
+    }
+    .filter-chip span.remove-chip { cursor: pointer; color: var(--primary-dark); font-weight: 700; margin-left: 2px; }
+    .btn-clear-all-chips { font-size: .78rem; font-weight: 600; color: var(--text-muted); cursor: pointer; text-decoration: underline; }
 
     /* LAYOUT */
     .layout { display: grid; grid-template-columns: 250px 1fr; gap: 28px; align-items: start; }
@@ -182,6 +190,13 @@
     .price-custom-input input { width: 100%; padding: 7px 6px 7px 28px; border: 1.5px solid var(--border); border-radius: 6px; font-size: .78rem; background: var(--bg); }
     .btn-apply-price { width: 100%; margin-top: 8px; padding: 7px; border-radius: 6px; background: var(--primary); color: #fff; font-size: .78rem; font-weight: 600; text-align: center; }
 
+    .filter-mobile-btn {
+      display: none; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px;
+      background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: .85rem; font-weight: 600; color: var(--text-main); width: 100%; margin-bottom: 16px;
+    }
+    .filter-count-badge { background: var(--primary); color: #fff; border-radius: 50px; padding: 1px 7px; font-size: .72rem; }
+
     .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
     .result-count { font-size: .88rem; color: var(--text-light); }
     .result-count strong { color: var(--text-main); font-weight: 700; }
@@ -189,17 +204,61 @@
     .sort-group label { font-size: .82rem; color: var(--text-muted); white-space: nowrap; }
     .sort-group select { padding: 8px 28px 8px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--white); font-size: .82rem; font-weight: 600; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24' stroke='%238A7E72' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
 
-    .vendor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
-    .vendor-card { background: var(--white); border-radius: 20px; border: 1.5px solid var(--border); transition: var(--transition); cursor: pointer; display: flex; flex-direction: column; }
-    .vendor-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-xl); border-color: var(--primary); }
+    .vendor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+    .vendor-card { background: var(--white); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); transition: var(--transition); cursor: pointer; display: flex; flex-direction: column; }
+    .vendor-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-xl); border-color: transparent; }
+    .vendor-cover { position: relative; height: 170px; overflow: hidden; background: linear-gradient(135deg,var(--primary),var(--gold)); }
+    .vendor-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease; }
+    .vendor-card:hover .vendor-cover img { transform: scale(1.06); }
+    .badge-verified { position: absolute; top: 10px; right: 10px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: rgba(5,150,105,.9); backdrop-filter: blur(6px); color: #fff; border-radius: 50px; font-size: .65rem; font-weight: 600; }
+    .badge-featured { position: absolute; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: rgba(124,58,237,.9); backdrop-filter: blur(6px); color: #fff; border-radius: 50px; font-size: .65rem; font-weight: 600; }
+    .vendor-logo-wrap { position: absolute; bottom: -22px; left: 14px; z-index: 2; }
+    .vendor-logo { width: 48px; height: 48px; border-radius: 12px; border: 3px solid var(--white); background: var(--white); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1rem; font-weight: 700; box-shadow: var(--shadow-md); overflow: hidden; }
+    .vendor-info { padding: 28px 14px 14px; flex: 1; display: flex; flex-direction: column; }
+    .vendor-cat { display: inline-block; font-size: .65rem; font-weight: 600; color: var(--mp-purple); background: var(--mp-purple-light); padding: 2px 8px; border-radius: 4px; margin-bottom: 6px; align-self: flex-start; }
+    .vendor-name { font-family: 'Lora', serif; font-size: .95rem; font-weight: 700; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
+    .vendor-meta { display: flex; align-items: center; gap: 10px; font-size: .78rem; color: var(--text-light); margin-bottom: 12px; }
+    .vendor-meta .loc { display: flex; align-items: center; gap: 3px; }
+    .vendor-meta .rat { display: flex; align-items: center; gap: 3px; color: var(--mp-star); font-weight: 700; }
+    .vendor-meta .rat .c { color: var(--text-muted); font-weight: 400; }
+    .vendor-price { margin-top: auto; display: flex; align-items: baseline; gap: 4px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .vendor-price .from { font-size: .7rem; color: var(--text-muted); }
+    .vendor-price .amt { font-family: 'Lora', serif; font-size: .95rem; font-weight: 700; color: var(--primary); }
+
+    .skel { animation: skel-anim 1.5s ease-in-out infinite; background: linear-gradient(90deg,var(--bg-alt) 25%,#f0ebe6 50%,var(--bg-alt) 75%); background-size: 200% 100%; border-radius: var(--radius-sm); }
+    @keyframes skel-anim { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .sk-card { background: var(--white); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+    .sk-card .sk-cover { height: 170px; }
+    .sk-card .sk-body { padding: 14px; }
 
     .empty { text-align: center; padding: 60px 20px; grid-column: 1/-1; }
+    .empty .ico { font-size: 3rem; margin-bottom: 12px; }
     .empty h3 { font-size: 1.2rem; margin-bottom: 8px; }
     .empty p { color: var(--text-light); font-size: .9rem; margin-bottom: 20px; }
+    .empty .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 22px; background: var(--primary); color: #fff; border-radius: 50px; font-weight: 600; font-size: .85rem; }
+
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
+    .pagination button { width: 38px; height: 38px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--white); font-size: .85rem; font-weight: 600; color: var(--text-main); transition: var(--transition); }
+    .pagination button:hover { border-color: var(--primary); color: var(--primary); }
+    .pagination button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .pagination button:disabled { opacity: .4; cursor: not-allowed; }
+
+    .filter-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; }
+    .filter-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 24px 20px 32px; z-index: 201; max-height: 85vh; overflow-y: auto; transform: translateY(100%); transition: transform .3s ease; }
+    .filter-sheet.open { transform: translateY(0); }
+    .filter-sheet .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .sheet-actions { display: flex; gap: 12px; margin-top: 24px; }
+    .btn-reset { flex: 1; padding: 12px; border: 1.5px solid var(--border); border-radius: 50px; font-weight: 600; color: var(--text-light); text-align: center; }
+    .btn-apply { flex: 2; padding: 12px; background: var(--primary); color: #fff; border-radius: 50px; font-weight: 700; text-align: center; }
 
     .footer { margin-top: 80px; padding: 32px 0; border-top: 1px solid var(--border); background: var(--white); font-size: .85rem; color: var(--text-light); }
     .footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
     .foot-links { display: flex; gap: 20px; list-style: none; }
+
+    @media (max-width: 840px) {
+      .filter-mobile-btn { display: flex; }
+      .sidebar { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -243,6 +302,10 @@
 
     <div class="active-filters-bar" id="activeFiltersBar"></div>
 
+    <button class="filter-mobile-btn" onclick="openFilterSheet()">
+      Filter &amp; Urutkan <span class="filter-count-badge" id="filterCountBadge" style="display:none">0</span>
+    </button>
+
     <div class="layout">
       <aside class="sidebar">
         <div class="filter-group">
@@ -268,23 +331,23 @@
         <div class="filter-group">
           <h4>Rentang Budget (Rp)</h4>
           <div class="price-preset-grid">
-            <button class="btn-price-preset" onclick="setPricePreset(0,5000000)">&lt; 5 Juta</button>
-            <button class="btn-price-preset" onclick="setPricePreset(5000000,15000000)">5 - 15 Juta</button>
-            <button class="btn-price-preset" onclick="setPricePreset(15000000,30000000)">15 - 30 Juta</button>
-            <button class="btn-price-preset" onclick="setPricePreset(30000000,0)">&gt; 30 Juta</button>
+            <button class="btn-price-preset" onclick="setPricePreset(0, 5000000)">&lt; 5 Juta</button>
+            <button class="btn-price-preset" onclick="setPricePreset(5000000, 15000000)">5 - 15 Juta</button>
+            <button class="btn-price-preset" onclick="setPricePreset(15000000, 30000000)">15 - 30 Juta</button>
+            <button class="btn-price-preset" onclick="setPricePreset(30000000, 0)">&gt; 30 Juta</button>
           </div>
           <div class="price-custom-wrap">
             <div class="price-custom-input">
               <span>Rp</span>
-              <input type="number" id="priceMin" placeholder="Min" onchange="applyFilters()">
+              <input type="text" id="minPriceInput" placeholder="Min" oninput="formatPriceInput(this)">
             </div>
-            <span style="color:var(--text-muted);font-size:.78rem">-</span>
+            <span style="font-size:.8rem;color:var(--text-muted)">-</span>
             <div class="price-custom-input">
               <span>Rp</span>
-              <input type="number" id="priceMax" placeholder="Max" onchange="applyFilters()">
+              <input type="text" id="maxPriceInput" placeholder="Max" oninput="formatPriceInput(this)">
             </div>
           </div>
-          <button class="btn-apply-price" onclick="applyFilters()">Terapkan Harga</button>
+          <button class="btn-apply-price" onclick="applyCustomPrice()">Terapkan Harga</button>
         </div>
 
         <div class="filter-group">
@@ -304,7 +367,7 @@
 
       <main>
         <div class="toolbar">
-          <div class="result-count">Menampilkan <strong id="resultCount">0</strong> vendor</div>
+          <div class="result-count">Menampilkan <strong id="resultCount">...</strong> vendor</div>
           <div class="sort-group">
             <label for="sortSelect">Urutkan:</label>
             <select id="sortSelect" onchange="applyFilters()">
@@ -318,6 +381,7 @@
         </div>
 
         <div class="vendor-grid" id="vendorGrid"></div>
+        <div class="pagination" id="pagination" style="display:none"></div>
       </main>
     </div>
   </div>
@@ -333,7 +397,11 @@
   </footer>
 
   <script>
+    let currentPage = 1;
+    let totalPages  = 1;
     let selectedCat = '';
+    let minPrice    = 0;
+    let maxPrice    = 0;
     let selectedProvName = '';
     let selectedKotaName = '';
     let selectedKecName  = '';
@@ -341,19 +409,38 @@
     const searchInput = document.getElementById('searchInput');
     const btnClearSearch = document.getElementById('btnClearSearch');
 
-    if (searchInput) {
-      searchInput.addEventListener('input', () => {
-        if (btnClearSearch) btnClearSearch.style.display = searchInput.value ? 'block' : 'none';
-      });
-    }
-
+    searchInput.addEventListener('input', () => {
+      btnClearSearch.style.display = searchInput.value ? 'block' : 'none';
+    });
     function clearSearch() {
-      if (searchInput) searchInput.value = '';
-      if (btnClearSearch) btnClearSearch.style.display = 'none';
+      searchInput.value = '';
+      btnClearSearch.style.display = 'none';
       applyFilters();
     }
 
+    function renderVendorSkeletons(count = 6) {
+      const grid = document.getElementById('vendorGrid');
+      if (!grid) return;
+      let skelHTML = '';
+      for (let i = 0; i < count; i++) {
+        skelHTML += `
+          <div class="vendor-card" style="background:#ffffff;border-radius:20px;border:1.5px solid var(--border);padding:22px 18px 18px;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:var(--shadow-sm);pointer-events:none">
+            <div class="img-skeleton-container" style="width:160px;height:160px;border-radius:50%;margin-bottom:16px;flex-shrink:0"></div>
+            <div class="img-skeleton-container" style="width:130px;height:20px;border-radius:8px;margin-bottom:8px"></div>
+            <div class="img-skeleton-container" style="width:100px;height:14px;border-radius:6px;margin-bottom:6px"></div>
+            <div class="img-skeleton-container" style="width:80px;height:12px;border-radius:6px;margin-bottom:16px"></div>
+            <div class="img-skeleton-container" style="width:100%;height:40px;border-radius:12px;margin-top:auto"></div>
+          </div>
+        `;
+      }
+      grid.innerHTML = skelHTML;
+    }
+
     async function loadVendors() {
+      renderVendorSkeletons(6);
+      const rc = document.getElementById('resultCount');
+      if (rc) rc.textContent = '...';
+
       const q = searchInput ? searchInput.value.trim() : '';
       const params = new URLSearchParams();
       if (q) params.set('q', q);
@@ -367,7 +454,6 @@
         const json = await res.json();
         if (json.data) {
           renderVendors(json.data);
-          const rc = document.getElementById('resultCount');
           if (rc) rc.textContent = json.data.length;
         }
       } catch(e) {}
@@ -589,18 +675,24 @@
       applyFilters();
     }
 
-    function applyFilters() { loadVendors(); }
-    function resetFilters() { if (searchInput) searchInput.value = ''; selectedCat = ''; selectedProvName = ''; selectedKotaName = ''; selectedKecName = ''; applyFilters(); }
+    function onKecamatanChange() {
+      const kecSel = document.getElementById('filterKecamatan');
+      selectedKecName = kecSel.options[kecSel.selectedIndex]?.dataset.name || '';
+      applyFilters();
+    }
+
+    function applyFilters() { currentPage = 1; loadVendors(); }
+    function resetFilters() { searchInput.value = ''; selectedCat = ''; applyFilters(); }
     function quickSelectCat(slug) { selectedCat = slug; applyFilters(); }
 
     document.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('q') && searchInput) searchInput.value = urlParams.get('q');
+      if (urlParams.get('q')) searchInput.value = urlParams.get('q');
       if (urlParams.get('kategori')) selectedCat = urlParams.get('kategori');
       if (urlParams.get('cat')) selectedCat = urlParams.get('cat');
       if (urlParams.get('kota')) selectedKotaName = urlParams.get('kota');
-      initRegionFilters();
       loadVendors();
+      initRegionFilters();
     });
   </script>
 </body>

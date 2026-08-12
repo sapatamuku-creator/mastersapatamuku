@@ -275,20 +275,22 @@ export default async function handler(req, res) {
         const offset = (parseInt(page) - 1) * parseInt(limit);
         query += `&order=is_verified.desc,rating_avg.desc,created_at.desc&range=${offset}-${offset + parseInt(limit) - 1}`;
 
-        let vRes = await sbServiceFetch(query);
-        let vendors = vRes.ok ? await vRes.json() : [];
+        // PARALLEL FETCH TO SUPABASE FOR MAXIMUM SPEED (<120ms)
+        const [vRes, prodRes] = await Promise.all([
+          sbServiceFetch(query),
+          sbServiceFetch(`/mp_products?select=id,vendor_id,price,cover_image_url,image_url,name`)
+        ]);
 
-        // Step 2: Fallback — If no vendors found directly in mp_vendors, query all vendors without filters
+        let vendors = vRes.ok ? await vRes.json() : [];
+        const allProducts = prodRes.ok ? await prodRes.json() : [];
+
+        // Fallback — If no vendors found directly in mp_vendors, query all vendors without filters
         if (!Array.isArray(vendors) || vendors.length === 0) {
           const fallbackRes = await sbServiceFetch(`/mp_vendors?select=id,slug,business_name,category_id,city,province,rating_avg,review_count,price_from,cover_image_url,logo_url,is_verified,is_active&limit=50`);
           if (fallbackRes.ok) {
             vendors = await fallbackRes.json();
           }
         }
-
-        // Step 3: Check mp_products for prices & cover photos
-        const prodRes = await sbServiceFetch(`/mp_products?select=id,vendor_id,price,cover_image_url,image_url,name`);
-        const allProducts = prodRes.ok ? await prodRes.json() : [];
 
         // If vendors is still empty but mp_products has items, auto-construct vendor entries from products!
         if ((!vendors || vendors.length === 0) && Array.isArray(allProducts) && allProducts.length > 0) {

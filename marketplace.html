@@ -367,7 +367,7 @@
 
       <main>
         <div class="toolbar">
-          <div class="result-count">Menampilkan <strong id="resultCount">0</strong> vendor</div>
+          <div class="result-count">Menampilkan <strong id="resultCount">...</strong> vendor</div>
           <div class="sort-group">
             <label for="sortSelect">Urutkan:</label>
             <select id="sortSelect" onchange="applyFilters()">
@@ -418,7 +418,29 @@
       applyFilters();
     }
 
+    function renderVendorSkeletons(count = 6) {
+      const grid = document.getElementById('vendorGrid');
+      if (!grid) return;
+      let skelHTML = '';
+      for (let i = 0; i < count; i++) {
+        skelHTML += `
+          <div class="vendor-card" style="background:#ffffff;border-radius:20px;border:1.5px solid var(--border);padding:22px 18px 18px;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:var(--shadow-sm);pointer-events:none">
+            <div class="img-skeleton-container" style="width:160px;height:160px;border-radius:50%;margin-bottom:16px;flex-shrink:0"></div>
+            <div class="img-skeleton-container" style="width:130px;height:20px;border-radius:8px;margin-bottom:8px"></div>
+            <div class="img-skeleton-container" style="width:100px;height:14px;border-radius:6px;margin-bottom:6px"></div>
+            <div class="img-skeleton-container" style="width:80px;height:12px;border-radius:6px;margin-bottom:16px"></div>
+            <div class="img-skeleton-container" style="width:100%;height:40px;border-radius:12px;margin-top:auto"></div>
+          </div>
+        `;
+      }
+      grid.innerHTML = skelHTML;
+    }
+
     async function loadVendors() {
+      renderVendorSkeletons(6);
+      const rc = document.getElementById('resultCount');
+      if (rc) rc.textContent = '...';
+
       const q = searchInput ? searchInput.value.trim() : '';
       const params = new URLSearchParams();
       if (q) params.set('q', q);
@@ -432,7 +454,6 @@
         const json = await res.json();
         if (json.data) {
           renderVendors(json.data);
-          const rc = document.getElementById('resultCount');
           if (rc) rc.textContent = json.data.length;
         }
       } catch(e) {}
