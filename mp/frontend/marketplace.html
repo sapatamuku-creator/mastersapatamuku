@@ -48,6 +48,39 @@
       --transition:     all .3s cubic-bezier(.4,0,.2,1);
     }
 
+    /* PROGRESSIVE ASYNC SHIMMER ANIMATION */
+    @keyframes shimmerPulse {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .img-skeleton-container {
+      position: relative;
+      overflow: hidden;
+      background: #F2EFEA;
+    }
+    .img-skeleton-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(90deg, rgba(242,239,244,0.4) 0%, rgba(255,255,255,0.9) 50%, rgba(242,239,244,0.4) 100%);
+      background-size: 200% 100%;
+      animation: shimmerPulse 1.4s ease-in-out infinite;
+      z-index: 1;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .img-skeleton-container.img-loaded::before {
+      opacity: 0;
+      animation: none;
+    }
+    .async-img {
+      opacity: 0;
+      transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .async-img.img-loaded {
+      opacity: 1;
+    }
+
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
     html { scroll-behavior: smooth; }
     body {
@@ -70,7 +103,6 @@
     }
     .navbar .container { display: flex; align-items: center; justify-content: space-between; height: 100%; }
     .nav-logo { display: flex; align-items: center; gap: 8px; font-family: 'Lora', serif; font-size: 1.35rem; font-weight: 700; }
-    .nav-logo .ico { width: 32px; height: 32px; background: linear-gradient(135deg,var(--primary),var(--gold)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: .95rem; }
     .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
     .nav-links a { font-size: .88rem; font-weight: 500; color: var(--text-light); }
     .nav-links a:hover { color: var(--primary); }
@@ -174,7 +206,7 @@
 
   <nav class="navbar">
     <div class="container">
-      <a href="/" class="nav-logo"><span class="ico">💍</span> sapatamu</a>
+      <a href="/" class="nav-logo">sapatamu</a>
       <ul class="nav-links">
         <li><a href="/marketplace">Marketplace</a></li>
         <li><a href="/guestbook" style="color: var(--primary); font-weight: 700;">Buku Tamu Digital</a></li>
@@ -206,7 +238,7 @@
     </div>
 
     <div class="quick-cat-bar" id="quickCatBar">
-      <div class="quick-cat-pill active" data-slug="" onclick="quickSelectCat('')">✨ Semua Kategori</div>
+      <div class="quick-cat-pill active" data-slug="" onclick="quickSelectCat('')">Semua Kategori</div>
     </div>
 
     <div class="active-filters-bar" id="activeFiltersBar"></div>
@@ -233,6 +265,40 @@
           </div>
         </div>
 
+        <div class="filter-group">
+          <h4>Rentang Budget (Rp)</h4>
+          <div class="price-preset-grid">
+            <button class="btn-price-preset" onclick="setPricePreset(0,5000000)">&lt; 5 Juta</button>
+            <button class="btn-price-preset" onclick="setPricePreset(5000000,15000000)">5 - 15 Juta</button>
+            <button class="btn-price-preset" onclick="setPricePreset(15000000,30000000)">15 - 30 Juta</button>
+            <button class="btn-price-preset" onclick="setPricePreset(30000000,0)">&gt; 30 Juta</button>
+          </div>
+          <div class="price-custom-wrap">
+            <div class="price-custom-input">
+              <span>Rp</span>
+              <input type="number" id="priceMin" placeholder="Min" onchange="applyFilters()">
+            </div>
+            <span style="color:var(--text-muted);font-size:.78rem">-</span>
+            <div class="price-custom-input">
+              <span>Rp</span>
+              <input type="number" id="priceMax" placeholder="Max" onchange="applyFilters()">
+            </div>
+          </div>
+          <button class="btn-apply-price" onclick="applyFilters()">Terapkan Harga</button>
+        </div>
+
+        <div class="filter-group">
+          <h4>Rating Minimum</h4>
+          <label><input type="radio" name="filterRating" value="" checked onchange="applyFilters()"> Semua Rating</label>
+          <label><input type="radio" name="filterRating" value="4.5" onchange="applyFilters()"> 4.5 ke atas</label>
+          <label><input type="radio" name="filterRating" value="4.0" onchange="applyFilters()"> 4.0 ke atas</label>
+        </div>
+
+        <div class="filter-group">
+          <h4>Verifikasi</h4>
+          <label><input type="checkbox" id="filterVerified" onchange="applyFilters()"> Hanya Terverifikasi</label>
+        </div>
+
         <a href="javascript:void(0)" class="filter-reset" onclick="resetFilters()">↺ Reset Semua Filter</a>
       </aside>
 
@@ -242,11 +308,11 @@
           <div class="sort-group">
             <label for="sortSelect">Urutkan:</label>
             <select id="sortSelect" onchange="applyFilters()">
-              <option value="rating_avg">⭐ Rating Tertinggi</option>
-              <option value="newest">🆕 Terbaru Bergabung</option>
-              <option value="view_count">🔥 Terpopuler</option>
-              <option value="price_low">💰 Harga Terendah</option>
-              <option value="price_high">💎 Harga Tertinggi</option>
+              <option value="rating_avg">Rating Tertinggi</option>
+              <option value="newest">Terbaru Bergabung</option>
+              <option value="view_count">Terpopuler</option>
+              <option value="price_low">Harga Terendah</option>
+              <option value="price_high">Harga Tertinggi</option>
             </select>
           </div>
         </div>
@@ -313,7 +379,6 @@
       if (!vendors || !vendors.length) {
         grid.innerHTML = `
           <div class="empty" style="grid-column:1/-1;text-align:center;padding:48px 20px">
-            <div style="font-size:2.5rem;margin-bottom:12px">🏪</div>
             <h3>Belum Ada Vendor Terdaftar</h3>
             <p style="color:var(--text-muted);font-size:0.9rem">Vendor di kategori atau wilayah ini akan segera hadir!</p>
           </div>
@@ -325,16 +390,25 @@
         const coverImg = v.cover_image_url || v.cover_image || null;
         const logoImg = v.logo_url || v.logo || coverImg || null;
         const price = v.price_from > 0 ? `Rp ${Number(v.price_from).toLocaleString('id-ID')}` : `Hubungi Vendor`;
-        const ratingVal = v.rating > 0 ? Number(v.rating).toFixed(1) : '0';
+        const ratingVal = v.rating > 0 ? Number(v.rating).toFixed(1) : '5.0';
         const reviewsCount = v.review_count || 0;
 
         return `
           <a href="/vendor/${v.slug}" class="vendor-card fade-in" style="background:#ffffff;border-radius:20px;border:1.5px solid var(--border);padding:22px 18px 18px;display:flex;flex-direction:column;align-items:center;text-align:center;transition:var(--transition);text-decoration:none;position:relative;box-shadow:var(--shadow-sm)">
             
-            <!-- 1. CLEAN LARGE CIRCULAR HERO IMAGE -->
+            <!-- 1. CLEAN LARGE CIRCULAR HERO IMAGE WITH ASYNC GREY SHIMMER -->
             <div style="position:relative;width:160px;height:160px;margin-bottom:16px;flex-shrink:0">
               <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;border:2.5px solid #ffffff;box-shadow:0 8px 20px rgba(74,63,53,0.12);background:linear-gradient(135deg,var(--primary-light),var(--bg-alt));display:flex;align-items:center;justify-content:center">
-                ${logoImg ? `<img src="${logoImg}" style="width:100%;height:100%;object-fit:cover" alt="${v.business_name}">` : `<div style="font-size:2.8rem;font-weight:800;color:var(--primary)">${init}</div>`}
+                ${logoImg ? `
+                  <div class="img-skeleton-container" style="width:100%;height:100%">
+                    <img src="${logoImg}" 
+                         alt="${v.business_name}" 
+                         class="async-img" 
+                         style="width:100%;height:100%;object-fit:cover"
+                         onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')"
+                         onerror="this.style.display='none';this.parentElement.classList.add('img-loaded')">
+                  </div>
+                ` : `<div style="font-size:2.8rem;font-weight:800;color:var(--primary)">${init}</div>`}
               </div>
             </div>
 
@@ -363,7 +437,7 @@
             <!-- Rating & Review Count (ONLY SHOWN IF REVIEWS EXIST AND COUNT > 0) -->
             ${(reviewsCount > 0 && v.rating > 0) ? `
               <div style="font-size:0.8rem;font-weight:600;color:#4B5563;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:14px">
-                <span style="color:#F59E0B">⭐</span>
+                <span style="color:#F59E0B">★</span>
                 <span style="font-weight:700">${Number(v.rating).toFixed(1)}/5</span>
                 <span style="color:#9CA3AF">(${reviewsCount} ulasan)</span>
               </div>
@@ -372,7 +446,7 @@
             <!-- Action Button / Price List -->
             <div style="width:100%;margin-top:auto">
               <div style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;background:#ffffff;color:var(--text-main);font-size:0.85rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:var(--transition);box-shadow:0 1px 3px rgba(0,0,0,0.04)">
-                🏷️ Daftar Harga (${price})
+                Daftar Harga (${price})
               </div>
             </div>
 

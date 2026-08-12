@@ -37,6 +37,39 @@
       --transition:    all 0.25s ease;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    /* PROGRESSIVE ASYNC SHIMMER ANIMATION */
+    @keyframes shimmerPulse {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .img-skeleton-container {
+      position: relative;
+      overflow: hidden;
+      background: #F2EFEA;
+    }
+    .img-skeleton-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(90deg, rgba(242,239,234,0.4) 0%, rgba(255,255,255,0.9) 50%, rgba(242,239,234,0.4) 100%);
+      background-size: 200% 100%;
+      animation: shimmerPulse 1.4s ease-in-out infinite;
+      z-index: 1;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .img-skeleton-container.img-loaded::before {
+      opacity: 0;
+      animation: none;
+    }
+    .async-img {
+      opacity: 0;
+      transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .async-img.img-loaded {
+      opacity: 1;
+    }
+
     body { font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.6; }
     a { text-decoration: none; color: inherit; }
     img { max-width: 100%; height: auto; display: block; }
@@ -293,13 +326,32 @@
           $('sbCity').textContent = v.city || 'Indonesia';
           $('aboutDesc').textContent = v.description || 'Vendor ini belum menyertakan deskripsi rinci.';
 
-          // COVER HERO BANNER WITH SAFE ERROR HANDLING AND LUXURY DEFAULT FALLBACK
+          // COVER HERO BANNER WITH ASYNC GREY SHIMMER
           const defaultCover = 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1400&q=80';
           const coverUrl = v.cover_image_url || v.cover_image || defaultCover;
-          $('coverHero').innerHTML = `<img src="${coverUrl}" alt="${v.business_name} Cover" onerror="this.onerror=null; this.src='${defaultCover}'"><div class="cover-overlay"></div>`;
+          $('coverHero').innerHTML = `
+            <div class="img-skeleton-container" style="width:100%;height:100%">
+              <img src="${coverUrl}" 
+                   alt="${v.business_name} Cover" 
+                   class="async-img" 
+                   style="width:100%;height:100%;object-fit:cover"
+                   onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')"
+                   onerror="this.onerror=null;this.src='${defaultCover}';this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')">
+            </div>
+            <div class="cover-overlay"></div>
+          `;
 
           if (v.logo_url) {
-            $('vendorLogo').innerHTML = `<img src="${v.logo_url}" alt="${v.business_name} Logo">`;
+            $('vendorLogo').innerHTML = `
+              <div class="img-skeleton-container" style="width:100%;height:100%">
+                <img src="${v.logo_url}" 
+                     alt="${v.business_name} Logo" 
+                     class="async-img" 
+                     style="width:100%;height:100%;object-fit:cover"
+                     onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')"
+                     onerror="this.style.display='none';this.parentElement.classList.add('img-loaded')">
+              </div>
+            `;
           } else {
             $('vendorLogo').textContent = v.business_name.charAt(0).toUpperCase();
           }
@@ -310,7 +362,7 @@
           $('btnWaSidebar').href = waUrl;
           $('sbWA').textContent = `+${waNum}`;
 
-          // RENDER PRODUCTS / PACKAGES
+          // RENDER PRODUCTS / PACKAGES WITH ASYNC GREY SHIMMER
           const pkgContainer = $('paketGrid');
           if (products.length === 0) {
             pkgContainer.innerHTML = `<p style="color:var(--text-muted);grid-column:1/-1">Belum ada paket yang dipublikasikan oleh vendor ini.</p>`;
@@ -322,15 +374,22 @@
               const pkgWaUrl = `https://wa.me/${waNum}?text=Halo%20${encodeURIComponent(v.business_name)},%20saya%20tertarik%20dengan%20paket%20"${encodeURIComponent(p.name)}"%20seharga%20${encodeURIComponent(formatRupiah(p.price))}`;
               return `
                 <div class="pkg-card">
-                  <div style="position:relative">
-                    <img src="${img}" class="pkg-img" alt="${p.name}">
+                  <div style="position:relative;height:200px">
+                    <div class="img-skeleton-container" style="width:100%;height:100%">
+                      <img src="${img}" 
+                           class="pkg-img async-img" 
+                           style="width:100%;height:100%;object-fit:cover" 
+                           alt="${p.name}"
+                           onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')"
+                           onerror="this.style.display='none';this.parentElement.classList.add('img-loaded')">
+                    </div>
                     ${tag}
                   </div>
                   <div class="pkg-body">
                     <h3 class="pkg-name">${p.name}</h3>
                     <div class="pkg-price">${formatRupiah(p.price)}</div>
                     <div class="pkg-desc">${p.description || '-'}</div>
-                    <a href="${pkgWaUrl}" target="_blank" class="btn-wa" style="padding:8px 16px;font-size:0.8rem;justify-content:center">💬 Tanya Paket Ini</a>
+                    <a href="${pkgWaUrl}" target="_blank" class="btn-wa" style="padding:8px 16px;font-size:0.8rem;justify-content:center">Tanya Paket Ini</a>
                   </div>
                 </div>
               `;
