@@ -252,14 +252,27 @@
       });
     }
 
-    async function fetchRegionData(urlCDN, urlProxy) {
-      try {
-        let res = await fetch(urlCDN);
-        if (res.ok) return await res.json();
-      } catch (e) {}
+    async function fetchRegionData(urlProxy, urlCDN, urlEmsifa) {
       try {
         let res = await fetch(urlProxy);
-        if (res.ok) return await res.json();
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) return data;
+        }
+      } catch (e) {}
+      try {
+        let res = await fetch(urlCDN);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) return data;
+        }
+      } catch (e) {}
+      try {
+        let res = await fetch(urlEmsifa);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) return data;
+        }
       } catch (e) {}
       return [];
     }
@@ -281,10 +294,11 @@
       regSelect.innerHTML = '<option value="">Memuat Kab. / Kota...</option>';
       regSelect.disabled = true;
 
-      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/regencies/${provId}.json`;
       const urlProxy = `/api/mp/regions?type=regencies&provId=${provId}`;
+      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/regencies/${provId}.json`;
+      const urlEmsifa = `https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${provId}.json`;
 
-      const data = await fetchRegionData(urlCDN, urlProxy);
+      const data = await fetchRegionData(urlProxy, urlCDN, urlEmsifa);
       if (data && data.length > 0) {
         regSelect.innerHTML = '<option value="">Pilih Kab. / Kota...</option>';
         data.forEach(r => {
@@ -314,10 +328,11 @@
       distSelect.innerHTML = '<option value="">Memuat Kecamatan...</option>';
       distSelect.disabled = true;
 
-      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/districts/${regId}.json`;
       const urlProxy = `/api/mp/regions?type=districts&regId=${regId}`;
+      const urlCDN = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/districts/${regId}.json`;
+      const urlEmsifa = `https://www.emsifa.com/api-wilayah-indonesia/api/districts/${regId}.json`;
 
-      const data = await fetchRegionData(urlCDN, urlProxy);
+      const data = await fetchRegionData(urlProxy, urlCDN, urlEmsifa);
       if (data && data.length > 0) {
         distSelect.innerHTML = '<option value="">Pilih Kecamatan...</option>';
         data.forEach(d => {
