@@ -99,31 +99,52 @@ async function verifyAuth(req) {
   return await res.json();
 }
 
+const CATEGORY_UUID_MAP = {
+  'cat-wo':            'a1b2c3d4-0001-4000-8000-000000000001',
+  'cat-foto':          'a1b2c3d4-0002-4000-8000-000000000002',
+  'cat-katering':      'a1b2c3d4-0003-4000-8000-000000000003',
+  'cat-venue':         'a1b2c3d4-0004-4000-8000-000000000004',
+  'cat-dekorasi':      'a1b2c3d4-0005-4000-8000-000000000005',
+  'cat-makeup':        'a1b2c3d4-0006-4000-8000-000000000006',
+  'cat-entertainment': 'a1b2c3d4-0007-4000-8000-000000000007',
+  'cat-undangan':      'a1b2c3d4-0008-4000-8000-000000000008',
+  'cat-jewellery':    'a1b2c3d4-0009-4000-8000-000000000009',
+  'cat-photobooth':   'a1b2c3d4-0010-4000-8000-000000000010',
+  'cat-honeymoon':    'a1b2c3d4-0011-4000-8000-000000000011'
+};
+
 const DEFAULT_CATEGORIES = [
-  { id: 'cat-wo', name: 'Wedding Organizer & Planner', slug: 'wedding-organizer', icon: '📋', is_active: true, sort_order: 1 },
-  { id: 'cat-foto', name: 'Fotografi & Videografi', slug: 'foto-video', icon: '📸', is_active: true, sort_order: 2 },
-  { id: 'cat-katering', name: 'Katering (Catering)', slug: 'katering', icon: '🍽️', is_active: true, sort_order: 3 },
-  { id: 'cat-venue', name: 'Venue & Gedung Pernikahan', slug: 'venue', icon: '🏰', is_active: true, sort_order: 4 },
-  { id: 'cat-dekorasi', name: 'Dekorasi & Florist', slug: 'dekorasi', icon: '🌸', is_active: true, sort_order: 5 },
-  { id: 'cat-makeup', name: 'Rias Pengantin & Gaun (Makeup & Attire)', slug: 'makeup-attire', icon: '💄', is_active: true, sort_order: 6 },
-  { id: 'cat-entertainment', name: 'Musik, MC & Entertainment', slug: 'music-entertainment', icon: '🎵', is_active: true, sort_order: 7 },
-  { id: 'cat-undangan', name: 'Undangan & Souvenir', slug: 'undangan-souvenir', icon: '💌', is_active: true, sort_order: 8 },
-  { id: 'cat-jewellery', name: 'Perhiasan & Cincin Kawin', slug: 'jewellery-rings', icon: '💍', is_active: true, sort_order: 9 },
-  { id: 'cat-photobooth', name: 'Photobooth & Interactive', slug: 'photobooth', icon: '📸', is_active: true, sort_order: 10 },
-  { id: 'cat-honeymoon', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: '✈️', is_active: true, sort_order: 11 }
+  { id: 'a1b2c3d4-0001-4000-8000-000000000001', name: 'Wedding Organizer & Planner', slug: 'wedding-organizer', icon: '📋', is_active: true, sort_order: 1 },
+  { id: 'a1b2c3d4-0002-4000-8000-000000000002', name: 'Fotografi & Videografi', slug: 'foto-video', icon: '📸', is_active: true, sort_order: 2 },
+  { id: 'a1b2c3d4-0003-4000-8000-000000000003', name: 'Katering (Catering)', slug: 'katering', icon: '🍽️', is_active: true, sort_order: 3 },
+  { id: 'a1b2c3d4-0004-4000-8000-000000000004', name: 'Venue & Gedung Pernikahan', slug: 'venue', icon: '🏰', is_active: true, sort_order: 4 },
+  { id: 'a1b2c3d4-0005-4000-8000-000000000005', name: 'Dekorasi & Florist', slug: 'dekorasi', icon: '🌸', is_active: true, sort_order: 5 },
+  { id: 'a1b2c3d4-0006-4000-8000-000000000006', name: 'Rias Pengantin & Gaun (Makeup & Attire)', slug: 'makeup-attire', icon: '💄', is_active: true, sort_order: 6 },
+  { id: 'a1b2c3d4-0007-4000-8000-000000000007', name: 'Musik, MC & Entertainment', slug: 'music-entertainment', icon: '🎵', is_active: true, sort_order: 7 },
+  { id: 'a1b2c3d4-0008-4000-8000-000000000008', name: 'Undangan & Souvenir', slug: 'undangan-souvenir', icon: '💌', is_active: true, sort_order: 8 },
+  { id: 'a1b2c3d4-0009-4000-8000-000000000009', name: 'Perhiasan & Cincin Kawin', slug: 'jewellery-rings', icon: '💍', is_active: true, sort_order: 9 },
+  { id: 'a1b2c3d4-0010-4000-8000-000000000010', name: 'Photobooth & Interactive', slug: 'photobooth', icon: '📸', is_active: true, sort_order: 10 },
+  { id: 'a1b2c3d4-0011-4000-8000-000000000011', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: '✈️', is_active: true, sort_order: 11 }
 ];
 
+function getValidUuidCategory(catId) {
+  if (!catId) return CATEGORY_UUID_MAP['cat-foto'];
+  if (CATEGORY_UUID_MAP[catId]) return CATEGORY_UUID_MAP[catId];
+  if (CATEGORY_UUID_MAP[`cat-${catId}`]) return CATEGORY_UUID_MAP[`cat-${catId}`];
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(catId)) return catId;
+  return CATEGORY_UUID_MAP['cat-foto'];
+}
+
 async function ensureCategoryInDB(catId) {
-  if (!catId) catId = 'cat-foto';
+  const targetUuid = getValidUuidCategory(catId);
   try {
-    const checkRes = await sbFetch(`/mp_categories?id=eq.${encodeURIComponent(catId)}&select=id&limit=1`);
+    const checkRes = await sbFetch(`/mp_categories?id=eq.${encodeURIComponent(targetUuid)}&select=id&limit=1`);
     const checkRows = checkRes.ok ? await checkRes.json() : [];
     if (Array.isArray(checkRows) && checkRows.length > 0) return checkRows[0].id;
   } catch(e) {}
 
-  const targetCat = DEFAULT_CATEGORIES.find(c => c.id === catId) || 
-                    DEFAULT_CATEGORIES.find(c => c.id === `cat-${catId}`) || 
-                    DEFAULT_CATEGORIES[1];
+  const targetCat = DEFAULT_CATEGORIES.find(c => c.id === targetUuid) || DEFAULT_CATEGORIES[1];
 
   try {
     const upsertRes = await sbServiceFetch('/mp_categories', {
@@ -145,7 +166,7 @@ async function ensureCategoryInDB(catId) {
     if (Array.isArray(anyRows) && anyRows.length > 0) return anyRows[0].id;
   } catch(e) {}
 
-  return targetCat.id;
+  return targetUuid;
 }
 
 export default async function handler(req, res) {
