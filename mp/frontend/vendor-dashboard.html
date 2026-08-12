@@ -363,7 +363,7 @@
         </div>
       </div>
 
-      <!-- TAB 4: EDIT PROFIL BISNIS (WITH LUXURY CROPPER & PROGRESS LOADER) -->
+      <!-- TAB 4: EDIT PROFIL BISNIS (WITH LUXURY LIGHTROOM CC CROPPER & PROGRESS LOADER) -->
       <div class="panel" id="tab-profile">
         <div class="card-panel" style="max-width:680px">
           <h2 class="panel-title" style="margin-bottom:20px">Edit Profil Bisnis Vendor</h2>
@@ -381,7 +381,7 @@
                   <input type="file" id="fileLogoInput" accept="image/*" onchange="startCropFlow(this, 'logo')">
                   <span style="font-size:1.6rem">📷</span>
                   <span style="font-weight:600;font-size:0.88rem">Pilih / Drag Foto Logo di Sini</span>
-                  <span style="font-size:0.75rem;color:var(--text-muted)">Dapat dipotong (Crop), Zoom, Putar, &amp; Dikompres WebP</span>
+                  <span style="font-size:0.75rem;color:var(--text-muted)">Fit 100%, Drag Posisi, Zoom 0.1x - 5x, &amp; Kemiringan Lightroom-Style</span>
                 </div>
 
                 <!-- LOADER OVERLAY -->
@@ -460,25 +460,33 @@
     </main>
   </div>
 
-  <!-- MODAL CROP & IMAGE EDITOR -->
+  <!-- MODAL CROP & LIGHTROOM CC IMAGE EDITOR -->
   <div class="modal-overlay" id="modalCropImage">
-    <div class="modal-box" style="max-width:620px">
+    <div class="modal-box" style="max-width:640px">
       <div class="modal-title">
-        <span id="cropModalTitle">✂️ Potong &amp; Atur Posisi Foto</span>
+        <span id="cropModalTitle">✂️ Potong &amp; Atur Posisi Foto (Lightroom CC Style)</span>
         <button onclick="closeModalCrop()" style="font-size:1.2rem;color:var(--text-muted)">&times;</button>
       </div>
 
-      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:14px">Geser foto untuk menyesuaikan posisi center. Gunakan slider untuk Zoom &amp; tombol untuk memutar foto.</p>
+      <p style="font-size:0.84rem;color:var(--text-muted);margin-bottom:14px">Geser foto untuk menyesuaikan posisi center. Gunakan slider Zoom &amp; Kemiringan Angle untuk presisi tinggi.</p>
 
-      <div id="cropViewport" style="position:relative;width:100%;height:320px;background:#181513;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:grab;user-select:none">
+      <div id="cropViewport" style="position:relative;width:100%;height:340px;background:#12100e;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:grab;user-select:none;box-shadow:inset 0 0 20px rgba(0,0,0,0.8)">
         <canvas id="cropCanvas" style="display:block"></canvas>
       </div>
 
       <div style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
+        <!-- ZOOM SLIDER (UNLIMITED 0.1x to 5.0x) -->
         <div style="display:flex;align-items:center;gap:12px;background:var(--bg);padding:10px 14px;border-radius:12px;border:1px solid var(--surface-border)">
-          <span style="font-size:0.85rem;font-weight:600">🔍 Zoom:</span>
-          <input type="range" id="cropZoomRange" min="0.5" max="3" step="0.05" value="1" style="flex:1" oninput="updateCropZoom(this.value)">
-          <span id="cropZoomVal" style="font-size:0.82rem;font-weight:700;width:40px;text-align:right">1.0x</span>
+          <span style="font-size:0.85rem;font-weight:600;width:70px">🔍 Zoom:</span>
+          <input type="range" id="cropZoomRange" min="0.1" max="5.0" step="0.02" value="1.0" style="flex:1" oninput="updateCropZoom(this.value)">
+          <span id="cropZoomVal" style="font-size:0.82rem;font-weight:700;width:50px;text-align:right">1.00x</span>
+        </div>
+
+        <!-- FINE ANGLE TILT SLIDER (-45° to +45°) -->
+        <div style="display:flex;align-items:center;gap:12px;background:var(--bg);padding:10px 14px;border-radius:12px;border:1px solid var(--surface-border)">
+          <span style="font-size:0.85rem;font-weight:600;width:70px">📐 Kemiringan:</span>
+          <input type="range" id="cropAngleRange" min="-45" max="45" step="0.5" value="0" style="flex:1" oninput="updateCropAngle(this.value)">
+          <span id="cropAngleVal" style="font-size:0.82rem;font-weight:700;width:50px;text-align:right">0.0°</span>
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
@@ -569,12 +577,13 @@
     let _currentVendor = null;
     let _packages = [];
 
-    /* CROPPER STATE */
+    /* ADVANCED LIGHTROOM CC CROPPER STATE */
     let _cropState = {
       type: 'logo',
       image: null,
       zoom: 1.0,
-      rotation: 0,
+      baseRotation: 0,
+      fineAngle: 0,
       offsetX: 0,
       offsetY: 0,
       isDragging: false,
@@ -626,7 +635,7 @@
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
     }
 
-    /* ── ADVANCED CROP & CANVAS ENGINE ── */
+    /* ── ADVANCED LIGHTROOM CC CROP & CANVAS ENGINE ── */
     function startCropFlow(inputEl, type) {
       if (!inputEl.files || !inputEl.files[0]) return;
       const file = inputEl.files[0];
@@ -639,7 +648,8 @@
             type: type,
             image: img,
             zoom: 1.0,
-            rotation: 0,
+            baseRotation: 0,
+            fineAngle: 0,
             offsetX: 0,
             offsetY: 0,
             isDragging: false,
@@ -647,7 +657,9 @@
             startY: 0
           };
           $('cropZoomRange').value = 1.0;
-          $('cropZoomVal').textContent = '1.0x';
+          $('cropZoomVal').textContent = '1.00x';
+          $('cropAngleRange').value = 0;
+          $('cropAngleVal').textContent = '0.0°';
           $('cropModalTitle').textContent = type === 'logo' ? '✂️ Potong Logo (Rasio 1:1)' : (type === 'cover' ? '✂️ Potong Banner (Rasio 3:1)' : '✂️ Potong Foto Sampul Paket');
           $('modalCropImage').classList.add('active');
           initCropEvents();
@@ -697,22 +709,31 @@
 
     function updateCropZoom(val) {
       _cropState.zoom = parseFloat(val);
-      $('cropZoomVal').textContent = `${_cropState.zoom.toFixed(1)}x`;
+      $('cropZoomVal').textContent = `${_cropState.zoom.toFixed(2)}x`;
+      drawCropCanvas();
+    }
+
+    function updateCropAngle(val) {
+      _cropState.fineAngle = parseFloat(val);
+      $('cropAngleVal').textContent = `${_cropState.fineAngle.toFixed(1)}°`;
       drawCropCanvas();
     }
 
     function rotateCrop(deg) {
-      _cropState.rotation = (_cropState.rotation + deg) % 360;
+      _cropState.baseRotation = (_cropState.baseRotation + deg) % 360;
       drawCropCanvas();
     }
 
     function resetCrop() {
       _cropState.zoom = 1.0;
-      _cropState.rotation = 0;
+      _cropState.baseRotation = 0;
+      _cropState.fineAngle = 0;
       _cropState.offsetX = 0;
       _cropState.offsetY = 0;
       $('cropZoomRange').value = 1.0;
-      $('cropZoomVal').textContent = '1.0x';
+      $('cropZoomVal').textContent = '1.00x';
+      $('cropAngleRange').value = 0;
+      $('cropAngleVal').textContent = '0.0°';
       drawCropCanvas();
     }
 
@@ -722,20 +743,86 @@
       const ctx = canvas.getContext('2d');
 
       const vpW = 540;
-      const vpH = 320;
+      const vpH = 340;
       canvas.width = vpW;
       canvas.height = vpH;
 
-      ctx.clearRect(0, 0, vpW, vpH);
-      ctx.save();
-
-      ctx.translate(vpW / 2 + _cropState.offsetX, vpH / 2 + _cropState.offsetY);
-      ctx.rotate((_cropState.rotation * Math.PI) / 180);
-      ctx.scale(_cropState.zoom, _cropState.zoom);
-
       const img = _cropState.image;
-      ctx.drawImage(img, -img.width / 2, -img.height / 2, img.width, img.height);
 
+      // Calculate baseline scale so the full image fits 100% inside viewport on load!
+      const baseScale = Math.min((vpW * 0.85) / img.width, (vpH * 0.85) / img.height);
+      const totalScale = baseScale * _cropState.zoom;
+      const totalAngle = _cropState.baseRotation + _cropState.fineAngle;
+
+      ctx.clearRect(0, 0, vpW, vpH);
+
+      ctx.fillStyle = '#12100e';
+      ctx.fillRect(0, 0, vpW, vpH);
+
+      ctx.save();
+      ctx.translate(vpW / 2 + _cropState.offsetX, vpH / 2 + _cropState.offsetY);
+      ctx.rotate((totalAngle * Math.PI) / 180);
+      ctx.scale(totalScale, totalScale);
+
+      ctx.drawImage(img, -img.width / 2, -img.height / 2, img.width, img.height);
+      ctx.restore();
+
+      // Draw Lightroom CC Crop Mask Guide Overlay
+      drawCropGuideOverlay(ctx, vpW, vpH, _cropState.type);
+    }
+
+    function drawCropGuideOverlay(ctx, vpW, vpH, type) {
+      ctx.save();
+      let boxW, boxH, isCircle = false;
+      if (type === 'logo') {
+        boxW = 210; boxH = 210; isCircle = true;
+      } else if (type === 'cover') {
+        boxW = 460; boxH = 153;
+      } else {
+        boxW = 380; boxH = 280;
+      }
+
+      const boxX = (vpW - boxW) / 2;
+      const boxY = (vpH - boxH) / 2;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.beginPath();
+      ctx.rect(0, 0, vpW, vpH);
+
+      if (isCircle) {
+        ctx.arc(vpW / 2, vpH / 2, boxW / 2, 0, Math.PI * 2, true);
+      } else {
+        ctx.rect(boxX + boxW, boxY, -boxW, boxH);
+      }
+      ctx.fill('evenodd');
+
+      // Crop Frame Border
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      if (isCircle) {
+        ctx.arc(vpW / 2, vpH / 2, boxW / 2, 0, Math.PI * 2);
+      } else {
+        ctx.rect(boxX, boxY, boxW, boxH);
+      }
+      ctx.stroke();
+
+      // Rule of Thirds Grid Lines (Lightroom CC Style)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+
+      ctx.moveTo(boxX + boxW / 3, boxY);
+      ctx.lineTo(boxX + boxW / 3, boxY + boxH);
+      ctx.moveTo(boxX + (boxW * 2) / 3, boxY);
+      ctx.lineTo(boxX + (boxW * 2) / 3, boxY + boxH);
+
+      ctx.moveTo(boxX, boxY + boxH / 3);
+      ctx.lineTo(boxX + boxW, boxY + boxH / 3);
+      ctx.moveTo(boxX, boxY + (boxH * 2) / 3);
+      ctx.lineTo(boxX + boxW, boxY + (boxH * 2) / 3);
+
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -759,32 +846,40 @@
       loaderEl.style.display = 'flex';
       setLoaderProgress(circleEl, textEl, 15, 'Mengompresi WebP...');
 
-      // Export cropped canvas to high resolution WebP
+      // Render high resolution target canvas
+      const targetW = type === 'cover' ? 1200 : (type === 'logo' ? 600 : 800);
+      const targetH = type === 'cover' ? 400 : (type === 'logo' ? 600 : 600);
+
       const exportCanvas = document.createElement('canvas');
-      const maxDim = type === 'cover' ? 1200 : (type === 'logo' ? 600 : 800);
-      exportCanvas.width = maxDim;
-      exportCanvas.height = type === 'cover' ? Math.round(maxDim / 3) : (type === 'logo' ? maxDim : Math.round(maxDim * 0.75));
+      exportCanvas.width = targetW;
+      exportCanvas.height = targetH;
 
       const ctx = exportCanvas.getContext('2d');
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+      ctx.fillRect(0, 0, targetW, targetH);
+
+      const vpW = 540;
+      const vpH = 340;
+      let boxW = type === 'cover' ? 460 : (type === 'logo' ? 210 : 380);
+      let boxH = type === 'cover' ? 153 : (type === 'logo' ? 210 : 280);
+
+      const scaleMultiplier = targetW / boxW;
 
       ctx.save();
-      ctx.translate(exportCanvas.width / 2, exportCanvas.height / 2);
-      ctx.rotate((_cropState.rotation * Math.PI) / 180);
-      ctx.scale(_cropState.zoom, _cropState.zoom);
+      ctx.translate(targetW / 2, targetH / 2);
 
-      const scaleRatio = Math.min(exportCanvas.width / _cropState.image.width, exportCanvas.height / _cropState.image.height);
-      ctx.drawImage(
-        _cropState.image,
-        -_cropState.image.width / 2 + _cropState.offsetX,
-        -_cropState.image.height / 2 + _cropState.offsetY,
-        _cropState.image.width * scaleRatio,
-        _cropState.image.height * scaleRatio
-      );
+      const totalAngle = _cropState.baseRotation + _cropState.fineAngle;
+      ctx.rotate((totalAngle * Math.PI) / 180);
+
+      const img = _cropState.image;
+      const baseScale = Math.min((vpW * 0.85) / img.width, (vpH * 0.85) / img.height);
+      const totalScale = baseScale * _cropState.zoom * scaleMultiplier;
+
+      ctx.scale(totalScale, totalScale);
+      ctx.drawImage(img, -img.width / 2 + (_cropState.offsetX * scaleMultiplier) / totalScale, -img.height / 2 + (_cropState.offsetY * scaleMultiplier) / totalScale, img.width, img.height);
       ctx.restore();
 
-      const dataUrl = exportCanvas.toDataURL('image/webp', 0.8);
+      const dataUrl = exportCanvas.toDataURL('image/webp', 0.85);
       const base64 = dataUrl.split(',')[1];
 
       setLoaderProgress(circleEl, textEl, 45, 'Mengunggah ke Drive...');
