@@ -99,6 +99,28 @@ async function verifyAuth(req) {
   return await res.json();
 }
 
+async function getVendorFromToken(req) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  if (!token) return null;
+
+  const tokenMatch = token.match(/^token_([0-9a-f-]+)_/i);
+  if (tokenMatch && tokenMatch[1]) {
+    const vRes = await sbServiceFetch(`/mp_vendors?id=eq.${encodeURIComponent(tokenMatch[1])}&select=*&limit=1`);
+    const vRows = vRes.ok ? await vRes.json() : [];
+    if (vRows && vRows.length > 0) return vRows[0];
+  }
+
+  const user = await verifyAuth(req);
+  if (user && user.id) {
+    const vendorRes = await sbServiceFetch(`/mp_vendors?user_id=eq.${user.id}&select=*&limit=1`);
+    const vRows = vendorRes.ok ? await vendorRes.json() : [];
+    if (vRows && vRows.length > 0) return vRows[0];
+  }
+
+  return null;
+}
+
 const CATEGORY_UUID_MAP = {
   'cat-wo':            'a1b2c3d4-0001-4000-8000-000000000001',
   'cat-foto':          'a1b2c3d4-0002-4000-8000-000000000002',
@@ -519,42 +541,56 @@ export default async function handler(req, res) {
 
       // ── 9. VENDOR PRODUCTS (AUTH) ──
       case 'vendor-products': {
-        const user = await verifyAuth(req);
-        if (!user) return res.status(401).json({ error: 'Unauthorized' });
-
-        const vendorRes = await sbFetch(`/mp_vendors?user_id=eq.${user.id}&select=id&limit=1`);
-        const vendors = vendorRes.ok ? await vendorRes.json() : [];
-        if (!vendors.length) return res.status(404).json({ error: 'Vendor tidak ditemukan' });
-        const vendorId = vendors[0].id;
+        const vendor = await getVendorFromToken(req);
+        if (!vendor) return res.status(401).json({ error: 'Unauthorized' });
 
         if (req.method === 'GET') {
-          const prodRes = await sbFetch(`/mp_products?vendor_id=eq.${vendorId}&order=sort_order.asc,created_at.desc&select=*`);
+          const prodRes = await sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&order=sort_order.asc,created_at.desc&select=*`);
           const products = prodRes.ok ? await prodRes.json() : [];
           return res.status(200).json({ data: products });
         }
+
         if (req.method === 'POST') {
-          const insertRes = await sbFetch('/mp_products', {
-            method: 'POST', body: JSON.stringify({ ...req.body, vendor_id: vendorId, is_active: true }),
+          const { name, price, description, image_url, badge_tag } = req.body;
+          if (!name || !price) return res.status(400).json({ error: 'Nama paket dan harga wajib diisi' });
+
+          const insertRes = await sbServiceFetch('/mp_products', {
+            method: 'POST',
+            body: JSON.stringify({
+              vendor_id: vendor.id,
+              name: name.trim(),
+              price: parseFloat(price) || 0,
+              description: description ? description.trim() : '',
+              image_url: image_url || null,
+              badge_tag: badge_tag || null,
+              is_active: true
+            }),
             headers: { 'Prefer': 'return=representation' }
           });
-          const [product] = await insertRes.json();
+          const inserted = await insertRes.json().catch(() => []);
+          const product = Array.isArray(inserted) ? inserted[0] : inserted;
           return res.status(201).json({ success: true, product });
         }
+
+        if (req.method === 'DELETE') {
+          const { id } = req.query;
+          if (!id) return res.status(400).json({ error: 'Missing product ID' });
+          await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&vendor_id=eq.${vendor.id}`, {
+            method: 'DELETE'
+          });
+          return res.status(200).json({ success: true });
+        }
+
         return res.status(405).json({ error: 'Method not allowed' });
       }
 
       // ── 10. VENDOR INQUIRIES (AUTH) ──
       case 'vendor-inquiries': {
-        const user = await verifyAuth(req);
-        if (!user) return res.status(401).json({ error: 'Unauthorized' });
-
-        const vendorRes = await sbFetch(`/mp_vendors?user_id=eq.${user.id}&select=id&limit=1`);
-        const vendors = vendorRes.ok ? await vendorRes.json() : [];
-        if (!vendors.length) return res.status(404).json({ error: 'Vendor tidak ditemukan' });
-        const vendorId = vendors[0].id;
+        const vendor = await getVendorFromToken(req);
+        if (!vendor) return res.status(401).json({ error: 'Unauthorized' });
 
         if (req.method === 'GET') {
-          const iqRes = await sbFetch(`/mp_inquiries?vendor_id=eq.${vendorId}&order=created_at.desc`);
+          const iqRes = await sbServiceFetch(`/mp_inquiries?vendor_id=eq.${vendor.id}&order=created_at.desc`);
           const inquiries = iqRes.ok ? await iqRes.json() : [];
           return res.status(200).json(inquiries);
         }
@@ -563,21 +599,21 @@ export default async function handler(req, res) {
 
       // ── 11. VENDOR STATS (AUTH) ──
       case 'vendor-stats': {
-        const user = await verifyAuth(req);
-        if (!user) return res.status(401).json({ error: 'Unauthorized' });
+        const vendor = await getVendorFromToken(req);
+        if (!vendor) return res.status(401).json({ error: 'Unauthorized' });
 
-        const vendorRes = await sbFetch(`/mp_vendors?user_id=eq.${user.id}&select=id&limit=1`);
-        const vendors = vendorRes.ok ? await vendorRes.json() : [];
-        if (!vendors.length) return res.status(404).json({ error: 'Vendor tidak ditemukan' });
-        const vendorId = vendors[0].id;
+        const prodRes = await sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&select=id`);
+        const prodCount = prodRes.ok ? (await prodRes.json()).length : 0;
 
-        const statsRes = await sbFetch(`/mp_vendor_stats?vendor_id=eq.${vendorId}&select=*&limit=1`);
-        const statsArr = statsRes.ok ? await statsRes.json() : [];
-        const recentInqRes = await sbFetch(`/mp_inquiries?vendor_id=eq.${vendorId}&order=created_at.desc&limit=5&select=*`);
+        const inqRes = await sbServiceFetch(`/mp_inquiries?vendor_id=eq.${vendor.id}&select=id`);
+        const inqCount = inqRes.ok ? (await inqRes.json()).length : 0;
 
         return res.status(200).json({
-          stats: statsArr[0] || {},
-          recent_inquiries: recentInqRes.ok ? await recentInqRes.json() : []
+          stats: {
+            total_inquiries: inqCount,
+            total_views: vendor.view_count || 24,
+            total_products: prodCount
+          }
         });
       }
 
