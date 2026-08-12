@@ -256,16 +256,15 @@ export default async function handler(req, res) {
       // ── 3. VENDORS BROWSE & SEARCH ──
       case 'vendors': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-        const { category_id, city, search, q, page = 1, limit = 12, kategori } = req.query;
+        const { category_id, city, search, q, page = 1, limit = 24, kategori } = req.query;
 
-        // Use sbServiceFetch to bypass RLS so all active vendors are visible to public
-        let query = `/mp_vendors?is_active=eq.true&select=id,slug,business_name,category_id,city,province,rating,review_count,price_from,cover_image_url,logo_url,is_verified`;
+        // Use sbServiceFetch to query mp_vendors with exact column names (rating_avg, not rating)
+        let query = `/mp_vendors?select=id,slug,business_name,category_id,city,province,rating_avg,review_count,price_from,cover_image_url,logo_url,is_verified,is_active`;
 
         // category filter — supports both category_id UUID and kategori slug
         if (category_id) {
           query += `&category_id=eq.${encodeURIComponent(category_id)}`;
         } else if (kategori) {
-          // match by category slug via DEFAULT_CATEGORIES lookup
           const catObj = DEFAULT_CATEGORIES.find(c => c.slug === kategori);
           if (catObj) query += `&category_id=eq.${encodeURIComponent(catObj.id)}`;
         }
@@ -275,16 +274,20 @@ export default async function handler(req, res) {
         if (searchTerm) query += `&or=(business_name.ilike.*${encodeURIComponent(searchTerm)}*,description.ilike.*${encodeURIComponent(searchTerm)}*,city.ilike.*${encodeURIComponent(searchTerm)}*)`;
 
         const offset = (parseInt(page) - 1) * parseInt(limit);
-        query += `&order=is_verified.desc,rating.desc,created_at.desc&range=${offset}-${offset + parseInt(limit) - 1}`;
+        query += `&order=is_verified.desc,rating_avg.desc,created_at.desc&range=${offset}-${offset + parseInt(limit) - 1}`;
 
-        const vRes = await sbServiceFetch(query);
-        if (!vRes.ok) return res.status(502).json({ error: 'Failed to fetch vendors' });
+        let vRes = await sbServiceFetch(query);
+        if (!vRes.ok) {
+          console.error('Failed to fetch vendors:', await vRes.text());
+          return res.status(502).json({ error: 'Database query error' });
+        }
 
         const vendors = await vRes.json();
 
-        // Resolve category_name from DEFAULT_CATEGORIES for each vendor
+        // Map rating_avg to rating for backward compatibility with frontend cards
         const enriched = (vendors || []).map(v => ({
           ...v,
+          rating: v.rating_avg || 0,
           category_name: (DEFAULT_CATEGORIES.find(c => c.id === v.category_id) || {}).name || 'Vendor Wedding'
         }));
 
@@ -648,6 +651,38 @@ export default async function handler(req, res) {
           }
           const product = Array.isArray(insertedJson) ? insertedJson[0] : insertedJson;
           return res.status(201).json({ success: true, product });
+        }
+
+        if (req.method === 'PATCH' || req.method === 'PUT') {
+          const { id } = req.query;
+          if (!id) return res.status(400).json({ error: 'Missing product ID' });
+
+          const { name, price, description, image_url, cover_image_url, badge_tag } = req.body;
+          const updateBody = {};
+
+          if (name) {
+            updateBody.name = name.trim();
+            updateBody.slug = generateSlug(name) + '-' + Date.now().toString(36);
+          }
+          if (price !== undefined) updateBody.price = Math.round(parseFloat(price)) || 0;
+          if (description !== undefined) updateBody.description = description ? description.trim() : '';
+          const finalImage = image_url || cover_image_url;
+          if (finalImage !== undefined) updateBody.cover_image_url = finalImage || null;
+          if (badge_tag !== undefined) updateBody.price_label = badge_tag ? badge_tag.trim() : null;
+          updateBody.updated_at = new Date().toISOString();
+
+          const updateRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&vendor_id=eq.${vendor.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(updateBody),
+            headers: { 'Prefer': 'return=representation' }
+          });
+          const updatedJson = await updateRes.json().catch(() => null);
+          if (!updateRes.ok || !updatedJson) {
+            const errMsg = (updatedJson && updatedJson.message) ? updatedJson.message : 'Gagal memperbarui paket';
+            return res.status(400).json({ error: errMsg });
+          }
+          const product = Array.isArray(updatedJson) ? updatedJson[0] : updatedJson;
+          return res.status(200).json({ success: true, product });
         }
 
         if (req.method === 'DELETE') {
