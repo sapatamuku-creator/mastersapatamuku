@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detail Paket — Sapatamu.id</title>
+  <meta name="description" content="Detail paket dan layanan pernikahan di Sapatamu.id">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/animations.css">
+  <style>
+    :root {
+      --primary:       hsl(0, 62%, 68%);
+      --primary-dark:  hsl(0, 55%, 55%);
+      --gold:          hsl(40, 63%, 48%);
+      --mp-green:      hsl(142, 55%, 48%);
+      --text-main:     hsl(20, 15%, 15%);
+      --text-light:    hsl(20, 8%, 40%);
+      --text-muted:    hsl(20, 5%, 58%);
+      --bg:            hsl(30, 25%, 97%);
+      --bg-alt:        hsl(30, 20%, 94%);
+      --white:         #fff;
+      --border:        hsl(30, 15%, 88%);
+      --shadow-sm:     0 1px 4px rgba(0,0,0,.06);
+      --shadow-md:     0 4px 16px rgba(0,0,0,.08);
+      --shadow-lg:     0 8px 32px rgba(0,0,0,.10);
+      --shadow-xl:     0 16px 48px rgba(0,0,0,.13);
+      --radius:        16px;
+      --radius-sm:     10px;
+      --radius-lg:     24px;
+      --transition:    all .2s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.6; }
+    a { text-decoration: none; color: inherit; transition: var(--transition); }
+    img { max-width: 100%; height: auto; display: block; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; font-size: inherit; }
+
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      background: rgba(255,251,249,.92); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border); transition: var(--transition);
+    }
+    .navbar.scrolled { box-shadow: var(--shadow-md); }
+    .navbar .inner {
+      max-width: 1140px; margin: 0 auto; padding: 0 20px;
+      height: 60px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-back { display: flex; align-items: center; gap: 6px; font-size: .88rem; color: var(--text-light); font-weight: 500; }
+    .nav-back:hover { color: var(--primary); }
+    .nav-logo { font-family: 'Lora', serif; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .nav-logo .li { width: 28px; height: 28px; background: linear-gradient(135deg,var(--primary),var(--gold)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: .85rem; }
+
+    .container { max-width: 1140px; margin: 80px auto 60px; padding: 0 20px; }
+    .product-grid { display: grid; grid-template-columns: 1fr 380px; gap: 32px; align-items: start; }
+    @media (max-width: 900px) { .product-grid { grid-template-columns: 1fr; } }
+
+    .gallery-wrap { display: flex; flex-direction: column; gap: 12px; }
+    .main-img {
+      width: 100%; aspect-ratio: 16/10; border-radius: var(--radius); overflow: hidden;
+      background: linear-gradient(135deg,var(--primary-dark),var(--gold)); position: relative;
+      border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+    }
+    .main-img img { width: 100%; height: 100%; object-fit: cover; }
+    .thumb-grid { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .thumb-item {
+      width: 70px; height: 70px; border-radius: var(--radius-sm); overflow: hidden;
+      flex-shrink: 0; cursor: pointer; border: 2px solid transparent; opacity: .7; transition: var(--transition);
+    }
+    .thumb-item.active, .thumb-item:hover { opacity: 1; border-color: var(--primary); }
+    .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+
+    .product-details { background: var(--white); border-radius: var(--radius-lg); padding: 32px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+    .badge-tag { display: inline-block; padding: 4px 12px; background: rgba(224,123,123,.12); color: var(--primary); border-radius: 50px; font-size: .75rem; font-weight: 600; margin-bottom: 12px; }
+    .product-title { font-family: 'Lora', serif; font-size: clamp(1.4rem,3vw,1.9rem); font-weight: 700; margin-bottom: 8px; line-height: 1.3; }
+    .product-price { font-family: 'Lora', serif; font-size: 1.5rem; font-weight: 700; color: var(--primary); margin-bottom: 20px; }
+    .product-price .unit { font-size: .85rem; color: var(--text-muted); font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 400; }
+    .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+    .section-title { font-size: .9rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 12px; }
+    .description-text { color: var(--text-light); line-height: 1.8; font-size: .95rem; white-space: pre-line; }
+
+    .inclusion-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
+    .inclusion-item { display: flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--text-main); font-weight: 500; }
+    .inclusion-item .check { color: var(--mp-green); font-weight: 700; }
+
+    .sidebar-sticky { position: sticky; top: 80px; display: flex; flex-direction: column; gap: 20px; }
+    .card-box { background: var(--white); border-radius: var(--radius-lg); padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-md); }
+
+    .vendor-mini { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+    .v-logo {
+      width: 54px; height: 54px; border-radius: 14px; overflow: hidden; flex-shrink: 0;
+      background: linear-gradient(135deg,var(--primary),var(--gold));
+      display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 1.1rem;
+    }
+    .v-logo img { width: 100%; height: 100%; object-fit: cover; }
+    .v-info { min-width: 0; }
+    .v-name { font-weight: 700; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .v-meta { font-size: .78rem; color: var(--text-muted); }
+
+    .form-title { font-family: 'Lora', serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 14px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: .78rem; font-weight: 600; margin-bottom: 4px; color: var(--text-light); }
+    .form-group input, .form-group textarea {
+      width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: .88rem; background: var(--bg); color: var(--text-main); font-family: inherit;
+    }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+
+    .btn-submit {
+      width: 100%; padding: 12px; border-radius: 50px; font-weight: 700; font-size: .9rem;
+      background: linear-gradient(135deg,var(--primary),var(--primary-dark)); color: #fff;
+      box-shadow: 0 4px 12px rgba(224,123,123,.3); transition: var(--transition); margin-top: 6px;
+    }
+    .btn-wa-direct {
+      width: 100%; padding: 11px; border-radius: 50px; font-weight: 600; font-size: .88rem;
+      background: #25D366; color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 3px 10px rgba(37,211,102,.25); margin-top: 10px;
+    }
+
+    .other-products { margin-top: 48px; }
+    .other-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
+    .p-card {
+      background: var(--white); border-radius: var(--radius); border: 1px solid var(--border);
+      overflow: hidden; transition: var(--transition);
+    }
+    .p-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: var(--bg-alt); }
+    .p-body { padding: 14px; }
+    .p-title { font-weight: 700; font-size: .88rem; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .p-price { font-family: 'Lora', serif; font-weight: 700; color: var(--primary); font-size: .92rem; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 900;
+      padding: 12px 20px; border-radius: 12px; font-size: .87rem; font-weight: 500;
+      background: var(--text-main); color: #fff; box-shadow: var(--shadow-lg);
+      transform: translateY(80px); opacity: 0; transition: all .3s ease;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: var(--mp-green); }
+    .toast.error { background: hsl(0,65%,55%); }
+
+    .skeleton { background: linear-gradient(90deg, var(--bg-alt) 25%, #f0ebe6 50%, var(--bg-alt) 75%); background-size: 200% 100%; animation: skel 1.5s ease-in-out infinite; border-radius: 8px; }
+    @keyframes skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar" id="navbar">
+    <div class="inner">
+      <a href="/marketplace" class="nav-back">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+        Marketplace
+      </a>
+      <a href="/" class="nav-logo"><span class="li">💍</span> sapatamu</a>
+    </div>
+  </nav>
+
+  <div class="container" id="mainContainer">
+    <div class="product-grid" id="productGrid">
+      <div>
+        <div class="gallery-wrap">
+          <div class="main-img" id="mainImgWrap">
+            <div class="skeleton" style="width:100%;height:100%"></div>
+          </div>
+          <div class="thumb-grid" id="thumbGrid"></div>
+        </div>
+
+        <div class="product-details" style="margin-top:24px">
+          <span class="badge-tag" id="prodCat">Paket Wedding</span>
+          <h1 class="product-title" id="prodTitle"><div class="skeleton" style="height:32px;width:70%"></div></h1>
+          <div class="product-price" id="prodPrice"><div class="skeleton" style="height:24px;width:40%"></div></div>
+
+          <div class="divider"></div>
+
+          <div class="section-title">Deskripsi Paket</div>
+          <div class="description-text" id="prodDesc">Loading deskripsi...</div>
+
+          <div class="divider"></div>
+
+          <div class="section-title">Apa Yang Termasuk</div>
+          <div class="inclusion-list" id="prodInclusions">
+            <div class="skeleton" style="height:20px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-sticky">
+        <div class="card-box">
+          <div class="vendor-mini" id="vendorMini">
+            <div class="v-logo skeleton"></div>
+            <div class="v-info">
+              <div class="skeleton" style="height:16px;width:120px;margin-bottom:4px"></div>
+              <div class="skeleton" style="height:12px;width:80px"></div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="form-title">Tanya Paket Ini</div>
+          <form id="inquiryForm">
+            <div class="form-group">
+              <label>Nama Lengkap *</label>
+              <input type="text" id="iqName" required placeholder="Nama kamu">
+            </div>
+            <div class="form-group">
+              <label>Nomor WhatsApp *</label>
+              <input type="tel" id="iqWA" required placeholder="08xxxxxxxxxx">
+            </div>
+            <div class="form-group">
+              <label>Tanggal Acara</label>
+              <input type="date" id="iqDate">
+            </div>
+            <div class="form-group">
+              <label>Pesan</label>
+              <textarea id="iqMsg" placeholder="Tanyakan ketersediaan tanggal atau custom paket..."></textarea>
+            </div>
+            <button type="submit" class="btn-submit" id="btnSubmit">Kirim Inquiry</button>
+          </form>
+
+          <a href="#" id="btnWaDirect" target="_blank" class="btn-wa-direct">
+            Chat WA Vendor
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="other-products" id="otherProductsSection" style="display:none">
+      <div class="section-title">Paket Lain dari Vendor Ini</div>
+      <div class="other-grid" id="otherGrid"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const slug = location.pathname.split('/store/')[1]?.split('/')[0] || new URLSearchParams(location.search).get('slug') || '';
+    let _product = null, _vendor = null;
+
+    function showToast(msg, type = '') {
+      const toast = $('toast');
+      toast.textContent = msg;
+      toast.className = 'toast show ' + type;
+      setTimeout(() => toast.className = 'toast', 3500);
+    }
+
+    async function loadProduct() {
+      if (!slug) return;
+      try {
+        const res = await fetch(`/api/marketplace/product-detail?slug=${encodeURIComponent(slug)}`);
+        const json = await res.json();
+        if (json.product) {
+          _product = json.product;
+          _vendor  = json.vendor;
+          renderProduct(json.product);
+          if (json.vendor) renderVendor(json.vendor);
+        }
+      } catch (err) {}
+    }
+
+    function renderProduct(p) {
+      const imgs = (p.images && p.images.length) ? p.images : (p.cover_image_url ? [p.cover_image_url] : []);
+      if (imgs.length) {
+        $('mainImgWrap').innerHTML = `<img src="${imgs[0]}" id="activeImg" alt="${p.name}">`;
+      }
+      $('prodTitle').textContent = p.name;
+      $('prodPrice').innerHTML   = `Rp ${Number(p.price||0).toLocaleString('id-ID')}`;
+      $('prodDesc').textContent  = p.description || 'Tidak ada deskripsi.';
+    }
+
+    function renderVendor(v) {
+      $('vendorMini').innerHTML = `<div class="v-info"><div class="v-name">${v.business_name}</div></div>`;
+    }
+
+    loadProduct();
+  </script>
+</body>
+</html>
