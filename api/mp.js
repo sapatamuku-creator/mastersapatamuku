@@ -20,7 +20,7 @@ async function verifyAuth(req) {
   return await res.json();
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (handleOptions(req, res)) return;
   setCors(res);
 
