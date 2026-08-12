@@ -1,4 +1,4 @@
-// api/marketplace.js
+// api/mp.js
 // Consolidated Serverless Function for Sapatamu Marketplace (Vercel Hobby 12-Function Limit Optimization)
 
 const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
@@ -99,6 +99,55 @@ async function verifyAuth(req) {
   return await res.json();
 }
 
+const DEFAULT_CATEGORIES = [
+  { id: 'cat-wo', name: 'Wedding Organizer & Planner', slug: 'wedding-organizer', icon: '📋', is_active: true, sort_order: 1 },
+  { id: 'cat-foto', name: 'Fotografi & Videografi', slug: 'foto-video', icon: '📸', is_active: true, sort_order: 2 },
+  { id: 'cat-katering', name: 'Katering (Catering)', slug: 'katering', icon: '🍽️', is_active: true, sort_order: 3 },
+  { id: 'cat-venue', name: 'Venue & Gedung Pernikahan', slug: 'venue', icon: '🏰', is_active: true, sort_order: 4 },
+  { id: 'cat-dekorasi', name: 'Dekorasi & Florist', slug: 'dekorasi', icon: '🌸', is_active: true, sort_order: 5 },
+  { id: 'cat-makeup', name: 'Rias Pengantin & Gaun (Makeup & Attire)', slug: 'makeup-attire', icon: '💄', is_active: true, sort_order: 6 },
+  { id: 'cat-entertainment', name: 'Musik, MC & Entertainment', slug: 'music-entertainment', icon: '🎵', is_active: true, sort_order: 7 },
+  { id: 'cat-undangan', name: 'Undangan & Souvenir', slug: 'undangan-souvenir', icon: '💌', is_active: true, sort_order: 8 },
+  { id: 'cat-jewellery', name: 'Perhiasan & Cincin Kawin', slug: 'jewellery-rings', icon: '💍', is_active: true, sort_order: 9 },
+  { id: 'cat-photobooth', name: 'Photobooth & Interactive', slug: 'photobooth', icon: '📸', is_active: true, sort_order: 10 },
+  { id: 'cat-honeymoon', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: '✈️', is_active: true, sort_order: 11 }
+];
+
+async function ensureCategoryInDB(catId) {
+  if (!catId) catId = 'cat-foto';
+  try {
+    const checkRes = await sbFetch(`/mp_categories?id=eq.${encodeURIComponent(catId)}&select=id&limit=1`);
+    const checkRows = checkRes.ok ? await checkRes.json() : [];
+    if (Array.isArray(checkRows) && checkRows.length > 0) return checkRows[0].id;
+  } catch(e) {}
+
+  const targetCat = DEFAULT_CATEGORIES.find(c => c.id === catId) || 
+                    DEFAULT_CATEGORIES.find(c => c.id === `cat-${catId}`) || 
+                    DEFAULT_CATEGORIES[1];
+
+  try {
+    const upsertRes = await sbServiceFetch('/mp_categories', {
+      method: 'POST',
+      body: JSON.stringify(targetCat),
+      headers: {
+        'Prefer': 'resolution=merge-duplicates,return=representation'
+      }
+    });
+    if (upsertRes.ok) {
+      const inserted = await upsertRes.json();
+      if (Array.isArray(inserted) && inserted.length > 0) return inserted[0].id;
+    }
+  } catch(e) {}
+
+  try {
+    const anyRes = await sbFetch(`/mp_categories?select=id&limit=1`);
+    const anyRows = anyRes.ok ? await anyRes.json() : [];
+    if (Array.isArray(anyRows) && anyRows.length > 0) return anyRows[0].id;
+  } catch(e) {}
+
+  return targetCat.id;
+}
+
 export default async function handler(req, res) {
   if (handleOptions(req, res)) return;
   setCors(res);
@@ -132,156 +181,98 @@ export default async function handler(req, res) {
           }
         } catch (e) {}
 
-        const fallbackCats = [
-          { id: 'cat-wo', name: 'Wedding Organizer & Planner', slug: 'wedding-organizer', icon: '📋' },
-          { id: 'cat-foto', name: 'Fotografi & Videografi', slug: 'foto-video', icon: '📸' },
-          { id: 'cat-katering', name: 'Katering (Catering)', slug: 'katering', icon: '🍽️' },
-          { id: 'cat-venue', name: 'Venue & Gedung Pernikahan', slug: 'venue', icon: '🏰' },
-          { id: 'cat-dekorasi', name: 'Dekorasi & Florist', slug: 'dekorasi', icon: '🌸' },
-          { id: 'cat-makeup', name: 'Rias Pengantin & Gaun (Makeup & Attire)', slug: 'makeup-attire', icon: '💄' },
-          { id: 'cat-entertainment', name: 'Musik, MC & Entertainment', slug: 'music-entertainment', icon: '🎵' },
-          { id: 'cat-undangan', name: 'Undangan & Souvenir', slug: 'undangan-souvenir', icon: '💌' },
-          { id: 'cat-jewellery', name: 'Perhiasan & Cincin Kawin', slug: 'jewellery-rings', icon: '💍' },
-          { id: 'cat-photobooth', name: 'Photobooth & Interactive', slug: 'photobooth', icon: '📷' },
-          { id: 'cat-honeymoon', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: '✈️' }
-        ];
-        return res.status(200).json(fallbackCats);
+        return res.status(200).json(DEFAULT_CATEGORIES);
       }
 
-      // ── 1B. REGIONS PROXY ──
+      // ── 2. REGIONS PROXY ──
       case 'regions': {
+        if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
         const { type, provId, regId } = req.query;
+
         let targetUrl = '';
-        if (type === 'provinces') {
-          targetUrl = 'https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/provinces.json';
-        } else if (type === 'regencies' && provId) {
+        if (type === 'regencies' && provId) {
           targetUrl = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/regencies/${provId}.json`;
         } else if (type === 'districts' && regId) {
           targetUrl = `https://cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api/districts/${regId}.json`;
         } else {
-          return res.status(400).json({ error: 'Invalid parameters' });
+          return res.status(400).json({ error: 'Invalid region type or missing ID parameter' });
         }
 
         try {
-          let r = await fetch(targetUrl);
-          if (!r.ok) r = await fetch(targetUrl.replace('cdn.jsdelivr.net/gh/emsifa/api-wilayah-indonesia@api', 'raw.githubusercontent.com/emsifa/api-wilayah-indonesia/api'));
-          const data = await r.json();
-          res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
-          return res.status(200).json(data);
-        } catch (err) {
-          return res.status(502).json({ error: 'Failed to fetch region data' });
-        }
+          const fetchRes = await fetch(targetUrl);
+          if (fetchRes.ok) {
+            const data = await fetchRes.json();
+            res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800');
+            return res.status(200).json(data);
+          }
+        } catch (e) {}
+
+        return res.status(502).json({ error: 'Gagal mengambil data wilayah' });
       }
 
-      // ── 2. VENDORS BROWSE ──
+      // ── 3. VENDORS BROWSE & SEARCH ──
       case 'vendors': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-        const {
-          kategori, provinsi, kota, kecamatan, min_price, max_price,
-          rating, verified, sort = 'rating_avg',
-          order = 'desc', page = '1', limit = '16', q
-        } = req.query;
+        const { category_id, city, search, page = 1, limit = 12 } = req.query;
 
-        const pageNum  = Math.max(1, parseInt(page) || 1);
-        const limitNum = Math.min(48, Math.max(1, parseInt(limit) || 16));
-        const offset   = (pageNum - 1) * limitNum;
+        let query = `/mp_vendors?is_active=eq.true&select=id,slug,business_name,category_id,city,province,rating,review_count,min_price,cover_image_url,logo_url,is_verified`;
 
-        const allowedSort = ['rating_avg', 'created_at', 'view_count', 'price_from'];
-        const sortCol  = allowedSort.includes(sort) ? sort : 'rating_avg';
-        const sortDir  = order === 'asc' ? 'asc' : 'desc';
+        if (category_id) query += `&category_id=eq.${encodeURIComponent(category_id)}`;
+        if (city) query += `&city=ilike.*${encodeURIComponent(city)}*`;
+        if (search) query += `&or=(business_name.ilike.*${encodeURIComponent(search)}*,description.ilike.*${encodeURIComponent(search)}*)`;
 
-        let path = `/mp_vendor_public?select=*`;
-        if (kategori) path += `&category_slug=eq.${encodeURIComponent(kategori)}`;
-        if (provinsi) path += `&province=ilike.${encodeURIComponent(`%${provinsi}%`)}`;
-        if (kota) path += `&city=ilike.${encodeURIComponent(`%${kota}%`)}`;
-        if (kecamatan) path += `&city=ilike.${encodeURIComponent(`%${kecamatan}%`)}`;
-        if (rating) path += `&rating_avg=gte.${parseFloat(rating)}`;
-        if (verified === 'true') path += `&is_verified=eq.true`;
-        if (min_price) path += `&price_from=gte.${parseInt(min_price)}`;
-        if (max_price) path += `&price_from=lte.${parseInt(max_price)}`;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        query += `&order=is_verified.desc,rating.desc,created_at.desc&range=${offset}-${offset + parseInt(limit) - 1}`;
 
-        if (q) {
-          const cleanQ = encodeURIComponent(`%${q.trim()}%`);
-          path += `&or=(business_name.ilike.${cleanQ},category_name.ilike.${cleanQ},city.ilike.${cleanQ},province.ilike.${cleanQ},description.ilike.${cleanQ})`;
-        }
+        const vRes = await sbFetch(query);
+        if (!vRes.ok) return res.status(502).json({ error: 'Failed to fetch vendors' });
 
-        path += `&order=${sortCol}.${sortDir}&limit=${limitNum}&offset=${offset}`;
-
-        const dataRes = await sbFetch(path, { headers: { 'Prefer': 'count=exact' } });
-        if (!dataRes.ok) return res.status(502).json({ error: 'Database error' });
-
-        const data  = await dataRes.json();
-        const total = parseInt(dataRes.headers.get('content-range')?.split('/')[1] || '0');
-
-        return res.status(200).json({
-          data,
-          pagination: { page: pageNum, limit: limitNum, total, total_pages: Math.ceil(total / limitNum) }
-        });
+        const vendors = await vRes.json();
+        return res.status(200).json({ data: vendors, page: parseInt(page), limit: parseInt(limit) });
       }
 
-      // ── 3. VENDOR DETAIL ──
+      // ── 4. VENDOR PROFILE ──
       case 'vendor-detail': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
         const { slug } = req.query;
-        if (!slug) return res.status(400).json({ error: 'Parameter "slug" wajib diisi' });
+        if (!slug) return res.status(400).json({ error: 'Missing vendor slug' });
 
-        const vendorRes = await sbFetch(`/mp_vendor_public?slug=eq.${encodeURIComponent(slug)}&limit=1`);
-        if (!vendorRes.ok) return res.status(502).json({ error: 'Database error' });
-        const vendors = await vendorRes.json();
+        const vRes = await sbFetch(`/mp_vendors?slug=eq.${encodeURIComponent(slug)}&select=*&limit=1`);
+        if (!vRes.ok) return res.status(502).json({ error: 'Database error' });
+
+        const vendors = await vRes.json();
         if (!vendors.length) return res.status(404).json({ error: 'Vendor tidak ditemukan' });
 
         const vendor = vendors[0];
-        sbFetch(`/rpc/mp_increment_view`, { method: 'POST', body: JSON.stringify({ p_vendor_id: vendor.id }) }).catch(() => {});
 
-        const productsRes = await sbFetch(`/mp_products?vendor_id=eq.${vendor.id}&is_active=eq.true&order=sort_order.asc,price.asc&select=*`);
-        const products = productsRes.ok ? await productsRes.json() : [];
+        const [pRes, rRes] = await Promise.all([
+          sbFetch(`/mp_products?vendor_id=eq.${vendor.id}&is_active=eq.true&order=sort_order.asc`),
+          sbFetch(`/mp_reviews?vendor_id=eq.${vendor.id}&order=created_at.desc&limit=10`)
+        ]);
 
-        const reviewsRes = await sbFetch(`/mp_reviews?vendor_id=eq.${vendor.id}&status=eq.approved&order=created_at.desc&limit=10&select=*`);
-        const reviews = reviewsRes.ok ? await reviewsRes.json() : [];
+        const products = pRes.ok ? await pRes.json() : [];
+        const reviews = rRes.ok ? await rRes.json() : [];
 
-        return res.status(200).json({ vendor, products, reviews });
+        return res.status(200).json({
+          vendor,
+          products,
+          reviews
+        });
       }
 
-      // ── 4. PRODUCT DETAIL ──
-      case 'product-detail': {
-        if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-        const { slug, id } = req.query;
-        if (!slug && !id) return res.status(400).json({ error: 'Parameter "slug" atau "id" wajib diisi' });
-
-        const filter = slug ? `slug=eq.${encodeURIComponent(slug)}` : `id=eq.${encodeURIComponent(id)}`;
-        const prodRes = await sbFetch(`/mp_products?${filter}&is_active=eq.true&limit=1&select=*`);
-        if (!prodRes.ok) return res.status(502).json({ error: 'Database error' });
-
-        const products = await prodRes.json();
-        if (!products.length) return res.status(404).json({ error: 'Produk tidak ditemukan' });
-        const product = products[0];
-
-        const vendorRes = await sbFetch(`/mp_vendor_public?id=eq.${product.vendor_id}&limit=1`);
-        const vendors = vendorRes.ok ? await vendorRes.json() : [];
-        const vendor = vendors[0] || null;
-
-        let otherProducts = [];
-        if (vendor) {
-          const otherRes = await sbFetch(`/mp_products?vendor_id=eq.${vendor.id}&id=neq.${product.id}&is_active=eq.true&order=sort_order.asc&limit=4&select=*`);
-          otherProducts = otherRes.ok ? await otherRes.json() : [];
-        }
-
-        return res.status(200).json({ product, vendor, otherProducts });
-      }
-
-      // ── 5. INQUIRY ──
-      case 'inquiry': {
+      // ── 5. CREATE INQUIRY ──
+      case 'create-inquiry': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         const { vendor_id, product_id, client_name, client_whatsapp, client_email, event_date, guest_count, budget_range, message } = req.body;
 
-        if (!vendor_id) return res.status(400).json({ error: 'vendor_id wajib diisi' });
-        if (!client_name) return res.status(400).json({ error: 'Nama wajib diisi' });
-        if (!client_whatsapp) return res.status(400).json({ error: 'Nomor WhatsApp wajib diisi' });
+        if (!vendor_id || !client_name || !client_whatsapp) {
+          return res.status(400).json({ error: 'Missing required inquiry parameters' });
+        }
 
-        const vendorRes = await sbFetch(`/mp_vendors?id=eq.${vendor_id}&is_active=eq.true&select=id,business_name,whatsapp&limit=1`);
-        if (!vendorRes.ok) return res.status(502).json({ error: 'Database error' });
+        const vCheck = await sbFetch(`/mp_vendors?id=eq.${vendor_id}&select=id,business_name,whatsapp,is_active&limit=1`);
+        if (!vCheck.ok) return res.status(502).json({ error: 'Gagal memverifikasi vendor' });
 
-        const vendors = await vendorRes.json();
+        const vendors = await vCheck.json();
         if (!vendors.length) return res.status(404).json({ error: 'Vendor tidak ditemukan atau tidak aktif' });
         const vendor = vendors[0];
 
@@ -318,55 +309,6 @@ export default async function handler(req, res) {
           whatsapp_url: `https://wa.me/${vendorWA}?text=${waText}`
         });
       }
-
-const DEFAULT_CATEGORIES = [
-  { id: 'cat-wo', name: 'Wedding Organizer & Planner', slug: 'wedding-organizer', icon: '📋', is_active: true, sort_order: 1 },
-  { id: 'cat-foto', name: 'Fotografi & Videografi', slug: 'foto-video', icon: '📸', is_active: true, sort_order: 2 },
-  { id: 'cat-katering', name: 'Katering (Catering)', slug: 'katering', icon: '🍽️', is_active: true, sort_order: 3 },
-  { id: 'cat-venue', name: 'Venue & Gedung Pernikahan', slug: 'venue', icon: '🏰', is_active: true, sort_order: 4 },
-  { id: 'cat-dekorasi', name: 'Dekorasi & Florist', slug: 'dekorasi', icon: '🌸', is_active: true, sort_order: 5 },
-  { id: 'cat-makeup', name: 'Rias Pengantin & Gaun (Makeup & Attire)', slug: 'makeup-attire', icon: '💄', is_active: true, sort_order: 6 },
-  { id: 'cat-entertainment', name: 'Musik, MC & Entertainment', slug: 'music-entertainment', icon: '🎵', is_active: true, sort_order: 7 },
-  { id: 'cat-undangan', name: 'Undangan & Souvenir', slug: 'undangan-souvenir', icon: '💌', is_active: true, sort_order: 8 },
-  { id: 'cat-jewellery', name: 'Perhiasan & Cincin Kawin', slug: 'jewellery-rings', icon: '💍', is_active: true, sort_order: 9 },
-  { id: 'cat-photobooth', name: 'Photobooth & Interactive', slug: 'photobooth', icon: '📸', is_active: true, sort_order: 10 },
-  { id: 'cat-honeymoon', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: '✈️', is_active: true, sort_order: 11 }
-];
-
-async function ensureCategoryInDB(catId) {
-  if (!catId) catId = 'cat-foto';
-  try {
-    const checkRes = await sbFetch(`/mp_categories?id=eq.${encodeURIComponent(catId)}&select=id&limit=1`);
-    const checkRows = checkRes.ok ? await checkRes.json() : [];
-    if (checkRows && checkRows.length > 0) return checkRows[0].id;
-  } catch(e) {}
-
-  const targetCat = DEFAULT_CATEGORIES.find(c => c.id === catId) || 
-                    DEFAULT_CATEGORIES.find(c => c.id === `cat-${catId}`) || 
-                    DEFAULT_CATEGORIES[1];
-
-  try {
-    const upsertRes = await sbServiceFetch('/mp_categories', {
-      method: 'POST',
-      body: JSON.stringify(targetCat),
-      headers: {
-        'Prefer': 'resolution=merge-duplicates,return=representation'
-      }
-    });
-    if (upsertRes.ok) {
-      const inserted = await upsertRes.json();
-      if (Array.isArray(inserted) && inserted.length > 0) return inserted[0].id;
-    }
-  } catch(e) {}
-
-  try {
-    const anyRes = await sbFetch(`/mp_categories?select=id&limit=1`);
-    const anyRows = anyRes.ok ? await anyRes.json() : [];
-    if (anyRows && anyRows.length > 0) return anyRows[0].id;
-  } catch(e) {}
-
-  return targetCat.id;
-}
 
       // ── 6. REGISTER VENDOR ──
       case 'register-vendor': {
@@ -518,7 +460,7 @@ async function ensureCategoryInDB(catId) {
       }
 
       // ── 8. VENDOR PROFILE (AUTH) ──
-      case 'vendor-profile': {
+      case 'vendor-me': {
         const user = await verifyAuth(req);
         if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -607,7 +549,7 @@ async function ensureCategoryInDB(catId) {
         return res.status(404).json({ error: `Endpoint "${endpoint}" not found` });
     }
   } catch (err) {
-    console.error(`[marketplace-api:${endpoint}] error:`, err.message);
-    return res.status(500).json({ error: 'Internal server error', detail: err.message });
+    console.error(`[marketplace-api:${endpoint}] error:`, err);
+    return res.status(500).json({ error: err.message || 'Internal server error', detail: err.stack || String(err) });
   }
 }
