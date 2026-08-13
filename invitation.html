@@ -200,7 +200,7 @@
             console.log("Applying Live Preview Data:", data);
             
             function formatDateId(ds) {
-                if(!ds) return "";
+                if(!ds || typeof ds !== 'string') return "";
                 const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
                 const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
                 let d;
@@ -213,143 +213,148 @@
             }
 
             function formatTimeId(ts, zone) {
-                if(!ts) return "";
+                if(!ts || typeof ts !== 'string') return "";
                 if(/^\d{2}:\d{2}$/.test(ts)) return ts.replace(':', '.') + (zone ? ' ' + zone : ' WIB');
                 return ts;
             }
 
-            if (!data) return;
+            try {
+                if (data) {
+                    // Global Texts
+                    if (data.headerLabel) document.querySelectorAll('.header-label-text').forEach(el => el.innerText = data.headerLabel);
+                    if (data.hashtag) document.querySelectorAll('.hashtag-text').forEach(el => el.innerText = data.hashtag);
+                    if (data.greeting) document.querySelectorAll('.greeting-text').forEach(el => el.innerText = data.greeting);
+                    
+                    // Set Guest Name
+                    if (guestName) document.querySelectorAll('.guest-name-display').forEach(el => el.innerText = guestName);
 
-            // Global Texts
-            if (data.headerLabel) document.querySelectorAll('.header-label-text').forEach(el => el.innerText = data.headerLabel);
-            if (data.hashtag) document.querySelectorAll('.hashtag-text').forEach(el => el.innerText = data.hashtag);
-            if (data.greeting) document.querySelectorAll('.greeting-text').forEach(el => el.innerText = data.greeting);
-            
-            // Set Guest Name
-            if (guestName) document.querySelectorAll('.guest-name-display').forEach(el => el.innerText = guestName);
+                    // Cover & Hero
+                    if (data.coverBg) document.querySelectorAll('#cover img').forEach(el => el.src = data.coverBg);
+                    if (data.heroImg) document.querySelectorAll('.hero-image').forEach(el => el.src = data.heroImg);
 
-            // Cover & Hero
-            if (data.coverBg) document.querySelectorAll('#cover img').forEach(el => el.src = data.coverBg);
-            if (data.heroImg) document.querySelectorAll('.hero-image').forEach(el => el.src = data.heroImg);
+                    // Names
+                    if (data.groom && data.bride) {
+                        const gFirst = (data.groom.name && typeof data.groom.name === 'string') ? data.groom.name.split(" ")[0] : "";
+                        const bFirst = (data.bride.name && typeof data.bride.name === 'string') ? data.bride.name.split(" ")[0] : "";
+                        if (gFirst && bFirst) {
+                            document.querySelectorAll('.wedding-names-text').forEach(el => el.innerHTML = gFirst + " <br>& " + bFirst);
+                            const pTitle = document.getElementById('page-title');
+                            if (pTitle) pTitle.innerText = `Undangan: ${gFirst} & ${bFirst}`;
+                        }
+                    }
 
-            // Names
-            if (data.groom && data.bride) {
-                const gFirst = data.groom.name ? data.groom.name.split(" ")[0] : "";
-                const bFirst = data.bride.name ? data.bride.name.split(" ")[0] : "";
-                if (gFirst && bFirst) {
-                    document.querySelectorAll('.wedding-names-text').forEach(el => el.innerHTML = gFirst + " <br>& " + bFirst);
-                    document.getElementById('page-title').innerText = `Undangan: ${gFirst} & ${bFirst}`;
+                    // Mempelai Pria
+                    if (data.groom && typeof data.groom === 'object') {
+                        const gSec = document.getElementById('groom-section');
+                        if (gSec) gSec.style.display = (data.show_groom === "false") ? 'none' : 'block';
+                        if (data.groom.header) document.querySelectorAll('.groom-header-text').forEach(el => el.innerText = data.groom.header);
+                        if (data.groom.name) document.querySelectorAll('.groom-name-text').forEach(el => el.innerText = data.groom.name);
+                        if (data.groom.desc) document.querySelectorAll('.groom-desc-text').forEach(el => el.innerHTML = String(data.groom.desc).replace(/\n/g, '<br>'));
+                        if (data.groom.photo) document.querySelectorAll('.groom-photo-img').forEach(el => el.src = data.groom.photo);
+                        if (data.groom.ig && typeof data.groom.ig === 'string') {
+                            document.querySelectorAll('.groom-ig-link').forEach(el => {
+                                el.href = `https://instagram.com/${data.groom.ig.replace('@', '')}`;
+                                el.innerHTML = `<i class="fab fa-instagram text-sm"></i> ${data.groom.ig}`;
+                            });
+                        }
+                    }
+
+                    // Mempelai Wanita
+                    if (data.bride && typeof data.bride === 'object') {
+                        const bSec = document.getElementById('bride-section');
+                        if (bSec) bSec.style.display = (data.show_bride === "false") ? 'none' : 'block';
+                        if (data.bride.header) document.querySelectorAll('.bride-header-text').forEach(el => el.innerText = data.bride.header);
+                        if (data.bride.name) document.querySelectorAll('.bride-name-text').forEach(el => el.innerText = data.bride.name);
+                        if (data.bride.desc) document.querySelectorAll('.bride-desc-text').forEach(el => el.innerHTML = String(data.bride.desc).replace(/\n/g, '<br>'));
+                        if (data.bride.photo) document.querySelectorAll('.bride-photo-img').forEach(el => el.src = data.bride.photo);
+                        if (data.bride.ig && typeof data.bride.ig === 'string') {
+                            document.querySelectorAll('.bride-ig-link').forEach(el => {
+                                el.href = `https://instagram.com/${data.bride.ig.replace('@', '')}`;
+                                el.innerHTML = `<i class="fab fa-instagram text-sm"></i> ${data.bride.ig}`;
+                            });
+                        }
+                    }
+
+                    // Events
+                    const eSec = document.getElementById('events-section');
+                    if (eSec) eSec.style.display = (data.show_events === "false") ? 'none' : 'block';
+                    if (data.events_header) document.querySelectorAll('.events-header-text').forEach(el => el.innerText = data.events_header);
+
+                    if (data.ev1 && typeof data.ev1 === 'object') {
+                        if (data.ev1.name) document.querySelectorAll('.ev1-name-text').forEach(el => el.innerText = data.ev1.name);
+                        if (data.ev1.date) document.querySelectorAll('.ev1-date-text').forEach(el => el.innerText = formatDateId(data.ev1.date));
+                        if (data.ev1.time) document.querySelectorAll('.ev1-time-text').forEach(el => el.innerText = formatTimeId(data.ev1.time, data.ev1.zone));
+                        if (data.ev1.locName) document.querySelectorAll('.ev1-loc-text').forEach(el => el.innerHTML = String(data.ev1.locName).replace(/\n/g, '<br>'));
+                        if (data.ev1.photo) document.querySelectorAll('.ev1-photo-img').forEach(el => el.src = data.ev1.photo);
+                        if (data.ev1.maps) document.querySelectorAll('.ev1-maps-btn').forEach(el => el.href = data.ev1.maps);
+                        
+                        // Set Countdown
+                        if (data.ev1.date && typeof data.ev1.date === 'string') {
+                            let isoDate = data.ev1.date;
+                            const ddmm = data.ev1.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                            if (ddmm) isoDate = ddmm[3] + '-' + ddmm[2] + '-' + ddmm[1];
+                            let t = data.ev1.time && /^\d{2}:\d{2}$/.test(data.ev1.time) ? data.ev1.time : "08:00";
+                            window.ACTIVE_COUNTDOWN = isoDate + 'T' + t + ':00';
+                        }
+                    }
+
+                    if (data.ev2 && typeof data.ev2 === 'object') {
+                        if (data.ev2.name) document.querySelectorAll('.ev2-name-text').forEach(el => el.innerText = data.ev2.name);
+                        if (data.ev2.date) document.querySelectorAll('.ev2-date-text').forEach(el => el.innerText = formatDateId(data.ev2.date));
+                        if (data.ev2.time) document.querySelectorAll('.ev2-time-text').forEach(el => el.innerText = formatTimeId(data.ev2.time, data.ev2.zone));
+                        if (data.ev2.locName) document.querySelectorAll('.ev2-loc-text').forEach(el => el.innerHTML = String(data.ev2.locName).replace(/\n/g, '<br>'));
+                        if (data.ev2.photo) document.querySelectorAll('.ev2-photo-img').forEach(el => el.src = data.ev2.photo);
+                        if (data.ev2.maps) document.querySelectorAll('.ev2-maps-btn').forEach(el => el.href = data.ev2.maps);
+                    }
+
+                    // Gifts
+                    const gfSec = document.getElementById('gift-section');
+                    if (gfSec) gfSec.style.display = (data.show_gift === "false") ? 'none' : 'block';
+                    if (data.gift_header) document.querySelectorAll('.gift-header-text').forEach(el => el.innerText = data.gift_header);
+                    if (Array.isArray(data.gifts)) {
+                        if (data.gifts[0] && data.gifts[0].acc) {
+                            document.querySelectorAll('.gift1-acc-text').forEach(el => el.innerText = data.gifts[0].acc);
+                            document.querySelectorAll('.gift1-owner-text').forEach(el => el.innerText = "A/n: " + (data.gifts[0].owner || ""));
+                        }
+                        if (data.gifts[1] && data.gifts[1].acc) {
+                            document.querySelectorAll('.gift2-acc-text').forEach(el => el.innerText = data.gifts[1].acc);
+                            document.querySelectorAll('.gift2-owner-text').forEach(el => el.innerText = "A/n: " + (data.gifts[1].owner || ""));
+                        }
+                        if (data.gifts[2] && data.gifts[2].acc) {
+                            document.querySelectorAll('.gift3-acc-text').forEach(el => el.innerText = data.gifts[2].acc);
+                            document.querySelectorAll('.gift3-owner-text').forEach(el => el.innerText = "A/n: " + (data.gifts[2].owner || ""));
+                        }
+                    }
+
+                    // Gallery
+                    const galSec = document.getElementById('gallery-section');
+                    if (galSec) galSec.style.display = (data.show_gallery === "false") ? 'none' : 'block';
+                    if (data.gallery_header) document.querySelectorAll('.gallery-header-text').forEach(el => el.innerText = data.gallery_header);
+                    if (Array.isArray(data.gallery)) {
+                        const galleryImgs = document.querySelectorAll('.carousel-card img');
+                        data.gallery.forEach((url, i) => {
+                            if (url && galleryImgs[i]) galleryImgs[i].src = url;
+                            if (url && galleryImgs[i + 6]) galleryImgs[i + 6].src = url;
+                        });
+                    }
+
+                    // Wishes
+                    const wSec = document.getElementById('wishes-section');
+                    if (wSec) wSec.style.display = (data.show_wishes === "false") ? 'none' : 'block';
+                    if (data.wishes_header) document.querySelectorAll('.wishes-header-text').forEach(el => el.innerText = data.wishes_header);
+
+                    // Music
+                    if (data.musicUrl) setMusicSource(data.musicUrl);
                 }
-            }
-
-            // Mempelai Pria
-            if (data.groom) {
-                const gSec = document.getElementById('groom-section');
-                if (gSec) gSec.style.display = (data.show_groom === "false") ? 'none' : 'block';
-                if (data.groom.header) document.querySelectorAll('.groom-header-text').forEach(el => el.innerText = data.groom.header);
-                if (data.groom.name) document.querySelectorAll('.groom-name-text').forEach(el => el.innerText = data.groom.name);
-                if (data.groom.desc) document.querySelectorAll('.groom-desc-text').forEach(el => el.innerHTML = data.groom.desc.replace(/\n/g, '<br>'));
-                if (data.groom.photo) document.querySelectorAll('.groom-photo-img').forEach(el => el.src = data.groom.photo);
-                if (data.groom.ig) {
-                    document.querySelectorAll('.groom-ig-link').forEach(el => {
-                        el.href = `https://instagram.com/${data.groom.ig.replace('@', '')}`;
-                        el.innerHTML = `<i class="fab fa-instagram text-sm"></i> ${data.groom.ig}`;
-                    });
+            } catch (err) {
+                console.error("Error inside applyLivePreview:", err);
+            } finally {
+                // Sembunyikan Loader SELALU
+                const loader = document.getElementById('shell-loader');
+                if(loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 400);
                 }
-            }
-
-            // Mempelai Wanita
-            if (data.bride) {
-                const bSec = document.getElementById('bride-section');
-                if (bSec) bSec.style.display = (data.show_bride === "false") ? 'none' : 'block';
-                if (data.bride.header) document.querySelectorAll('.bride-header-text').forEach(el => el.innerText = data.bride.header);
-                if (data.bride.name) document.querySelectorAll('.bride-name-text').forEach(el => el.innerText = data.bride.name);
-                if (data.bride.desc) document.querySelectorAll('.bride-desc-text').forEach(el => el.innerHTML = data.bride.desc.replace(/\n/g, '<br>'));
-                if (data.bride.photo) document.querySelectorAll('.bride-photo-img').forEach(el => el.src = data.bride.photo);
-                if (data.bride.ig) {
-                    document.querySelectorAll('.bride-ig-link').forEach(el => {
-                        el.href = `https://instagram.com/${data.bride.ig.replace('@', '')}`;
-                        el.innerHTML = `<i class="fab fa-instagram text-sm"></i> ${data.bride.ig}`;
-                    });
-                }
-            }
-
-            // Events
-            const eSec = document.getElementById('events-section');
-            if (eSec) eSec.style.display = (data.show_events === "false") ? 'none' : 'block';
-            if (data.events_header) document.querySelectorAll('.events-header-text').forEach(el => el.innerText = data.events_header);
-
-            if (data.ev1) {
-                if (data.ev1.name) document.querySelectorAll('.ev1-name-text').forEach(el => el.innerText = data.ev1.name);
-                if (data.ev1.date) document.querySelectorAll('.ev1-date-text').forEach(el => el.innerText = formatDateId(data.ev1.date));
-                if (data.ev1.time) document.querySelectorAll('.ev1-time-text').forEach(el => el.innerText = formatTimeId(data.ev1.time, data.ev1.zone));
-                if (data.ev1.locName) document.querySelectorAll('.ev1-loc-text').forEach(el => el.innerHTML = data.ev1.locName.replace(/\n/g, '<br>'));
-                if (data.ev1.photo) document.querySelectorAll('.ev1-photo-img').forEach(el => el.src = data.ev1.photo);
-                if (data.ev1.maps) document.querySelectorAll('.ev1-maps-btn').forEach(el => el.href = data.ev1.maps);
-                
-                // Set Countdown
-                if (data.ev1.date) {
-                    let isoDate = data.ev1.date;
-                    const ddmm = data.ev1.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-                    if (ddmm) isoDate = ddmm[3] + '-' + ddmm[2] + '-' + ddmm[1];
-                    let t = data.ev1.time && /^\d{2}:\d{2}$/.test(data.ev1.time) ? data.ev1.time : "08:00";
-                    window.ACTIVE_COUNTDOWN = isoDate + 'T' + t + ':00';
-                }
-            }
-
-            if (data.ev2) {
-                if (data.ev2.name) document.querySelectorAll('.ev2-name-text').forEach(el => el.innerText = data.ev2.name);
-                if (data.ev2.date) document.querySelectorAll('.ev2-date-text').forEach(el => el.innerText = formatDateId(data.ev2.date));
-                if (data.ev2.time) document.querySelectorAll('.ev2-time-text').forEach(el => el.innerText = formatTimeId(data.ev2.time, data.ev2.zone));
-                if (data.ev2.locName) document.querySelectorAll('.ev2-loc-text').forEach(el => el.innerHTML = data.ev2.locName.replace(/\n/g, '<br>'));
-                if (data.ev2.photo) document.querySelectorAll('.ev2-photo-img').forEach(el => el.src = data.ev2.photo);
-                if (data.ev2.maps) document.querySelectorAll('.ev2-maps-btn').forEach(el => el.href = data.ev2.maps);
-            }
-
-            // Gifts
-            const gfSec = document.getElementById('gift-section');
-            if (gfSec) gfSec.style.display = (data.show_gift === "false") ? 'none' : 'block';
-            if (data.gift_header) document.querySelectorAll('.gift-header-text').forEach(el => el.innerText = data.gift_header);
-            if (data.gifts) {
-                if (data.gifts[0] && data.gifts[0].acc) {
-                    document.querySelectorAll('.gift1-acc-text').forEach(el => el.innerText = data.gifts[0].acc);
-                    document.querySelectorAll('.gift1-owner-text').forEach(el => el.innerText = "A/n: " + (data.gifts[0].owner || ""));
-                }
-                if (data.gifts[1] && data.gifts[1].acc) {
-                    document.querySelectorAll('.gift2-acc-text').forEach(el => el.innerText = data.gifts[1].acc);
-                    document.querySelectorAll('.gift2-owner-text').forEach(el => el.innerText = "A/n: " + (data.gifts[1].owner || ""));
-                }
-                if (data.gifts[2] && data.gifts[2].acc) {
-                    document.querySelectorAll('.gift3-acc-text').forEach(el => el.innerText = data.gifts[2].acc);
-                    document.querySelectorAll('.gift3-owner-text').forEach(el => el.innerText = "A/n: " + (data.gifts[2].owner || ""));
-                }
-            }
-
-            // Gallery
-            const galSec = document.getElementById('gallery-section');
-            if (galSec) galSec.style.display = (data.show_gallery === "false") ? 'none' : 'block';
-            if (data.gallery_header) document.querySelectorAll('.gallery-header-text').forEach(el => el.innerText = data.gallery_header);
-            if (data.gallery) {
-                const galleryImgs = document.querySelectorAll('.carousel-card img');
-                data.gallery.forEach((url, i) => {
-                    if (url && galleryImgs[i]) galleryImgs[i].src = url;
-                    if (url && galleryImgs[i + 6]) galleryImgs[i + 6].src = url;
-                });
-            }
-
-            // Wishes
-            const wSec = document.getElementById('wishes-section');
-            if (wSec) wSec.style.display = (data.show_wishes === "false") ? 'none' : 'block';
-            if (data.wishes_header) document.querySelectorAll('.wishes-header-text').forEach(el => el.innerText = data.wishes_header);
-
-            // Music
-            if (data.musicUrl) setMusicSource(data.musicUrl);
-
-            // Sembunyikan Loader
-            const loader = document.getElementById('shell-loader');
-            if(loader) {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.remove(), 1000);
             }
         };
 
