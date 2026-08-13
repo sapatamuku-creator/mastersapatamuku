@@ -51,6 +51,22 @@ function doPost(e) {
     const payload = JSON.parse(e.postData.contents);
     const action = payload.action;
 
+    // Install onEdit trigger untuk spreadsheet client tertentu
+    if (action === 'installEditTrigger') {
+      if (!payload.ssId) return createResponse({ status: "error", message: "ssId required" });
+      try {
+        const ss = SpreadsheetApp.openById(payload.ssId);
+        const existing = ScriptApp.getProjectTriggers().filter(t =>
+          t.getHandlerFunction() === "handleSpreadsheetEdit" && t.getTriggerSourceId() === payload.ssId
+        );
+        existing.forEach(t => ScriptApp.deleteTrigger(t));
+        ScriptApp.newTrigger("handleSpreadsheetEdit").forSpreadsheet(payload.ssId).onEdit().create();
+        return createResponse({ status: "success", message: "onEdit trigger terpasang untuk " + ss.getName() });
+      } catch (e) {
+        return createResponse({ status: "error", message: "Gagal pasang trigger: " + e.toString() });
+      }
+    }
+
     // Routing based on action field in JSON payload
     switch(action) {
       // Auth & Management (CentralBackend.gs)
