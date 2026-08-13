@@ -921,107 +921,122 @@
                 return;
             }
             const ssId = window.CURRENT_SS_ID;
-            if (!ssId) return;
+            if (!ssId) {
+                showSapaModal("Error", "Sesi ID tidak ditemukan. Silakan muat ulang halaman.", "❌");
+                return;
+            }
 
             const btn = document.querySelector('.btn-save');
-            btn.innerText = "MENYIMPAN...";
-            btn.disabled = true;
-
-            const invData = {
-                musicUrl: document.getElementById('inv_music').value,
-                coverBg: document.getElementById('inv_cover_bg').value,
-                heroImg: document.getElementById('inv_hero_img').value,
-                headerLabel: document.getElementById('inv_header_label').value,
-                hashtag: document.getElementById('inv_hashtag').value,
-                show_groom: document.getElementById('show_groom').value,
-                show_bride: document.getElementById('show_bride').value,
-                show_events: document.getElementById('show_events').value,
-                events_header: document.getElementById('events_header').value,
-                show_gift: document.getElementById('show_gift').value,
-                gift_header: document.getElementById('gift_header').value,
-                show_gallery: document.getElementById('show_gallery').value,
-                gallery_header: document.getElementById('gallery_header').value,
-                show_wishes: document.getElementById('show_wishes').value,
-                wishes_header: document.getElementById('wishes_header').value,
-                groom: {
-                    header: document.getElementById('groom_header').value,
-                    photo: document.getElementById('groom_photo').value,
-                    name: document.getElementById('groom_name').value,
-                    desc: document.getElementById('groom_desc').value,
-                    ig: document.getElementById('groom_ig').value
-                },
-                bride: {
-                    header: document.getElementById('bride_header').value,
-                    photo: document.getElementById('bride_photo').value,
-                    name: document.getElementById('bride_name').value,
-                    desc: document.getElementById('bride_desc').value,
-                    ig: document.getElementById('bride_ig').value
-                },
-                ev1: {
-                    name: document.getElementById('ev1_name').value,
-                    date: fromDateInputValue(document.getElementById('ev1_date').value),
-                    time: document.getElementById('ev1_time').value,
-                    zone: document.getElementById('ev1_zone').value,
-                    locName: document.getElementById('ev1_loc_name').value,
-                    maps: document.getElementById('ev1_maps').value,
-                    photo: document.getElementById('ev1_photo').value
-                },
-                ev2: {
-                    name: document.getElementById('ev2_name').value,
-                    date: fromDateInputValue(document.getElementById('ev2_date').value),
-                    time: document.getElementById('ev2_time').value,
-                    zone: document.getElementById('ev2_zone').value,
-                    locName: document.getElementById('ev2_loc_name').value,
-                    maps: document.getElementById('ev2_maps').value,
-                    photo: document.getElementById('ev2_photo').value
-                },
-                gifts: [
-                    { bank: document.getElementById('gift1_bank').value, acc: document.getElementById('gift1_acc').value, owner: document.getElementById('gift1_owner').value },
-                    { bank: document.getElementById('gift2_bank').value, acc: document.getElementById('gift2_acc').value, owner: document.getElementById('gift2_owner').value },
-                    { bank: document.getElementById('gift3_bank').value, acc: document.getElementById('gift3_acc').value, owner: document.getElementById('gift3_owner').value }
-                ],
-                greeting: document.getElementById('inv_greeting').value,
-                gallery: [
-                    document.getElementById('gal_1').value, document.getElementById('gal_2').value,
-                    document.getElementById('gal_3').value, document.getElementById('gal_4').value,
-                    document.getElementById('gal_5').value, document.getElementById('gal_6').value
-                ],
-                theme: currentTheme
-            };
+            if (btn) {
+                btn.innerText = "MENYIMPAN...";
+                btn.disabled = true;
+            }
 
             try {
-                // ── STEP 1: Simpan ke Google Sheet via GAS (sumber kebenaran) ──
+                const getVal = id => {
+                    const el = document.getElementById(id);
+                    return el ? el.value : "";
+                };
+
+                const invData = {
+                    musicUrl: getVal('inv_music'),
+                    coverBg: getVal('inv_cover_bg'),
+                    heroImg: getVal('inv_hero_img'),
+                    headerLabel: getVal('inv_header_label'),
+                    hashtag: getVal('inv_hashtag'),
+                    show_groom: getVal('show_groom'),
+                    show_bride: getVal('show_bride'),
+                    show_events: getVal('show_events'),
+                    events_header: getVal('events_header'),
+                    show_gift: getVal('show_gift'),
+                    gift_header: getVal('gift_header'),
+                    show_gallery: getVal('show_gallery'),
+                    gallery_header: getVal('gallery_header'),
+                    show_wishes: getVal('show_wishes'),
+                    wishes_header: getVal('wishes_header'),
+                    groom: {
+                        header: getVal('groom_header'),
+                        photo: getVal('groom_photo'),
+                        name: getVal('groom_name'),
+                        desc: getVal('groom_desc'),
+                        ig: getVal('groom_ig')
+                    },
+                    bride: {
+                        header: getVal('bride_header'),
+                        photo: getVal('bride_photo'),
+                        name: getVal('bride_name'),
+                        desc: getVal('bride_desc'),
+                        ig: getVal('bride_ig')
+                    },
+                    ev1: {
+                        name: getVal('ev1_name'),
+                        date: fromDateInputValue(getVal('ev1_date')),
+                        time: getVal('ev1_time'),
+                        zone: getVal('ev1_zone'),
+                        locName: getVal('ev1_loc_name'),
+                        maps: getVal('ev1_maps'),
+                        photo: getVal('ev1_photo')
+                    },
+                    ev2: {
+                        name: getVal('ev2_name'),
+                        date: fromDateInputValue(getVal('ev2_date')),
+                        time: getVal('ev2_time'),
+                        zone: getVal('ev2_zone'),
+                        locName: getVal('ev2_loc_name'),
+                        maps: getVal('ev2_maps'),
+                        photo: getVal('ev2_photo')
+                    },
+                    gifts: [
+                        { bank: getVal('gift1_bank'), acc: getVal('gift1_acc'), owner: getVal('gift1_owner') },
+                        { bank: getVal('gift2_bank'), acc: getVal('gift2_acc'), owner: getVal('gift2_owner') },
+                        { bank: getVal('gift3_bank'), acc: getVal('gift3_acc'), owner: getVal('gift3_owner') }
+                    ],
+                    greeting: getVal('inv_greeting'),
+                    gallery: [
+                        getVal('gal_1'), getVal('gal_2'), getVal('gal_3'),
+                        getVal('gal_4'), getVal('gal_5'), getVal('gal_6')
+                    ],
+                    theme: currentTheme
+                };
+
+                // ── STEP 1: Simpan ke Supabase langsung (~150ms, super cepat!) ──
+                const sbRes = await fetch(`${SB_URL}/rest/v1/config_invitation?on_conflict=ssid`, {
+                    method: "POST",
+                    headers: SB_HDRS,
+                    body: JSON.stringify({ ssid: ssId, data: invData, updated_at: new Date().toISOString() })
+                });
+
+                if (!sbRes.ok) {
+                    console.warn("Supabase save warn:", sbRes.status);
+                }
+
+                // ── STEP 2: Mirror ke Google Sheet (GAS) secara background / async tanpa membuat tombol macet ──
                 const payload = {
                     action: "updateClientData",
                     ssId: ssId,
                     eventData: {
-                        nama: invData.groom.name + " & " + invData.bride.name,
+                        nama: (invData.groom.name || "") + " & " + (invData.bride.name || ""),
                         invitationData: invData,
                         theme: currentTheme
                     }
                 };
-                const res = await fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-                const result = await res.json();
-                if (result.status !== "success") throw new Error(result.message || "GAS save gagal");
+                fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+                    .then(r => r.json())
+                    .then(res => console.log("✅ Config synced to GAS in background"))
+                    .catch(err => console.warn("GAS sync background warning:", err));
 
-                // ── STEP 2: Mirror ke Supabase langsung dari browser (non-blocking) ──
-                // Ini yang membuat undangan.html bisa load < 200ms tanpa GAS cold start.
-                fetch(`${SB_URL}/rest/v1/config_invitation?on_conflict=ssid`, {
-                    method: "POST",
-                    headers: SB_HDRS,
-                    body: JSON.stringify({ ssid: ssId, data: invData, updated_at: new Date().toISOString() })
-                }).then(r => {
-                    if (!r.ok) console.warn("Mirror Supabase non-fatal:", r.status);
-                    else console.log("✅ Config mirrored to Supabase");
-                }).catch(e => console.warn("Mirror Supabase skip:", e.message));
-
-                btn.innerText = "✅ TERSIMPAN!";
-                setTimeout(() => { btn.innerText = "SIMPAN KONFIGURASI UNDANGAN"; btn.disabled = false; }, 2000);
+                if (btn) {
+                    btn.innerText = "✅ TERSIMPAN!";
+                    setTimeout(() => { btn.innerText = "SIMPAN KONFIGURASI UNDANGAN"; btn.disabled = false; }, 2000);
+                }
 
             } catch (e) {
+                console.error("Save Invitation Error:", e);
                 showSapaModal("Error", "Error: " + e.message, "❌");
-                btn.innerText = "SIMPAN KONFIGURASI UNDANGAN";
-                btn.disabled = false;
+                if (btn) {
+                    btn.innerText = "SIMPAN KONFIGURASI UNDANGAN";
+                    btn.disabled = false;
+                }
             }
         }
 
