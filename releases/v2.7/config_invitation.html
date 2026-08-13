@@ -1037,19 +1037,15 @@
                     console.log("✅ Config saved to Supabase successfully!");
                 }
 
-                // ── STEP 2: Mirror ke Google Sheet (GAS) secara background / async tanpa membuat tombol macet ──
+                // ── STEP 2: Mirror ke Google Sheet (GAS) secara background / async ──
                 const payload = {
-                    action: "updateClientData",
+                    action: "saveInvitationConfig",
                     ssId: ssId,
-                    eventData: {
-                        nama: (invData.groom.name || "") + " & " + (invData.bride.name || ""),
-                        invitationData: invData,
-                        theme: currentTheme
-                    }
+                    invitationData: invData
                 };
                 fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
                     .then(r => r.json())
-                    .then(res => console.log("✅ Config synced to GAS in background"))
+                    .then(res => console.log("✅ Config synced to InvConfig sheet in background:", res))
                     .catch(err => console.warn("GAS sync background warning:", err));
 
                 btn.innerText = "✅ TERSIMPAN!";

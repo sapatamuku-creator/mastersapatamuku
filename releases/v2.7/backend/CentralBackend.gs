@@ -1221,16 +1221,18 @@ function handleLogout(data) {
 
 function handleUpdateClientData(data) {
   try {
-    const targetSS = SpreadsheetApp.openById(data.ssId).getSheets()[0];
-    targetSS.getRange("A1:B1").setValues([["Nama Pengantin :", data.eventData.nama]]);
-    targetSS.getRange("D1:G1").setValues([["Sesi Undangan :", data.eventData.s1, data.eventData.s2, data.eventData.s3]]);
-    targetSS.getRange("A2:B2").setValues([["Hari & Tanggal :", data.eventData.tgl]]);
-    targetSS.getRange("A3:B3").setValues([["Lokasi Acara :", data.eventData.lokasi]]);
-    targetSS.getRange("A4:B4").setValues([["Waktu Acara :", data.eventData.waktu]]);
-    targetSS.getRange("A5:B5").setValues([["Link Invitation :", data.eventData.link]]);
+    const ss = SpreadsheetApp.openById(data.ssId);
+    const targetSS = ss.getSheets()[0];
+    if (data.eventData.nama) targetSS.getRange("A1:B1").setValues([["Nama Pengantin :", data.eventData.nama || ""]]);
+    if (data.eventData.s1 || data.eventData.s2 || data.eventData.s3) {
+      targetSS.getRange("D1:G1").setValues([["Sesi Undangan :", data.eventData.s1 || "", data.eventData.s2 || "", data.eventData.s3 || ""]]);
+    }
+    if (data.eventData.tgl) targetSS.getRange("A2:B2").setValues([["Hari & Tanggal :", data.eventData.tgl || ""]]);
+    if (data.eventData.lokasi) targetSS.getRange("A3:B3").setValues([["Lokasi Acara :", data.eventData.lokasi || ""]]);
+    if (data.eventData.waktu) targetSS.getRange("A4:B4").setValues([["Waktu Acara :", data.eventData.waktu || ""]]);
+    if (data.eventData.link) targetSS.getRange("A5:B5").setValues([["Link Invitation :", data.eventData.link || ""]]);
     
     // Simpan ke Config
-    const ss = SpreadsheetApp.openById(data.ssId);
     let configSheet = ss.getSheetByName("Config");
     if (configSheet) {
       if (data.eventData.waPhone) configSheet.getRange("B5").setValue(data.eventData.waPhone);
@@ -1254,11 +1256,16 @@ function handleUpdateClientData(data) {
     }
     
     // Sync Metadata ke Supabase secara otomatis
-    syncMetadataClientToSupabase(data.ssId, targetSS);
+    try {
+      syncMetadataClientToSupabase(data.ssId, targetSS);
+    } catch(mErr) {
+      console.error("Sync metadata skip:", mErr.toString());
+    }
     
     return createResponse({ status: "success", message: "Data berhasil diperbarui" });
   } catch (err) {
-    return createResponse({ status: "error", message: "Update gagal." });
+    console.error("handleUpdateClientData err:", err.toString());
+    return createResponse({ status: "error", message: "Update gagal: " + err.toString() });
   }
 }
 

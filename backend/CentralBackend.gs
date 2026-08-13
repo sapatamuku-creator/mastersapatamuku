@@ -158,6 +158,7 @@ function handleCentralPost(request) {
     case 'resetPasswordWithToken': return handleResetPasswordWithToken(request);
     case 'changePassword': return handleChangePassword(request);
     case 'updateClientData': return handleUpdateClientData(request);  
+    case 'saveInvitationConfig': return handleSaveInvitationConfig(request);
     case 'resolveSubdomain': return handleResolveSubdomain(request);
     case 'checkSubdomain': return handleCheckSubdomain(request);
     case 'uploadFile': return handleUploadFile(request);
@@ -1221,16 +1222,18 @@ function handleLogout(data) {
 
 function handleUpdateClientData(data) {
   try {
-    const targetSS = SpreadsheetApp.openById(data.ssId).getSheets()[0];
-    targetSS.getRange("A1:B1").setValues([["Nama Pengantin :", data.eventData.nama]]);
-    targetSS.getRange("D1:G1").setValues([["Sesi Undangan :", data.eventData.s1, data.eventData.s2, data.eventData.s3]]);
-    targetSS.getRange("A2:B2").setValues([["Hari & Tanggal :", data.eventData.tgl]]);
-    targetSS.getRange("A3:B3").setValues([["Lokasi Acara :", data.eventData.lokasi]]);
-    targetSS.getRange("A4:B4").setValues([["Waktu Acara :", data.eventData.waktu]]);
-    targetSS.getRange("A5:B5").setValues([["Link Invitation :", data.eventData.link]]);
+    const ss = SpreadsheetApp.openById(data.ssId);
+    const targetSS = ss.getSheets()[0];
+    if (data.eventData.nama) targetSS.getRange("A1:B1").setValues([["Nama Pengantin :", data.eventData.nama || ""]]);
+    if (data.eventData.s1 || data.eventData.s2 || data.eventData.s3) {
+      targetSS.getRange("D1:G1").setValues([["Sesi Undangan :", data.eventData.s1 || "", data.eventData.s2 || "", data.eventData.s3 || ""]]);
+    }
+    if (data.eventData.tgl) targetSS.getRange("A2:B2").setValues([["Hari & Tanggal :", data.eventData.tgl || ""]]);
+    if (data.eventData.lokasi) targetSS.getRange("A3:B3").setValues([["Lokasi Acara :", data.eventData.lokasi || ""]]);
+    if (data.eventData.waktu) targetSS.getRange("A4:B4").setValues([["Waktu Acara :", data.eventData.waktu || ""]]);
+    if (data.eventData.link) targetSS.getRange("A5:B5").setValues([["Link Invitation :", data.eventData.link || ""]]);
     
     // Simpan ke Config
-    const ss = SpreadsheetApp.openById(data.ssId);
     let configSheet = ss.getSheetByName("Config");
     if (configSheet) {
       if (data.eventData.waPhone) configSheet.getRange("B5").setValue(data.eventData.waPhone);
@@ -1254,11 +1257,41 @@ function handleUpdateClientData(data) {
     }
     
     // Sync Metadata ke Supabase secara otomatis
-    syncMetadataClientToSupabase(data.ssId, targetSS);
+    try {
+      syncMetadataClientToSupabase(data.ssId, targetSS);
+    } catch(mErr) {
+      console.error("Sync metadata skip:", mErr.toString());
+    }
     
-    return createResponse({ status: "success", message: "Data berhasil diperbarui" });
+function handleSaveInvitationConfig(data) {
+  try {
+    const ssId = data.ssId;
+    const invData = data.invitationData || (data.eventData && data.eventData.invitationData);
+    if (!ssId || !invData) {
+      return createResponse({ status: "error", message: "ssId atau invitationData kosong" });
+    }
+
+    const ss = SpreadsheetApp.openById(ssId);
+    let invSheet = ss.getSheetByName("InvConfig");
+    if (!invSheet) {
+      invSheet = ss.insertSheet("InvConfig");
+      invSheet.getRange("A1").setValue("JSON_DATA_UNDANGAN :");
+    }
+    
+    // Tulis JSON data undangan langsung ke sel B1 Sheet InvConfig
+    invSheet.getRange("B1").setValue(JSON.stringify(invData));
+    
+    // Mirror ke Supabase table config_invitation
+    try {
+      mirrorInvConfigToSupabase(ssId, invData);
+    } catch(mErr) {
+      console.error("Mirror to Supabase failed: " + mErr.toString());
+    }
+    
+    return createResponse({ status: "success", message: "Konfigurasi undangan berhasil disimpan di InvConfig dan Supabase" });
   } catch (err) {
-    return createResponse({ status: "error", message: "Update gagal." });
+    console.error("handleSaveInvitationConfig err: " + err.toString());
+    return createResponse({ status: "error", message: "Gagal menyimpan InvConfig: " + err.toString() });
   }
 }
 

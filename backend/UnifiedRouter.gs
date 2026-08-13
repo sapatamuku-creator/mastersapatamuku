@@ -61,6 +61,7 @@ function doPost(e) {
       case 'forgotPassword':
       case 'changePassword':
       case 'updateClientData':
+      case 'saveInvitationConfig':
       case 'resolveSubdomain':
       case 'checkSubdomain':
       case 'verifyAdminPassword':   // RBAC Guard — cek password admin di K1
