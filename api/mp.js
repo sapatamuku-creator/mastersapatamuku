@@ -1,4 +1,4 @@
-// api/mp.js
+﻿// api/mp.js
 // Consolidated Serverless Function for Sapatamu Marketplace (Vercel Hobby 12-Function Limit Optimization)
 
 const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
@@ -136,17 +136,17 @@ const CATEGORY_UUID_MAP = {
 };
 
 const DEFAULT_CATEGORIES = [
-  { id: 'a1b2c3d4-0001-4000-8000-000000000001', name: 'Wedding Organizer & Planner', slug: 'wedding-organizer', icon: '📋', is_active: true, sort_order: 1 },
-  { id: 'a1b2c3d4-0002-4000-8000-000000000002', name: 'Fotografi & Videografi', slug: 'foto-video', icon: '📸', is_active: true, sort_order: 2 },
-  { id: 'a1b2c3d4-0003-4000-8000-000000000003', name: 'Katering (Catering)', slug: 'katering', icon: '🍽️', is_active: true, sort_order: 3 },
-  { id: 'a1b2c3d4-0004-4000-8000-000000000004', name: 'Venue & Gedung Pernikahan', slug: 'venue', icon: '🏰', is_active: true, sort_order: 4 },
-  { id: 'a1b2c3d4-0005-4000-8000-000000000005', name: 'Dekorasi & Florist', slug: 'dekorasi', icon: '🌸', is_active: true, sort_order: 5 },
-  { id: 'a1b2c3d4-0006-4000-8000-000000000006', name: 'Rias Pengantin & Gaun (Makeup & Attire)', slug: 'makeup-attire', icon: '💄', is_active: true, sort_order: 6 },
-  { id: 'a1b2c3d4-0007-4000-8000-000000000007', name: 'Musik, MC & Entertainment', slug: 'music-entertainment', icon: '🎵', is_active: true, sort_order: 7 },
-  { id: 'a1b2c3d4-0008-4000-8000-000000000008', name: 'Undangan & Souvenir', slug: 'undangan-souvenir', icon: '💌', is_active: true, sort_order: 8 },
-  { id: 'a1b2c3d4-0009-4000-8000-000000000009', name: 'Perhiasan & Cincin Kawin', slug: 'jewellery-rings', icon: '💍', is_active: true, sort_order: 9 },
-  { id: 'a1b2c3d4-0010-4000-8000-000000000010', name: 'Photobooth & Interactive', slug: 'photobooth', icon: '📸', is_active: true, sort_order: 10 },
-  { id: 'a1b2c3d4-0011-4000-8000-000000000011', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: '✈️', is_active: true, sort_order: 11 }
+  { id: 'a1b2c3d4-0001-4000-8000-000000000001', name: 'Wedding Organizer & Planner', slug: 'wedding-organizer', icon: 'ðŸ“‹', is_active: true, sort_order: 1 },
+  { id: 'a1b2c3d4-0002-4000-8000-000000000002', name: 'Fotografi & Videografi', slug: 'foto-video', icon: 'ðŸ“¸', is_active: true, sort_order: 2 },
+  { id: 'a1b2c3d4-0003-4000-8000-000000000003', name: 'Katering (Catering)', slug: 'katering', icon: 'ðŸ½ï¸', is_active: true, sort_order: 3 },
+  { id: 'a1b2c3d4-0004-4000-8000-000000000004', name: 'Venue & Gedung Pernikahan', slug: 'venue', icon: 'ðŸ°', is_active: true, sort_order: 4 },
+  { id: 'a1b2c3d4-0005-4000-8000-000000000005', name: 'Dekorasi & Florist', slug: 'dekorasi', icon: 'ðŸŒ¸', is_active: true, sort_order: 5 },
+  { id: 'a1b2c3d4-0006-4000-8000-000000000006', name: 'Rias Pengantin & Gaun (Makeup & Attire)', slug: 'makeup-attire', icon: 'ðŸ’„', is_active: true, sort_order: 6 },
+  { id: 'a1b2c3d4-0007-4000-8000-000000000007', name: 'Musik, MC & Entertainment', slug: 'music-entertainment', icon: 'ðŸŽµ', is_active: true, sort_order: 7 },
+  { id: 'a1b2c3d4-0008-4000-8000-000000000008', name: 'Undangan & Souvenir', slug: 'undangan-souvenir', icon: 'ðŸ’Œ', is_active: true, sort_order: 8 },
+  { id: 'a1b2c3d4-0009-4000-8000-000000000009', name: 'Perhiasan & Cincin Kawin', slug: 'jewellery-rings', icon: 'ðŸ’', is_active: true, sort_order: 9 },
+  { id: 'a1b2c3d4-0010-4000-8000-000000000010', name: 'Photobooth & Interactive', slug: 'photobooth', icon: 'ðŸ“¸', is_active: true, sort_order: 10 },
+  { id: 'a1b2c3d4-0011-4000-8000-000000000011', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: 'âœˆï¸', is_active: true, sort_order: 11 }
 ];
 
 function getValidUuidCategory(catId) {
@@ -199,7 +199,7 @@ export default async function handler(req, res) {
 
   try {
     switch (endpoint) {
-      // ── 1. CATEGORIES ──
+      // â”€â”€ 1. CATEGORIES â”€â”€
       case 'categories': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
         try {
@@ -227,7 +227,7 @@ export default async function handler(req, res) {
         return res.status(200).json(DEFAULT_CATEGORIES);
       }
 
-      // ── 2. REGIONS PROXY ──
+      // â”€â”€ 2. REGIONS PROXY â”€â”€
       case 'regions': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
         const { type, provId, regId } = req.query;
@@ -253,7 +253,7 @@ export default async function handler(req, res) {
         return res.status(502).json({ error: 'Gagal mengambil data wilayah' });
       }
 
-      // ── 3. VENDORS BROWSE & SEARCH ──
+      // â”€â”€ 3. VENDORS BROWSE & SEARCH â”€â”€
       case 'vendors': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
         const { category_id, city, search, q, page = 1, limit = 24, kategori } = req.query;
@@ -284,7 +284,7 @@ export default async function handler(req, res) {
         let vendors = vRes.ok ? await vRes.json() : [];
         const allProducts = prodRes.ok ? await prodRes.json() : [];
 
-        // Fallback — If no vendors found directly in mp_vendors, query all vendors without filters
+        // Fallback â€” If no vendors found directly in mp_vendors, query all vendors without filters
         if (!Array.isArray(vendors) || vendors.length === 0) {
           const fallbackRes = await sbServiceFetch(`/mp_vendors?select=id,slug,business_name,category_id,city,province,rating_avg,review_count,price_from,cover_image_url,logo_url,is_verified,is_active&limit=50`);
           if (fallbackRes.ok) {
@@ -347,7 +347,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ data: enriched, page: parseInt(page), limit: parseInt(limit) });
       }
 
-      // ── 4. VENDOR PROFILE ──
+      // â”€â”€ 4. VENDOR PROFILE â”€â”€
       case 'vendor-detail': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
         const { slug } = req.query;
@@ -369,7 +369,7 @@ export default async function handler(req, res) {
         const catObj = DEFAULT_CATEGORIES.find(c => c.id === vendor.category_id);
         vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
 
-        // 2. Produk + review vendor — paralel, satu round-trip (tanpa fetch seluruh tabel)
+        // 2. Produk + review vendor â€” paralel, satu round-trip (tanpa fetch seluruh tabel)
         const PRODUCT_COLS = 'id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at';
         const [pRes, rRes] = await Promise.all([
           sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&order=created_at.desc&select=${PRODUCT_COLS}`),
@@ -379,7 +379,7 @@ export default async function handler(req, res) {
         const products = pRes.ok ? await pRes.json() : [];
         const reviews = rRes.ok ? await rRes.json() : [];
 
-        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=600, stale-while-revalidate=1800');
         return res.status(200).json({
           vendor,
           products: Array.isArray(products) ? products : [],
@@ -387,7 +387,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // ── 4B. PRODUCT DETAIL (PUBLIC) ──
+      // â”€â”€ 4B. PRODUCT DETAIL (PUBLIC) â”€â”€
       case 'product-detail': {
         if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
         const { id, slug } = req.query;
@@ -425,7 +425,7 @@ export default async function handler(req, res) {
         const otherProducts = otherProdsRes.ok ? await otherProdsRes.json() : [];
         const reviews = rRes.ok ? await rRes.json() : [];
 
-        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=600, stale-while-revalidate=1800');
         return res.status(200).json({
           product,
           vendor,
@@ -434,7 +434,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // ── 5. CREATE INQUIRY ──
+      // â”€â”€ 5. CREATE INQUIRY â”€â”€
       case 'create-inquiry': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         const { vendor_id, product_id, client_name, client_whatsapp, client_email, event_date, guest_count, budget_range, message } = req.body;
@@ -484,7 +484,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // ── 6. REGISTER VENDOR ──
+      // â”€â”€ 6. REGISTER VENDOR â”€â”€
       case 'register-vendor': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         const { business_name, category_id, city, province, owner_name, whatsapp, email, password, instagram, website, description, cover_image_url, logo_url } = req.body;
@@ -576,7 +576,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // ── LOGIN VENDOR ──
+      // â”€â”€ LOGIN VENDOR â”€â”€
       case 'login-vendor': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         const { email, password } = req.body;
@@ -615,7 +615,7 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: `Email "${cleanEmail}" belum terdaftar. Silakan lakukan pendaftaran vendor terlebih dahulu.` });
       }
 
-      // ── 7. UPLOAD IMAGE PROXY ──
+      // â”€â”€ 7. UPLOAD IMAGE PROXY â”€â”€
       case 'upload-image': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         const { image, type, vendorId, filename, gasUrl } = req.body;
@@ -657,7 +657,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // ── 8. VENDOR PROFILE (AUTH) ──
+      // â”€â”€ 8. VENDOR PROFILE (AUTH) â”€â”€
       case 'vendor-me': {
         const authHeader = req.headers['authorization'] || '';
         const token = authHeader.replace(/^Bearer\s+/i, '');
@@ -718,7 +718,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
       }
 
-      // ── 9. VENDOR PRODUCTS (AUTH) ──
+      // â”€â”€ 9. VENDOR PRODUCTS (AUTH) â”€â”€
       case 'vendor-products': {
         const vendor = await getVendorFromToken(req);
         if (!vendor) return res.status(401).json({ error: 'Unauthorized' });
@@ -813,7 +813,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
       }
 
-      // ── 10. VENDOR INQUIRIES (AUTH) ──
+      // â”€â”€ 10. VENDOR INQUIRIES (AUTH) â”€â”€
       case 'vendor-inquiries': {
         const vendor = await getVendorFromToken(req);
         if (!vendor) return res.status(401).json({ error: 'Unauthorized' });
@@ -826,7 +826,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
       }
 
-      // ── 11. VENDOR STATS (AUTH) ──
+      // â”€â”€ 11. VENDOR STATS (AUTH) â”€â”€
       case 'vendor-stats': {
         const vendor = await getVendorFromToken(req);
         if (!vendor) return res.status(401).json({ error: 'Unauthorized' });
@@ -854,3 +854,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message || 'Internal server error', detail: err.stack || String(err) });
   }
 }
+
