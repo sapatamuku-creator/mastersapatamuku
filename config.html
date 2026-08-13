@@ -497,14 +497,30 @@
             // 1. Direct Update Supabase config_welcome table for INSTANT <300ms sync with welcome.html
             try {
                 if (ssId && window.SB_URL && window.SB_KEY) {
-                    const getRes = await fetch(
-                        `${SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data`,
-                        { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
-                    );
+                    // Ambil data FRESH dari GAS (sheet) supaya vendors/rundown tidak hilang
                     let existingData = {};
-                    if (getRes.ok) {
-                        const rows = await getRes.json();
-                        if (rows && rows.length > 0 && rows[0].data) existingData = rows[0].data;
+                    try {
+                        const freshUrl = `${window.SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`;
+                        const freshRes = await fetch(freshUrl);
+                        if (freshRes.ok) {
+                            const fresh = await freshRes.json();
+                            if (fresh && fresh.status === "success" && fresh.vendors) {
+                                existingData = { ...fresh };
+                                delete existingData.status;
+                                delete existingData.latestGuest;
+                                delete existingData.log;
+                            }
+                        }
+                    } catch (freshErr) {
+                        console.warn("GAS fresh welcome fetch failed, fallback ke Supabase row:", freshErr);
+                        const getRes = await fetch(
+                            `${SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data`,
+                            { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                        );
+                        if (getRes.ok) {
+                            const rows = await getRes.json();
+                            if (rows && rows.length > 0 && rows[0].data) existingData = rows[0].data;
+                        }
                     }
 
                     existingData.urlFoto = urlFoto;
