@@ -10,6 +10,8 @@
     <script src="subdomain_resolver.js?v=3.3"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Alice&family=Montserrat:wght@200;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="rsvp_embed.css">
     
     <!-- Dynamic CSS will be injected here -->
     <style id="dynamic-style"></style>
@@ -269,8 +271,547 @@
             return true;
         };
 
+        // ─── RSVP EMBED: Konfirmasi Kehadiran + Selfie Check-In (di-port dari rsvp.html) ───
+        let attendanceStatus = "";
+        let rsvpPaxCount = 1;
+        let selfieStream = null;
+        let capturedSelfieBase64 = null;
+        let selfieValidated = false;
+
+        window.initRsvpEmbed = function () {
+            const container = document.getElementById('rsvp-embed');
+            if (!container || container.dataset.ready) return;
+            const ssId = window.CURRENT_SS_ID || urlParams.get('ssId');
+            if (!ssId) { container.style.display = 'none'; return; }
+            container.dataset.ready = "1";
+
+            container.innerHTML = `
+                <div class="rsvp-card">
+                    <div class="header-logo">
+                        <div class="monogram">RSVP</div>
+                        <div class="wedding-subtitle">Konfirmasi Kehadiran</div>
+                    </div>
+
+                    <div id="formContent">
+                        <div class="wedding-info">
+                            <h2 class="wedding-title" id="weddingTitle">Menghubungkan...</h2>
+                            <p class="wedding-detail">
+                                <span id="weddingDate">--</span><br>
+                                <span id="weddingTime">--</span><br>
+                                <span id="weddingVenue">--</span>
+                            </p>
+                        </div>
+
+                        <form class="rsvp-form" id="rsvpForm" onsubmit="submitRsvp(event)">
+                            <div>
+                                <p class="greeting" id="guestGreeting">Kepada Yth. Bapak/Ibu/Saudara/i,</p>
+                            </div>
+
+                            <div>
+                                <span class="form-label">Apakah Anda Akan Hadir?</span>
+                                <div class="attendance-options">
+                                    <label class="option-card" id="optHadir" onclick="selectAttendance('hadir')">
+                                        <span class="option-icon">🥂</span>
+                                        <span class="option-title">Bisa Hadir</span>
+                                        <input type="radio" name="attendance" value="hadir" required>
+                                    </label>
+                                    <label class="option-card" id="optAbsen" onclick="selectAttendance('absen')">
+                                        <span class="option-icon">✉️</span>
+                                        <span class="option-title">Tidak Hadir</span>
+                                        <input type="radio" name="attendance" value="absen" required>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="pax-container" id="paxContainer">
+                                <span class="form-label">Jumlah Anggota yang Hadir</span>
+                                <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Termasuk Anda sendiri.</p>
+                                <div class="counter-wrapper">
+                                    <button type="button" class="counter-btn" onclick="adjustPax(-1)">-</button>
+                                    <span class="counter-value" id="paxValue">1</span>
+                                    <button type="button" class="counter-btn" onclick="adjustPax(1)">+</button>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label class="form-label" for="wishesText">Ucapan &amp; Doa Restu</label>
+                                <textarea class="textarea-input" id="wishesText" placeholder="Tulis ucapan selamat dan harapan terbaik Anda untuk mempelai..." required></textarea>
+                            </div>
+
+                            <div class="selfie-section" id="selfieSection">
+                                <label class="form-label">📸 Selfie Check-In &mdash; Jalur Cepat</label>
+                                <p style="font-size: 10px; color: var(--text-muted); margin-bottom: 12px; text-align: center; line-height: 1.6;">
+                                    Daftarkan wajah Anda sekarang &amp; nikmati <strong style="color: var(--gold);">check-in kilat</strong> tanpa antre di hari H. ✨
+                                </p>
+                                <div class="selfie-container" id="selfieContainer">
+                                    <video id="selfieVideo" autoplay playsinline muted></video>
+                                    <canvas id="selfieCanvas"></canvas>
+                                    <img id="selfiePreview" alt="Selfie preview">
+                                    <div class="selfie-overlay" id="selfieOverlay">
+                                        <span id="selfieCountdown">3</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="selfie-btn" id="btnSelfie" onclick="toggleSelfie()">📸 Aktifkan Selfie Check-In</button>
+                                <div class="selfie-hint" id="selfieHint">Pastikan wajah Anda terlihat jelas &amp; pencahayaan cukup</div>
+                                <div class="selfie-status" id="selfieStatus"></div>
+                            </div>
+
+                            <button type="submit" class="submit-btn" id="btnSubmit" disabled>
+                                <span>Kirim Konfirmasi</span>
+                                <div class="btn-spinner" id="btnSpinner"></div>
+                            </button>
+                            <p style="font-size: 10px; color: var(--text-muted); text-align: center; margin-top: -15px;" id="submitHint">Pilih status kehadiran terlebih dahulu</p>
+                        </form>
+                    </div>
+
+                    <div class="success-view" id="successView">
+                        <div class="success-icon">✓</div>
+                        <h3 class="success-title">Terima Kasih!</h3>
+                        <p class="success-message" id="successMsg">Konfirmasi kehadiran dan ucapan Anda telah berhasil disimpan di sistem kami.</p>
+                        <button type="button" class="submit-btn" style="background: transparent; border: 1.5px solid var(--primary); color: var(--primary);" onclick="resetForm()">
+                            <span>Ubah Konfirmasi</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="toast" id="toast">
+                    <span id="toastIcon">⚠️</span>
+                    <span id="toastText">Pesan di sini</span>
+                </div>
+
+                <div id="cameraPermModal" role="dialog" aria-modal="true" aria-labelledby="camPermTitle">
+                    <div class="cam-perm-box">
+                        <div class="cam-perm-icon">🚀</div>
+                        <h2 class="cam-perm-title" id="camPermTitle">Aktifkan Jalur Cepat</h2>
+                        <p class="cam-perm-desc">
+                            <strong>Selfie Check-In</strong> &mdash; daftarkan wajah Anda sekali,
+                            masuk tanpa antre selamanya.
+                        </p>
+                        <div class="cam-perm-note">
+                            📲 <strong>Bagaimana caranya?</strong><br>
+                            Panitia menggunakan foto Anda untuk <strong>mengenali kehadiran secara instan</strong>
+                            di hari-H &mdash; tanpa perlu tunjukkan undangan, tanpa antre panjang. Cukup datang,
+                            senyum, dan langsung masuk! 🎊
+                        </div>
+                        <div class="cam-perm-actions">
+                            <button class="cam-perm-btn-allow" id="btnAllowCamera" onclick="grantCameraAccess()">📸 Aktifkan Selfie Check-In</button>
+                            <button class="cam-perm-btn-skip" onclick="skipSelfie()">Lewati &mdash; check-in manual saja</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Isi info acara (dari data undangan yang sudah dimuat)
+            const inv = window.RSVP_INV_DATA || {};
+            const gName = (inv.groom && inv.groom.name) || "";
+            const bName = (inv.bride && inv.bride.name) || "";
+            const titleEl = document.getElementById('weddingTitle');
+            if (titleEl) titleEl.innerText = [gName, bName].filter(Boolean).join(' & ') || "Acara Pernikahan";
+            const ev1 = inv.ev1 || {};
+            if (document.getElementById('weddingDate')) document.getElementById('weddingDate').innerText = ev1.date || "-";
+            if (document.getElementById('weddingTime')) document.getElementById('weddingTime').innerText = ev1.time ? (ev1.time + (ev1.zone ? ' ' + ev1.zone : ' WIB')) : "-";
+            if (document.getElementById('weddingVenue')) document.getElementById('weddingVenue').innerText = String(ev1.locName || "").replace(/\n/g, '<br>');
+
+            const greetingEl = document.getElementById('guestGreeting');
+            if (greetingEl) {
+                if (guestName && guestName !== "Tamu Undangan") {
+                    greetingEl.innerHTML = `Kepada Yth.<br><strong>${escAttr(guestName)}</strong>`;
+                } else {
+                    greetingEl.innerHTML = "Kepada Yth. Bapak/Ibu/Saudara/i,";
+                }
+            }
+        };
+
+        window.selectAttendance = function (type) {
+            attendanceStatus = type;
+            const optHadir = document.getElementById("optHadir");
+            const optAbsen = document.getElementById("optAbsen");
+            const paxContainer = document.getElementById("paxContainer");
+            const selfieSection = document.getElementById("selfieSection");
+            const btnSubmit = document.getElementById("btnSubmit");
+            const submitHint = document.getElementById("submitHint");
+
+            if (type === 'hadir') {
+                optHadir.classList.add("selected");
+                optAbsen.classList.remove("selected");
+                paxContainer.style.display = "block";
+                const radio = document.querySelector('#rsvp-embed input[value="hadir"]');
+                if (radio) radio.checked = true;
+                btnSubmit.disabled = true;
+                submitHint.textContent = "Ambil selfie terlebih dahulu";
+                selfieSection.classList.add("show");
+                handleSelfiePermission();
+            } else {
+                optAbsen.classList.add("selected");
+                optHadir.classList.remove("selected");
+                paxContainer.style.display = "none";
+                selfieSection.classList.remove("show");
+                const radio = document.querySelector('#rsvp-embed input[value="absen"]');
+                if (radio) radio.checked = true;
+                btnSubmit.disabled = false;
+                submitHint.textContent = "";
+                stopSelfieCamera();
+            }
+        };
+
+        window.adjustPax = function (amount) {
+            rsvpPaxCount += amount;
+            if (rsvpPaxCount < 1) rsvpPaxCount = 1;
+            if (rsvpPaxCount > 10) rsvpPaxCount = 10;
+            const el = document.getElementById("paxValue");
+            if (el) el.innerText = rsvpPaxCount;
+        };
+
+        window.showToast = function (message, type = "info") {
+            const toast = document.getElementById("toast");
+            const toastIcon = document.getElementById("toastIcon");
+            const toastText = document.getElementById("toastText");
+            if (!toast || !toastIcon || !toastText) return;
+            toastText.innerText = message;
+            const iconMap = { success: "✅", error: "❌", warning: "⚠️", info: "ℹ️" };
+            toastIcon.innerText = iconMap[type] || "ℹ️";
+            toast.style.borderColor = type === "success" ? "var(--success)" : type === "error" ? "var(--error)" : type === "warning" ? "var(--primary)" : "var(--border-color)";
+            toast.classList.add("show");
+            setTimeout(() => toast.classList.remove("show"), 3000);
+        };
+
+        window.submitRsvp = async function (event) {
+            event.preventDefault();
+            const ssId = window.CURRENT_SS_ID || urlParams.get('ssId');
+            if (!ssId) { showToast("⚠️ Halaman ini belum terkait undangan.", "warning"); return; }
+            if (!attendanceStatus) { showToast("⚠️ Pilih status konfirmasi kehadiran Anda.", "warning"); return; }
+
+            const wishesText = document.getElementById("wishesText").value.trim();
+            if (!wishesText) { showToast("⚠️ Silakan tulis ucapan selamat Anda.", "warning"); return; }
+            if (attendanceStatus === 'hadir' && (!capturedSelfieBase64 || !selfieValidated)) {
+                showToast("⚠️ Ambil selfie yang valid terlebih dahulu.", "warning");
+                return;
+            }
+
+            const btnSubmit = document.getElementById("btnSubmit");
+            const btnSpinner = document.getElementById("btnSpinner");
+            btnSubmit.disabled = true;
+            btnSpinner.style.display = "inline-block";
+
+            try {
+                const finalPax = (attendanceStatus === 'hadir') ? rsvpPaxCount : 0;
+                const senderName = guestName || "Tamu Undangan";
+
+                document.getElementById("formContent").style.display = "none";
+                document.getElementById("successView").style.display = "block";
+                btnSpinner.style.display = "none";
+
+                if (attendanceStatus === 'hadir') {
+                    document.getElementById("successMsg").innerText = `Terima kasih atas konfirmasinya! Kami menantikan kehadiran Anda (${rsvpPaxCount} orang) di hari bahagia kami.`;
+                } else {
+                    document.getElementById("successMsg").innerText = "Terima kasih atas konfirmasinya. Ucapan dan doa restu Anda telah kami terima dengan penuh syukur.";
+                }
+                showToast("✅ Konfirmasi berhasil dikirim!", "success");
+
+                const SB_HDRS = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                };
+
+                if (attendanceStatus === 'hadir' && capturedSelfieBase64) {
+                    fetch(window.SCRIPT_URL, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            action: "selfiePost",
+                            ssId: ssId,
+                            kode: guestId,
+                            nama: guestName || "Guest",
+                            kategori: "REGULAR",
+                            image: capturedSelfieBase64
+                        })
+                    }).then(r => r.json()).then(data => {
+                        if (data.status === "success" && data.fileUrl) {
+                            fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&kode=eq.${guestId}`, {
+                                method: "PATCH",
+                                headers: SB_HDRS,
+                                body: JSON.stringify({ selfie_url: data.fileUrl })
+                            }).catch(e => console.warn("Selfie URL sync failed:", e));
+                        }
+                    }).catch(e => console.warn("Background selfie upload failed:", e));
+                }
+
+                fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&kode=eq.${guestId}`, {
+                    method: "PATCH",
+                    headers: SB_HDRS,
+                    body: JSON.stringify({ rencana_hadir: finalPax })
+                }).catch(e => console.warn("Background RSVP update failed:", e));
+
+                fetch(`${SB_URL}/rest/v1/wishes_queue`, {
+                    method: "POST",
+                    headers: SB_HDRS,
+                    body: JSON.stringify({ ssid: ssId, nama: senderName, ucapan: wishesText })
+                }).catch(e => console.warn("Background wishes failed:", e));
+
+                fetch(window.SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "updateRsvp", ssId: ssId, guestId: guestId, pax: finalPax, wishText: wishesText })
+                }).catch(e => console.warn("Background GAS RSVP update failed:", e));
+            } catch (err) {
+                console.error("Gagal mengirim RSVP/Wishes:", err);
+                showToast("❌ Terjadi kesalahan. Silakan coba lagi.", "error");
+                btnSubmit.disabled = false;
+                btnSpinner.style.display = "none";
+                document.getElementById("formContent").style.display = "block";
+                document.getElementById("successView").style.display = "none";
+            }
+        };
+
+        window.resetForm = function () {
+            const sv = document.getElementById("successView");
+            const fc = document.getElementById("formContent");
+            if (sv) sv.style.display = "none";
+            if (fc) fc.style.display = "block";
+            const btnSubmit = document.getElementById("btnSubmit");
+            const btnSpinner = document.getElementById("btnSpinner");
+            if (btnSubmit) btnSubmit.disabled = false;
+            if (btnSpinner) btnSpinner.style.display = "none";
+        };
+
+        // ─── SELFIE ───
+        window.toggleSelfie = async function () {
+            const video = document.getElementById("selfieVideo");
+            const preview = document.getElementById("selfiePreview");
+            const btn = document.getElementById("btnSelfie");
+            const status = document.getElementById("selfieStatus");
+            const hint = document.getElementById("selfieHint");
+
+            if (capturedSelfieBase64) {
+                capturedSelfieBase64 = null;
+                selfieValidated = false;
+                preview.style.display = "none";
+                preview.src = "";
+                status.textContent = "";
+                status.className = "selfie-status";
+                hint.textContent = "Pastikan wajah terlihat jelas dan pencahayaan cukup";
+                updateSubmitButton();
+                startSelfieCamera();
+                return;
+            }
+            if (selfieStream) { takeSelfieWithCountdown(); return; }
+            await handleSelfiePermission();
+        };
+
+        async function handleSelfiePermission() {
+            if (selfieStream) return;
+            try {
+                const perm = await navigator.permissions.query({ name: 'camera' });
+                if (perm.state === 'granted') { await startSelfieCamera(); return; }
+                if (perm.state === 'denied') { _showCameraBlockedHint(); return; }
+                _showCameraPermModal();
+            } catch (e) { _showCameraPermModal(); }
+        }
+        function _showCameraPermModal() {
+            const m = document.getElementById('cameraPermModal');
+            if (m) m.classList.add('visible');
+        }
+        function _showCameraBlockedHint() {
+            const status = document.getElementById('selfieStatus');
+            const hint = document.getElementById('selfieHint');
+            const btn = document.getElementById('btnSelfie');
+            if (status) { status.textContent = '⛔ Akses kamera diblokir'; status.className = 'selfie-status error'; }
+            if (hint) hint.textContent = 'Aktifkan izin kamera di pengaturan browser Anda, lalu muat ulang halaman.';
+            if (btn) btn.textContent = '📸 Ambil Selfie';
+        }
+        window.grantCameraAccess = async function () {
+            const m = document.getElementById('cameraPermModal');
+            if (m) m.classList.remove('visible');
+            await startSelfieCamera();
+        };
+        window.skipSelfie = function () {
+            const m = document.getElementById('cameraPermModal');
+            if (m) m.classList.remove('visible');
+            const status = document.getElementById('selfieStatus');
+            const hint = document.getElementById('selfieHint');
+            const btn = document.getElementById('btnSelfie');
+            const selfieSection = document.getElementById('selfieSection');
+
+            capturedSelfieBase64 = null;
+            selfieValidated = true;
+            if (selfieSection) selfieSection.classList.remove('show');
+            if (status) status.textContent = '';
+            if (hint) hint.textContent = 'Selfie dilewati';
+            if (btn) btn.textContent = '📸 Ambil Selfie';
+
+            const btnSubmit = document.getElementById('btnSubmit');
+            const submitHint = document.getElementById('submitHint');
+            if (btnSubmit) btnSubmit.disabled = false;
+            if (submitHint) submitHint.textContent = '';
+        };
+        async function startSelfieCamera() {
+            const video = document.getElementById("selfieVideo");
+            const btn = document.getElementById("btnSelfie");
+            const hint = document.getElementById("selfieHint");
+            const status = document.getElementById("selfieStatus");
+            try {
+                selfieStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                video.srcObject = selfieStream;
+                video.style.display = "block";
+                btn.textContent = "📸 Ambil Sekarang";
+                btn.classList.remove("captured", "retry");
+                hint.textContent = "Pastikan wajah terlihat jelas dan pencahayaan cukup";
+                status.textContent = "Kamera aktif";
+                status.className = "selfie-status";
+            } catch (err) {
+                console.error("Camera error:", err);
+                status.textContent = "Kamera tidak dapat diakses";
+                status.className = "selfie-status error";
+                hint.textContent = "Anda bisa melewati langkah ini";
+            }
+        }
+        function stopSelfieCamera() {
+            if (selfieStream) {
+                selfieStream.getTracks().forEach(t => t.stop());
+                selfieStream = null;
+            }
+        }
+        async function takeSelfieWithCountdown() {
+            const video = document.getElementById("selfieVideo");
+            const overlay = document.getElementById("selfieOverlay");
+            const countdownEl = document.getElementById("selfieCountdown");
+            const btn = document.getElementById("btnSelfie");
+            btn.disabled = true;
+            btn.textContent = "MENYIAPKAN...";
+            overlay.classList.add("show");
+            let count = 3;
+            countdownEl.textContent = count;
+            const timer = setInterval(() => {
+                count--;
+                if (count > 0) { countdownEl.textContent = count; }
+                else if (count === 0) { countdownEl.textContent = "📸"; }
+                else { clearInterval(timer); overlay.classList.remove("show"); captureSelfie(); }
+            }, 800);
+        }
+        function captureSelfie() {
+            const video = document.getElementById("selfieVideo");
+            const canvas = document.getElementById("selfieCanvas");
+            const preview = document.getElementById("selfiePreview");
+            const btn = document.getElementById("btnSelfie");
+            const status = document.getElementById("selfieStatus");
+            const hint = document.getElementById("selfieHint");
+
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext("2d");
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            capturedSelfieBase64 = canvas.toDataURL("image/jpeg", 0.8);
+            stopSelfieCamera();
+
+            video.style.display = "none";
+            preview.src = capturedSelfieBase64;
+            preview.style.display = "block";
+
+            validateSelfie(canvas, status, hint);
+
+            btn.textContent = "🔄 Ulangi Selfie";
+            btn.classList.add("retry");
+            btn.disabled = false;
+        }
+        function validateSelfie(canvas, status, hint) {
+            const ctx = canvas.getContext("2d");
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            let totalBrightness = 0;
+            for (let i = 0; i < data.length; i += 4) {
+                totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
+            }
+            const avgBrightness = totalBrightness / (data.length / 4);
+
+            let laplacianSum = 0;
+            let laplacianCount = 0;
+            const width = canvas.width;
+            const height = canvas.height;
+            const grayscale = new Uint8Array(width * height);
+            for (let i = 0; i < data.length; i += 4) {
+                grayscale[i / 4] = (data[i] + data[i + 1] + data[i + 2]) / 3;
+            }
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = y * width + x;
+                    const laplacian = -4 * grayscale[idx] + grayscale[idx - 1] + grayscale[idx + 1] + grayscale[idx - width] + grayscale[idx + width];
+                    laplacianSum += laplacian * laplacian;
+                    laplacianCount++;
+                }
+            }
+            const laplacianVariance = laplacianSum / laplacianCount;
+
+            let skinPixels = 0;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const checkRadius = Math.min(width, height) * 0.25;
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const idx = (y * width + x) * 4;
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+                    if (dist > checkRadius) continue;
+                    const max = Math.max(r, g, b);
+                    const min = Math.min(r, g, b);
+                    const s = max === 0 ? 0 : (max - min) / max;
+                    const v = max / 255;
+                    if (r > 95 && g > 40 && b > 20 && r > g && r > b && max - min > 15 && s > 0.1 && s < 0.7 && v > 0.3) skinPixels++;
+                }
+            }
+            const skinRatio = skinPixels / (checkRadius * checkRadius * Math.PI);
+
+            let isValid = true;
+            let messages = [];
+            if (avgBrightness < 50) { isValid = false; messages.push("Terlalu gelap"); }
+            else if (avgBrightness > 220) { isValid = false; messages.push("Terlalu terang"); }
+            if (laplacianVariance < 100) { isValid = false; messages.push("Foto blur"); }
+            if (skinRatio < 0.05) { isValid = false; messages.push("Wajah tidak terdeteksi"); }
+
+            selfieValidated = isValid;
+            if (isValid) {
+                status.textContent = "✅ Foto valid";
+                status.className = "selfie-status success";
+                hint.textContent = "Foto siap dikirim";
+            } else {
+                status.textContent = "⚠️ " + messages.join(", ");
+                status.className = "selfie-status error";
+                hint.textContent = "Ambil ulang dengan pencahayaan yang lebih baik";
+            }
+            updateSubmitButton();
+        }
+        function updateSubmitButton() {
+            const btnSubmit = document.getElementById("btnSubmit");
+            const submitHint = document.getElementById("submitHint");
+            if (attendanceStatus === 'hadir') {
+                if (selfieValidated && capturedSelfieBase64) {
+                    btnSubmit.disabled = false;
+                    submitHint.textContent = "";
+                } else {
+                    btnSubmit.disabled = true;
+                    submitHint.textContent = "Ambil selfie yang valid terlebih dahulu";
+                }
+            }
+        }
+
+        // Routing: tombol "Konfirmasi Kehadiran" (di bawah kartu RSVP) -> scroll ke kartu
+        window.handleRsvpClick = function () {
+            const embed = document.getElementById('rsvp-embed');
+            if (!embed) return;
+            embed.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            embed.classList.remove('pulse-highlight');
+            void embed.offsetWidth;
+            embed.classList.add('pulse-highlight');
+        };
+
         window.applyLivePreview = function (data) {
             console.log("Applying Live Preview Data:", data);
+            window.RSVP_INV_DATA = data;
             
             function formatDateId(ds) {
                 if(!ds || typeof ds !== 'string') return "";
@@ -456,6 +997,9 @@
             document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => obs.observe(el));
 
             loadWishes();
+
+            // RSVP Embed (konfirmasi kehadiran + selfie) — diisi setelah template dimuat
+            initRsvpEmbed();
         }
 
         window.startInvitation = function () {

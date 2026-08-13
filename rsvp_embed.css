@@ -1,0 +1,539 @@
+/* ============================================================
+   RSVP EMBED — Fitur Konfirmasi Kehadiran + Selfie Check-In
+   Di-port dari rsvp.html, dimasukkan ke dalam invitation.html
+   (tema STANDARD_CLEAN_MINIMALIS_1 / premium_luxury_1).
+   Semua style di-scope di bawah #rsvp-embed agar tidak bentrok
+   dengan CSS tema.
+   ============================================================ */
+#rsvp-embed {
+    --primary: #E07B7B;
+    --bg-color: #FFF9F5;
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --border-color: #F0E6DE;
+    --border-hover: rgba(224, 123, 123, 0.6);
+    --gold: #C8962E;
+    --gold-glow: rgba(200, 150, 46, 0.1);
+    --text-main: #4A3F35;
+    --text-muted: #8C7560;
+    --success: #10B981;
+    --error: #E07B7B;
+    --font-serif: 'Lora', serif;
+    --font-sans: 'Plus Jakarta Sans', sans-serif;
+    --duration-fast: 0.2s;
+    --duration-normal: 0.35s;
+    --duration-slow: 0.55s;
+    --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-modal: cubic-bezier(0.34, 1.56, 0.64, 1);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    text-align: left;
+}
+
+#rsvp-embed .rsvp-card {
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 24px;
+    padding: 32px 24px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 10px 40px rgba(224, 123, 123, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Header Monogram */
+#rsvp-embed .header-logo {
+    text-align: center;
+    margin-bottom: 22px;
+}
+#rsvp-embed .monogram {
+    font-family: var(--font-serif);
+    font-size: 28px;
+    color: var(--primary);
+    letter-spacing: 4px;
+    border-bottom: 1px solid var(--border-color);
+    display: inline-block;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+#rsvp-embed .wedding-subtitle {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+}
+
+/* Wedding Info */
+#rsvp-embed .wedding-info {
+    text-align: center;
+    margin-bottom: 26px;
+    padding: 15px;
+    border-radius: 16px;
+    background: #FDF8F4;
+    border: 1px solid var(--border-color);
+}
+#rsvp-embed .wedding-title {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    color: var(--text-main);
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+#rsvp-embed .wedding-detail {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+/* RSVP Form */
+#rsvp-embed .rsvp-form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+#rsvp-embed .greeting {
+    font-size: 14px;
+    color: var(--text-main);
+    line-height: 1.5;
+    border-left: 3px solid var(--primary);
+    padding-left: 12px;
+    margin-bottom: 4px;
+}
+#rsvp-embed .form-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--primary);
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* Attendance Options */
+#rsvp-embed .attendance-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+#rsvp-embed .option-card {
+    border: 1px solid var(--border-color);
+    background: #FDF8F4;
+    border-radius: 16px;
+    padding: 20px 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform var(--duration-fast) var(--ease-out), border-color var(--duration-fast) ease, background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+#rsvp-embed .option-card:active { transform: scale(0.97); }
+#rsvp-embed .option-card.selected {
+    border-color: var(--primary);
+    background: rgba(224, 123, 123, 0.08);
+    box-shadow: 0 0 15px rgba(224, 123, 123, 0.3);
+}
+#rsvp-embed .option-icon { font-size: 24px; }
+#rsvp-embed .option-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+#rsvp-embed .attendance-options input[type="radio"] { display: none; }
+
+/* Pax Counter */
+#rsvp-embed .pax-container {
+    display: none;
+    animation: fadeInSlide 0.4s ease forwards;
+    background: #FDF8F4;
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    border-radius: 16px;
+}
+@keyframes fadeInSlide {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+#rsvp-embed .counter-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 10px;
+}
+#rsvp-embed .counter-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1.5px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+    outline: none;
+}
+#rsvp-embed .counter-btn:active { transform: scale(0.9); }
+#rsvp-embed .counter-value {
+    font-size: 24px;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: center;
+    color: var(--text-main);
+}
+
+/* Wishes Textarea */
+#rsvp-embed .input-group { display: flex; flex-direction: column; }
+#rsvp-embed .textarea-input {
+    width: 100%;
+    min-height: 110px;
+    background: #FDF8F4;
+    border: 1.5px solid var(--border-color);
+    border-radius: 16px;
+    padding: 14px;
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease, background-color var(--duration-fast) ease;
+}
+#rsvp-embed .textarea-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 10px rgba(224, 123, 123, 0.2);
+    background: #fff;
+}
+#rsvp-embed .textarea-input::placeholder { color: var(--text-muted); opacity: 0.7; }
+
+/* Submit Button */
+#rsvp-embed .submit-btn {
+    width: 100%;
+    padding: 16px 20px;
+    border-radius: 50px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) ease, box-shadow var(--duration-normal) var(--ease-out);
+    outline: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+#rsvp-embed .submit-btn:active { transform: scale(0.97); }
+#rsvp-embed .submit-btn:disabled {
+    background: #cbd5e1;
+    color: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+#rsvp-embed .btn-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: rsvpSpin 0.8s linear infinite;
+    display: none;
+}
+@keyframes rsvpSpin { to { transform: rotate(360deg); } }
+
+/* Selfie Section */
+#rsvp-embed .selfie-section {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    animation: fadeInSlide 0.4s ease forwards;
+}
+#rsvp-embed .selfie-section.show { display: flex; }
+#rsvp-embed .selfie-container {
+    position: relative;
+    width: 190px;
+    height: 190px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #000;
+    margin-bottom: 12px;
+    border: 3px solid var(--border-color);
+}
+#rsvp-embed .selfie-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+#rsvp-embed .selfie-container canvas { display: none; }
+#rsvp-embed .selfie-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+}
+#rsvp-embed .selfie-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+#rsvp-embed .selfie-overlay.show { display: flex; }
+#rsvp-embed .selfie-overlay span {
+    font-size: 60px;
+    color: white;
+    font-weight: 900;
+    text-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+}
+#rsvp-embed .selfie-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 2px solid var(--gold);
+    background: transparent;
+    color: var(--gold);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+#rsvp-embed .selfie-btn:active { transform: scale(0.97); }
+#rsvp-embed .selfie-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+#rsvp-embed .selfie-btn.captured { background: var(--gold); color: white; }
+#rsvp-embed .selfie-btn.retry {
+    background: white;
+    border-color: var(--primary);
+    color: var(--primary);
+}
+#rsvp-embed .selfie-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 8px;
+}
+#rsvp-embed .selfie-status {
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    margin-top: 4px;
+    min-height: 16px;
+}
+#rsvp-embed .selfie-status.success { color: var(--success); }
+#rsvp-embed .selfie-status.error { color: var(--error); }
+
+/* Camera Permission Modal (child of #rsvp-embed) */
+#rsvp-embed #cameraPermModal {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(74, 63, 53, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: sapaFadeIn 0.25s ease;
+}
+#rsvp-embed #cameraPermModal.visible { display: flex; }
+@keyframes sapaFadeIn { from { opacity: 0; } to { opacity: 1; } }
+#rsvp-embed .cam-perm-box {
+    background: #fff;
+    border-radius: 28px;
+    padding: 36px 28px 28px;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(74, 63, 53, 0.2);
+    animation: camBoxIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes camBoxIn {
+    from { transform: scale(0.88) translateY(16px); opacity: 0; }
+    to   { transform: scale(1) translateY(0);       opacity: 1; }
+}
+#rsvp-embed .cam-perm-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(200, 150, 46, 0.12), rgba(224, 123, 123, 0.12));
+    border: 1.5px solid var(--border-color);
+    font-size: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+}
+#rsvp-embed .cam-perm-title {
+    font-family: var(--font-serif);
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 10px;
+}
+#rsvp-embed .cam-perm-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.65;
+    margin-bottom: 8px;
+}
+#rsvp-embed .cam-perm-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: #FDF8F4;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 22px;
+    line-height: 1.5;
+}
+#rsvp-embed .cam-perm-note strong { color: var(--text-main); }
+#rsvp-embed .cam-perm-actions { display: flex; flex-direction: column; gap: 10px; }
+#rsvp-embed .cam-perm-btn-allow {
+    width: 100%;
+    padding: 15px;
+    border-radius: 50px;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+#rsvp-embed .cam-perm-btn-allow:active { transform: scale(0.97); }
+#rsvp-embed .cam-perm-btn-skip {
+    width: 100%;
+    padding: 13px;
+    border-radius: 50px;
+    border: 1.5px solid var(--border-color);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+#rsvp-embed .cam-perm-btn-skip:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+    #rsvp-embed .cam-perm-btn-allow:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px rgba(224, 123, 123, 0.3);
+    }
+    #rsvp-embed .cam-perm-btn-skip:hover {
+        border-color: var(--text-muted);
+        color: var(--text-main);
+    }
+}
+
+/* Success View */
+#rsvp-embed .success-view {
+    text-align: center;
+    display: none;
+    animation: successEntrance var(--duration-slow) var(--ease-modal) forwards;
+}
+@keyframes successEntrance {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+#rsvp-embed .success-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid var(--success);
+    color: var(--success);
+    font-size: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+#rsvp-embed .success-title {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    margin-bottom: 12px;
+    color: var(--primary);
+}
+#rsvp-embed .success-message {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+/* Toast (child of #rsvp-embed) */
+#rsvp-embed .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #fff;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(74, 63, 53, 0.15);
+    z-index: 100000;
+    transition: transform var(--duration-slow) var(--ease-modal);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#rsvp-embed .toast.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Hover Protection */
+@media (hover: hover) and (pointer: fine) {
+    #rsvp-embed .option-card:hover {
+        border-color: var(--border-hover);
+        transform: translateY(-2px);
+    }
+    #rsvp-embed .counter-btn:hover {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 0 10px rgba(224, 123, 123, 0.3);
+    }
+    #rsvp-embed .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(224, 123, 123, 0.3);
+    }
+}
+
+/* Highlight saat tombol Konfirmasi Kehadiran diklik (scroll dari bawah) */
+@keyframes rsvpPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(224, 123, 123, 0.5); }
+    70%  { box-shadow: 0 0 0 18px rgba(224, 123, 123, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(224, 123, 123, 0); }
+}
+#rsvp-embed.pulse-highlight .rsvp-card {
+    animation: rsvpPulse 1.2s ease-out 2;
+}
