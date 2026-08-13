@@ -102,12 +102,17 @@ async function getVendorFromToken(req) {
   return null;
 }
 
+function generateSlug(text) {
+  return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
+}
+
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
   const url = new URL(req.url);
   const endpoint = url.searchParams.get('endpoint') || url.pathname.split('/').pop();
   const q = url.searchParams;
+  const body = (req.method !== 'GET' && req.method !== 'HEAD') ? await req.json().catch(() => ({})) : {};
 
   try {
     switch (endpoint) {
@@ -190,15 +195,12 @@ export default async function handler(req) {
         query += `&limit=50`;
 
         let allProducts = [];
-        const t0 = Date.now();
         const [vRes, prodRes] = await Promise.all([
           sbServiceFetch(query),
           sbServiceFetch(`/mp_products?select=vendor_id,price,cover_image_url,image_url&limit=500`)
         ]);
-        const t1 = Date.now();
         vendors = vRes.ok ? await vRes.json() : [];
         allProducts = prodRes.ok ? await prodRes.json() : [];
-        const t2 = Date.now();
 
         if (!Array.isArray(vendors) || vendors.length === 0) {
           const fallbackRes = await sbServiceFetch(`/mp_vendors?select=id,slug,business_name,category_id,city,province,rating_avg,review_count,price_from,cover_image_url,logo_url,is_verified,is_active&limit=50`);
@@ -264,7 +266,7 @@ export default async function handler(req) {
           };
         });
 
-        return json({ data: enriched, page, limit }, 200, { ...CACHE_PUBLIC, 'x-ms-fetch': `${t1 - t0}`, 'x-ms-json': `${t2 - t1}` });
+        return json({ data: enriched, page, limit }, 200, CACHE_PUBLIC);
       }
 
       // === VENDOR PROFILE (public, cacheable) ===
@@ -348,25 +350,138 @@ export default async function handler(req) {
         return json({ product, vendor, otherProducts, reviews }, 200, CACHE_PUBLIC);
       }
 
-      // === VENDOR ME (auth GET) ===
+      // === VENDOR ME (auth GET/PATCH) ===
       case 'vendor-me': {
-        if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
         const vendor = await getVendorFromToken(req);
         if (!vendor) return json({ error: 'Unauthorized / Vendor tidak ditemukan' }, 401, NO_CACHE);
-        return json({ vendor }, 200, NO_CACHE);
+
+        if (req.method === 'GET') return json({ vendor }, 200, NO_CACHE);
+        if (req.method === 'PATCH') {
+          const allowedFields = [
+            'business_name', 'city', 'province', 'owner_name',
+            'whatsapp', 'email', 'instagram', 'website',
+            'description', 'cover_image_url', 'logo_url'
+          ];
+          const cleanBody = {};
+          for (const key of allowedFields) {
+            if (body[key] !== undefined && body[key] !== null) {
+              cleanBody[key] = body[key];
+            }
+          }
+          if (body.cover_image && !cleanBody.cover_image_url) {
+            cleanBody.cover_image_url = body.cover_image;
+          }
+
+          const patchRes = await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(cleanBody),
+            headers: { 'Prefer': 'return=representation' }
+          });
+
+          const patchJson = await patchRes.json().catch(() => null);
+          if (!patchRes.ok || !patchJson) {
+            const errMsg = (patchJson && patchJson.message) ? patchJson.message : 'Gagal memperbarui profil vendor';
+            return json({ error: errMsg }, 400, NO_CACHE);
+          }
+
+          const updated = Array.isArray(patchJson) ? patchJson[0] : patchJson;
+          return json({ success: true, vendor: updated || vendor }, 200, NO_CACHE);
+        }
+        return json({ error: 'Method not allowed' }, 405);
       }
 
-      // === VENDOR PRODUCTS (auth GET) ===
+      // === VENDOR PRODUCTS (auth GET/POST/PATCH/DELETE) ===
       case 'vendor-products': {
-        if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
         const vendor = await getVendorFromToken(req);
         if (!vendor) return json({ error: 'Unauthorized' }, 401, NO_CACHE);
-        const prodRes = await sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&order=sort_order.asc,created_at.desc&select=*`);
-        const products = prodRes.ok ? await prodRes.json() : [];
-        products.forEach(p => {
-          p.category_name = p.category_name || p.short_desc || '';
-        });
-        return json({ data: products }, 200, NO_CACHE);
+
+        if (req.method === 'GET') {
+          const prodRes = await sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&order=sort_order.asc,created_at.desc&select=*`);
+          const products = prodRes.ok ? await prodRes.json() : [];
+          products.forEach(p => {
+            p.category_name = p.category_name || p.short_desc || '';
+          });
+          return json({ data: products }, 200, NO_CACHE);
+        }
+
+        if (req.method === 'POST') {
+          const { name, price, description, image_url, cover_image_url, badge_tag, category_name } = body;
+          if (!name || !price) return json({ error: 'Nama paket dan harga wajib diisi' }, 400);
+
+          const slug = generateSlug(name) + '-' + Date.now().toString(36);
+          const finalImage = image_url || cover_image_url || null;
+          const finalPrice = Math.round(parseFloat(price)) || 0;
+          const catVal = category_name ? category_name.trim() : '';
+
+          const insertRes = await sbServiceFetch('/mp_products', {
+            method: 'POST',
+            body: JSON.stringify({
+              vendor_id: vendor.id,
+              name: name.trim(),
+              slug: slug,
+              price: finalPrice,
+              description: description ? description.trim() : '',
+              short_desc: catVal,
+              cover_image_url: finalImage,
+              price_label: badge_tag ? badge_tag.trim() : null,
+              is_active: true
+            }),
+            headers: { 'Prefer': 'return=representation' }
+          });
+          const insertedJson = await insertRes.json().catch(() => null);
+          if (!insertRes.ok || !insertedJson) {
+            const errMsg = (insertedJson && insertedJson.message) ? insertedJson.message : 'Gagal menyimpan paket ke database';
+            return json({ error: errMsg }, 400);
+          }
+          const product = Array.isArray(insertedJson) ? insertedJson[0] : insertedJson;
+          if (product) product.category_name = product.category_name || product.short_desc || '';
+          return json({ success: true, product }, 201);
+        }
+
+        if (req.method === 'PATCH' || req.method === 'PUT') {
+          const id = q.get('id');
+          if (!id) return json({ error: 'Missing product ID' }, 400);
+
+          const { name, price, description, image_url, cover_image_url, badge_tag, category_name } = body;
+          const updateBody = {};
+
+          if (name) {
+            updateBody.name = name.trim();
+            updateBody.slug = generateSlug(name) + '-' + Date.now().toString(36);
+          }
+          if (price !== undefined) updateBody.price = Math.round(parseFloat(price)) || 0;
+          if (description !== undefined) updateBody.description = description ? description.trim() : '';
+          const finalImage = image_url || cover_image_url;
+          if (finalImage !== undefined) updateBody.cover_image_url = finalImage || null;
+          if (badge_tag !== undefined) updateBody.price_label = badge_tag ? badge_tag.trim() : null;
+          if (category_name !== undefined) updateBody.short_desc = category_name ? category_name.trim() : '';
+          updateBody.updated_at = new Date().toISOString();
+
+          const updateRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&vendor_id=eq.${vendor.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(updateBody),
+            headers: { 'Prefer': 'return=representation' }
+          });
+          const updatedJson = await updateRes.json().catch(() => null);
+          if (!updateRes.ok || !updatedJson) {
+            const errMsg = (updatedJson && updatedJson.message) ? updatedJson.message : 'Gagal memperbarui paket';
+            return json({ error: errMsg }, 400);
+          }
+          const product = Array.isArray(updatedJson) ? updatedJson[0] : updatedJson;
+          if (product) product.category_name = product.category_name || product.short_desc || '';
+          return json({ success: true, product }, 200);
+        }
+
+        if (req.method === 'DELETE') {
+          const id = q.get('id');
+          if (!id) return json({ error: 'Missing product ID' }, 400);
+          await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&vendor_id=eq.${vendor.id}`, {
+            method: 'DELETE'
+          });
+          return json({ success: true }, 200);
+        }
+
+        return json({ error: 'Method not allowed' }, 405);
       }
 
       // === VENDOR INQUIRIES (auth GET) ===
