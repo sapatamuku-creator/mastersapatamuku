@@ -353,62 +353,37 @@ export default async function handler(req, res) {
         const { slug } = req.query;
         if (!slug) return res.status(400).json({ error: 'Missing vendor slug' });
 
-        const [vRes, allProdsRes] = await Promise.all([
-          sbServiceFetch(`/mp_vendors?slug=eq.${encodeURIComponent(slug)}&select=*&limit=1`),
-          sbServiceFetch(`/mp_products?select=*&order=created_at.desc`)
-        ]);
+        const VENDOR_COLS = 'id,slug,business_name,city,province,whatsapp,description,cover_image_url,logo_url,category_id,is_verified,rating_avg,review_count';
 
+        // 1. Cari vendor (slim select, satu query)
+        let vRes = await sbServiceFetch(`/mp_vendors?slug=eq.${encodeURIComponent(slug)}&select=${VENDOR_COLS}&limit=1`);
         let vendors = vRes.ok ? await vRes.json() : [];
         if (!Array.isArray(vendors) || !vendors.length) {
-          const vSearchRes = await sbServiceFetch(`/mp_vendors?or=(slug.ilike.*${encodeURIComponent(slug)}*,business_name.ilike.*${encodeURIComponent(slug.replace(/-/g, ' '))}*)&select=*&limit=1`);
+          const vSearchRes = await sbServiceFetch(`/mp_vendors?or=(slug.ilike.*${encodeURIComponent(slug)}*,business_name.ilike.*${encodeURIComponent(slug.replace(/-/g, ' '))}*)&select=${VENDOR_COLS}&limit=1`);
           vendors = vSearchRes.ok ? await vSearchRes.json() : [];
         }
 
-        let vendor = (Array.isArray(vendors) && vendors.length > 0) ? vendors[0] : null;
-        const allProds = allProdsRes.ok ? await allProdsRes.json() : [];
-
-        // Fallback: If vendor record is missing from mp_vendors but products exist in mp_products
-        if (!vendor && allProds.length > 0) {
-          vendor = {
-            id: allProds[0].vendor_id,
-            business_name: 'Knowhere Studio',
-            slug: 'knowhere-studio',
-            city: 'Kab. Cirebon (Weru)',
-            province: 'Jawa Barat',
-            whatsapp: '6287864752163',
-            description: 'Vendor Fotografi & Videografi Pernikahan Profesional',
-            cover_image_url: allProds[0].cover_image_url || allProds[0].image_url,
-            logo_url: allProds[0].cover_image_url || allProds[0].image_url,
-            category_id: DEFAULT_CATEGORIES[1].id,
-            category_name: 'Fotografi & Videografi',
-            rating_avg: 0,
-            review_count: 0,
-            is_verified: true
-          };
-        }
-
+        const vendor = (Array.isArray(vendors) && vendors.length > 0) ? vendors[0] : null;
         if (!vendor) return res.status(404).json({ error: 'Vendor tidak ditemukan' });
 
         const catObj = DEFAULT_CATEGORIES.find(c => c.id === vendor.category_id);
         vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
 
+        // 2. Produk + review vendor — paralel, satu round-trip (tanpa fetch seluruh tabel)
+        const PRODUCT_COLS = 'id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at';
         const [pRes, rRes] = await Promise.all([
-          sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&order=created_at.desc`),
+          sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&order=created_at.desc&select=${PRODUCT_COLS}`),
           sbServiceFetch(`/mp_reviews?vendor_id=eq.${vendor.id}&order=created_at.desc&limit=10`)
         ]);
 
-        let products = pRes.ok ? await pRes.json() : [];
+        const products = pRes.ok ? await pRes.json() : [];
         const reviews = rRes.ok ? await rRes.json() : [];
 
-        if (!Array.isArray(products) || products.length === 0) {
-          products = allProds.filter(p => p.vendor_id === vendor.id);
-          if (products.length === 0) products = allProds;
-        }
-
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
         return res.status(200).json({
           vendor,
-          products,
-          reviews
+          products: Array.isArray(products) ? products : [],
+          reviews: Array.isArray(reviews) ? reviews : []
         });
       }
 
@@ -418,7 +393,7 @@ export default async function handler(req, res) {
         const { id, slug } = req.query;
         if (!id && !slug) return res.status(400).json({ error: 'Missing product ID or slug' });
 
-        let pQuery = id ? `/mp_products?id=eq.${encodeURIComponent(id)}&limit=1` : `/mp_products?slug=eq.${encodeURIComponent(slug)}&limit=1`;
+        let pQuery = id ? `/mp_products?id=eq.${encodeURIComponent(id)}&select=id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at&limit=1` : `/mp_products?slug=eq.${encodeURIComponent(slug)}&select=id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at&limit=1`;
         const pRes = await sbServiceFetch(pQuery);
         let products = pRes.ok ? await pRes.json() : [];
 
@@ -430,8 +405,8 @@ export default async function handler(req, res) {
 
         // Fetch vendor, other products from same vendor, and reviews
         const [vRes, otherProdsRes, rRes] = await Promise.all([
-          sbServiceFetch(`/mp_vendors?id=eq.${product.vendor_id}&select=*&limit=1`),
-          sbServiceFetch(`/mp_products?vendor_id=eq.${product.vendor_id}&id=neq.${product.id}&order=created_at.desc`),
+          sbServiceFetch(`/mp_vendors?id=eq.${product.vendor_id}&select=id,slug,business_name,city,province,whatsapp,description,cover_image_url,logo_url,category_id,is_verified,rating_avg,review_count&limit=1`),
+          sbServiceFetch(`/mp_products?vendor_id=eq.${product.vendor_id}&id=neq.${product.id}&order=created_at.desc&select=id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at`),
           sbServiceFetch(`/mp_reviews?vendor_id=eq.${product.vendor_id}&order=created_at.desc&limit=10`)
         ]);
 
@@ -450,6 +425,7 @@ export default async function handler(req, res) {
         const otherProducts = otherProdsRes.ok ? await otherProdsRes.json() : [];
         const reviews = rRes.ok ? await rRes.json() : [];
 
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
         return res.status(200).json({
           product,
           vendor,

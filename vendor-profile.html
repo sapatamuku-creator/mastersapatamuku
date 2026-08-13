@@ -400,16 +400,35 @@
       pkgContainer.innerHTML = skelHTML;
     }
 
+    const VENDOR_CACHE_TTL = 5 * 60 * 1000; // 5 menit
+    function getVendorCache(key) {
+      try {
+        const raw = sessionStorage.getItem(key);
+        if (!raw) return null;
+        const entry = JSON.parse(raw);
+        if (Date.now() - entry.ts > VENDOR_CACHE_TTL) { sessionStorage.removeItem(key); return null; }
+        return entry.data;
+      } catch (e) { return null; }
+    }
+    function setVendorCache(key, data) {
+      try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch (e) { }
+    }
+
     async function loadVendor() {
       if (!slug) return;
       renderVendorProfileSkeletons();
       try {
-        const res = await fetch(`/api/mp/vendor-detail?slug=${encodeURIComponent(slug)}`);
-        if (!res.ok) {
-          $('vendorName').textContent = 'Vendor Tidak Ditemukan';
-          return;
+        const cacheKey = `vendor-detail:${slug}`;
+        let data = getVendorCache(cacheKey);
+        if (!data) {
+          const res = await fetch(`/api/mp/vendor-detail?slug=${encodeURIComponent(slug)}`);
+          if (!res.ok) {
+            $('vendorName').textContent = 'Vendor Tidak Ditemukan';
+            return;
+          }
+          data = await res.json();
+          setVendorCache(cacheKey, data);
         }
-        const data = await res.json();
         const v = data.vendor;
         const products = data.products || [];
         const reviews = data.reviews || [];
