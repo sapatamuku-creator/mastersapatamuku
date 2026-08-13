@@ -290,7 +290,7 @@ export default async function handler(req) {
         const catObj = DEFAULT_CATEGORIES.find(c => c.id === vendor.category_id);
         vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
 
-        const PRODUCT_COLS = 'id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at';
+        const PRODUCT_COLS = '*';
         const [pRes, rRes] = await Promise.all([
           sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&order=created_at.desc&select=${PRODUCT_COLS}`),
           sbServiceFetch(`/mp_reviews?vendor_id=eq.${vendor.id}&order=created_at.desc&limit=10`)
