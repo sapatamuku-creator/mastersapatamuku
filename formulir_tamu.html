@@ -2773,9 +2773,15 @@
                 sesi_3: document.getElementById('edit_ev_s3').value,
                 updated_at: new Date().toISOString()
             };
+            const sbHeaders = {
+                "apikey": SB_KEY,
+                "Authorization": "Bearer " + SB_KEY,
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates"
+            };
             fetch(`${SB_URL}/rest/v1/metadata_client?on_conflict=ssid`, {
                 method: "POST",
-                headers: { ...SB_HEADERS, "Prefer": "resolution=merge-duplicates" },
+                headers: sbHeaders,
                 body: JSON.stringify(metaPayload)
             }).then(r => {
                 if (!r.ok) console.warn("Mirror metadata to Supabase failed:", r.status);
