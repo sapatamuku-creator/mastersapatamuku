@@ -1021,14 +1021,24 @@
                 };
 
                 // ── STEP 1: Simpan ke Supabase langsung (~150ms, super cepat!) ──
+                const sbHeaders = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json",
+                    "Prefer": "resolution=merge-duplicates"
+                };
+
                 const sbRes = await fetch(`${SB_URL}/rest/v1/config_invitation?on_conflict=ssid`, {
                     method: "POST",
-                    headers: SB_HDRS,
+                    headers: sbHeaders,
                     body: JSON.stringify({ ssid: ssId, data: invData, updated_at: new Date().toISOString() })
                 });
 
                 if (!sbRes.ok) {
-                    console.warn("Supabase save warn:", sbRes.status);
+                    const errTxt = await sbRes.text();
+                    console.warn("Supabase save warn:", sbRes.status, errTxt);
+                } else {
+                    console.log("✅ Config saved to Supabase successfully!");
                 }
 
                 // ── STEP 2: Mirror ke Google Sheet (GAS) secara background / async tanpa membuat tombol macet ──
