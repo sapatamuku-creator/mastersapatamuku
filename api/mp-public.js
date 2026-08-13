@@ -190,12 +190,15 @@ export default async function handler(req) {
         query += `&limit=50`;
 
         let allProducts = [];
+        const t0 = Date.now();
         const [vRes, prodRes] = await Promise.all([
           sbServiceFetch(query),
           sbServiceFetch(`/mp_products?select=vendor_id,price,cover_image_url,image_url&limit=500`)
         ]);
+        const t1 = Date.now();
         vendors = vRes.ok ? await vRes.json() : [];
         allProducts = prodRes.ok ? await prodRes.json() : [];
+        const t2 = Date.now();
 
         if (!Array.isArray(vendors) || vendors.length === 0) {
           const fallbackRes = await sbServiceFetch(`/mp_vendors?select=id,slug,business_name,category_id,city,province,rating_avg,review_count,price_from,cover_image_url,logo_url,is_verified,is_active&limit=50`);
@@ -261,7 +264,7 @@ export default async function handler(req) {
           };
         });
 
-        return json({ data: enriched, page, limit }, 200, CACHE_PUBLIC);
+        return json({ data: enriched, page, limit }, 200, { ...CACHE_PUBLIC, 'x-ms-fetch': `${t1 - t0}`, 'x-ms-json': `${t2 - t1}` });
       }
 
       // === VENDOR PROFILE (public, cacheable) ===
