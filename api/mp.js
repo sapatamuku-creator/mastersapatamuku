@@ -370,7 +370,7 @@ export default async function handler(req, res) {
         vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
 
         // 2. Produk + review vendor â€” paralel, satu round-trip (tanpa fetch seluruh tabel)
-        const PRODUCT_COLS = 'id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at';
+        const PRODUCT_COLS = '*';
         const [pRes, rRes] = await Promise.all([
           sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&order=created_at.desc&select=${PRODUCT_COLS}`),
           sbServiceFetch(`/mp_reviews?vendor_id=eq.${vendor.id}&order=created_at.desc&limit=10`)
@@ -393,7 +393,7 @@ export default async function handler(req, res) {
         const { id, slug } = req.query;
         if (!id && !slug) return res.status(400).json({ error: 'Missing product ID or slug' });
 
-        let pQuery = id ? `/mp_products?id=eq.${encodeURIComponent(id)}&select=id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at&limit=1` : `/mp_products?slug=eq.${encodeURIComponent(slug)}&select=id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at&limit=1`;
+        let pQuery = id ? `/mp_products?id=eq.${encodeURIComponent(id)}&select=*&limit=1` : `/mp_products?slug=eq.${encodeURIComponent(slug)}&select=*&limit=1`;
         const pRes = await sbServiceFetch(pQuery);
         let products = pRes.ok ? await pRes.json() : [];
 
@@ -406,7 +406,7 @@ export default async function handler(req, res) {
         // Fetch vendor, other products from same vendor, and reviews
         const [vRes, otherProdsRes, rRes] = await Promise.all([
           sbServiceFetch(`/mp_vendors?id=eq.${product.vendor_id}&select=id,slug,business_name,city,province,whatsapp,description,cover_image_url,logo_url,category_id,is_verified,rating_avg,review_count&limit=1`),
-          sbServiceFetch(`/mp_products?vendor_id=eq.${product.vendor_id}&id=neq.${product.id}&order=created_at.desc&select=id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at`),
+          sbServiceFetch(`/mp_products?vendor_id=eq.${product.vendor_id}&id=neq.${product.id}&order=created_at.desc&select=*`),
           sbServiceFetch(`/mp_reviews?vendor_id=eq.${product.vendor_id}&order=created_at.desc&limit=10`)
         ]);
 
