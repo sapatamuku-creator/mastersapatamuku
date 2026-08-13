@@ -1176,6 +1176,31 @@
     </div>
 </div>
 
+<!-- Realtime Progress Loading Modal -->
+<div id="progress-modal" class="notification-modal" style="display: none; z-index: 9999999;">
+    <div class="notification-content" style="max-width: 420px; padding: 32px 24px; text-align: center;">
+        <div style="position: relative; width: 60px; height: 60px; margin: 0 auto 16px;">
+            <div class="spinner" style="width: 60px; height: 60px; border-width: 4px;"></div>
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px;">⚡</div>
+        </div>
+        <h3 id="progress-modal-title" style="font-size: 19px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">Menyalin Foto...</h3>
+        <p id="progress-modal-subtitle" style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Proses pemindaian &amp; penyalinan sedang berjalan realtime.</p>
+
+        <div style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 14px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span id="progress-modal-status" style="font-size: 13px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;">Mempersiapkan...</span>
+                <span id="progress-modal-counter" style="font-size: 15px; font-weight: 800; color: var(--primary); font-family: monospace;">0 / 0</span>
+            </div>
+            <div style="width: 100%; height: 10px; background: #EFE6DE; border-radius: 20px; overflow: hidden; position: relative;">
+                <div id="progress-modal-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--gold)); border-radius: 20px; transition: width 0.12s ease-out;"></div>
+            </div>
+        </div>
+        <div id="progress-modal-detail" style="font-size: 11px; color: var(--text-muted); word-break: break-all; min-height: 16px; font-weight: 500;">
+            Mohon jangan tutup browser selama proses ini.
+        </div>
+    </div>
+</div>
+
 <!-- Desktop Mode Switcher Modal (Mobile Only) -->
 <div id="desktop-mode-modal" class="desktop-mode-modal">
     <div class="desktop-mode-content">
@@ -1302,6 +1327,44 @@
     window.closeAlertModal = function() {
         document.getElementById('alert-modal').style.display = 'none';
     };
+
+    function showProgressModal(title, subtitle = 'Sedang memproses foto...') {
+        const pTitle = document.getElementById('progress-modal-title');
+        const pSub = document.getElementById('progress-modal-subtitle');
+        const pStatus = document.getElementById('progress-modal-status');
+        const pCounter = document.getElementById('progress-modal-counter');
+        const pBar = document.getElementById('progress-modal-bar');
+        const pDetail = document.getElementById('progress-modal-detail');
+
+        if (pTitle) pTitle.innerText = title;
+        if (pSub) pSub.innerText = subtitle;
+        if (pStatus) pStatus.innerText = 'Mempersiapkan...';
+        if (pCounter) pCounter.innerText = '0 / 0';
+        if (pBar) pBar.style.width = '0%';
+        if (pDetail) pDetail.innerText = 'Mohon jangan tutup browser selama proses ini.';
+
+        const modal = document.getElementById('progress-modal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function updateProgressModal(current, total, statusText = '', detailText = '') {
+        const pStatus = document.getElementById('progress-modal-status');
+        const pCounter = document.getElementById('progress-modal-counter');
+        const pBar = document.getElementById('progress-modal-bar');
+        const pDetail = document.getElementById('progress-modal-detail');
+
+        const percent = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+
+        if (pCounter) pCounter.innerText = `${current} / ${total}`;
+        if (pBar) pBar.style.width = `${percent}%`;
+        if (statusText && pStatus) pStatus.innerText = statusText;
+        if (detailText && pDetail) pDetail.innerText = detailText;
+    }
+
+    function closeProgressModal() {
+        const modal = document.getElementById('progress-modal');
+        if (modal) modal.style.display = 'none';
+    }
 
     // ============================================================
     // DESKTOP MODE SWITCHER (Mobile Detection)
@@ -1704,15 +1767,21 @@
         try {
             showAlert('Pilih Folder Master', 'Silakan pilih folder master foto (RAW/JPG) di PC Anda.', '📁');
             const sourceHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            closeAlertModal();
             if (!sourceHandle) return;
-
-            const destHandle = await sourceHandle.getDirectoryHandle(subfolderName, { create: true });
 
             const cleanTargets = fileList.map(name => {
                 let s = String(name).trim();
                 if (s.includes('.')) s = s.split('.').slice(0, -1).join('.');
                 return s.toLowerCase();
             }).filter(Boolean);
+
+            const totalTargetCount = cleanTargets.length;
+
+            showProgressModal('Ekspor Instan Foto...', `Menyalin berkas foto ke subfolder "${subfolderName}"`);
+            updateProgressModal(0, totalTargetCount, 'Memulai pemindaian...', `Folder: ${sourceHandle.name}`);
+
+            const destHandle = await sourceHandle.getDirectoryHandle(subfolderName, { create: true });
 
             let copiedCount = 0;
             let matchedTargets = new Set();
@@ -1739,6 +1808,17 @@
                                 await writable.close();
                                 copiedCount++;
                                 matchedTargets.add(matched);
+
+                                updateProgressModal(
+                                    copiedCount, 
+                                    totalTargetCount, 
+                                    `Menyalin: ${fileName}`, 
+                                    `${copiedCount} dari ${totalTargetCount} foto tersalin (${matchedTargets.size} target cocok)`
+                                );
+
+                                // Tiny pause so browser updates progress UI smoothly
+                                await new Promise(r => setTimeout(r, 12));
+
                             } catch (err) {
                                 console.error(`Gagal menyalin ${fileName}:`, err);
                             }
@@ -1750,6 +1830,7 @@
             }
 
             await scanAndCopyDir(sourceHandle);
+            closeProgressModal();
 
             const notFoundCount = cleanTargets.length - matchedTargets.size;
 
@@ -1764,6 +1845,7 @@
             }
 
         } catch (err) {
+            closeProgressModal();
             if (err.name !== 'AbortError') {
                 showAlert('Error Ekspor', `Gagal mengekspor file: ${err.message}`, '❌');
             }
@@ -2578,9 +2660,14 @@
             const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
             let copied = 0;
             let paired = 0;
+            const totalToCopy = selected.length;
             const logLines = [];
 
-            for (const f of selected) {
+            showProgressModal('Menyalin Foto Lokal...', 'Sedang menyalin foto pilihan Anda ke folder tujuan.');
+            updateProgressModal(0, totalToCopy, 'Memulai penyalinan...', `Folder: ${dirHandle.name}`);
+
+            for (let i = 0; i < selected.length; i++) {
+                const f = selected[i];
                 const baseName = f.name.split('.').slice(0, -1).join('.');
                 const ext = f.name.split('.').pop().toLowerCase();
 
@@ -2613,13 +2700,25 @@
                     logMsg += ` + ${rawMatches.length} RAW`;
                 }
                 logLines.push(logMsg);
+
+                updateProgressModal(
+                    i + 1, 
+                    totalToCopy, 
+                    `Menyalin: ${f.name}`, 
+                    `${i + 1} dari ${totalToCopy} foto (${paired > 0 ? paired + ' RAW pasangan' : '100%'})`
+                );
+
+                await new Promise(r => setTimeout(r, 12));
             }
+
+            closeProgressModal();
 
             const summary = paired > 0
                 ? `${copied} file berhasil disalin (${selected.length} foto + ${paired} file RAW pasangan).`
                 : `${copied} foto berhasil disalin ke folder yang dipilih.`;
             showAlert('Sukses', summary, '✅');
         } catch (e) {
+            closeProgressModal();
             if (e.name !== 'AbortError') {
                 showAlert('Error', `Gagal mengekspor file: ${e.message}`, '❌');
             }
