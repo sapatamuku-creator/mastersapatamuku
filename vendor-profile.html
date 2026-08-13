@@ -504,7 +504,7 @@
     function renderCategoryFiltersNav(products) {
       const navEl = $('categoryFilterNav');
       if (!navEl) return;
-      const cats = [...new Set(products.map(p => (p.category_name || '').trim()).filter(Boolean))];
+      const cats = [...new Set(products.map(p => (p.category_name || p.short_desc || '').trim()).filter(Boolean))];
       if (cats.length === 0) {
         navEl.style.display = 'none';
         return;
@@ -512,7 +512,7 @@
       navEl.style.display = 'flex';
       const filterCats = ['Semua', ...cats];
       navEl.innerHTML = filterCats.map(c => {
-        const count = c === 'Semua' ? products.length : products.filter(p => (p.category_name || '').trim() === c).length;
+        const count = c === 'Semua' ? products.length : products.filter(p => (p.category_name || p.short_desc || '').trim() === c).length;
         const isActive = c === window._activeCategoryFilter;
         return `
           <button type="button" 
@@ -529,7 +529,7 @@
       renderCategoryFiltersNav(window._allVendorProducts || []);
       const filtered = cat === 'Semua'
         ? (window._allVendorProducts || [])
-        : (window._allVendorProducts || []).filter(p => (p.category_name || '').trim() === cat);
+        : (window._allVendorProducts || []).filter(p => (p.category_name || p.short_desc || '').trim() === cat);
       renderVendorProductsGrid(filtered);
     }
 
