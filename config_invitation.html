@@ -646,133 +646,133 @@
         });
 
         async function initApp() {
-        SapaGuard.apply('sensitive'); // RBAC Guard
+            SapaGuard.apply('sensitive'); // RBAC Guard
             if (!window.SAPATAMU_RESOLVED) { setTimeout(initApp, 100); return; }
             syncNavbar();
+            selectTheme(currentTheme || "standard_clean_minimalis_1");
             loadInvitationSettings();
         }
 
-        function selectTheme(theme) {
-            const validThemes = ["standard_clean_minimalis_1", "premium_luxury_1"];
-            const resolvedTheme = (theme && validThemes.includes(theme.toLowerCase())) ? theme.toLowerCase() : "standard_clean_minimalis_1";
-            currentTheme = resolvedTheme;
-            document.getElementById('active-theme-label').innerHTML = `Tema Aktif: <span class="text-primary">${resolvedTheme}</span>`;
-            const iframe = document.getElementById('preview-iframe');
-            iframe.src = `invitation.html?theme_id=${resolvedTheme}`;
-            setTimeout(updatePreview, 1500);
-        }
+        function populateFormFromConfig(s) {
+            if (!s) return;
+            const inv = s.invitationData || s;
 
-        function syncNavbar() {
-            const ssId = window.CURRENT_SS_ID || "";
-            document.querySelectorAll('.nav-link').forEach(link => {
-                const base = link.href.split('?')[0];
-                link.href = `${base}?ssId=${ssId}`;
-            });
+            // Load Hero
+            if (document.getElementById('inv_music')) document.getElementById('inv_music').value = inv.musicUrl || "";
+            if (document.getElementById('inv_cover_bg')) document.getElementById('inv_cover_bg').value = inv.coverBg || "";
+            if (document.getElementById('inv_hero_img')) document.getElementById('inv_hero_img').value = inv.heroImg || "";
+            if (document.getElementById('inv_header_label')) document.getElementById('inv_header_label').value = inv.headerLabel || "";
+            if (document.getElementById('inv_hashtag')) document.getElementById('inv_hashtag').value = inv.hashtag || "";
+
+            // Load Groom
+            const g = inv.groom || {};
+            if (document.getElementById('groom_photo')) document.getElementById('groom_photo').value = g.photo || "";
+            if (document.getElementById('groom_name')) document.getElementById('groom_name').value = g.name || "";
+            if (document.getElementById('groom_desc')) document.getElementById('groom_desc').value = g.desc || "";
+            if (document.getElementById('groom_ig')) document.getElementById('groom_ig').value = g.ig || "";
+
+            // Load Bride
+            const b = inv.bride || {};
+            if (document.getElementById('bride_photo')) document.getElementById('bride_photo').value = b.photo || "";
+            if (document.getElementById('bride_name')) document.getElementById('bride_name').value = b.name || "";
+            if (document.getElementById('bride_desc')) document.getElementById('bride_desc').value = b.desc || "";
+            if (document.getElementById('bride_ig')) document.getElementById('bride_ig').value = b.ig || "";
+
+            // Load Events
+            const ev1 = inv.ev1 || {};
+            if (document.getElementById('ev1_name')) document.getElementById('ev1_name').value = ev1.name || "";
+            if (document.getElementById('ev1_date')) document.getElementById('ev1_date').value = toDateInputValue(ev1.date || "");
+            if (document.getElementById('ev1_time')) document.getElementById('ev1_time').value = ev1.time || "";
+            if (ev1.zone && document.getElementById('ev1_zone')) document.getElementById('ev1_zone').value = ev1.zone;
+            if (document.getElementById('ev1_loc_name')) document.getElementById('ev1_loc_name').value = ev1.locName || "";
+            if (document.getElementById('ev1_maps')) document.getElementById('ev1_maps').value = ev1.maps || "";
+            if (document.getElementById('ev1_photo')) document.getElementById('ev1_photo').value = ev1.photo || "";
+
+            const ev2 = inv.ev2 || {};
+            if (document.getElementById('ev2_name')) document.getElementById('ev2_name').value = ev2.name || "";
+            if (document.getElementById('ev2_date')) document.getElementById('ev2_date').value = toDateInputValue(ev2.date || "");
+            if (document.getElementById('ev2_time')) document.getElementById('ev2_time').value = ev2.time || "";
+            if (ev2.zone && document.getElementById('ev2_zone')) document.getElementById('ev2_zone').value = ev2.zone;
+            if (document.getElementById('ev2_loc_name')) document.getElementById('ev2_loc_name').value = ev2.locName || "";
+            if (document.getElementById('ev2_maps')) document.getElementById('ev2_maps').value = ev2.maps || "";
+            if (document.getElementById('ev2_photo')) document.getElementById('ev2_photo').value = ev2.photo || "";
+
+            // Load Gifts
+            if (document.getElementById('show_gift')) document.getElementById('show_gift').value = inv.show_gift !== undefined ? inv.show_gift : "true";
+            if (document.getElementById('gift_header')) document.getElementById('gift_header').value = inv.gift_header || "";
+            
+            const gifts = inv.gifts || [{}, {}, {}];
+            if (gifts[0]) {
+                if (document.getElementById('gift1_bank')) document.getElementById('gift1_bank').value = gifts[0].bank || "BRI";
+                if (document.getElementById('gift1_acc')) document.getElementById('gift1_acc').value = gifts[0].acc || "";
+                if (document.getElementById('gift1_owner')) document.getElementById('gift1_owner').value = gifts[0].owner || "";
+            }
+            if (gifts[1]) {
+                if (document.getElementById('gift2_bank')) document.getElementById('gift2_bank').value = gifts[1].bank || "BJB";
+                if (document.getElementById('gift2_acc')) document.getElementById('gift2_acc').value = gifts[1].acc || "";
+                if (document.getElementById('gift2_owner')) document.getElementById('gift2_owner').value = gifts[1].owner || "";
+            }
+            if (gifts[2]) {
+                if (document.getElementById('gift3_bank')) document.getElementById('gift3_bank').value = gifts[2].bank || "DANA";
+                if (document.getElementById('gift3_acc')) document.getElementById('gift3_acc').value = gifts[2].acc || "";
+                if (document.getElementById('gift3_owner')) document.getElementById('gift3_owner').value = gifts[2].owner || "";
+            }
+
+            if (document.getElementById('inv_greeting')) document.getElementById('inv_greeting').value = inv.greeting || "Yth. Bapak/Ibu/Saudara/i";
+
+            // Load Gallery & Wishes
+            if (document.getElementById('show_gallery')) document.getElementById('show_gallery').value = inv.show_gallery !== undefined ? inv.show_gallery : "true";
+            if (document.getElementById('gallery_header')) document.getElementById('gallery_header').value = inv.gallery_header || "";
+            if (document.getElementById('show_wishes')) document.getElementById('show_wishes').value = inv.show_wishes !== undefined ? inv.show_wishes : "true";
+            if (document.getElementById('wishes_header')) document.getElementById('wishes_header').value = inv.wishes_header || "";
+            
+            const gal = inv.gallery || [];
+            if (document.getElementById('gallery-container')) {
+                document.getElementById('gallery-container').innerHTML = '';
+                galleryCount = 0;
+                if (gal.length > 0) {
+                    gal.forEach(url => addGallerySlot(url));
+                } else {
+                    for(let i=0; i<6; i++) addGallerySlot("");
+                }
+            }
+            
+            const activeTheme = s.theme || inv.theme || "standard_clean_minimalis_1";
+            selectTheme(activeTheme);
+
+            // Initial Preview update
+            setTimeout(updatePreview, 500);
         }
 
         async function loadInvitationSettings() {
             const ssId = window.CURRENT_SS_ID;
             if (!ssId) return;
 
+            // ── STEP 1: Fast fetch from Supabase (~150ms) ──
+            try {
+                const sbRes = await fetch(
+                    `${SB_URL}/rest/v1/config_invitation?ssid=eq.${ssId}&select=data&limit=1`,
+                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                );
+                if (sbRes.ok) {
+                    const rows = await sbRes.json();
+                    if (rows && rows.length > 0 && rows[0].data) {
+                        console.log("✅ Config loaded from Supabase");
+                        populateFormFromConfig({ invitationData: rows[0].data, theme: rows[0].data.theme });
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn("Supabase load error:", e);
+            }
+
+            // ── STEP 2: Fallback to GAS ──
             try {
                 const res = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`);
                 const result = await res.json();
                 if (result.status === "success") {
-                    const s = result.data;
-                    const inv = s.invitationData || {};
-
-                    // Load Hero
-                    document.getElementById('inv_music').value = inv.musicUrl || "";
-                    document.getElementById('inv_cover_bg').value = inv.coverBg || "";
-                    document.getElementById('inv_hero_img').value = inv.heroImg || "";
-                    document.getElementById('inv_header_label').value = inv.headerLabel || "";
-                    document.getElementById('inv_hashtag').value = inv.hashtag || "";
-
-                    // Load Groom
-                    const g = inv.groom || {};
-                    document.getElementById('groom_photo').value = g.photo || "";
-                    document.getElementById('groom_name').value = g.name || "";
-                    document.getElementById('groom_desc').value = g.desc || "";
-                    document.getElementById('groom_ig').value = g.ig || "";
-
-                    // Load Bride
-                    const b = inv.bride || {};
-                    document.getElementById('bride_photo').value = b.photo || "";
-                    document.getElementById('bride_name').value = b.name || "";
-                    document.getElementById('bride_desc').value = b.desc || "";
-                    document.getElementById('bride_ig').value = b.ig || "";
-
-                    // Load Events
-                    const ev1 = inv.ev1 || {};
-                    document.getElementById('ev1_name').value = ev1.name || "";
-                    document.getElementById('ev1_date').value = toDateInputValue(ev1.date || "");
-                    document.getElementById('ev1_time').value = ev1.time || "";
-                    if (ev1.zone) document.getElementById('ev1_zone').value = ev1.zone;
-                    document.getElementById('ev1_loc_name').value = ev1.locName || "";
-                    document.getElementById('ev1_maps').value = ev1.maps || "";
-                    document.getElementById('ev1_photo').value = ev1.photo || "";
-
-                    const ev2 = inv.ev2 || {};
-                    document.getElementById('ev2_name').value = ev2.name || "";
-                    document.getElementById('ev2_date').value = toDateInputValue(ev2.date || "");
-                    document.getElementById('ev2_time').value = ev2.time || "";
-                    if (ev2.zone) document.getElementById('ev2_zone').value = ev2.zone;
-                    document.getElementById('ev2_loc_name').value = ev2.locName || "";
-                    document.getElementById('ev2_maps').value = ev2.maps || "";
-                    document.getElementById('ev2_photo').value = ev2.photo || "";
-
-                    // Load Gifts
-                    document.getElementById('show_gift').value = inv.show_gift !== undefined ? inv.show_gift : "true";
-                    document.getElementById('gift_header').value = inv.gift_header || "";
-                    
-                    const gifts = inv.gifts || [{}, {}, {}];
-                    document.getElementById('gift1_bank').value = gifts[0].bank || "BRI";
-                    document.getElementById('gift1_acc').value = gifts[0].acc || "0046 0101 6863 537";
-                    document.getElementById('gift1_owner').value = gifts[0].owner || "Bintang Zahlahar Trijati";
-                    
-                    document.getElementById('gift2_bank').value = gifts[1].bank || "BJB";
-                    document.getElementById('gift2_acc').value = gifts[1].acc || "0150614368104";
-                    document.getElementById('gift2_owner').value = gifts[1].owner || "Anisa Nur Fitria";
-
-                    document.getElementById('gift3_bank').value = gifts[2].bank || "DANA";
-                    document.getElementById('gift3_acc').value = gifts[2].acc || "082246379369";
-                    document.getElementById('gift3_owner').value = gifts[2].owner || "Anisa Nur Fitria";
-
-                    document.getElementById('inv_greeting').value = inv.greeting || "Yth. Bapak/Ibu/Saudara/i";
-
-                    // Load Gallery & Wishes
-                    document.getElementById('show_gallery').value = inv.show_gallery !== undefined ? inv.show_gallery : "true";
-                    document.getElementById('gallery_header').value = inv.gallery_header || "";
-                    document.getElementById('show_wishes').value = inv.show_wishes !== undefined ? inv.show_wishes : "true";
-                    document.getElementById('wishes_header').value = inv.wishes_header || "";
-                    
-                    const gal = inv.gallery || [];
-                    document.getElementById('gallery-container').innerHTML = '';
-                    galleryCount = 0;
-                    if (gal.length > 0) {
-                        gal.forEach(url => addGallerySlot(url));
-                    } else {
-                        for(let i=0; i<6; i++) addGallerySlot("");
-                    }
-                    
-                    if (s.theme) selectTheme(s.theme);
-                    
-                    // Cek apakah ada redirect dari Katalog (membawa theme_id baru)
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const newThemeId = urlParams.get('theme_id');
-                    if (newThemeId && newThemeId !== s.theme) {
-                        selectTheme(newThemeId);
-                        // Hapus parameter theme_id dari URL agar tidak loop save
-                        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?ssId=' + ssId;
-                        window.history.replaceState({path:newUrl}, '', newUrl);
-                        
-                        // Auto-save konfigurasi untuk menempelkan tema baru ke Supabase
-                        console.log("Auto-saving new theme from catalog:", newThemeId);
-                        setTimeout(saveInvitationConfig, 1500);
-                    }
-
-                    // Initial Preview update
-                    setTimeout(updatePreview, 1000);
+                    console.log("✅ Config loaded from GAS fallback");
+                    populateFormFromConfig(result.data);
                 }
             } catch (e) { console.error("Load Invitation Error:", e); }
         }
