@@ -766,19 +766,22 @@
         }
 
         async function loadInvitationSettings() {
-            const ssId = window.CURRENT_SS_ID;
+            const ssId = window.CURRENT_SS_ID || (new URLSearchParams(window.location.search)).get('ssId');
             if (!ssId) return;
+
+            const sbUrl = window.SB_URL || "https://llrapesaaoliyjrrrsjh.supabase.co";
+            const sbKey = window.SB_KEY || "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
 
             // ── STEP 1: Fast fetch from Supabase (~150ms) ──
             try {
                 const sbRes = await fetch(
-                    `${SB_URL}/rest/v1/config_invitation?ssid=eq.${ssId}&select=data&limit=1`,
-                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                    `${sbUrl}/rest/v1/config_invitation?ssid=eq.${ssId}&select=data&limit=1`,
+                    { headers: { "apikey": sbKey, "Authorization": "Bearer " + sbKey } }
                 );
                 if (sbRes.ok) {
                     const rows = await sbRes.json();
                     if (rows && rows.length > 0 && rows[0].data) {
-                        console.log("✅ Config loaded from Supabase");
+                        console.log("✅ Config loaded from Supabase for ssid:", ssId);
                         populateFormFromConfig({ invitationData: rows[0].data, theme: rows[0].data.theme });
                         return;
                     }
@@ -941,7 +944,7 @@
                 showSapaModal("Perhatian", "🔒 Mode Lihat Saja Aktif! Anda tidak dapat menyimpan konfigurasi.", "⚠️");
                 return;
             }
-            const ssId = window.CURRENT_SS_ID;
+            const ssId = window.CURRENT_SS_ID || (new URLSearchParams(window.location.search)).get('ssId');
             if (!ssId) {
                 showSapaModal("Error", "Sesi ID tidak ditemukan. Silakan muat ulang halaman.", "❌");
                 return;
@@ -1020,15 +1023,18 @@
                     theme: currentTheme
                 };
 
+                const sbUrl = window.SB_URL || "https://llrapesaaoliyjrrrsjh.supabase.co";
+                const sbKey = window.SB_KEY || "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
                 // ── STEP 1: Simpan ke Supabase langsung (~150ms, super cepat!) ──
                 const sbHeaders = {
-                    "apikey": SB_KEY,
-                    "Authorization": "Bearer " + SB_KEY,
+                    "apikey": sbKey,
+                    "Authorization": "Bearer " + sbKey,
                     "Content-Type": "application/json",
                     "Prefer": "resolution=merge-duplicates"
                 };
 
-                const sbRes = await fetch(`${SB_URL}/rest/v1/config_invitation?on_conflict=ssid`, {
+                const sbRes = await fetch(`${sbUrl}/rest/v1/config_invitation?on_conflict=ssid`, {
                     method: "POST",
                     headers: sbHeaders,
                     body: JSON.stringify({ ssid: ssId, data: invData, updated_at: new Date().toISOString() })
@@ -1036,9 +1042,9 @@
 
                 if (!sbRes.ok) {
                     const errTxt = await sbRes.text();
-                    console.warn("Supabase save warn:", sbRes.status, errTxt);
+                    console.error("Supabase save warn:", sbRes.status, errTxt);
                 } else {
-                    console.log("✅ Config saved to Supabase successfully!");
+                    console.log("✅ Config saved to Supabase successfully for ssid:", ssId);
                 }
 
                 // ── STEP 2: Mirror ke Google Sheet (GAS) secara background / async tanpa membuat tombol macet ──

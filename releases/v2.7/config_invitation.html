@@ -672,6 +672,25 @@
             const ssId = window.CURRENT_SS_ID;
             if (!ssId) return;
 
+            // ── STEP 1: Fast fetch from Supabase (~150ms) ──
+            try {
+                const sbRes = await fetch(
+                    `${SB_URL}/rest/v1/config_invitation?ss_id=eq.${ssId}&select=data&limit=1`,
+                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                );
+                if (sbRes.ok) {
+                    const rows = await sbRes.json();
+                    if (rows && rows.length > 0 && rows[0].data) {
+                        console.log("✅ Config loaded from Supabase");
+                        populateFormFromConfig({ invitationData: rows[0].data, theme: rows[0].data.theme });
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn("Supabase load error:", e);
+            }
+
+            // ── STEP 2: Fallback to GAS ──
             try {
                 const res = await fetch(`${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`);
                 const result = await res.json();
@@ -997,21 +1016,41 @@
                         invitationData: invData,
                         theme: currentTheme
                     }
+                // ── STEP 1: Simpan ke Supabase langsung (~150ms, super cepat!) ──
+                const sbHeaders = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json",
+                    "Prefer": "resolution=merge-duplicates"
                 };
-                const res = await fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-                const result = await res.json();
-                if (result.status !== "success") throw new Error(result.message || "GAS save gagal");
 
-                // ── STEP 2: Mirror ke Supabase langsung dari browser (non-blocking) ──
-                // Ini yang membuat undangan.html bisa load < 200ms tanpa GAS cold start.
-                fetch(`${SB_URL}/rest/v1/config_invitation?on_conflict=ssid`, {
+                const sbRes = await fetch(`${SB_URL}/rest/v1/config_invitation?on_conflict=ssid`, {
                     method: "POST",
-                    headers: SB_HDRS,
+                    headers: sbHeaders,
                     body: JSON.stringify({ ssid: ssId, data: invData, updated_at: new Date().toISOString() })
-                }).then(r => {
-                    if (!r.ok) console.warn("Mirror Supabase non-fatal:", r.status);
-                    else console.log("✅ Config mirrored to Supabase");
-                }).catch(e => console.warn("Mirror Supabase skip:", e.message));
+                });
+
+                if (!sbRes.ok) {
+                    const errTxt = await sbRes.text();
+                    console.warn("Supabase save warn:", sbRes.status, errTxt);
+                } else {
+                    console.log("✅ Config saved to Supabase successfully!");
+                }
+
+                // ── STEP 2: Mirror ke Google Sheet (GAS) secara background / async tanpa membuat tombol macet ──
+                const payload = {
+                    action: "updateClientData",
+                    ssId: ssId,
+                    eventData: {
+                        nama: (invData.groom.name || "") + " & " + (invData.bride.name || ""),
+                        invitationData: invData,
+                        theme: currentTheme
+                    }
+                };
+                fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+                    .then(r => r.json())
+                    .then(res => console.log("✅ Config synced to GAS in background"))
+                    .catch(err => console.warn("GAS sync background warning:", err));
 
                 btn.innerText = "✅ TERSIMPAN!";
                 setTimeout(() => { btn.innerText = "SIMPAN KONFIGURASI UNDANGAN"; btn.disabled = false; }, 2000);
