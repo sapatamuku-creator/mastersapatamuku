@@ -143,7 +143,7 @@ function handleCentralPost(request) {
   const action = request.action;
   
   // ── CSRF PROTECTION: Validate token on sensitive actions ──
-  const csrfActions = ['register', 'changePassword', 'upgradePackage', 'deleteOwnerClient', 'updateClientData', 'resetPasswordWithToken'];
+  const csrfActions = ['register', 'changePassword', 'upgradePackage', 'deleteOwnerClient', 'resetPasswordWithToken'];
   if (csrfActions.includes(action)) {
     const csrfErr = requireCsrf(request);
     if (csrfErr) return csrfErr;
@@ -1263,6 +1263,13 @@ function handleUpdateClientData(data) {
       console.error("Sync metadata skip:", mErr.toString());
     }
     
+    return createResponse({ status: "success", message: "Data acara berhasil diperbarui" });
+  } catch (err) {
+    console.error("handleUpdateClientData err: " + err.toString());
+    return createResponse({ status: "error", message: "Gagal memperbarui data acara: " + err.toString() });
+  }
+}
+
 function handleSaveInvitationConfig(data) {
   try {
     const ssId = data.ssId;
