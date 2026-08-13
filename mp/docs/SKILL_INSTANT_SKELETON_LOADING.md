@@ -122,9 +122,9 @@ async function loadData() {
 
 ---
 
-### Langkah 3: Render Gambar secara Asynchronous dengan Event `onload` & `onerror`
+### Langkah 3: Render Gambar secara Asynchronous dengan Lazy Loading (`loading="lazy"` & `decoding="async"`)
 
-Saat membuat element `<img>` pada template string JS, bungkus dengan `.img-skeleton-container` dan tambahkan handler event `onload` & `onerror`:
+Saat membuat element `<img>` pada template string JS, bungkus dengan `.img-skeleton-container`, sertakan `loading="lazy"` + `decoding="async"`, dan tambahkan handler event `onload` & `onerror` secara **independen per gambar**:
 
 ```javascript
 function renderAsyncImage(imgUrl, altText) {
@@ -138,12 +138,17 @@ function renderAsyncImage(imgUrl, altText) {
            alt="${altText}" 
            class="async-img" 
            style="width:100%;height:100%;object-fit:cover"
+           loading="lazy"
+           decoding="async"
            onload="this.classList.add('img-loaded'); this.parentElement.classList.add('img-loaded')"
            onerror="this.style.display='none'; this.parentElement.classList.add('img-loaded')">
     </div>
   `;
 }
 ```
+
+> **Catatan Arsitektur (Lazy & Parallel Image Stream)**: 
+> Dengan `loading="lazy"` & `decoding="async"`, browser tidak menunggu seluruh foto selesai di-download bersamaan. Setiap 1 foto yang siap dari Google Drive/GAS/Supabase akan **langsung tampil secara independen dan paralel berurutan** tanpa menahan foto lainnya.
 
 ---
 
