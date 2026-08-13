@@ -500,15 +500,19 @@
         btn.disabled = true;
 
         try {
-            const res = await fetch(GAS_SYNC_URL, {
-                method: "POST",
-                body: JSON.stringify({
-                    action: "sendOwnerOtp",
-                    adminPassword: adminPassword,
-                    method: selectedOtpMethod
-                })
-            });
-            const result = await res.json();
+            const getUrl = `${GAS_SYNC_URL}?action=sendOwnerOtp&adminPassword=${encodeURIComponent(adminPassword)}&method=${encodeURIComponent(selectedOtpMethod)}`;
+            const res = await fetch(getUrl);
+            const txt = await res.text();
+            let result;
+            try {
+                result = JSON.parse(txt);
+            } catch(jsonErr) {
+                const postRes = await fetch(GAS_SYNC_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "sendOwnerOtp", adminPassword: adminPassword, method: selectedOtpMethod })
+                });
+                result = await postRes.json();
+            }
 
             if (result.status === 'success') {
                 showToast(`✅ Kode OTP berhasil dikirim via ${selectedOtpMethod.toUpperCase()}!`, "green");
@@ -521,7 +525,7 @@
                 btn.disabled = false;
             }
         } catch (e) {
-            showToast("❌ Error Koneksi OTP: " + e.toString(), "red");
+            showToast("❌ Error Koneksi OTP: " + e.message, "red");
             btn.innerHTML = '⚡ Kirim Kode OTP';
             btn.disabled = false;
         }
@@ -555,15 +559,19 @@
         btn.disabled = true;
 
         try {
-            const res = await fetch(GAS_SYNC_URL, {
-                method: "POST",
-                body: JSON.stringify({
-                    action: "verifyOwnerOtp",
-                    adminPassword: adminPassword,
-                    otp: otpCode
-                })
-            });
-            const result = await res.json();
+            const getUrl = `${GAS_SYNC_URL}?action=verifyOwnerOtp&adminPassword=${encodeURIComponent(adminPassword)}&otp=${encodeURIComponent(otpCode)}`;
+            const res = await fetch(getUrl);
+            const txt = await res.text();
+            let result;
+            try {
+                result = JSON.parse(txt);
+            } catch(jsonErr) {
+                const postRes = await fetch(GAS_SYNC_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ action: "verifyOwnerOtp", adminPassword: adminPassword, otp: otpCode })
+                });
+                result = await postRes.json();
+            }
 
             if (result.status === 'success') {
                 showToast("🎉 Verifikasi 2FA Berhasil! Selamat Datang, Owner.", "green");
@@ -575,7 +583,7 @@
                 showToast("❌ " + (result.message || "Kode OTP Salah / Expired"), "red");
             }
         } catch(e) {
-            showToast("❌ Error Verifikasi OTP: " + e.toString(), "red");
+            showToast("❌ Error Verifikasi OTP: " + e.message, "red");
         }
         btn.innerHTML = 'Verifikasi & Masuk Dashboard';
         btn.disabled = false;

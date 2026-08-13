@@ -15,6 +15,8 @@ function doGet(e) {
     case 'getWAForm':
       return handleWAFormGet(e);
     case 'resolveSubdomain':
+    case 'sendOwnerOtp':
+    case 'verifyOwnerOtp':
       return handleCentralPost(e.parameter);
     case 'logout':
       return handleLogout(e.parameter);
