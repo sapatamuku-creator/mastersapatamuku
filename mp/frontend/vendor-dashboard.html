@@ -794,7 +794,7 @@
     function updateCategoryDatalist() {
       const datalist = $('categoryDatalist');
       if (!datalist) return;
-      const cats = [...new Set(_packages.map(p => (p.category_name || '').trim()).filter(Boolean))];
+      const cats = [...new Set(_packages.map(p => (p.category_name || p.short_desc || '').trim()).filter(Boolean))];
       datalist.innerHTML = cats.map(c => `<option value="${c}">`).join('');
     }
 
@@ -803,7 +803,7 @@
       if (!filterEl) return;
       updateCategoryDatalist();
 
-      const cats = [...new Set(_packages.map(p => (p.category_name || '').trim()).filter(Boolean))];
+      const cats = [...new Set(_packages.map(p => (p.category_name || p.short_desc || '').trim()).filter(Boolean))];
       if (cats.length === 0) {
         filterEl.style.display = 'none';
         return;
@@ -812,7 +812,7 @@
       const filterCats = ['Semua', ...cats];
       filterEl.innerHTML = filterCats.map(c => `
         <button type="button" class="nav-btn ${c === _currentCategoryFilter ? 'active' : ''}" style="padding:6px 14px;font-size:0.82rem;white-space:nowrap;border-radius:20px;background:${c === _currentCategoryFilter ? 'var(--primary-dark)' : 'var(--bg)'};color:${c === _currentCategoryFilter ? '#fff' : 'var(--text-main)'};border:1px solid var(--surface-border)" onclick="setCategoryFilter('${c}')">
-          ${c} ${c === 'Semua' ? `(${_packages.length})` : `(${_packages.filter(p => (p.category_name || '').trim() === c).length})`}
+          ${c} ${c === 'Semua' ? `(${_packages.length})` : `(${_packages.filter(p => (p.category_name || p.short_desc || '').trim() === c).length})`}
         </button>
       `).join('');
     }
@@ -1227,7 +1227,7 @@
 
       const displayList = _currentCategoryFilter === 'Semua' 
         ? _packages 
-        : _packages.filter(p => (p.category_name || '').trim() === _currentCategoryFilter);
+        : _packages.filter(p => (p.category_name || p.short_desc || '').trim() === _currentCategoryFilter);
 
       if (displayList.length === 0) {
         container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Tidak ada paket untuk kategori "${_currentCategoryFilter}".</p></div>`;
@@ -1255,7 +1255,7 @@
         `;
         const tagLabel = p.price_label || p.badge_tag;
         const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
-        const catName = (p.category_name || '').trim();
+        const catName = (p.category_name || p.short_desc || '').trim();
         const catBadge = catName ? `<span style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.65);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;backdrop-filter:blur(4px);z-index:2">${catName}</span>` : '';
 
         return `
@@ -1294,7 +1294,7 @@
       if ($('btnSubmitPkg')) $('btnSubmitPkg').textContent = '💾 Simpan Perubahan Paket';
 
       $('pkgName').value = p.name || '';
-      if ($('pkgCategory')) $('pkgCategory').value = p.category_name || '';
+      if ($('pkgCategory')) $('pkgCategory').value = p.category_name || p.short_desc || '';
 
       const curr = p.currency || 'IDR';
       if ($('pkgCurrency')) $('pkgCurrency').value = curr;

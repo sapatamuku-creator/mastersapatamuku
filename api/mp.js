@@ -750,6 +750,9 @@ export default async function handler(req, res) {
         if (req.method === 'GET') {
           const prodRes = await sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&order=sort_order.asc,created_at.desc&select=*`);
           const products = prodRes.ok ? await prodRes.json() : [];
+          products.forEach(p => {
+            p.category_name = p.category_name || p.short_desc || '';
+          });
           return res.status(200).json({ data: products });
         }
 
@@ -760,6 +763,7 @@ export default async function handler(req, res) {
           const slug = generateSlug(name) + '-' + Date.now().toString(36);
           const finalImage = image_url || cover_image_url || null;
           const finalPrice = Math.round(parseFloat(price)) || 0;
+          const catVal = category_name ? category_name.trim() : '';
 
           const insertRes = await sbServiceFetch('/mp_products', {
             method: 'POST',
@@ -769,9 +773,9 @@ export default async function handler(req, res) {
               slug: slug,
               price: finalPrice,
               description: description ? description.trim() : '',
+              short_desc: catVal,
               cover_image_url: finalImage,
               price_label: badge_tag ? badge_tag.trim() : null,
-              category_name: category_name ? category_name.trim() : 'Wedding',
               is_active: true
             }),
             headers: { 'Prefer': 'return=representation' }
@@ -783,6 +787,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: errMsg });
           }
           const product = Array.isArray(insertedJson) ? insertedJson[0] : insertedJson;
+          if (product) product.category_name = product.category_name || product.short_desc || '';
           return res.status(201).json({ success: true, product });
         }
 
@@ -802,7 +807,7 @@ export default async function handler(req, res) {
           const finalImage = image_url || cover_image_url;
           if (finalImage !== undefined) updateBody.cover_image_url = finalImage || null;
           if (badge_tag !== undefined) updateBody.price_label = badge_tag ? badge_tag.trim() : null;
-          if (category_name !== undefined) updateBody.category_name = category_name ? category_name.trim() : 'Wedding';
+          if (category_name !== undefined) updateBody.short_desc = category_name ? category_name.trim() : '';
           updateBody.updated_at = new Date().toISOString();
 
           const updateRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&vendor_id=eq.${vendor.id}`, {
@@ -816,6 +821,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: errMsg });
           }
           const product = Array.isArray(updatedJson) ? updatedJson[0] : updatedJson;
+          if (product) product.category_name = product.category_name || product.short_desc || '';
           return res.status(200).json({ success: true, product });
         }
 
