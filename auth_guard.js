@@ -396,19 +396,21 @@
         // 1. Tentukan durasi idle berdasarkan halaman (Optimasi Supabase Pooler)
         let idleTimeoutDuration = 2 * 60 * 1000; // Standar 2 Menit (Dashboard & Undangan)
 
-        // Halaman operasional Hari H: kiosk/checkin/onsite/worker/welcome/formulir_tamu
+        // Halaman operasional Hari H & Konfigurasi Undangan: kiosk/checkin/onsite/worker/welcome/formulir_tamu/config_invitation
         // Mendapatkan idle timeout 60 menit DAN koneksi Realtime TIDAK diputus saat tab inactive
         const isOperationalPage = (
-            path.includes('kiosk.html') ||
-            path.includes('worker.html') ||
-            path.includes('onsite.html') ||
-            path.includes('checkin.html') ||
-            path.includes('welcome.html') ||
-            path.includes('formulir_tamu.html')
+            path.includes('kiosk') ||
+            path.includes('worker') ||
+            path.includes('onsite') ||
+            path.includes('checkin') ||
+            path.includes('welcome') ||
+            path.includes('formulir_tamu') ||
+            path.includes('config_invitation') ||
+            path.includes('config')
         );
 
         if (isOperationalPage) {
-            idleTimeoutDuration = 60 * 60 * 1000; // 60 Menit
+            idleTimeoutDuration = 60 * 60 * 1000; // 60 Menit (Aman untuk operasional & konfigurasi undangan)
         }
 
         // 2. Pembersihan Koneksi Realtime Supabase Dinamis
