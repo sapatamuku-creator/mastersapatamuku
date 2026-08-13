@@ -5,6 +5,8 @@
 window.SAPATAMU_RESOLVED = false;
 window.CURRENT_SS_ID = null;
 window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+window.SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
+window.SB_KEY = "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
 
 // SECURITY: URL parameter validation helpers
 const VALID_CATEGORIES = ['wedding', 'birthday', 'anniversary', 'corporate', 'gathering'];

@@ -117,9 +117,13 @@
             }
         }
 
-        // ─── 3. LOAD DATA FROM SUPABASE ───
+        let _resolveRetries = 0;
         async function loadDynamicConfig() {
-            if (!window.SAPATAMU_RESOLVED) { setTimeout(loadDynamicConfig, 100); return; }
+            if (!window.SAPATAMU_RESOLVED && _resolveRetries < 20) {
+                _resolveRetries++;
+                setTimeout(loadDynamicConfig, 100);
+                return;
+            }
             const ssId = window.CURRENT_SS_ID || urlParams.get('ssId');
 
             try {
