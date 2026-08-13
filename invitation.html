@@ -92,6 +92,13 @@
                 if (!htmlRes.ok) throw new Error("Template HTML tidak ditemukan.");
                 const htmlText = await htmlRes.text();
                 
+                // Fetch CSS
+                const cssRes = await fetch(`/assets/templates/${themeId}/style.css`);
+                if (cssRes.ok) {
+                    const cssText = await cssRes.text();
+                    document.getElementById('dynamic-style').innerHTML = cssText;
+                }
+
                 // Inject Layout (append ke body, hindari hapus audio & loader)
                 let templateWrapper = document.getElementById('template-wrapper');
                 if (!templateWrapper) {
@@ -100,12 +107,8 @@
                     document.getElementById('dynamic-body').appendChild(templateWrapper);
                 }
                 templateWrapper.innerHTML = htmlText;
-
-                // Fetch CSS
-                const cssRes = await fetch(`/assets/templates/${themeId}/style.css`);
-                if (cssRes.ok) {
-                    const cssText = await cssRes.text();
-                    document.getElementById('dynamic-style').innerHTML = cssText;
+                if (window.tailwind && typeof window.tailwind.refresh === 'function') {
+                    try { window.tailwind.refresh(); } catch(e) {}
                 }
 
                 console.log(`✅ Template [${themeId}] loaded successfully.`);
