@@ -13,8 +13,10 @@ function validateSsId(val) {
   return val && /^[a-zA-Z0-9_-]{20,60}$/.test(val) ? val : null;
 }
 function validateUsername(val) {
-  // Username: lowercase alphanumeric, 3-50 chars
-  return val && /^[a-z0-9]{3,50}$/.test(val) ? val : null;
+  // Username slug: lowercase alphanumeric, hyphens, underscores, 3-50 chars
+  if (!val) return null;
+  const clean = String(val).toLowerCase().replace(/[\s&]/g, '').replace(/[^a-z0-9_-]/g, '');
+  return clean && clean.length >= 3 && clean.length <= 50 ? clean : null;
 }
 function validateCategory(val) {
   return val && VALID_CATEGORIES.includes(val.toLowerCase()) ? val.toLowerCase() : 'wedding';
@@ -75,23 +77,21 @@ async function resolveSapatamuSubdomain() {
             window.CURRENT_SS_ID = validSsId;
 
             // Simpan ke storage jika ada data user/kategori
-            if (_urlUser) {
-                const validUser = validateUsername(_urlUser);
-                const validCat = validateCategory(_urlParams.get('category'));
-                if (!validUser) {
-                    console.warn("Invalid username parameter rejected:", _urlUser);
-                } else {
-                    // Simpan role dari URL (jika baru login) atau pertahankan role yang ada
-                    const _urlRole = _urlParams.get('role');
-                    const _existingRole = (function () {
-                        try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch (e) { return undefined; }
-                    })();
-                    const _sessionRole = _urlRole || _existingRole || 'client';
-                    const _sessionData = { ssId: validSsId, username: validUser, category: validCat, role: _sessionRole };
-                    localStorage.setItem('sapatamu_db', JSON.stringify(_sessionData));
-                    sessionStorage.setItem('sapatamu_session', JSON.stringify(_sessionData));
-                    window.CURRENT_CATEGORY = validCat;
-                }
+            const subFromHost = (parts.length >= 3 && parts[0] !== 'www') ? parts[0].toLowerCase() : null;
+            const validUser = validateUsername(_urlUser) || subFromHost;
+            const validCat = validateCategory(_urlParams.get('category'));
+
+            if (validUser) {
+                // Simpan role dari URL (jika baru login) atau pertahankan role yang ada
+                const _urlRole = _urlParams.get('role');
+                const _existingRole = (function () {
+                    try { return JSON.parse(localStorage.getItem('sapatamu_db'))?.role; } catch (e) { return undefined; }
+                })();
+                const _sessionRole = _urlRole || _existingRole || 'client';
+                const _sessionData = { ssId: validSsId, username: validUser, category: validCat, role: _sessionRole };
+                localStorage.setItem('sapatamu_db', JSON.stringify(_sessionData));
+                sessionStorage.setItem('sapatamu_session', JSON.stringify(_sessionData));
+                window.CURRENT_CATEGORY = validCat;
             }
 
             // Bersihkan URL tanpa reload
