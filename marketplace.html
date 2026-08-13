@@ -535,21 +535,29 @@
       if (rc) rc.textContent = '...';
 
       const q = searchInput ? searchInput.value.trim() : '';
-      const params = new URLSearchParams();
-      if (q) params.set('q', q);
-      if (selectedCat) params.set('kategori', selectedCat);
-      if (selectedKotaName) params.set('city', selectedKotaName);
-      else if (selectedProvName) params.set('city', selectedProvName);
-      params.set('limit', '24');
+const params = new URLSearchParams();
+if (q) params.set('q', q);
+if (selectedCat) params.set('kategori', selectedCat);
+if (selectedKotaName) params.set('city', selectedKotaName);
+else if (selectedProvName) params.set('city', selectedProvName);
+params.set('limit', '24');
 
-      try {
-        const res = await fetch('/api/mp/vendors?' + params.toString());
-        const json = await res.json();
-        if (json.data) {
-          renderVendors(json.data);
-          if (rc) rc.textContent = json.data.length;
-        }
-      } catch(e) {}
+const cacheKey = 'mv:' + params.toString();
+const cached = apiCacheGet(cacheKey, 5 * 60 * 1000);
+if (cached && cached.data && cached.data.length) {
+renderVendors(cached.data);
+if (rc) rc.textContent = cached.data.length;
+}
+
+try {
+const res = await fetch('/api/mp/vendors?' + params.toString());
+const json = await res.json();
+if (json.data) {
+apiCacheSet(cacheKey, json);
+renderVendors(json.data);
+if (rc) rc.textContent = json.data.length;
+}
+} catch(e) {}
     }
 
     function renderVendors(vendors) {
@@ -647,12 +655,30 @@
       }).join(' ');
     }
 
+    function apiCacheGet(key, ttlMs) {
+      try {
+        const raw = localStorage.getItem('api-cache:' + key);
+        if (!raw) return null;
+        const item = JSON.parse(raw);
+        if (Date.now() - item.t > ttlMs) { localStorage.removeItem('api-cache:' + key); return null; }
+        return item.d;
+      } catch (e) { return null; }
+    }
+    function apiCacheSet(key, data) {
+      try { localStorage.setItem('api-cache:' + key, JSON.stringify({ t: Date.now(), d: data })); } catch (e) {}
+    }
+
     async function fetchRegionData(urlProxy, urlCDN, urlEmsifa) {
+      const cached = apiCacheGet('regions:' + urlProxy, 24 * 60 * 60 * 1000);
+      if (cached && Array.isArray(cached) && cached.length > 0) return cached;
       try {
         let res = await fetch(urlProxy);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) return data;
+          if (Array.isArray(data) && data.length > 0) {
+            apiCacheSet('regions:' + urlProxy, data);
+            return data;
+          }
         }
       } catch (e) {}
       try {
