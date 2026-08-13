@@ -187,8 +187,7 @@ export default async function handler(req) {
         if (city) query += `&city=ilike.*${encodeURIComponent(city)}*`;
         if (searchTerm) query += `&or=(business_name.ilike.*${encodeURIComponent(searchTerm)}*,description.ilike.*${encodeURIComponent(searchTerm)}*,city.ilike.*${encodeURIComponent(searchTerm)}*)`;
 
-        const offset = (page - 1) * limit;
-        query += `&order=is_verified.desc,rating_avg.desc,created_at.desc&range=${offset}-${offset + limit - 1}`;
+        query += `&limit=50`;
 
         let vRes = await sbServiceFetch(query);
         let vendors = vRes.ok ? await vRes.json() : [];
@@ -232,7 +231,14 @@ export default async function handler(req) {
           allProducts = prodRes.ok ? await prodRes.json() : [];
         }
 
-        const enriched = (vendors || []).map(v => {
+        const enriched = (vendors || [])
+          .sort((a, b) => {
+            if ((b.is_verified ? 1 : 0) !== (a.is_verified ? 1 : 0)) return (b.is_verified ? 1 : 0) - (a.is_verified ? 1 : 0);
+            if ((b.rating_avg || 0) !== (a.rating_avg || 0)) return (b.rating_avg || 0) - (a.rating_avg || 0);
+            return String(b.created_at || '').localeCompare(String(a.created_at || ''));
+          })
+          .slice((page - 1) * limit, (page - 1) * limit + limit)
+          .map(v => {
           const vProds = (allProducts || []).filter(p => p.vendor_id === v.id);
           let minPrice = v.price_from || 0;
           let coverImg = v.cover_image_url || null;
