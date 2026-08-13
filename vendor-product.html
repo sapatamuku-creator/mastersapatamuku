@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detail Paket — Marketplace Sapatamu.id</title>
+  <meta name="description" content="Detail rincian fasilitas paket, harga, ulasan, dan konsultasi WhatsApp di Sapatamu.id">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,400&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── 60-30-10 COLOR PALETTE HARMONY ── */
+    :root {
+      --primary:        #e07b7b;
+      --primary-dark:   #c45c5c;
+      --gold:           #c8962e;
+      --text-main:      #2c2420;
+      --text-light:     #63574e;
+      --text-muted:     #8e8278;
+      --bg:             #faf8f5;
+      --white:          #ffffff;
+      --border:         #efe9e0;
+      --cta-green:      #1b5e43;
+      --cta-green-dark: #144733;
+      --shadow-sm:      0 2px 8px rgba(44, 36, 32, 0.04);
+      --shadow-md:      0 6px 20px rgba(44, 36, 32, 0.08);
+      --shadow-lg:      0 12px 36px rgba(44, 36, 32, 0.12);
+      --radius:         16px;
+      --radius-sm:      10px;
+      --radius-lg:      24px;
+      --transition:     all 0.25s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* PROGRESSIVE ASYNC SHIMMER ANIMATION */
+    @keyframes shimmerPulse {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .img-skeleton-container {
+      position: relative;
+      overflow: hidden;
+      background: #F2EFEA;
+    }
+    .img-skeleton-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(90deg, rgba(242,239,234,0.4) 0%, rgba(255,255,255,0.9) 50%, rgba(242,239,234,0.4) 100%);
+      background-size: 200% 100%;
+      animation: shimmerPulse 1.4s ease-in-out infinite;
+      z-index: 1;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .img-skeleton-container.img-loaded::before {
+      opacity: 0;
+      animation: none;
+    }
+    .async-img {
+      opacity: 0;
+      transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .async-img.img-loaded {
+      opacity: 1;
+    }
+
+    body { font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.6; }
+    a { text-decoration: none; color: inherit; }
+    img { max-width: 100%; height: auto; display: block; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+    /* NAVBAR */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border); transition: var(--transition);
+    }
+    .navbar .inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 20px;
+      height: 60px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-back { display: flex; align-items: center; gap: 6px; font-size: 0.88rem; color: var(--text-light); font-weight: 600; }
+    .nav-back:hover { color: var(--primary-dark); }
+    .nav-logo { font-family: 'Lora', serif; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text-main); }
+    .nav-logo span { width: 30px; height: 30px; background: linear-gradient(135deg,var(--primary),var(--gold)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.85rem; }
+
+    /* LAYOUT & CONTAINERS */
+    .container { max-width: 1200px; margin: 80px auto 60px; padding: 0 24px; }
+    
+    .breadcrumb { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .breadcrumb a { color: var(--text-light); }
+    .breadcrumb a:hover { color: var(--primary-dark); }
+
+    /* PRODUCT HERO GRID */
+    .product-hero {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 36px;
+      background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--border);
+      padding: 32px; box-shadow: var(--shadow-md); margin-bottom: 36px;
+    }
+    @media (max-width: 860px) { .product-hero { grid-template-columns: 1fr; gap: 24px; padding: 20px; } }
+
+    .product-cover-wrap { position: relative; border-radius: var(--radius); overflow: hidden; height: 380px; background: #fce4e4; }
+    @media (max-width: 600px) { .product-cover-wrap { height: 260px; } }
+    .product-cover-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .pkg-tag-badge {
+      position: absolute; top: 16px; right: 16px; padding: 6px 14px; border-radius: 50px;
+      font-size: 0.8rem; font-weight: 700; background: linear-gradient(135deg, var(--gold), #d4a037); color: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2;
+    }
+    .pkg-category-badge {
+      position: absolute; top: 16px; left: 16px; padding: 6px 14px; border-radius: 50px;
+      font-size: 0.8rem; font-weight: 700; background: rgba(0,0,0,0.65); color: #fff;
+      backdrop-filter: blur(4px); z-index: 2;
+    }
+
+    .product-info { display: flex; flex-direction: column; }
+    .vendor-mini-link {
+      display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px;
+      padding: 6px 14px; border-radius: 50px; background: var(--bg); border: 1px solid var(--border);
+      font-size: 0.88rem; font-weight: 600; color: var(--text-main); width: fit-content; transition: var(--transition);
+    }
+    .vendor-mini-link:hover { border-color: var(--primary); color: var(--primary-dark); }
+    .vendor-avatar-mini { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--primary); }
+
+    .product-title { font-family: 'Lora', serif; font-size: clamp(1.4rem, 2.2vw, 2rem); font-weight: 700; color: var(--text-main); margin-bottom: 12px; line-height: 1.3; }
+    .product-price { font-size: 1.8rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 20px; }
+
+    .btn-wa-lg {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 16px 28px; border-radius: 50px;
+      background: linear-gradient(135deg, var(--cta-green), #246d50); color: #fff; font-weight: 700; font-size: 1rem;
+      box-shadow: 0 6px 20px rgba(27, 94, 67, 0.28); transition: var(--transition); margin-bottom: 16px; width: 100%;
+    }
+    .btn-wa-lg:hover { transform: translateY(-2px); background: linear-gradient(135deg, var(--cta-green-dark), #1d5c43); box-shadow: 0 8px 24px rgba(27, 94, 67, 0.38); }
+
+    .btn-store-outline {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 24px; border-radius: 50px; border: 1.5px solid var(--border);
+      background: var(--white); color: var(--text-main); font-weight: 600; font-size: 0.9rem;
+      transition: var(--transition); width: 100%;
+    }
+    .btn-store-outline:hover { border-color: var(--primary); color: var(--primary-dark); background: var(--bg); }
+
+    /* CONTENT DETAILS & REVIEWS GRID */
+    .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 36px; }
+    @media (max-width: 900px) { .content-grid { grid-template-columns: 1fr; } }
+
+    .section-card {
+      background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--border);
+      padding: 32px; box-shadow: var(--shadow-sm); margin-bottom: 32px;
+    }
+    .section-title { font-family: 'Lora', serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 18px; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+
+    .product-desc-text { font-size: 0.95rem; color: var(--text-light); line-height: 1.8; white-space: pre-line; }
+
+    /* OTHER PRODUCTS CAROUSEL GRID */
+    .other-products-title { font-family: 'Lora', serif; font-size: 1.4rem; font-weight: 700; margin-bottom: 20px; color: var(--text-main); }
+    .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+    .pkg-card {
+      background: var(--white); border-radius: var(--radius); border: 1px solid var(--border);
+      overflow: hidden; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; transition: var(--transition);
+    }
+    .pkg-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: rgba(224,123,123,0.4); }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="inner">
+      <a href="#" id="navBackVendor" class="nav-back">← Kembali ke Profil Vendor</a>
+      <a href="/" class="nav-logo">sapatamu</a>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTAINER -->
+  <div class="container">
+    
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+      <a href="/marketplace">Marketplace</a> &gt;
+      <a href="#" id="bcVendorName">Vendor</a> &gt;
+      <span id="bcProductName" style="color:var(--text-main);font-weight:600">Detail Paket</span>
+    </div>
+
+    <!-- PRODUCT HERO -->
+    <div class="product-hero">
+      <div class="product-cover-wrap" id="coverContainer">
+        <div class="img-skeleton-container" style="width:100%;height:100%"></div>
+      </div>
+
+      <div class="product-info">
+        <a href="#" id="vendorBadgeLink" class="vendor-mini-link">
+          <div class="img-skeleton-container" style="width:28px;height:28px;border-radius:50%"></div>
+          <span id="vendorBadgeName">Memuat Vendor...</span>
+        </a>
+
+        <h1 class="product-title" id="productTitle">
+          <div class="img-skeleton-container" style="width:80%;height:32px;border-radius:6px"></div>
+        </h1>
+
+        <div class="product-price" id="productPrice">
+          <div class="img-skeleton-container" style="width:160px;height:28px;border-radius:6px"></div>
+        </div>
+
+        <div style="margin-top:auto;padding-top:20px">
+          <a href="#" id="btnWaOrder" target="_blank" class="btn-wa-lg">
+            💬 Konsultasi &amp; Pesan via WhatsApp ↗
+          </a>
+          <a href="#" id="btnViewVendorStore" class="btn-store-outline">
+            🏪 Lihat Semua Paket dari Vendor Ini
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT GRID: DESCRIPTION & REVIEWS -->
+    <div class="content-grid">
+      <div>
+        <div class="section-card">
+          <h2 class="section-title">Deskripsi &amp; Rincian Fasilitas Paket</h2>
+          <div class="product-desc-text" id="productDesc">
+            <div class="img-skeleton-container" style="width:100%;height:16px;border-radius:4px;margin-bottom:8px"></div>
+            <div class="img-skeleton-container" style="width:90%;height:16px;border-radius:4px;margin-bottom:8px"></div>
+            <div class="img-skeleton-container" style="width:75%;height:16px;border-radius:4px"></div>
+          </div>
+        </div>
+
+        <!-- REVIEWS SECTION -->
+        <div class="section-card">
+          <h2 class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Ulasan &amp; Preview Paket</span>
+            <span style="font-size:0.9rem;font-weight:600;color:var(--gold)" id="reviewScoreHeader">⭐ 5.0</span>
+          </h2>
+          <div id="reviewsContainer">
+            <p style="color:var(--text-muted);font-size:0.9rem">Memuat ulasan vendor...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIDEBAR VENDOR SUMMARY -->
+      <div>
+        <div class="section-card" style="position:sticky;top:84px">
+          <h3 style="font-family:'Lora',serif;font-weight:700;font-size:1.1rem;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px">Informasi Penyedia Layanan</h3>
+          
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <div id="vendorSideLogo" style="width:48px;height:48px;border-radius:50%;overflow:hidden;background:var(--primary);flex-shrink:0">
+              <div class="img-skeleton-container" style="width:100%;height:100%"></div>
+            </div>
+            <div>
+              <strong id="vendorSideName" style="font-size:0.95rem;display:block">-</strong>
+              <small id="vendorSideCity" style="color:var(--text-muted);font-size:0.8rem">-</small>
+            </div>
+          </div>
+
+          <p id="vendorSideDesc" style="font-size:0.85rem;color:var(--text-light);line-height:1.6;margin-bottom:20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">-</p>
+
+          <a href="#" id="btnWaSideDirect" target="_blank" class="btn-wa-lg" style="padding:10px 18px;font-size:0.88rem;margin-bottom:10px">
+            💬 Chat Vendor Langsung
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- OTHER PACKAGES CAROUSEL GRID -->
+    <div style="margin-top:20px">
+      <h2 class="other-products-title">Paket Lainnya dari Vendor Ini</h2>
+      <div class="pkg-grid" id="otherProductsGrid">
+        <div class="pkg-card" style="pointer-events:none">
+          <div class="img-skeleton-container" style="height:180px;width:100%"></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+            <div class="img-skeleton-container" style="width:140px;height:18px;border-radius:6px"></div>
+            <div class="img-skeleton-container" style="width:90px;height:16px;border-radius:4px"></div>
+          </div>
+        </div>
+        <div class="pkg-card" style="pointer-events:none">
+          <div class="img-skeleton-container" style="height:180px;width:100%"></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+            <div class="img-skeleton-container" style="width:140px;height:18px;border-radius:6px"></div>
+            <div class="img-skeleton-container" style="width:90px;height:16px;border-radius:4px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('id') || '';
+    const vendorSlugParam = urlParams.get('vendor') || '';
+
+    const igVerifiedBadge = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#0095F6" style="display:inline-block;vertical-align:middle;margin-left:4px" title="Terverifikasi"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.347-1.903-4.25-4.25-4.25-.495 0-.965.084-1.4.238C14.34 2.215 12.97 1.34 11.39 1.34s-2.95.875-3.6 2.148c-.435-.154-.905-.238-1.4-.238-2.347 0-4.25 1.903-4.25 4.25 0 .495.084.965.238 1.4C1.215 9.55.34 10.92.34 12.5s.875 2.95 2.148 3.6c-.154.435-.238.905-.238 1.4 0 2.347 1.903 4.25 4.25 4.25.495 0 .965-.084 1.4-.238.65 1.273 2.02 2.148 3.6 2.148s2.95-.875 3.6-2.148c.435.154.905.238 1.4.238 2.347 0 4.25-1.903 4.25-4.25 0-.495-.084-.965-.238-1.4 1.273-.65 2.148-2.02 2.148-3.6zM9.9 17.25l-4.15-4.15 1.414-1.414 2.736 2.736 6.886-6.886 1.414 1.414-8.3 8.3z"/></svg>`;
+
+    function formatRupiah(num) {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+    }
+
+    async function loadProductDetail() {
+      if (!productId) {
+        alert('Produk tidak ditemukan');
+        window.location.href = '/marketplace';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/mp/product-detail?id=${encodeURIComponent(productId)}`);
+        if (!res.ok) {
+          $('productTitle').textContent = 'Produk Tidak Ditemukan';
+          return;
+        }
+
+        const data = await res.json();
+        const p = data.product;
+        const v = data.vendor;
+        const otherProducts = data.otherProducts || [];
+        const reviews = data.reviews || [];
+
+        if (!p || !v) {
+          $('productTitle').textContent = 'Detail Produk Tidak Ditemukan';
+          return;
+        }
+
+        document.title = `${p.name} — ${v.business_name} | Sapatamu.id`;
+
+        // BREADCRUMBS & NAVIGATION LINKS
+        const vendorProfileUrl = `/vendor/${v.slug || vendorSlugParam}`;
+        $('navBackVendor').href = vendorProfileUrl;
+        $('bcVendorName').href = vendorProfileUrl;
+        $('bcVendorName').textContent = v.business_name;
+        $('bcProductName').textContent = p.name;
+
+        // VENDOR MINI LINK
+        $('vendorBadgeLink').href = vendorProfileUrl;
+        $('vendorBadgeName').innerHTML = `${v.business_name} ${igVerifiedBadge}`;
+        if (v.logo_url) {
+          $('vendorBadgeLink').querySelector('.img-skeleton-container').innerHTML = `
+            <img src="${v.logo_url}" class="vendor-avatar-mini async-img" alt="${v.business_name}" loading="lazy" decoding="async" onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')">
+          `;
+        }
+
+        // HERO COVER IMAGE
+        const coverImg = p.cover_image_url || p.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80';
+        const tagLabel = p.price_label || p.badge_tag;
+        const tagHtml = tagLabel ? `<span class="pkg-tag-badge">${tagLabel}</span>` : '';
+        const catBadgeHtml = p.category_name ? `<span class="pkg-category-badge">${p.category_name}</span>` : '';
+
+        $('coverContainer').innerHTML = `
+          ${catBadgeHtml}
+          ${tagHtml}
+          <div class="img-skeleton-container" style="width:100%;height:100%">
+            <img src="${coverImg}" class="async-img" style="width:100%;height:100%;object-fit:cover" alt="${p.name}" loading="lazy" decoding="async" onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')">
+          </div>
+        `;
+
+        // PRODUCT TITLE & PRICE
+        $('productTitle').textContent = p.name;
+        $('productPrice').textContent = formatRupiah(p.price);
+
+        // WHATSAPP CTA LINK
+        const waNum = (v.whatsapp || '').replace(/[^0-9]/g, '');
+        const waMsg = `Halo%20${encodeURIComponent(v.business_name)},%20saya%20tertarik%20dengan%20paket%20"${encodeURIComponent(p.name)}"%20seharga%20${encodeURIComponent(formatRupiah(p.price))}%20di%20Sapatamu.id`;
+        const waUrl = `https://wa.me/${waNum}?text=${waMsg}`;
+        $('btnWaOrder').href = waUrl;
+        $('btnViewVendorStore').href = vendorProfileUrl;
+        $('btnWaSideDirect').href = waUrl;
+
+        // DESCRIPTION
+        $('productDesc').textContent = p.description || 'Tidak ada deskripsi rinci untuk paket ini.';
+
+        // SIDEBAR VENDOR SUMMARY
+        $('vendorSideName').innerHTML = `${v.business_name} ${igVerifiedBadge}`;
+        $('vendorSideCity').textContent = v.city || 'Indonesia';
+        $('vendorSideDesc').textContent = v.description || 'Vendor terverifikasi Sapatamu.id';
+        if (v.logo_url) {
+          $('vendorSideLogo').innerHTML = `
+            <div class="img-skeleton-container" style="width:100%;height:100%">
+              <img src="${v.logo_url}" class="async-img" style="width:100%;height:100%;object-fit:cover" alt="${v.business_name}" loading="lazy" decoding="async" onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')">
+            </div>
+          `;
+        } else {
+          $('vendorSideLogo').textContent = v.business_name.charAt(0).toUpperCase();
+        }
+
+        // REVIEWS
+        if (reviews.length > 0) {
+          const avgRating = (reviews.reduce((acc, r) => acc + (r.rating || 5), 0) / reviews.length).toFixed(1);
+          $('reviewScoreHeader').textContent = `⭐ ${avgRating} (${reviews.length} ulasan)`;
+          $('reviewsContainer').innerHTML = reviews.map(r => `
+            <div style="background:var(--bg);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px;border:1px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <strong style="font-size:0.9rem">${r.client_name || 'Pengantin Sapatamu'}</strong>
+                <span style="color:var(--gold);font-weight:700;font-size:0.85rem">⭐ ${r.rating || 5}.0</span>
+              </div>
+              <p style="font-size:0.85rem;color:var(--text-light);line-height:1.5">${r.comment || ''}</p>
+              <small style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;display:block">${new Date(r.created_at).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })}</small>
+            </div>
+          `).join('');
+        } else {
+          $('reviewsContainer').innerHTML = `<p style="color:var(--text-muted);font-size:0.88rem">Belum ada ulasan untuk vendor ini.</p>`;
+        }
+
+        // OTHER PRODUCTS
+        const otherGrid = $('otherProductsGrid');
+        if (otherProducts.length === 0) {
+          otherGrid.innerHTML = `<p style="color:var(--text-muted);grid-column:1/-1">Tidak ada paket lain dari vendor ini.</p>`;
+        } else {
+          otherGrid.innerHTML = otherProducts.map(op => {
+            const opImg = op.cover_image_url || op.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
+            const opDetailUrl = `/vendor-product.html?id=${encodeURIComponent(op.id)}&vendor=${encodeURIComponent(v.slug || '')}`;
+            const opCatBadge = op.category_name ? `<span style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.65);color:#fff;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px">${op.category_name}</span>` : '';
+            return `
+              <div class="pkg-card">
+                <div style="position:relative;height:160px">
+                  <div class="img-skeleton-container" style="width:100%;height:100%">
+                    <img src="${opImg}" class="async-img" style="width:100%;height:100%;object-fit:cover" alt="${op.name}" loading="lazy" decoding="async" onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')">
+                  </div>
+                  ${opCatBadge}
+                </div>
+                <div style="padding:16px;display:flex;flex-direction:column;flex:1">
+                  <h4 style="font-family:'Lora',serif;font-size:1rem;font-weight:700;margin-bottom:4px;line-height:1.3">${op.name}</h4>
+                  <div style="font-size:1.05rem;font-weight:700;color:var(--primary);margin-bottom:12px">${formatRupiah(op.price)}</div>
+                  <a href="${opDetailUrl}" class="btn-store-outline" style="padding:8px 14px;font-size:0.8rem;margin-top:auto;justify-content:center">Lihat Detail Paket ↗</a>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+      } catch (e) {
+        console.error(e);
+        $('productTitle').textContent = 'Terjadi Kesalahan Memuat Paket';
+      }
+    }
+
+    loadProductDetail();
+  </script>
+</body>
+</html>

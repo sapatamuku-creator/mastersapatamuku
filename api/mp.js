@@ -412,6 +412,52 @@ export default async function handler(req, res) {
         });
       }
 
+      // ── 4B. PRODUCT DETAIL (PUBLIC) ──
+      case 'product-detail': {
+        if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+        const { id, slug } = req.query;
+        if (!id && !slug) return res.status(400).json({ error: 'Missing product ID or slug' });
+
+        let pQuery = id ? `/mp_products?id=eq.${encodeURIComponent(id)}&limit=1` : `/mp_products?slug=eq.${encodeURIComponent(slug)}&limit=1`;
+        const pRes = await sbServiceFetch(pQuery);
+        let products = pRes.ok ? await pRes.json() : [];
+
+        if (!Array.isArray(products) || !products.length) {
+          return res.status(404).json({ error: 'Paket produk tidak ditemukan' });
+        }
+
+        const product = products[0];
+
+        // Fetch vendor, other products from same vendor, and reviews
+        const [vRes, otherProdsRes, rRes] = await Promise.all([
+          sbServiceFetch(`/mp_vendors?id=eq.${product.vendor_id}&select=*&limit=1`),
+          sbServiceFetch(`/mp_products?vendor_id=eq.${product.vendor_id}&id=neq.${product.id}&order=created_at.desc`),
+          sbServiceFetch(`/mp_reviews?vendor_id=eq.${product.vendor_id}&order=created_at.desc&limit=10`)
+        ]);
+
+        const vendorRows = vRes.ok ? await vRes.json() : [];
+        const vendor = (Array.isArray(vendorRows) && vendorRows.length > 0) ? vendorRows[0] : {
+          id: product.vendor_id,
+          business_name: 'Knowhere Studio',
+          slug: 'knowhere-studio',
+          city: 'Kab. Cirebon (Weru)',
+          whatsapp: '6287864752163'
+        };
+
+        const catObj = DEFAULT_CATEGORIES.find(c => c.id === vendor.category_id);
+        vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
+
+        const otherProducts = otherProdsRes.ok ? await otherProdsRes.json() : [];
+        const reviews = rRes.ok ? await rRes.json() : [];
+
+        return res.status(200).json({
+          product,
+          vendor,
+          otherProducts,
+          reviews
+        });
+      }
+
       // ── 5. CREATE INQUIRY ──
       case 'create-inquiry': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -708,7 +754,7 @@ export default async function handler(req, res) {
         }
 
         if (req.method === 'POST') {
-          const { name, price, description, image_url, cover_image_url, badge_tag } = req.body;
+          const { name, price, description, image_url, cover_image_url, badge_tag, category_name } = req.body;
           if (!name || !price) return res.status(400).json({ error: 'Nama paket dan harga wajib diisi' });
 
           const slug = generateSlug(name) + '-' + Date.now().toString(36);
@@ -725,6 +771,7 @@ export default async function handler(req, res) {
               description: description ? description.trim() : '',
               cover_image_url: finalImage,
               price_label: badge_tag ? badge_tag.trim() : null,
+              category_name: category_name ? category_name.trim() : 'Wedding',
               is_active: true
             }),
             headers: { 'Prefer': 'return=representation' }
@@ -743,7 +790,7 @@ export default async function handler(req, res) {
           const { id } = req.query;
           if (!id) return res.status(400).json({ error: 'Missing product ID' });
 
-          const { name, price, description, image_url, cover_image_url, badge_tag } = req.body;
+          const { name, price, description, image_url, cover_image_url, badge_tag, category_name } = req.body;
           const updateBody = {};
 
           if (name) {
@@ -755,6 +802,7 @@ export default async function handler(req, res) {
           const finalImage = image_url || cover_image_url;
           if (finalImage !== undefined) updateBody.cover_image_url = finalImage || null;
           if (badge_tag !== undefined) updateBody.price_label = badge_tag ? badge_tag.trim() : null;
+          if (category_name !== undefined) updateBody.category_name = category_name ? category_name.trim() : 'Wedding';
           updateBody.updated_at = new Date().toISOString();
 
           const updateRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&vendor_id=eq.${vendor.id}`, {

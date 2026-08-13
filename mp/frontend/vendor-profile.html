@@ -229,7 +229,8 @@
         <div class="tab-content">
           <!-- TAB 1: PAKET & LAYANAN (DEFAULT ACTIVE) -->
           <div class="tab-panel active" id="tab-paket">
-            <h2 style="font-family:'Lora',serif;font-size:1.25rem;margin-bottom:18px">Daftar Paket &amp; Price List</h2>
+            <h2 style="font-family:'Lora',serif;font-size:1.25rem;margin-bottom:14px">Daftar Paket &amp; Price List</h2>
+            <div id="categoryFilterNav" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:16px"></div>
             <div class="pkg-grid" id="paketGrid">
               <p style="color:var(--text-muted)">Memuat paket vendor...</p>
             </div>
@@ -422,41 +423,14 @@
           $('btnWaSidebar').href = waUrl;
           $('sbWA').textContent = `+${waNum}`;
 
-          // RENDER PRODUCTS / PACKAGES WITH ASYNC GREY SHIMMER
-          const pkgContainer = $('paketGrid');
-          if (products.length === 0) {
-            pkgContainer.innerHTML = `<p style="color:var(--text-muted);grid-column:1/-1">Belum ada paket yang dipublikasikan oleh vendor ini.</p>`;
-          } else {
-            pkgContainer.innerHTML = products.map(p => {
-              const img = p.cover_image_url || p.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
-              const tagLabel = p.price_label || p.badge_tag;
-              const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
-              const pkgWaUrl = `https://wa.me/${waNum}?text=Halo%20${encodeURIComponent(v.business_name)},%20saya%20tertarik%20dengan%20paket%20"${encodeURIComponent(p.name)}"%20seharga%20${encodeURIComponent(formatRupiah(p.price))}`;
-              return `
-                <div class="pkg-card">
-                  <div style="position:relative;height:200px">
-                    <div class="img-skeleton-container" style="width:100%;height:100%">
-                      <img src="${img}" 
-                           class="pkg-img async-img" 
-                           style="width:100%;height:100%;object-fit:cover" 
-                           alt="${p.name}"
-                           loading="lazy"
-                           decoding="async"
-                           onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')"
-                           onerror="this.style.display='none';this.parentElement.classList.add('img-loaded')">
-                    </div>
-                    ${tag}
-                  </div>
-                  <div class="pkg-body">
-                    <h3 class="pkg-name">${p.name}</h3>
-                    <div class="pkg-price">${formatRupiah(p.price)}</div>
-                    <div class="pkg-desc">${p.description || '-'}</div>
-                    <a href="${pkgWaUrl}" target="_blank" class="btn-wa" style="padding:8px 16px;font-size:0.8rem;justify-content:center">Tanya Paket Ini</a>
-                  </div>
-                </div>
-              `;
-            }).join('');
-          }
+          // CATEGORY FILTER & PRODUCTS RENDERING
+          window._allVendorProducts = products;
+          window._currentVendorData = v;
+          window._vendorWaNum = waNum;
+          window._activeCategoryFilter = 'Semua';
+
+          renderCategoryFiltersNav(products);
+          renderVendorProductsGrid(products);
 
           // RENDER REVIEWS & RATINGS
           $('reviewCountHeader').textContent = `(${reviews.length} ulasan)`;
@@ -479,6 +453,89 @@
         console.error(e);
         $('vendorName').textContent = 'Terjadi Kesalahan Vendor';
       }
+    }
+
+    function renderCategoryFiltersNav(products) {
+      const navEl = $('categoryFilterNav');
+      if (!navEl) return;
+      const cats = [...new Set(products.map(p => (p.category_name || '').trim()).filter(Boolean))];
+      if (cats.length === 0) {
+        navEl.style.display = 'none';
+        return;
+      }
+      navEl.style.display = 'flex';
+      const filterCats = ['Semua', ...cats];
+      navEl.innerHTML = filterCats.map(c => {
+        const count = c === 'Semua' ? products.length : products.filter(p => (p.category_name || '').trim() === c).length;
+        const isActive = c === window._activeCategoryFilter;
+        return `
+          <button type="button" 
+                  style="padding:6px 16px;font-size:0.82rem;font-weight:600;white-space:nowrap;border-radius:20px;border:1px solid var(--border);cursor:pointer;transition:all 0.2s ease;background:${isActive ? 'var(--primary)' : 'var(--surface)'};color:${isActive ? '#fff' : 'var(--text-main)'}"
+                  onclick="filterVendorProducts('${c}')">
+            ${c} (${count})
+          </button>
+        `;
+      }).join('');
+    }
+
+    function filterVendorProducts(cat) {
+      window._activeCategoryFilter = cat;
+      renderCategoryFiltersNav(window._allVendorProducts || []);
+      const filtered = cat === 'Semua'
+        ? (window._allVendorProducts || [])
+        : (window._allVendorProducts || []).filter(p => (p.category_name || '').trim() === cat);
+      renderVendorProductsGrid(filtered);
+    }
+
+    function renderVendorProductsGrid(products) {
+      const pkgContainer = $('paketGrid');
+      if (!pkgContainer) return;
+
+      if (!products || products.length === 0) {
+        pkgContainer.innerHTML = `<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:24px 0">Tidak ada paket untuk kategori ini.</p>`;
+        return;
+      }
+
+      const v = window._currentVendorData || {};
+      const waNum = window._vendorWaNum || '';
+
+      pkgContainer.innerHTML = products.map(p => {
+        const img = p.cover_image_url || p.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
+        const tagLabel = p.price_label || p.badge_tag;
+        const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
+        const catName = (p.category_name || '').trim();
+        const catBadge = catName ? `<span style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.65);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;backdrop-filter:blur(4px);z-index:2">${catName}</span>` : '';
+        const pkgWaUrl = `https://wa.me/${waNum}?text=Halo%20${encodeURIComponent(v.business_name || 'Vendor')},%20saya%20tertarik%20dengan%20paket%20"${encodeURIComponent(p.name)}"%20seharga%20${encodeURIComponent(formatRupiah(p.price))}`;
+        const detailUrl = `/vendor-product.html?id=${encodeURIComponent(p.id)}&vendor=${encodeURIComponent(v.slug || '')}`;
+
+        return `
+          <div class="pkg-card">
+            <div style="position:relative;height:200px">
+              <div class="img-skeleton-container" style="width:100%;height:100%">
+                <img src="${img}" 
+                     class="pkg-img async-img" 
+                     style="width:100%;height:100%;object-fit:cover" 
+                     alt="${p.name}"
+                     loading="lazy"
+                     decoding="async"
+                     onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')"
+                     onerror="this.style.display='none';this.parentElement.classList.add('img-loaded')">
+              </div>
+              ${catBadge}
+              ${tag}
+            </div>
+            <div class="pkg-body" style="display:flex;flex-direction:column;flex:1">
+              <h3 class="pkg-name" style="font-size:1.1rem;font-weight:700;margin-bottom:6px;line-height:1.3">${p.name}</h3>
+              <div class="pkg-price" style="font-size:1.15rem;font-weight:700;color:var(--primary);margin-bottom:8px">${formatRupiah(p.price)}</div>
+              <div class="pkg-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;line-height:1.5">${p.description || '-'}</div>
+              <div style="display:flex;gap:8px;margin-top:auto">
+                <a href="${detailUrl}" class="btn-wa" style="flex:1;background:var(--text-main);color:#fff;justify-content:center;font-size:0.8rem;padding:8px 12px;border-radius:10px;font-weight:600">Lihat Detail Paket ↗</a>
+                <a href="${pkgWaUrl}" target="_blank" class="btn-wa" style="padding:8px 12px;font-size:0.8rem;justify-content:center;border-radius:10px" title="Tanya via WA">💬 WA</a>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     loadVendor();

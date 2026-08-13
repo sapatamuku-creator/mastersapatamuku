@@ -418,6 +418,8 @@
             </button>
           </div>
 
+          <div id="dashCategoryFilter" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:16px"></div>
+
           <div id="packageList" class="pkg-grid">
             <div class="pkg-card" style="background:#ffffff;border-radius:16px;border:1.5px solid var(--surface-border);overflow:hidden;pointer-events:none">
               <div class="img-skeleton-container" style="width:100%;height:180px"></div>
@@ -606,6 +608,14 @@
           <input type="text" id="pkgName" required placeholder="misal: Paket Foto &amp; Video Complete Akad Resepsi">
         </div>
         <div class="form-group">
+          <label>Kategori Paket (Opsional)</label>
+          <input type="text" id="pkgCategory" list="categoryDatalist" placeholder="misal: Catering Buffet, Dekorasi Akad, Foto Prewedding..." autocomplete="off">
+          <datalist id="categoryDatalist"></datalist>
+          <small style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;display:block">
+            Kelompokkan paket Anda agar mudah difilter oleh calon pengantin (Kosongkan jika tidak ingin dikelompokkan).
+          </small>
+        </div>
+        <div class="form-group">
           <label>Harga Paket *</label>
           <div class="currency-input-wrap">
             <select id="pkgCurrency" class="currency-select" onchange="updateCurrencyPrefix()">
@@ -779,11 +789,45 @@
       return raw ? parseInt(raw, 10) : 0;
     }
 
+    let _currentCategoryFilter = 'Semua';
+
+    function updateCategoryDatalist() {
+      const datalist = $('categoryDatalist');
+      if (!datalist) return;
+      const cats = [...new Set(_packages.map(p => (p.category_name || '').trim()).filter(Boolean))];
+      datalist.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+    }
+
+    function renderDashCategoryFilter() {
+      const filterEl = $('dashCategoryFilter');
+      if (!filterEl) return;
+      updateCategoryDatalist();
+
+      const cats = [...new Set(_packages.map(p => (p.category_name || '').trim()).filter(Boolean))];
+      if (cats.length === 0) {
+        filterEl.style.display = 'none';
+        return;
+      }
+      filterEl.style.display = 'flex';
+      const filterCats = ['Semua', ...cats];
+      filterEl.innerHTML = filterCats.map(c => `
+        <button type="button" class="nav-btn ${c === _currentCategoryFilter ? 'active' : ''}" style="padding:6px 14px;font-size:0.82rem;white-space:nowrap;border-radius:20px;background:${c === _currentCategoryFilter ? 'var(--primary-dark)' : 'var(--bg)'};color:${c === _currentCategoryFilter ? '#fff' : 'var(--text-main)'};border:1px solid var(--surface-border)" onclick="setCategoryFilter('${c}')">
+          ${c} ${c === 'Semua' ? `(${_packages.length})` : `(${_packages.filter(p => (p.category_name || '').trim() === c).length})`}
+        </button>
+      `).join('');
+    }
+
+    function setCategoryFilter(cat) {
+      _currentCategoryFilter = cat;
+      renderPackages();
+    }
+
     function openModalAddPackage() {
       $('formAddPackage').reset();
       if ($('pkgId')) $('pkgId').value = '';
-      if ($('modalAddPackageTitle')) $('modalAddPackageTitle').textContent = '📦 Tambah Paket Wedding Baru';
+      if ($('modalAddPackageTitle')) $('modalAddPackageTitle').textContent = '📦 Tambah Paket Baru';
       if ($('btnSubmitPkg')) $('btnSubmitPkg').textContent = '🚀 Simpan & Publiskan Paket';
+      if ($('pkgCategory')) $('pkgCategory').value = '';
       if ($('pkgCurrency')) $('pkgCurrency').value = 'IDR';
       if ($('pkgCurrencyPrefix')) $('pkgCurrencyPrefix').textContent = 'Rp';
       if ($('pkgPricePreview')) $('pkgPricePreview').textContent = 'Rp 0';
@@ -1165,6 +1209,7 @@
       const container = $('packageList');
       const previewContainer = $('overviewPkgPreview');
       $('stProd').textContent = _packages.length;
+      renderDashCategoryFilter();
 
       if (_packages.length === 0) {
         const emptyHtml = `
@@ -1180,7 +1225,16 @@
         return;
       }
 
-      const html = _packages.map(p => {
+      const displayList = _currentCategoryFilter === 'Semua' 
+        ? _packages 
+        : _packages.filter(p => (p.category_name || '').trim() === _currentCategoryFilter);
+
+      if (displayList.length === 0) {
+        container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Tidak ada paket untuk kategori "${_currentCategoryFilter}".</p></div>`;
+        return;
+      }
+
+      const html = displayList.map(p => {
         const img = p.cover_image_url || p.image_url || null;
         const fallbackImg = 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
         const imgTag = img ? `
@@ -1201,10 +1255,14 @@
         `;
         const tagLabel = p.price_label || p.badge_tag;
         const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
+        const catName = (p.category_name || '').trim();
+        const catBadge = catName ? `<span style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.65);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;backdrop-filter:blur(4px);z-index:2">${catName}</span>` : '';
+
         return `
           <div class="pkg-card">
             <div style="position:relative;height:180px">
               ${imgTag}
+              ${catBadge}
               ${tag}
             </div>
             <div class="pkg-body">
@@ -1221,7 +1279,9 @@
       }).join('');
 
       container.innerHTML = html;
-      previewContainer.innerHTML = html;
+      if (_currentCategoryFilter === 'Semua') {
+        previewContainer.innerHTML = html;
+      }
     }
 
     function editPackage(id) {
@@ -1230,10 +1290,12 @@
 
       $('formAddPackage').reset();
       if ($('pkgId')) $('pkgId').value = p.id;
-      if ($('modalAddPackageTitle')) $('modalAddPackageTitle').textContent = '✏️ Edit Paket Wedding';
+      if ($('modalAddPackageTitle')) $('modalAddPackageTitle').textContent = '✏️ Edit Paket';
       if ($('btnSubmitPkg')) $('btnSubmitPkg').textContent = '💾 Simpan Perubahan Paket';
 
       $('pkgName').value = p.name || '';
+      if ($('pkgCategory')) $('pkgCategory').value = p.category_name || '';
+
       const curr = p.currency || 'IDR';
       if ($('pkgCurrency')) $('pkgCurrency').value = curr;
       if ($('pkgCurrencyPrefix')) $('pkgCurrencyPrefix').textContent = getCurrencySymbol(curr);
@@ -1351,6 +1413,7 @@
 
       const pkgId = $('pkgId') ? $('pkgId').value.trim() : '';
       const isEdit = Boolean(pkgId);
+      const category_name = $('pkgCategory') ? $('pkgCategory').value.trim() : '';
 
       const btn = $('btnSubmitPkg');
       btn.disabled = true;
@@ -1358,6 +1421,7 @@
 
       const payload = {
         name: $('pkgName').value.trim(),
+        category_name: category_name,
         price: rawPrice,
         currency: $('pkgCurrency') ? $('pkgCurrency').value : 'IDR',
         badge_tag: $('pkgTag').value.trim(),
