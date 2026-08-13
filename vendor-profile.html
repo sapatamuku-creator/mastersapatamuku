@@ -533,9 +533,12 @@
       renderVendorProductsGrid(filtered);
     }
 
+    let _productRenderGen = 0;
     function renderVendorProductsGrid(products) {
       const pkgContainer = $('paketGrid');
       if (!pkgContainer) return;
+
+      const gen = ++_productRenderGen;
 
       if (!products || products.length === 0) {
         pkgContainer.innerHTML = `<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:24px 0">Tidak ada paket untuk kategori ini.</p>`;
@@ -545,7 +548,7 @@
       const v = window._currentVendorData || {};
       const waNum = window._vendorWaNum || '';
 
-      pkgContainer.innerHTML = products.map(p => {
+      const cardHtml = (p) => {
         const img = p.cover_image_url || p.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
         const tagLabel = p.price_label || p.badge_tag;
         const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
@@ -581,7 +584,20 @@
             </div>
           </div>
         `;
-      }).join('');
+      };
+
+      // LAZY FIRST RENDER: kartu pertama langsung tampil, sisanya queue per frame
+      pkgContainer.innerHTML = '';
+      pkgContainer.insertAdjacentHTML('beforeend', cardHtml(products[0]));
+      let i = 1;
+      const enqueueNext = () => {
+        if (gen !== _productRenderGen) return; // render baru dimulai → batal queue lama
+        if (i >= products.length) return;
+        pkgContainer.insertAdjacentHTML('beforeend', cardHtml(products[i]));
+        i++;
+        requestAnimationFrame(enqueueNext);
+      };
+      requestAnimationFrame(enqueueNext);
     }
 
     function handleGlobalNavSearch(e) {
