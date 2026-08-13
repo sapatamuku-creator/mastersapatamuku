@@ -190,13 +190,8 @@ export default async function handler(req) {
         const offset = (page - 1) * limit;
         query += `&order=is_verified.desc,rating_avg.desc,created_at.desc&range=${offset}-${offset + limit - 1}`;
 
-        const [vRes, prodRes] = await Promise.all([
-          sbServiceFetch(query),
-          sbServiceFetch(`/mp_products?select=id,vendor_id,price,cover_image_url,image_url,name`)
-        ]);
-
+        let vRes = await sbServiceFetch(query);
         let vendors = vRes.ok ? await vRes.json() : [];
-        const allProducts = prodRes.ok ? await prodRes.json() : [];
 
         if (!Array.isArray(vendors) || vendors.length === 0) {
           const fallbackRes = await sbServiceFetch(`/mp_vendors?select=id,slug,business_name,category_id,city,province,rating_avg,review_count,price_from,cover_image_url,logo_url,is_verified,is_active&limit=50`);
@@ -205,7 +200,10 @@ export default async function handler(req) {
           }
         }
 
-        if ((!vendors || vendors.length === 0) && Array.isArray(allProducts) && allProducts.length > 0) {
+        let allProducts = [];
+        if ((!vendors || vendors.length === 0)) {
+          const prodRes = await sbServiceFetch(`/mp_products?select=vendor_id,price,cover_image_url,image_url&limit=500`);
+          allProducts = prodRes.ok ? await prodRes.json() : [];
           const vendorMap = {};
           for (const p of allProducts) {
             if (!p.vendor_id) continue;
@@ -226,6 +224,12 @@ export default async function handler(req) {
             }
           }
           vendors = Object.values(vendorMap);
+        }
+
+        const vendorIds = (vendors || []).map(v => v.id).filter(Boolean);
+        if (vendorIds.length > 0) {
+          const prodRes = await sbServiceFetch(`/mp_products?vendor_id=in.(${vendorIds.map(encodeURIComponent).join(',')})&select=vendor_id,price,cover_image_url,image_url`);
+          allProducts = prodRes.ok ? await prodRes.json() : [];
         }
 
         const enriched = (vendors || []).map(v => {
