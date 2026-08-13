@@ -1342,9 +1342,21 @@
         };
 
 
-    const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
-    
-    let CURRENT_SS_ID = window.CURRENT_SS_ID || (session ? session.ssId : null);
+    let _storedSsId = null;
+    function getSSID() {
+        if (_storedSsId) return _storedSsId;
+        if (window.CURRENT_SS_ID) return window.CURRENT_SS_ID;
+        try {
+            const s = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
+            if (s && s.ssId) return s.ssId;
+        } catch(e) {}
+        return (new URLSearchParams(window.location.search)).get('ssId') || "";
+    }
+    Object.defineProperty(window, 'CURRENT_SS_ID', {
+        get: function() { return getSSID(); },
+        set: function(v) { _storedSsId = v; },
+        configurable: true
+    });
     let MASTER_LIST = [];
 
     // Helper untuk generate kode unik tamu di client-side (Supabase First)
