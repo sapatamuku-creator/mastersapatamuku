@@ -1167,38 +1167,64 @@
                 document.getElementById('music-upload-status-text').innerText = 'Mengupload ke server...';
                 try {
                     const ssId = window.CURRENT_SS_ID || new URLSearchParams(window.location.search).get('ssId');
-                    const payload = {
-                        action: 'uploadMusic',
-                        ssId: ssId,
-                        filename: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
-                        base64Content: base64
-                    };
-                    const res = await fetch(window.SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await res.json();
+                    const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
 
-                    if (result.status === 'success') {
-                        const url = result.url;
-                        document.getElementById('inv_music').value = url;
-                        updatePreview();
-                        // Show success in upload zone
-                        document.getElementById('music-upload-progress').classList.add('hidden');
-                        document.getElementById('music-upload-idle').classList.remove('hidden');
-                        document.getElementById('music-upload-idle').innerHTML = `
-                            <p class="text-2xl mb-1">✅</p>
-                            <p class="text-xs font-bold text-green-600">${file.name}</p>
-                            <p class="text-[9px] text-neutral-400 mt-1">Upload berhasil! Klik untuk ganti.</p>`;
-                        // Show status
-                        const st = document.getElementById('music-convert-status');
-                        st.className = 'text-[9px] mt-1 text-green-600';
-                        st.innerText = '✅ Musik berhasil diupload & link tersimpan otomatis!';
-                        st.classList.remove('hidden');
-                        setTimeout(() => st.classList.add('hidden'), 5000);
-                    } else {
-                        throw new Error(result.message || 'Upload gagal');
+                    // Upload chunked: hop redirect GAS flaky untuk body besar,
+                    // jadi file dipecah jadi chunk ~1MB base64 yang dijamin lolos.
+                    const CHUNK_SIZE = 1024 * 1024;
+                    const totalChunks = Math.ceil(base64.length / CHUNK_SIZE);
+                    const uploadId = Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+                    let result = null;
+
+                    for (let i = 0; i < totalChunks; i++) {
+                        const chunk = base64.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                        let lastErr = null;
+                        for (let attempt = 1; attempt <= 3; attempt++) {
+                            try {
+                                const res = await fetch(window.SCRIPT_URL, {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        action: 'uploadMusicChunk',
+                                        ssId: ssId,
+                                        filename: filename,
+                                        uploadId: uploadId,
+                                        chunkIndex: i,
+                                        totalChunks: totalChunks,
+                                        base64Content: chunk
+                                    })
+                                });
+                                // GAS kadang membalas halaman HTML (hop redirect) — tangani sebagai error
+                                const text = await res.text();
+                                result = JSON.parse(text);
+                                if (result.status === 'error') throw new Error(result.message || 'Upload gagal');
+                                break;
+                            } catch (err) {
+                                lastErr = err;
+                                if (attempt === 3) break;
+                                await new Promise(r => setTimeout(r, 1500 * attempt));
+                            }
+                        }
+                        if (!result || result.status === 'error') throw (lastErr || new Error('Upload gagal'));
+                        document.getElementById('music-upload-status-text').innerText = `Mengupload... (${i+1}/${totalChunks})`;
                     }
+
+                    const url = result.url;
+                    if (!url) throw new Error('URL musik tidak diterima dari server');
+                    document.getElementById('inv_music').value = url;
+                    updatePreview();
+                    // Show success in upload zone
+                    document.getElementById('music-upload-progress').classList.add('hidden');
+                    document.getElementById('music-upload-idle').classList.remove('hidden');
+                    document.getElementById('music-upload-idle').innerHTML = `
+                        <p class="text-2xl mb-1">✅</p>
+                        <p class="text-xs font-bold text-green-600">${file.name}</p>
+                        <p class="text-[9px] text-neutral-400 mt-1">Upload berhasil! Klik untuk ganti.</p>`;
+                    // Show status
+                    const st = document.getElementById('music-convert-status');
+                    st.className = 'text-[9px] mt-1 text-green-600';
+                    st.innerText = '✅ Musik berhasil diupload & link tersimpan otomatis!';
+                    st.classList.remove('hidden');
+                    setTimeout(() => st.classList.add('hidden'), 5000);
                 } catch (err) {
                     document.getElementById('music-upload-status-text').innerText = '❌ Gagal: ' + err.message;
                     setTimeout(() => {

@@ -124,6 +124,8 @@ function doPost(e) {
       // Music Upload to GitHub
       case 'uploadMusic':
         return handleMusicUpload(payload);
+      case 'uploadMusicChunk':
+        return handleMusicUploadChunk(payload);
 
       // Core Guestbook Actions (Main.gs)
       default:
@@ -153,64 +155,141 @@ function handleMusicUpload(payload) {
       return createResponse({ status: 'error', message: 'Missing file data' });
     }
 
-    const GITHUB_TOKEN = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
-    const GITHUB_OWNER = PropertiesService.getScriptProperties().getProperty('GITHUB_OWNER') || 'sapatamuku-creator';
-    const GITHUB_REPO  = PropertiesService.getScriptProperties().getProperty('GITHUB_REPO')  || 'sapatamu-music';
-
-    if (!GITHUB_TOKEN) {
-      return createResponse({ status: 'error', message: 'GITHUB_TOKEN belum diset di Script Properties.' });
-    }
-
-    // Unique filename: timestamp + original name
     const safeFilename = `${Date.now()}_${filename}`;
-    const filePath = `music/${safeFilename}`;
-    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
-
-    const ghRes = UrlFetchApp.fetch(apiUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github.v3+json'
-      },
-      payload: JSON.stringify({
-        message: `Upload music: ${safeFilename}`,
-        content: base64Content
-      }),
-      muteHttpExceptions: true
-    });
-
-    const ghResult = JSON.parse(ghRes.getContentText());
-    if (!ghResult.content || !ghResult.content.download_url) {
-      return createResponse({ status: 'error', message: 'GitHub upload gagal: ' + (ghResult.message || JSON.stringify(ghResult)) });
-    }
-
-    const rawUrl = ghResult.content.download_url;
-
-    // Auto-save URL + filename to client spreadsheet (Config_Invitation sheet)
-    if (ssId) {
-      try {
-        const ss = SpreadsheetApp.openById(ssId);
-        let sheet = ss.getSheetByName('Config_Invitation');
-        if (sheet) {
-          const data = sheet.getDataRange().getValues();
-          let foundUrl = false, foundFile = false;
-          for (let i = 0; i < data.length; i++) {
-            if (data[i][0] === 'musicUrl')      { sheet.getRange(i+1, 2).setValue(rawUrl);       foundUrl  = true; }
-            if (data[i][0] === 'musicFilename')  { sheet.getRange(i+1, 2).setValue(safeFilename); foundFile = true; }
-          }
-          if (!foundUrl)  sheet.appendRow(['musicUrl', rawUrl]);
-          if (!foundFile) sheet.appendRow(['musicFilename', safeFilename]);
-        }
-      } catch(saveErr) {
-        Logger.log('Warning: Could not auto-save music URL to sheet: ' + saveErr);
-      }
-    }
+    const rawUrl = pushMusicToGitHub(safeFilename, base64Content);
+    if (ssId) saveMusicMeta(ssId, rawUrl, safeFilename);
 
     return createResponse({ status: 'success', url: rawUrl, filename: safeFilename });
 
   } catch (err) {
     return createResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+/**
+ * MUSIC UPLOAD (CHUNKED) — file besar dipecah jadi chunk ~1MB base64 agar
+ * lolos hop redirect GAS (script.googleusercontent.com) yang flaky untuk
+ * body besar. Chunk distaging di Drive, dirakit saat chunk terakhir tiba,
+ * lalu di-upload ke GitHub dan URL-nya disimpan ke spreadsheet client.
+ */
+function handleMusicUploadChunk(payload) {
+  const { ssId, filename, uploadId, chunkIndex, totalChunks, base64Content } = payload;
+  const prefix = `_sapa_${uploadId}`;
+
+  const cleanupChunks = () => {
+    try {
+      const leftovers = DriveApp.searchFiles(`title contains '${prefix}'`);
+      while (leftovers.hasNext()) leftovers.next().setTrashed(true);
+    } catch (e) { Logger.log('Chunk cleanup warning: ' + e); }
+  };
+
+  try {
+    if (!uploadId || chunkIndex === undefined || !totalChunks || !base64Content) {
+      return createResponse({ status: 'error', message: 'Data chunk tidak lengkap' });
+    }
+    const ci = Number(chunkIndex);
+    const tc = Number(totalChunks);
+    if (ci < 0 || ci >= tc) {
+      return createResponse({ status: 'error', message: 'Indeks chunk tidak valid' });
+    }
+
+    // Chunk pertama: bersihkan sisa chunk lama dengan uploadId yang sama (upload retried)
+    if (ci === 0) cleanupChunks();
+
+    // Simpan chunk ke Drive (overwrite bila ada)
+    const chunkName = `${prefix}_${ci}.b64`;
+    const existing = DriveApp.searchFiles(`title = '${chunkName}'`);
+    if (existing.hasNext()) existing.next().setTrashed(true);
+    DriveApp.createFile(chunkName, base64Content, MimeType.PLAIN_TEXT);
+
+    if (ci < tc - 1) {
+      return createResponse({ status: 'progress', chunkIndex: ci });
+    }
+
+    // Chunk terakhir — rakit semua chunk menjadi base64 penuh
+    let fullBase64 = "";
+    for (let i = 0; i < tc; i++) {
+      const it = DriveApp.searchFiles(`title = '${prefix}_${i}.b64'`);
+      if (!it.hasNext()) {
+        cleanupChunks();
+        return createResponse({ status: 'error', message: `Chunk ${i} tidak ditemukan — upload dibatalkan` });
+      }
+      fullBase64 += it.next().getBlob().getDataAsString();
+    }
+    cleanupChunks();
+
+    if (!filename) {
+      return createResponse({ status: 'error', message: 'Missing filename' });
+    }
+
+    const safeFilename = `${Date.now()}_${filename}`;
+    const rawUrl = pushMusicToGitHub(safeFilename, fullBase64);
+    if (ssId) saveMusicMeta(ssId, rawUrl, safeFilename);
+
+    return createResponse({ status: 'success', url: rawUrl, filename: safeFilename });
+
+  } catch (err) {
+    cleanupChunks();
+    return createResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+/**
+ * PUT base64 MP3 ke GitHub repo musik. Return raw download URL.
+ */
+function pushMusicToGitHub(safeFilename, base64Content) {
+  const GITHUB_TOKEN = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  const GITHUB_OWNER = PropertiesService.getScriptProperties().getProperty('GITHUB_OWNER') || 'sapatamuku-creator';
+  const GITHUB_REPO  = PropertiesService.getScriptProperties().getProperty('GITHUB_REPO')  || 'sapatamu-music';
+
+  if (!GITHUB_TOKEN) {
+    throw new Error('GITHUB_TOKEN belum diset di Script Properties.');
+  }
+
+  const filePath = `music/${safeFilename}`;
+  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
+
+  const ghRes = UrlFetchApp.fetch(apiUrl, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `token ${GITHUB_TOKEN}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github.v3+json'
+    },
+    payload: JSON.stringify({
+      message: `Upload music: ${safeFilename}`,
+      content: base64Content
+    }),
+    muteHttpExceptions: true
+  });
+
+  const ghResult = JSON.parse(ghRes.getContentText());
+  if (!ghResult.content || !ghResult.content.download_url) {
+    throw new Error('GitHub upload gagal: ' + (ghResult.message || JSON.stringify(ghResult)));
+  }
+
+  return ghResult.content.download_url;
+}
+
+/**
+ * Auto-save URL musik + filename ke Config_Invitation sheet client.
+ */
+function saveMusicMeta(ssId, rawUrl, safeFilename) {
+  try {
+    if (!ssId) return;
+    const ss = SpreadsheetApp.openById(ssId);
+    const sheet = ss.getSheetByName('Config_Invitation');
+    if (!sheet) return;
+    const data = sheet.getDataRange().getValues();
+    let foundUrl = false, foundFile = false;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][0] === 'musicUrl')      { sheet.getRange(i+1, 2).setValue(rawUrl);       foundUrl  = true; }
+      if (data[i][0] === 'musicFilename')  { sheet.getRange(i+1, 2).setValue(safeFilename); foundFile = true; }
+    }
+    if (!foundUrl)  sheet.appendRow(['musicUrl', rawUrl]);
+    if (!foundFile) sheet.appendRow(['musicFilename', safeFilename]);
+  } catch (saveErr) {
+    Logger.log('Warning: Could not auto-save music URL to sheet: ' + saveErr);
   }
 }
 
