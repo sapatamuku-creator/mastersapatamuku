@@ -1280,13 +1280,20 @@
     </style>
 
     <script src="config.js"></script>
-    <script>(function() {
-        const SCRIPT_URL = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
-        const SB_HEADERS = {
-            "apikey": SB_KEY,
-            "Authorization": "Bearer " + SB_KEY,
+    <script>
+        window.SCRIPT_URL = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+        window.SB_KEY = window.SB_KEY || "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+        window.SB_URL = window.SB_URL || "https://llrapesaaoliyjrrrsjh.supabase.co";
+        window.SB_HEADERS = {
+            "apikey": window.SB_KEY,
+            "Authorization": "Bearer " + window.SB_KEY,
             "Content-Type": "application/json"
         };
+        const SCRIPT_URL = window.SCRIPT_URL;
+        const SB_KEY = window.SB_KEY;
+        const SB_URL = window.SB_URL;
+        const SB_HEADERS = window.SB_HEADERS;
+        (function() {
 
         function syncNavbar() {
             const ssId = window.CURRENT_SS_ID || "";
@@ -2741,58 +2748,98 @@
     window.tutupModalEdit = () => document.getElementById('editModalOverlay').style.display = 'none';
 
     window.prosesUpdateData = async function() {
-        const ssid = document.getElementById('edit_ssid').value;
+        const ssid = document.getElementById('edit_ssid').value || window.CURRENT_SS_ID || (new URLSearchParams(window.location.search)).get('ssId');
+        if (!ssid) {
+            showSapaModal("Gagal", "ID Spreadsheet tidak ditemukan. Silakan muat ulang halaman.", "❌");
+            return;
+        }
+
         toggleProcessing(true, "UPDATING EVENT...");
         try {
+            const evNama = document.getElementById('edit_ev_nama').value;
+            const evDate = document.getElementById('edit_ev_date').value;
+            const evLoc = document.getElementById('edit_ev_loc').value;
+            const evTime = document.getElementById('edit_ev_time').value;
+            const evLink = document.getElementById('edit_ev_link').value;
+            const evS1 = document.getElementById('edit_ev_s1').value;
+            const evS2 = document.getElementById('edit_ev_s2').value;
+            const evS3 = document.getElementById('edit_ev_s3').value;
+
             const payload = {
                 action: "updateClientData",
                 ssId: ssid,
                 eventData: {
-                    nama: document.getElementById('edit_ev_nama').value,
-                    tgl: document.getElementById('edit_ev_date').value,
-                    lokasi: document.getElementById('edit_ev_loc').value,
-                    waktu: document.getElementById('edit_ev_time').value,
-                    link: document.getElementById('edit_ev_link').value,
-                    s1: document.getElementById('edit_ev_s1').value,
-                    s2: document.getElementById('edit_ev_s2').value,
-                    s3: document.getElementById('edit_ev_s3').value
+                    nama: evNama,
+                    tgl: evDate,
+                    lokasi: evLoc,
+                    waktu: evTime,
+                    link: evLink,
+                    s1: evS1,
+                    s2: evS2,
+                    s3: evS3
                 }
             };
-            await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
 
-            // STEP 2: Direct Supabase UPSERT (Supabase First — same pattern as config_invitation.html)
+            const scriptUrl = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+            const sbUrl = window.SB_URL || "https://llrapesaaoliyjrrrsjh.supabase.co";
+            const sbKey = window.SB_KEY || "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+
+            // STEP 1: Direct Supabase UPSERT (~150ms, super cepat)
             const metaPayload = {
                 ssid: ssid,
-                nama_pengantin: document.getElementById('edit_ev_nama').value,
-                hari_tanggal: document.getElementById('edit_ev_date').value,
-                lokasi_acara: document.getElementById('edit_ev_loc').value,
-                waktu_acara: document.getElementById('edit_ev_time').value,
-                link_invitation: document.getElementById('edit_ev_link').value,
-                sesi_1: document.getElementById('edit_ev_s1').value,
-                sesi_2: document.getElementById('edit_ev_s2').value,
-                sesi_3: document.getElementById('edit_ev_s3').value,
+                nama_pengantin: evNama,
+                hari_tanggal: evDate,
+                lokasi_acara: evLoc,
+                waktu_acara: evTime,
+                link_invitation: evLink,
+                sesi_1: evS1,
+                sesi_2: evS2,
+                sesi_3: evS3,
                 updated_at: new Date().toISOString()
             };
+
             const sbHeaders = {
-                "apikey": SB_KEY,
-                "Authorization": "Bearer " + SB_KEY,
+                "apikey": sbKey,
+                "Authorization": "Bearer " + sbKey,
                 "Content-Type": "application/json",
                 "Prefer": "resolution=merge-duplicates"
             };
-            fetch(`${SB_URL}/rest/v1/metadata_client?on_conflict=ssid`, {
+
+            const sbRes = await fetch(`${sbUrl}/rest/v1/metadata_client?on_conflict=ssid`, {
                 method: "POST",
                 headers: sbHeaders,
                 body: JSON.stringify(metaPayload)
-            }).then(r => {
-                if (!r.ok) console.warn("Mirror metadata to Supabase failed:", r.status);
-                else console.log("✅ Metadata mirrored to Supabase");
-            }).catch(e => console.warn("Mirror metadata skip:", e.message));
+            });
+
+            if (!sbRes.ok) {
+                const errTxt = await sbRes.text();
+                console.warn("Supabase metadata update warning:", sbRes.status, errTxt);
+            } else {
+                console.log("✅ Metadata updated in Supabase successfully for ssid:", ssid);
+            }
+
+            // STEP 2: Update Google Sheet via GAS (background)
+            fetch(scriptUrl, { method: "POST", body: JSON.stringify(payload) })
+                .then(r => r.json())
+                .then(res => console.log("✅ Metadata updated to Google Sheet in background:", res))
+                .catch(err => console.warn("GAS update metadata background warning:", err));
+
+            // Update UI langsung di browser
+            const elName = document.getElementById('view-wedding-name');
+            if (elName) elName.innerText = evNama || "Event Guestbook";
+            const elSched = document.getElementById('view-schedule');
+            if (elSched) elSched.innerHTML = (evDate || "") + "<br>" + (evTime || "");
+            const elLoc = document.getElementById('view-location');
+            if (elLoc) elLoc.innerText = evLoc || "";
+            const elLink = document.getElementById('view-link');
+            if (elLink) elLink.innerText = evLink || "";
 
             tutupModalEdit();
+            toggleProcessing(false);
             showSapaModal("Sukses", "Detail acara berhasil diperbarui!", "🎉");
-            refreshApp();
         } catch (e) {
-            showSapaModal("Gagal", "Gagal memperbarui detail acara.", "❌");
+            console.error("prosesUpdateData Error:", e);
+            showSapaModal("Gagal", "Gagal memperbarui detail acara: " + e.message, "❌");
             toggleProcessing(false);
         }
     };
