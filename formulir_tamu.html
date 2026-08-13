@@ -2016,12 +2016,13 @@
         const supabaseUrl = `${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${kode}`;
         
         try {
-            await fetch(supabaseUrl, {
+            const sbRes = await fetch(supabaseUrl, {
                 method: "PATCH",
                 headers: {
                     "apikey": SB_KEY,
                     "Authorization": "Bearer " + SB_KEY,
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Prefer": "return=representation"
                 },
                 body: JSON.stringify({
                     nama: editData.nama,
@@ -2034,6 +2035,10 @@
                     rencana_hadir: editData.pax
                 })
             });
+
+            if (!sbRes.ok) {
+                throw new Error("Supabase update gagal (" + sbRes.status + "): " + (await sbRes.text()));
+            }
 
             // Update local MASTER_LIST immediately
             guest.nama = editData.nama;
@@ -2049,7 +2054,7 @@
             closeEditGuestModal();
             showSapaModal("Berhasil", "Data tamu berhasil diperbarui.", "✅");
 
-            // Step 2: Update Google Sheet in background (fire-and-forget/non-blocking)
+            // Step 2: Update Google Sheet in background
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -2058,7 +2063,16 @@
                     kode: kode,
                     ...editData
                 })
-            }).catch(err => console.warn("Background GS sync failed:", err));
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res && res.status === "error") {
+                    console.warn("GS edit failed:", res.message);
+                } else {
+                    console.log("GS edit complete:", res);
+                }
+            })
+            .catch(err => console.warn("Background GS sync failed:", err));
             setTimeout(checkSpreadsheetCountMismatch, 2000);
 
         } catch (e) {
