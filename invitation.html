@@ -76,19 +76,30 @@
         // ─── 2. DYNAMIC FETCHER ENGINE ───
         async function fetchTemplateEngine(rawThemeId) {
             try {
-                // L6: Validate theme_id parameter (alphanumeric and hyphens only)
-                const themeId = (rawThemeId || 'standard_clean_minimalis_1').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+                // Validate theme_id parameter (alphanumeric and hyphens only)
+                let themeId = (rawThemeId || 'standard_clean_minimalis_1').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+                if (themeId === 'classic' || themeId === 'default' || !themeId) {
+                    themeId = 'standard_clean_minimalis_1';
+                }
                 
-                // Fetch Layout HTML
-                const htmlRes = await fetch(`/assets/templates/${themeId}/layout.html`);
+                // Fetch Layout HTML with fallback to standard_clean_minimalis_1 if 404
+                let htmlRes = await fetch(`/assets/templates/${themeId}/layout.html`);
+                if (!htmlRes.ok && themeId !== 'standard_clean_minimalis_1') {
+                    console.warn(`Template HTML [${themeId}] tidak ditemukan, fallback ke standard_clean_minimalis_1`);
+                    themeId = 'standard_clean_minimalis_1';
+                    htmlRes = await fetch(`/assets/templates/${themeId}/layout.html`);
+                }
                 if (!htmlRes.ok) throw new Error("Template HTML tidak ditemukan.");
                 const htmlText = await htmlRes.text();
                 
                 // Inject Layout (append ke body, hindari hapus audio & loader)
-                const templateWrapper = document.createElement('div');
-                templateWrapper.id = "template-wrapper";
+                let templateWrapper = document.getElementById('template-wrapper');
+                if (!templateWrapper) {
+                    templateWrapper = document.createElement('div');
+                    templateWrapper.id = "template-wrapper";
+                    document.getElementById('dynamic-body').appendChild(templateWrapper);
+                }
                 templateWrapper.innerHTML = htmlText;
-                document.getElementById('dynamic-body').appendChild(templateWrapper);
 
                 // Fetch CSS
                 const cssRes = await fetch(`/assets/templates/${themeId}/style.css`);
@@ -101,7 +112,7 @@
                 return true;
             } catch (e) {
                 console.error("Gagal meload template:", e);
-                document.getElementById('shell-loader').innerHTML = `<p class="text-red-500">Gagal memuat template</p>`;
+                document.getElementById('shell-loader').innerHTML = `<p class="text-red-500 font-bold p-4 text-center">Gagal memuat template</p>`;
                 return false;
             }
         }
@@ -110,30 +121,31 @@
         async function loadDynamicConfig() {
             if (!window.SAPATAMU_RESOLVED) { setTimeout(loadDynamicConfig, 100); return; }
             const ssId = window.CURRENT_SS_ID || urlParams.get('ssId');
-            if (!ssId) { document.getElementById('shell-loader').innerHTML = "Akses Tidak Valid."; return; }
 
             try {
                 // 1. Dapatkan JSON Konfigurasi dari Supabase
-                const sbRes = await fetch(
-                    `${SB_URL}/rest/v1/config_invitation?ssid=eq.${ssId}&select=data&limit=1`,
-                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
-                );
-                
-                if (sbRes.ok) {
-                    const rows = await sbRes.json();
-                    if (rows && rows.length > 0 && rows[0].data) {
-                        const invData = rows[0].data;
-                        const themeId = (urlParams.get('theme_id') || invData.theme || "standard_clean_minimalis_1").toLowerCase();
+                if (ssId) {
+                    const sbRes = await fetch(
+                        `${SB_URL}/rest/v1/config_invitation?ssid=eq.${ssId}&select=data&limit=1`,
+                        { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                    );
+                    
+                    if (sbRes.ok) {
+                        const rows = await sbRes.json();
+                        if (rows && rows.length > 0 && rows[0].data) {
+                            const invData = rows[0].data;
+                            let themeId = (urlParams.get('theme_id') || invData.theme || "standard_clean_minimalis_1").toLowerCase();
 
-                        // 2. Fetch Cangkang Template
-                        const isLoaded = await fetchTemplateEngine(themeId);
-                        
-                        // 3. Render Data ke Template
-                        if(isLoaded) {
-                            window.applyLivePreview(invData);
-                            initializeScripts(); // Countdown, dll
+                            // 2. Fetch Cangkang Template
+                            const isLoaded = await fetchTemplateEngine(themeId);
+                            
+                            // 3. Render Data ke Template
+                            if(isLoaded) {
+                                window.applyLivePreview(invData);
+                                initializeScripts(); // Countdown, dll
+                            }
+                            return;
                         }
-                        return;
                     }
                 }
             } catch (e) {
@@ -141,52 +153,46 @@
             }
 
             // 2. Fallback jika Supabase kosong / gagal: Ambil dari GAS (Google Sheet)
-            try {
-                console.log("[Fallback] Supabase kosong, mencoba mengambil dari GAS...");
-                const gasUrl = `${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`;
-                const gasRes = await fetch(gasUrl);
-                if (gasRes.ok) {
-                    const gasResult = await gasRes.json();
-                    if (gasResult && gasResult.status === "success" && gasResult.data && gasResult.data.invitationData) {
-                        const invData = gasResult.data.invitationData;
-                        const themeId = (urlParams.get('theme_id') || invData.theme || "standard_clean_minimalis_1").toLowerCase();
-                        
-                        const isLoaded = await fetchTemplateEngine(themeId);
-                        if (isLoaded) {
-                            window.applyLivePreview(invData);
-                            initializeScripts();
+            if (ssId) {
+                try {
+                    console.log("[Fallback] Supabase kosong, mencoba mengambil dari GAS...");
+                    const gasUrl = `${window.SCRIPT_URL}?action=getSettings&ssId=${ssId}`;
+                    const gasRes = await fetch(gasUrl);
+                    if (gasRes.ok) {
+                        const gasResult = await gasRes.json();
+                        if (gasResult && gasResult.status === "success" && gasResult.data && gasResult.data.invitationData) {
+                            const invData = gasResult.data.invitationData;
+                            let themeId = (urlParams.get('theme_id') || invData.theme || "standard_clean_minimalis_1").toLowerCase();
+                            
+                            const isLoaded = await fetchTemplateEngine(themeId);
+                            if (isLoaded) {
+                                window.applyLivePreview(invData);
+                                initializeScripts();
+                            }
+                            return;
                         }
-                        return;
                     }
+                } catch (gasErr) {
+                    console.error("GAS fallback load failed", gasErr);
                 }
-            } catch (gasErr) {
-                console.error("GAS fallback load failed", gasErr);
             }
 
-            // Fallback jika kosong tetapi ada theme_id (mode live preview halaman config)
-            const themeIdParam = urlParams.get('theme_id');
-            if (themeIdParam) {
-                const themeId = themeIdParam.toLowerCase();
-                const isLoaded = await fetchTemplateEngine(themeId);
-                if (isLoaded) {
-                    const loader = document.getElementById('shell-loader');
-                    if (loader) {
-                        loader.style.opacity = '0';
-                        setTimeout(() => loader.remove(), 1000);
-                    }
-                    // Initialize animations, countdown, wishes list, etc.
-                    initializeScripts();
-                    
-                    // Request parent to update preview data immediately with current input values
-                    if (window.parent && typeof window.parent.updatePreview === 'function') {
-                        window.parent.updatePreview();
-                    }
+            // 3. Fallback jika belum ada data diset di DB (misal baru buka halaman config / preview)
+            let themeId = (urlParams.get('theme_id') || "standard_clean_minimalis_1").toLowerCase();
+            const isLoaded = await fetchTemplateEngine(themeId);
+            if (isLoaded) {
+                const loader = document.getElementById('shell-loader');
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 500);
                 }
-                return;
+                initializeScripts();
+                
+                // Request parent to update preview data immediately with current input values
+                if (window.parent && typeof window.parent.updatePreview === 'function') {
+                    window.parent.updatePreview();
+                }
             }
-
-            // Fallback jika kosong
-            document.getElementById('shell-loader').innerHTML = "Konfigurasi belum diset. Silakan buka Control Panel.";
         }
 
         // ─── 4. MAPPER / RENDERER SCRIPT (The Engine) ───

@@ -424,7 +424,7 @@
         <!-- MAIN AREA: LIVE PREVIEW -->
         <div class="preview-panel">
             <div class="preview-frame-container">
-                <iframe id="preview-iframe" src="invitation.html" class="preview-frame" onload="updatePreview()"></iframe>
+                <iframe id="preview-iframe" src="invitation.html?theme_id=standard_clean_minimalis_1" class="preview-frame" onload="updatePreview()"></iframe>
                 <!-- Mobile Badge inside phone container -->
                 <div class="absolute top-4 right-4 z-50 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full border border-neutral-100 shadow-md flex items-center gap-2 pointer-events-none">
                     <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
@@ -441,7 +441,7 @@
     <input type="file" id="globalFilePicker" style="display: none;" onchange="handleFileChange(event)">
 
     <script>
-        let currentTheme = "classic";
+        let currentTheme = "standard_clean_minimalis_1";
         let targetInputId = ""; // Untuk menampung input mana yang sedang diupload
         let galleryCount = 0;
 
@@ -653,10 +653,12 @@
         }
 
         function selectTheme(theme) {
-            currentTheme = theme;
-            document.getElementById('active-theme-label').innerHTML = `Tema Aktif: <span class="text-primary">${theme}</span>`;
+            const validThemes = ["standard_clean_minimalis_1", "premium_luxury_1"];
+            const resolvedTheme = (theme && validThemes.includes(theme.toLowerCase())) ? theme.toLowerCase() : "standard_clean_minimalis_1";
+            currentTheme = resolvedTheme;
+            document.getElementById('active-theme-label').innerHTML = `Tema Aktif: <span class="text-primary">${resolvedTheme}</span>`;
             const iframe = document.getElementById('preview-iframe');
-            iframe.src = `invitation.html?theme_id=${theme}`;
+            iframe.src = `invitation.html?theme_id=${resolvedTheme}`;
             setTimeout(updatePreview, 1500);
         }
 

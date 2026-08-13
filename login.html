@@ -383,7 +383,7 @@
                 const sub = (data.subdomain || data.username || "").toLowerCase().replace(/[\s&]/g, '');
                 if (sub) {
                     const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
-                    const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
+                    const targetPage = (!currentPage || currentPage === "login.html" || currentPage === "login") ? "dashboard.html" : currentPage;
                     window.location.replace("https://" + sub + ".sapatamu.id/" + targetPage);
                     return;
                 }
@@ -396,7 +396,7 @@
                 if (sub) {
                     sessionStorage.setItem(SESSION_KEY, localData);
                     const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
-                    const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
+                    const targetPage = (!currentPage || currentPage === "login.html" || currentPage === "login") ? "dashboard.html" : currentPage;
                     window.location.replace("https://" + sub + ".sapatamu.id/" + targetPage);
                     return;
                 }
@@ -492,7 +492,7 @@
                     role: sbData.role || 'client',
                     package: sbData.package || ''
                 };
-                // Use secure session storage (sessionStorage only, clears on tab close)
+                // Use secure session storage
                 if (typeof saveSession === 'function') {
                     saveSession(userData);
                 } else {
@@ -501,7 +501,7 @@
                 }
 
                 const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
-                const targetPage = (currentPage === "login.html" || currentPage === "") ? "dashboard.html" : currentPage;
+                const targetPage = (!currentPage || currentPage === "login.html" || currentPage === "login") ? "dashboard.html" : currentPage;
                 
                 const targetUrl = `https://${sub}.sapatamu.id/${targetPage}?ssId=${sbData.ssId}&user=${encodeURIComponent(sbData.username)}&category=${sbData.category || 'wedding'}&role=${userData.role}`;
                 window.location.replace(targetUrl);
@@ -522,7 +522,7 @@
                 
                 // Cek status aktif
                 if (res.data.status && res.data.status.toLowerCase() !== 'active') {
-                    showSapaModal("Akun Dinonaktifkan", "Akun ini telah dinonaktifkan oleh Admin. Silakan hubungi pusat.", "⚠️");
+                    showSapaModal("Akun Dinonaktifkan", "Akun ini telah dinonaktifkan oleh Admin. Silakan hubungi pusat.", "⚠️ ");
                     setLoading('btn_login', false);
                     return;
                 }
@@ -534,7 +534,7 @@
                     role: res.data.role || 'client',
                     package: res.data.package || ''
                 };
-                // Use secure session storage (sessionStorage only, clears on tab close)
+                // Use secure session storage
                 if (typeof saveSession === 'function') {
                     saveSession(userData);
                 } else {
@@ -543,7 +543,7 @@
                 }
 
                 const currentPage = window.location.pathname.split('/').pop() || "dashboard.html";
-                const targetPage = (currentPage === "login.html") ? "dashboard.html" : currentPage;
+                const targetPage = (!currentPage || currentPage === "login.html" || currentPage === "login") ? "dashboard.html" : currentPage;
                 
                 const targetUrl = `https://${sub}.sapatamu.id/${targetPage}?ssId=${res.data.ssId}&user=${encodeURIComponent(res.data.username)}&category=${res.data.category || 'wedding'}&role=${userData.role}`;
                 window.location.replace(targetUrl);
