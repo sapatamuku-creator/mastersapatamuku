@@ -1493,6 +1493,11 @@
     // --- CORE FUNCTIONS ---
     async function initApp() {
         SapaGuard.apply('sensitive'); // RBAC Guard
+        if (!window.SAPATAMU_RESOLVED) { setTimeout(initApp, 100); return; }
+        const ssId = window.CURRENT_SS_ID || (new URLSearchParams(window.location.search)).get('ssId');
+        if (!ssId) { setTimeout(initApp, 200); return; }
+        window.CURRENT_SS_ID = ssId;
+
         syncNavbar();
         initNavScroll();
         await refreshApp();
@@ -1530,10 +1535,17 @@
     }
 
     async function refreshApp() {
+        const ssId = window.CURRENT_SS_ID || (new URLSearchParams(window.location.search)).get('ssId');
+        if (!ssId) {
+            console.warn("ssId empty in refreshApp, retrying...");
+            setTimeout(refreshApp, 300);
+            return;
+        }
+
         toggleProcessing(true, "MEMUAT DATA...");
         try {
             // ===== STEP 1: Fetch TAMU dulu (data utama) — adopsi pola wa_blast.html =====
-            const tamuRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&order=row.desc`, { headers: SB_HEADERS });
+            const tamuRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&order=row.desc`, { headers: SB_HEADERS });
             if (!tamuRes.ok) throw new Error("Supabase tamu fetch failed");
             const tamuData = await tamuRes.json();
 
@@ -1554,9 +1566,9 @@
 
             // ===== STEP 2: Fetch METADATA & SUBDOMAIN di background (tidak blokir UI) =====
             Promise.all([
-                fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=*`, { headers: SB_HEADERS })
+                fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${ssId}&select=*`, { headers: SB_HEADERS })
                     .then(r => r.ok ? r.json() : Promise.reject("meta fetch failed")),
-                fetch(`${SB_URL}/rest/v1/client_public_profile?ssid=eq.${CURRENT_SS_ID}&select=subdomain`, { headers: SB_HEADERS })
+                fetch(`${SB_URL}/rest/v1/client_public_profile?ssid=eq.${ssId}&select=subdomain`, { headers: SB_HEADERS })
                     .then(r => r.ok ? r.json() : Promise.resolve([]))
             ])
             .then(([metaData, profileData]) => {
@@ -1615,7 +1627,7 @@
             // ===== STEP 3: Check Spreadsheet Count in Background for Mismatch Warning =====
             fetch(SCRIPT_URL, {
                 method: "POST",
-                body: JSON.stringify({ action: "getSpreadsheetGuestCount", ssId: CURRENT_SS_ID })
+                body: JSON.stringify({ action: "getSpreadsheetGuestCount", ssId: ssId })
             })
             .then(r => r.json())
             .then(res => {
@@ -1634,7 +1646,7 @@
                     }
                     
                     // Muat ulang metadata_client dari Supabase secara asinkron untuk memperbarui template pasca auto-sync GAS
-                    fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&select=*`, { headers: SB_HEADERS })
+                    fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${ssId}&select=*`, { headers: SB_HEADERS })
                         .then(r => r.ok ? r.json() : [])
                         .then(metaData => {
                             if (metaData && metaData.length > 0) {
