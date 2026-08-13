@@ -605,37 +605,8 @@
                     <h3 class="gift-header-text text-2xl font-serif italic mb-2">Wedding Gift</h3>
                     <p class="text-[9px] tracking-[0.3em] text-neutral-400 uppercase">Tanda Kasih</p>
                 </div>
-                <div class="reveal space-y-4">
-                    <div class="gift-card">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2e/BRI_2020.svg"
-                            class="gift1-logo h-6 mx-auto mb-6 grayscale opacity-80" alt="Bank Logo">
-                        <p class="gift1-acc-text text-lg font-serif text-neutral-800 mb-1">0046 0101 6863 537</p>
-                        <p class="gift1-owner-text text-[9px] uppercase tracking-widest text-neutral-400 mb-6">Atas
-                            Nama: Bintang Zahlahar Trijati</p>
-                        <button onclick="copyToClipboard('004601016863537')"
-                            class="px-8 py-3 border border-neutral-200 rounded-full text-[8px] uppercase tracking-widest font-bold text-neutral-400 hover:bg-neutral-50">Salin
-                            No. Rekening</button>
-                    </div>
-                    <div class="gift-card">
-                        <img src="https://ridergalau.id/wp-content/uploads/2026/01/Logo-Bank-BJB.png"
-                            class="gift2-logo h-8 mx-auto mb-6 grayscale opacity-80" alt="Bank Logo">
-                        <p class="gift2-acc-text text-lg font-serif text-neutral-800 mb-1">0150614368104</p>
-                        <p class="gift2-owner-text text-[9px] uppercase tracking-widest text-neutral-400 mb-6">Atas
-                            Nama: Anisa Nur Fitria</p>
-                        <button onclick="copyToClipboard('0150614368104')"
-                            class="px-8 py-3 border border-neutral-200 rounded-full text-[8px] uppercase tracking-widest font-bold text-neutral-400 hover:bg-neutral-50">Salin
-                            No. Rekening</button>
-                    </div>
-                    <div class="gift-card">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Logo_dana_blue.svg/1280px-Logo_dana_blue.svg.png"
-                            class="gift3-logo h-6 mx-auto mb-6 grayscale opacity-80" alt="Bank Logo">
-                        <p class="gift3-acc-text text-lg font-serif text-neutral-800 mb-1">082246379369</p>
-                        <p class="gift3-owner-text text-[9px] uppercase tracking-widest text-neutral-400 mb-6">Atas
-                            Nama: Anisa Nur Fitria</p>
-                        <button onclick="copyToClipboard('082246379369')"
-                            class="px-8 py-3 border border-neutral-200 rounded-full text-[8px] uppercase tracking-widest font-bold text-neutral-400 hover:bg-neutral-50 transition-colors">Salin
-                            No. HP</button>
-                    </div>
+                <div class="reveal space-y-4" id="gifts-container">
+                    <!-- Kartu gift dirender dinamis oleh undangan.html (jumlah bebas + logo bank otomatis) -->
                 </div>
             </div>
         </section>
@@ -1143,6 +1114,65 @@
             }, 300);
         }
 
+        // Logo bank resmi (URL terverifikasi). Bank/e-wallet lain otomatis memakai monogram.
+        const BANK_LOGOS = {
+            "BCA": "https://upload.wikimedia.org/wikipedia/commons/e/e0/BCA_logo.svg",
+            "BRI": "https://upload.wikimedia.org/wikipedia/commons/2/2e/BRI_2020.svg",
+            "BJB": "https://ridergalau.id/wp-content/uploads/2026/01/Logo-Bank-BJB.png",
+            "MANDIRI": "https://upload.wikimedia.org/wikipedia/commons/a/ad/Bank_Mandiri_logo_2016.svg",
+            "BNI": "https://upload.wikimedia.org/wikipedia/commons/f/fa/BNI_logo_2014.svg",
+            "BTN": "https://upload.wikimedia.org/wikipedia/commons/f/fd/Bank_BTN_logo.svg",
+            "PERMATA": "https://upload.wikimedia.org/wikipedia/commons/f/ff/Permata_Bank_%282024%29.svg",
+            "SEABANK": "https://upload.wikimedia.org/wikipedia/commons/a/ac/SeaBank.svg",
+            "DANA": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Logo_dana_blue.svg/1280px-Logo_dana_blue.svg.png"
+        };
+        const EWALLET_KEYS = ["DANA", "GOPAY", "OVO", "SHOPEEPAY", "LINKAJA", "LINK AJA", "PAYPAL"];
+
+        function escAttr(s) {
+            return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+        }
+
+        function bankMonogram(bank) {
+            if (!bank) return "GFT";
+            const words = String(bank).trim().split(/\s+/).filter(Boolean);
+            return words.length > 1 ? (words[0][0] + words[1][0]).toUpperCase() : words[0].slice(0, 2).toUpperCase();
+        }
+
+        function getBankLogo(bank) {
+            if (!bank) return "";
+            return BANK_LOGOS[String(bank).toUpperCase().replace(/[^A-Z0-9]/g, "")] || "";
+        }
+
+        window.fallbackGiftLogo = function (el, bank) {
+            const mono = document.createElement('div');
+            mono.className = "w-14 h-14 mx-auto mb-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-sm font-bold tracking-widest";
+            mono.textContent = bankMonogram(bank);
+            if (el && el.parentNode) el.parentNode.replaceChild(mono, el);
+        };
+
+        window.renderGifts = function (gifts) {
+            const container = document.getElementById('gifts-container');
+            if (!container || !Array.isArray(gifts)) return false;
+            const valid = gifts.filter(g => g && g.acc);
+            if (valid.length === 0) { container.innerHTML = ''; return true; }
+            container.innerHTML = valid.map(g => {
+                const bank = (g.bank || "").trim();
+                const key = bank.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                const logoUrl = getBankLogo(bank);
+                const logoHtml = logoUrl
+                    ? `<img src="${escAttr(logoUrl)}" class="h-8 mx-auto mb-6 object-contain grayscale opacity-80" alt="${escAttr(bank)}" onerror="window.fallbackGiftLogo(this, '${escAttr(bank)}')">`
+                    : `<div class="w-14 h-14 mx-auto mb-6 rounded-full bg-neutral-900 text-white flex items-center justify-center text-sm font-bold tracking-widest">${escAttr(bankMonogram(bank))}</div>`;
+                const btnLabel = EWALLET_KEYS.includes(key) ? "Salin No. HP" : "Salin No. Rekening";
+                return `<div class="gift-card bg-white rounded-2xl shadow-sm border border-neutral-100 p-8">
+                    ${logoHtml}
+                    <p class="gift-acc-text text-lg font-serif text-neutral-800 mb-1">${escAttr(g.acc)}</p>
+                    <p class="gift-owner-text text-[9px] uppercase tracking-widest text-neutral-400 mb-6">A/n: ${escAttr(g.owner || "")}</p>
+                    <button onclick="copyToClipboard('${escAttr(g.acc)}')" class="px-8 py-3 border border-neutral-200 rounded-full text-[8px] uppercase tracking-widest font-bold text-neutral-400 hover:bg-neutral-50 transition-colors">${btnLabel}</button>
+                </div>`;
+            }).join('');
+            return true;
+        };
+
         window.applyLivePreview = function (data) {
             console.log("Applying Live Preview Data:", data);
             
@@ -1304,20 +1334,7 @@
             else document.getElementById('gift-section').style.display = 'block';
             if (data.gift_header) document.querySelectorAll('.gift-header-text').forEach(el => el.innerText = data.gift_header);
             
-            if (data.gifts) {
-                if (data.gifts[0]) {
-                    document.querySelectorAll('.gift1-acc-text').forEach(el => el.innerText = data.gifts[0].acc);
-                    document.querySelectorAll('.gift1-owner-text').forEach(el => el.innerText = "Atas Nama: " + data.gifts[0].owner);
-                }
-                if (data.gifts[1]) {
-                    document.querySelectorAll('.gift2-acc-text').forEach(el => el.innerText = data.gifts[1].acc);
-                    document.querySelectorAll('.gift2-owner-text').forEach(el => el.innerText = "Atas Nama: " + data.gifts[1].owner);
-                }
-                if (data.gifts[2]) {
-                    document.querySelectorAll('.gift3-acc-text').forEach(el => el.innerText = data.gifts[2].acc);
-                    document.querySelectorAll('.gift3-owner-text').forEach(el => el.innerText = "Atas Nama: " + data.gifts[2].owner);
-                }
-            }
+            if (data.gifts) renderGifts(data.gifts);
 
             // Gallery
             if (data.show_gallery === "false") document.getElementById('gallery-section').style.display = 'none';

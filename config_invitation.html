@@ -376,22 +376,13 @@
                     <input type="text" id="gift_header" class="stk-input" placeholder="Header (Wedding Gift)" oninput="updatePreview()">
                 </div>
                 <div class="p-4 bg-neutral-50 rounded-2xl mb-4 border border-neutral-100">
-                    <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT CARD 1</div>
-                    <input type="text" id="gift1_bank" class="stk-input mb-2" placeholder="Bank (e.g. BRI)">
-                    <input type="text" id="gift1_acc" class="stk-input mb-2" placeholder="No Rekening">
-                    <input type="text" id="gift1_owner" class="stk-input" placeholder="Atas Nama">
-                </div>
-                <div class="p-4 bg-neutral-50 rounded-2xl mb-4 border border-neutral-100">
-                    <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT CARD 2</div>
-                    <input type="text" id="gift2_bank" class="stk-input mb-2" placeholder="Bank (e.g. BJB)">
-                    <input type="text" id="gift2_acc" class="stk-input mb-2" placeholder="No Rekening">
-                    <input type="text" id="gift2_owner" class="stk-input" placeholder="Atas Nama">
-                </div>
-                <div class="p-4 bg-neutral-50 rounded-2xl mb-4 border border-neutral-100">
-                    <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT CARD 3 (e.g. DANA)</div>
-                    <input type="text" id="gift3_bank" class="stk-input mb-2" placeholder="Bank/E-Wallet">
-                    <input type="text" id="gift3_acc" class="stk-input mb-2" placeholder="No Rek/HP">
-                    <input type="text" id="gift3_owner" class="stk-input" placeholder="Atas Nama">
+                    <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT / E-WALLET (logo bank otomatis sesuai nama, klik + untuk tambah/hapus)</div>
+                    <div id="gifts-container" class="space-y-3">
+                        <!-- Dynamic Gift Cards -->
+                    </div>
+                    <div class="text-center">
+                        <button id="btn-add-gift" onclick="addGiftSlot()" class="mt-3 px-4 py-2 bg-violet-100 text-violet-700 font-bold text-[10px] rounded-xl hover:bg-violet-200 transition-all">➕ TAMBAH GIFT / E-WALLET</button>
+                    </div>
                 </div>
 
                 <div class="section-title">Gallery Photos</div>
@@ -444,6 +435,7 @@
         let currentTheme = "standard_clean_minimalis_1";
         let targetInputId = ""; // Untuk menampung input mana yang sedang diupload
         let galleryCount = 0;
+        let giftCount = 0;
 
         const PACKAGE_TIER_MAP = {
             'standard': 1, 'e-invitation standard': 1, 'e-inv standard': 1,
@@ -491,6 +483,46 @@
                 document.getElementById('btn-add-gallery').classList.add('hidden');
                 document.getElementById('gallery-limit-text').classList.remove('hidden');
             }
+        }
+
+        function addGiftSlot(gift = {}) {
+            giftCount++;
+            const n = giftCount;
+            const container = document.getElementById('gifts-container');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = "gift-slot p-4 bg-white rounded-xl border border-neutral-200 relative";
+            div.innerHTML = `
+                <button onclick="removeGiftCard(this)" title="Hapus gift ini" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-[10px] font-bold shadow">✕</button>
+                <div class="font-bold text-[10px] mb-3 text-neutral-400">GIFT ${n}</div>
+                <input type="text" class="stk-input mb-2 gift-bank" placeholder="Bank / E-Wallet (e.g. BRI, BCA, DANA)" value="${escAttrVal(gift.bank)}" oninput="updatePreview()">
+                <input type="text" class="stk-input mb-2 gift-acc" placeholder="No Rekening / No HP" value="${escAttrVal(gift.acc)}" oninput="updatePreview()">
+                <input type="text" class="stk-input gift-owner" placeholder="Atas Nama" value="${escAttrVal(gift.owner)}" oninput="updatePreview()">
+            `;
+            container.appendChild(div);
+        }
+
+        function removeGiftCard(btn) {
+            const cardEl = btn.parentElement;
+            if (cardEl && cardEl.parentNode) cardEl.parentNode.removeChild(cardEl);
+            updatePreview();
+        }
+
+        function collectGifts() {
+            const container = document.getElementById('gifts-container');
+            if (!container) return [];
+            const gifts = [];
+            container.querySelectorAll('div.gift-slot').forEach(slot => {
+                const bank = slot.querySelector('.gift-bank').value.trim();
+                const acc = slot.querySelector('.gift-acc').value.trim();
+                const owner = slot.querySelector('.gift-owner').value.trim();
+                if (bank || acc || owner) gifts.push({ bank, acc, owner });
+            });
+            return gifts;
+        }
+
+        function escAttrVal(v) {
+            return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
         }
 
         window.showSapaModal = function(title, msg, icon = "✨") {
@@ -722,21 +754,16 @@
             if (document.getElementById('show_gift')) document.getElementById('show_gift').value = inv.show_gift !== undefined ? inv.show_gift : "true";
             if (document.getElementById('gift_header')) document.getElementById('gift_header').value = inv.gift_header || "";
             
-            const gifts = inv.gifts || [{}, {}, {}];
-            if (gifts[0]) {
-                if (document.getElementById('gift1_bank')) document.getElementById('gift1_bank').value = gifts[0].bank || "BRI";
-                if (document.getElementById('gift1_acc')) document.getElementById('gift1_acc').value = gifts[0].acc || "";
-                if (document.getElementById('gift1_owner')) document.getElementById('gift1_owner').value = gifts[0].owner || "";
-            }
-            if (gifts[1]) {
-                if (document.getElementById('gift2_bank')) document.getElementById('gift2_bank').value = gifts[1].bank || "BJB";
-                if (document.getElementById('gift2_acc')) document.getElementById('gift2_acc').value = gifts[1].acc || "";
-                if (document.getElementById('gift2_owner')) document.getElementById('gift2_owner').value = gifts[1].owner || "";
-            }
-            if (gifts[2]) {
-                if (document.getElementById('gift3_bank')) document.getElementById('gift3_bank').value = gifts[2].bank || "DANA";
-                if (document.getElementById('gift3_acc')) document.getElementById('gift3_acc').value = gifts[2].acc || "";
-                if (document.getElementById('gift3_owner')) document.getElementById('gift3_owner').value = gifts[2].owner || "";
+            const gifts = Array.isArray(inv.gifts) ? inv.gifts.filter(g => g && (g.bank || g.acc || g.owner)) : [];
+            if (document.getElementById('gifts-container')) {
+                document.getElementById('gifts-container').innerHTML = '';
+                giftCount = 0;
+                if (gifts.length > 0) {
+                    gifts.forEach(g => addGiftSlot(g));
+                } else {
+                    addGiftSlot({ bank: "BRI", acc: "", owner: "" });
+                    addGiftSlot({ bank: "DANA", acc: "", owner: "" });
+                }
             }
 
             if (document.getElementById('inv_greeting')) document.getElementById('inv_greeting').value = inv.greeting || "Yth. Bapak/Ibu/Saudara/i";
@@ -853,11 +880,7 @@
                     maps: document.getElementById('ev2_maps').value,
                     photo: document.getElementById('ev2_photo').value
                 },
-                gifts: [
-                    { bank: document.getElementById('gift1_bank').value, acc: document.getElementById('gift1_acc').value, owner: document.getElementById('gift1_owner').value },
-                    { bank: document.getElementById('gift2_bank').value, acc: document.getElementById('gift2_acc').value, owner: document.getElementById('gift2_owner').value },
-                    { bank: document.getElementById('gift3_bank').value, acc: document.getElementById('gift3_acc').value, owner: document.getElementById('gift3_owner').value }
-                ],
+                gifts: collectGifts(),
                 greeting: document.getElementById('inv_greeting').value,
                 gallery: Array.from({length: galleryCount}, (_, i) => {
                     const el = document.getElementById(`gal_${i+1}`);
@@ -1010,16 +1033,12 @@
                         maps: getVal('ev2_maps'),
                         photo: getVal('ev2_photo')
                     },
-                    gifts: [
-                        { bank: getVal('gift1_bank'), acc: getVal('gift1_acc'), owner: getVal('gift1_owner') },
-                        { bank: getVal('gift2_bank'), acc: getVal('gift2_acc'), owner: getVal('gift2_owner') },
-                        { bank: getVal('gift3_bank'), acc: getVal('gift3_acc'), owner: getVal('gift3_owner') }
-                    ],
+                    gifts: collectGifts(),
                     greeting: getVal('inv_greeting'),
-                    gallery: [
-                        getVal('gal_1'), getVal('gal_2'), getVal('gal_3'),
-                        getVal('gal_4'), getVal('gal_5'), getVal('gal_6')
-                    ],
+                    gallery: Array.from({length: galleryCount}, (_, i) => {
+                        const el = document.getElementById(`gal_${i+1}`);
+                        return el ? el.value : "";
+                    }).filter(v => v),
                     theme: currentTheme
                 };
 
