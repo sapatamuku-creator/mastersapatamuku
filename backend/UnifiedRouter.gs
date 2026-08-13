@@ -154,7 +154,7 @@ function handleMusicUpload(payload) {
     }
 
     const GITHUB_TOKEN = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
-    const GITHUB_OWNER = PropertiesService.getScriptProperties().getProperty('GITHUB_OWNER') || 'opick8c';
+    const GITHUB_OWNER = PropertiesService.getScriptProperties().getProperty('GITHUB_OWNER') || 'sapatamuku-creator';
     const GITHUB_REPO  = PropertiesService.getScriptProperties().getProperty('GITHUB_REPO')  || 'sapatamu-music';
 
     if (!GITHUB_TOKEN) {
