@@ -379,7 +379,7 @@ export default async function handler(req, res) {
         const products = pRes.ok ? await pRes.json() : [];
         const reviews = rRes.ok ? await rRes.json() : [];
 
-        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=600, stale-while-revalidate=1800');
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=3600, stale-while-revalidate=1800');
         return res.status(200).json({
           vendor,
           products: Array.isArray(products) ? products : [],
@@ -425,7 +425,7 @@ export default async function handler(req, res) {
         const otherProducts = otherProdsRes.ok ? await otherProdsRes.json() : [];
         const reviews = rRes.ok ? await rRes.json() : [];
 
-        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=600, stale-while-revalidate=1800');
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=3600, stale-while-revalidate=1800');
         return res.status(200).json({
           product,
           vendor,
@@ -854,4 +854,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message || 'Internal server error', detail: err.stack || String(err) });
   }
 }
+
 
