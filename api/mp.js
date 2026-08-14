@@ -728,6 +728,14 @@ const cleanEmail = email.toLowerCase().trim();
           if (!authRes.ok) {
             const err = await authRes.json().catch(() => ({}));
             const msg = err.error_description || err.msg || err.message || 'Email atau password salah';
+            // GoTrue memblokir login pra-konfirmasi email → alihkan ke alur OTP (panel frontend)
+            if (authRes.status === 401 && /email not confirmed/i.test(msg)) {
+              return res.status(403).json({
+                error: 'Email akun Anda belum diverifikasi. Periksa email untuk kode OTP, atau kirim ulang kode.',
+                code: 'EMAIL_UNVERIFIED',
+                email: cleanEmail
+              });
+            }
             return res.status(401).json({ error: msg });
           }
           const authJson = await authRes.json();
