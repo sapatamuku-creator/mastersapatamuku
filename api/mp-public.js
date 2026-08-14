@@ -329,7 +329,7 @@ export default async function handler(req) {
         const id = q.get('id');
         if (!id) return json({ error: 'Missing product ID' }, 400);
 
-        const pRes = await sbFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&select=id,cover_image_url,image_url&limit=1`);
+        const pRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&select=id,cover_image_url,image_url&limit=1`);
         const rows = pRes.ok ? await pRes.json() : [];
         const product = (Array.isArray(rows) && rows[0]) ? rows[0] : null;
         if (!product) return json({ error: 'Produk tidak ditemukan' }, 404);
