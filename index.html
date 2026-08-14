@@ -351,6 +351,23 @@
     .kategori-name { margin: 0; font-size: 0.72rem; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45); line-height: 1.35; }
     .kategori-count { margin: 0; font-size: 0.68rem; font-weight: 600; color: rgba(255, 255, 255, 0.9); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
 
+    /* RUNNING MARQUEE VENDOR STRIP */
+    .vendor-marquee-section { overflow: hidden; }
+    .vendor-marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+    .vendor-marquee-track { display: flex; gap: 16px; width: max-content; animation: marqueeScroll 34s linear infinite; }
+    .vendor-marquee:hover .vendor-marquee-track { animation-play-state: paused; }
+    @keyframes marqueeScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .marquee-card { width: 240px; flex-shrink: 0; background: var(--white); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-sm); transition: var(--transition); }
+    .marquee-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .marquee-card .mc-cover { width: 100%; height: 140px; object-fit: cover; display: block; background: var(--bg-alt); }
+    .marquee-card .mc-body { padding: 12px 14px; }
+    .marquee-card .mc-name { font-size: 0.9rem; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+    .marquee-card .mc-meta { font-size: 0.78rem; color: var(--text-light); display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+    .marquee-explore { text-align: center; margin-top: 28px; }
+    .marquee-explore a { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.95rem; color: var(--primary-dark); border-bottom: 2px solid var(--primary-light); padding-bottom: 2px; transition: var(--transition); }
+    .marquee-explore a:hover { color: var(--primary); border-color: var(--primary); }
+    @media (prefers-reduced-motion: reduce) { .vendor-marquee-track { animation: none; overflow-x: auto; } }
+
     .kota-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
     .kota-card { position: relative; height: 160px; border-radius: var(--radius); overflow: hidden; cursor: pointer; }
     .kota-card .kota-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform 0.5s ease; }
@@ -581,6 +598,23 @@
             <div class="img-skeleton-container" style="width:100px;height:14px;border-radius:4px;margin-top:8px"></div>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RUNNING MARQUEE VENDOR STRIP -->
+  <section class="section vendor-marquee-section" id="vendorMarquee" style="padding-top:0">
+    <div class="container" style="max-width:1200px;padding:0 24px">
+      <div class="vendor-marquee">
+        <div class="vendor-marquee-track" id="vendorMarqueeTrack">
+          <div class="marquee-card skeleton"></div>
+          <div class="marquee-card skeleton"></div>
+          <div class="marquee-card skeleton"></div>
+          <div class="marquee-card skeleton"></div>
+        </div>
+      </div>
+      <div class="marquee-explore">
+        <a href="/marketplace">Jelajahi Vendor Lainnya &nearr;</a>
       </div>
     </div>
   </section>
@@ -850,9 +884,38 @@ grid.innerHTML = vendors.map(renderVendorCard).join('');
       }
     }
 
+    async function loadMarqueeVendors() {
+      const track = document.getElementById('vendorMarqueeTrack');
+      if (!track) return;
+      let vendors = apiCacheGet('vendors:marquee', 5 * 60 * 1000);
+      if (!vendors || !Array.isArray(vendors) || vendors.length === 0) {
+        try {
+          const res = await fetch('/api/mp/vendors?limit=10');
+          const json = await res.json();
+          vendors = json.data || [];
+          if (vendors.length > 0) apiCacheSet('vendors:marquee', vendors);
+        } catch (e) {}
+      }
+      if (!vendors || vendors.length === 0) {
+        const sec = document.getElementById('vendorMarquee');
+        if (sec) sec.style.display = 'none';
+        return;
+      }
+      const card = v => `<a class="marquee-card" href="/vendor/${v.slug}">
+        <img class="mc-cover" src="${v.cover_image_url || v.cover_image || ''}" alt="${v.business_name}" loading="lazy">
+        <div class="mc-body">
+          <div class="mc-name">${v.business_name}</div>
+          <div class="mc-meta">&#11088; ${v.rating_avg || '5.0'}${v.city ? ' &middot; ' + v.city : ''}</div>
+        </div>
+      </a>`;
+      const inner = vendors.map(card).join('');
+      track.innerHTML = inner + inner;
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       loadCategories();
       loadFeaturedVendors();
+      loadMarqueeVendors();
     });
   </script>
 </body>
