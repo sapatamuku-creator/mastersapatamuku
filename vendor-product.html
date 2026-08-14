@@ -194,6 +194,9 @@
     .section-title { font-family: 'Lora', serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 18px; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 12px; }
 
     .product-desc-text { font-size: 0.95rem; color: var(--text-light); line-height: 1.8; white-space: pre-line; }
+    .vendor-desc-clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .vendor-desc-toggle { display: none; background: none; border: none; padding: 0; margin: -4px 0 16px; color: var(--primary-dark); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+    .vendor-desc-toggle:hover { text-decoration: underline; }
 
     /* OTHER PRODUCTS CAROUSEL GRID */
     .other-products-title { font-family: 'Lora', serif; font-size: 1.4rem; font-weight: 700; color: var(--text-main); margin: 0; }
@@ -326,7 +329,8 @@
             </div>
           </div>
 
-          <p id="vendorSideDesc" style="font-size:0.85rem;color:var(--text-light);line-height:1.6;margin-bottom:20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">-</p>
+          <p id="vendorSideDesc" class="vendor-desc-clamped" style="font-size:0.85rem;color:var(--text-light);line-height:1.6;margin-bottom:20px">-</p>
+          <button type="button" id="vendorDescToggle" class="vendor-desc-toggle">Selengkapnya</button>
 
           <a href="#" id="btnWaSideDirect" target="_blank" class="btn-wa-lg" style="padding:10px 18px;font-size:0.88rem;margin-bottom:10px">
             💬 Chat Vendor Langsung
@@ -428,7 +432,8 @@
       const vsl = $('vendorSideLogo'); if (vsl) vsl.innerHTML = '';
       const vsn = $('vendorSideName'); if (vsn) vsn.textContent = '-';
       const vsc = $('vendorSideCity'); if (vsc) vsc.textContent = '-';
-      const vsd = $('vendorSideDesc'); if (vsd) vsd.textContent = '';
+      const vsd = $('vendorSideDesc'); if (vsd) { vsd.textContent = ''; vsd.classList.remove('vendor-desc-clamped'); }
+      const vsdt = $('vendorDescToggle'); if (vsdt) { vsdt.style.display = 'none'; }
       const waSide = $('btnWaSideDirect'); if (waSide) waSide.style.display = 'none';
       const opg = $('otherProductsGrid'); if (opg) opg.innerHTML = '';
       const ohr = $('otherHeadingRow'); if (ohr) ohr.style.display = 'none';
@@ -438,6 +443,28 @@
       const grid = $('otherProductsGrid');
       if (!grid) return;
       grid.scrollBy({ left: dir * 320, behavior: 'smooth' });
+    }
+
+    function setupVendorDescToggle() {
+      const vsd = $('vendorSideDesc');
+      const vsdt = $('vendorDescToggle');
+      if (!vsd || !vsdt || vsdt._bound) return;
+      vsdt._bound = true;
+      const refresh = () => {
+        vsd.classList.remove('vendor-desc-clamped');
+        const fullH = vsd.scrollHeight;
+        vsd.classList.add('vendor-desc-clamped');
+        const clampedH = vsd.scrollHeight;
+        const truncated = fullH > clampedH + 1;
+        vsdt.style.display = truncated ? 'inline-block' : 'none';
+        vsdt.textContent = vsd.classList.contains('vendor-desc-clamped') ? 'Selengkapnya' : 'Tutup';
+      };
+      vsdt.addEventListener('click', () => {
+        vsd.classList.toggle('vendor-desc-clamped');
+        vsdt.textContent = vsd.classList.contains('vendor-desc-clamped') ? 'Selengkapnya' : 'Tutup';
+      });
+      window.addEventListener('resize', refresh);
+      refresh();
     }
 
     function syncOtherArrows() {
@@ -532,6 +559,7 @@
         $('vendorSideName').innerHTML = `${v.business_name} ${igVerifiedBadge}`;
         $('vendorSideCity').textContent = v.city || 'Indonesia';
         $('vendorSideDesc').textContent = v.description || 'Vendor terverifikasi Sapatamu.id';
+        setupVendorDescToggle();
         if (v.logo_url) {
           $('vendorSideLogo').innerHTML = `
             <div class="img-skeleton-container" style="width:100%;height:100%">
