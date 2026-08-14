@@ -313,7 +313,7 @@ export default async function handler(req) {
         const slug = q.get('slug');
         if (!id && !slug) return json({ error: 'Missing product ID or slug' }, 400);
 
-        const PRODUCT_COLS = 'id,vendor_id,slug,name,price,description,image_url,cover_image_url,price_label,short_desc,category_name,created_at';
+        const PRODUCT_COLS = '*';
         let pQuery = id
           ? `/mp_products?id=eq.${encodeURIComponent(id)}&select=${PRODUCT_COLS}&limit=1`
           : `/mp_products?slug=eq.${encodeURIComponent(slug)}&select=${PRODUCT_COLS}&limit=1`;
