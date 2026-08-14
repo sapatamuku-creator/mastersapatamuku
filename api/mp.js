@@ -92,6 +92,33 @@ function generateSlug(text) {
 const OTP_TTL_MS = 5 * 60 * 1000;           // kode berlaku 5 menit
 const OTP_MAX_ATTEMPTS = 5;                 // maks 5 percobaan salah
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;   // cooldown kirim ulang 60 detik
+const STALE_ACCOUNT_TTL_MS = 24 * 60 * 60 * 1000; // akun tanpa verifikasi email dihapus setelah 24 jam
+
+// Lazy sweep: hapus akun pendaftaran menggantung (email belum diverifikasi > 24 jam,
+// tanpa produk & inquiry) agar email bisa dipakai daftar ulang. Dipanggil dari register-vendor.
+async function sweepStaleVendorAccounts() {
+  try {
+    const cutoff = new Date(Date.now() - STALE_ACCOUNT_TTL_MS).toISOString();
+    const res = await sbServiceFetch(`/mp_vendors?email_verified_at=is.null&created_at=lt.${cutoff}&select=id,user_id&limit=25`);
+    const rows = res.ok ? await res.json() : [];
+    for (const v of (Array.isArray(rows) ? rows : [])) {
+      const prodRes = await sbServiceFetch(`/mp_products?vendor_id=eq.${v.id}&select=id&limit=1`);
+      const prods = prodRes.ok ? await prodRes.json() : [];
+      if (Array.isArray(prods) && prods.length > 0) continue;
+      const inqRes = await sbServiceFetch(`/mp_inquiries?vendor_id=eq.${v.id}&select=id&limit=1`);
+      const inqs = inqRes.ok ? await inqRes.json() : [];
+      if (Array.isArray(inqs) && inqs.length > 0) continue;
+      await sbServiceFetch(`/vendor_otp?vendor_id=eq.${v.id}`, { method: 'DELETE' });
+      await sbServiceFetch(`/mp_vendors?id=eq.${v.id}`, { method: 'DELETE' });
+      if (v.user_id) {
+        await fetch(`${SB_URL}/auth/v1/admin/users/${v.user_id}`, {
+          method: 'DELETE',
+          headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+        }).catch(() => {});
+      }
+    }
+  } catch (e) { console.error('[sweepStaleVendorAccounts error]', e); }
+}
 
 function genOtpCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -613,6 +640,8 @@ export default async function handler(req, res) {
       // â”€â”€ 6. REGISTER VENDOR â”€â”€
       case 'register-vendor': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        // Bersihkan akun menggantung (email belum diverifikasi > 24 jam) agar email bisa dipakai lagi
+        sweepStaleVendorAccounts();
         const { business_name, category_id, city, province, owner_name, whatsapp, email, password, instagram, website, description, cover_image_url, logo_url } = req.body;
 
         const finalBusinessName = (business_name || '').trim();
@@ -744,6 +773,18 @@ const cleanEmail = email.toLowerCase().trim();
           const vRes = await sbServiceFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
           const vRows = vRes.ok ? await vRes.json() : [];
           const vendor = (Array.isArray(vRows) && vRows[0]) ? vRows[0] : null;
+
+          // Konfirmasi via link email (klik "Confirm email address") juga sah →
+          // sinkronkan status konfirmasi GoTrue ke email_verified_at agar login lolos.
+          const confirmedAt = (authJson.user && (authJson.user.confirmed_at || authJson.user.email_confirmed_at)) || null;
+          if (vendor && confirmedAt && !vendor.email_verified_at) {
+            const iso = new Date(confirmedAt).toISOString();
+            await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ email_verified_at: iso })
+            });
+            vendor.email_verified_at = iso;
+          }
 
           // Phase 2: email harus diverifikasi dulu sebelum akun bisa dipakai
           if (vendor && !vendor.email_verified_at) {
