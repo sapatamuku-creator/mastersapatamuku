@@ -429,7 +429,17 @@
             const gName = (inv.groom && inv.groom.name) || "";
             const bName = (inv.bride && inv.bride.name) || "";
             const titleEl = document.getElementById('weddingTitle');
-            if (titleEl) titleEl.innerText = [gName, bName].filter(Boolean).join(' & ') || "Acara Pernikahan";
+            if (titleEl) {
+                if (gName || bName) {
+                    let html = '';
+                    if (gName) html += `<span class="ws-name ws-groom">${escAttr(gName)}</span>`;
+                    if (gName && bName) html += `<span class="ws-amp">&amp;</span>`;
+                    if (bName) html += `<span class="ws-name ws-bride">${escAttr(bName)}</span>`;
+                    titleEl.innerHTML = html;
+                } else {
+                    titleEl.innerText = "Acara Pernikahan";
+                }
+            }
             const ev1 = inv.ev1 || {};
             if (document.getElementById('weddingDate')) document.getElementById('weddingDate').innerText = ev1.date || "-";
             if (document.getElementById('weddingTime')) document.getElementById('weddingTime').innerText = ev1.time ? (ev1.time + (ev1.zone ? ' ' + ev1.zone : ' WIB')) : "-";
