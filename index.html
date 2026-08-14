@@ -383,7 +383,8 @@
     .vendor-cover { position: relative; height: 180px; overflow: hidden; }
     .vendor-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
     .vendor-logo-wrap { position: absolute; bottom: -24px; left: 16px; z-index: 2; }
-    .vendor-logo { width: 52px; height: 52px; border-radius: 14px; border: 3px solid var(--white); background: var(--white); object-fit: cover; box-shadow: var(--shadow-md); }
+    .vendor-logo { width: 52px; height: 52px; border-radius: 14px; border: 3px solid var(--white); background: var(--white); object-fit: cover; box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 1.05rem; overflow: hidden; }
+    .vendor-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .vendor-info { padding: 32px 16px 16px; }
     .vendor-category { display: inline-block; font-size: 0.7rem; font-weight: 600; color: var(--mp-purple); background: var(--mp-purple-light); padding: 3px 8px; border-radius: 4px; margin-bottom: 8px; }
     .vendor-name { font-family: 'Lora', serif; font-size: 1.05rem; font-weight: 600; color: var(--text-main); margin-bottom: 6px; }
@@ -739,6 +740,9 @@
 
     function renderVendorCard(v) {
       const init = v.business_name ? v.business_name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase() : 'V';
+      const logoHtml = v.logo_url
+        ? `<img src="${v.logo_url}" alt="${v.business_name}">`
+        : `<span>${init}</span>`;
       const price = v.price_from > 0 ? `<span class="amount">Rp ${Number(v.price_from).toLocaleString('id-ID')}</span>` : `<span class="amount">Hubungi Vendor</span>`;
       return `<a href="/vendor/${v.slug}" class="vendor-card fade-in">
         <div class="vendor-cover" style="background:linear-gradient(135deg,var(--primary),var(--gold))">
@@ -754,7 +758,7 @@
                    onerror="this.style.display='none';this.parentElement.classList.add('img-loaded')">
             </div>
           ` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:2rem">${init}</div>`}
-          <div class="vendor-logo-wrap"><div class="vendor-logo" style="background:linear-gradient(135deg,var(--primary),var(--gold))"></div></div>
+          <div class="vendor-logo-wrap"><div class="vendor-logo" style="background:linear-gradient(135deg,var(--primary),var(--gold))">${logoHtml}</div></div>
         </div>
         <div class="vendor-info">
           <span class="vendor-category">${v.category_name || ''}</span>
