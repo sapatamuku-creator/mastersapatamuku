@@ -67,7 +67,17 @@ export default async function middleware(request) {
       : reqUrl.searchParams.get('id');
     if (isProductPage || prodPathMatch) {
       if (!productId) return;
-      const found = await resolveProductById(productId);
+      let found = await resolveProductById(productId);
+      if (!found) {
+        // Fallback: lewat API publik (service key) bila RLS/env menghalangi baca langsung
+        try {
+          const apiRes = await fetch(`${reqUrl.origin}/api/mp/product-detail?id=${encodeURIComponent(productId)}`);
+          if (apiRes.ok) {
+            const apiJson = await apiRes.json();
+            if (apiJson && apiJson.product) found = { product: apiJson.product, vendor: apiJson.vendor || null };
+          }
+        } catch (e2) { /* biarkan null → pakai meta statis */ }
+      }
       if (!found) return;
       const meta = buildProductOgMeta(found.product, found.vendor);
       const copy = await fetch(`${reqUrl.origin}/vendor-product.html?og-static=1`);
