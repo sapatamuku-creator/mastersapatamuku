@@ -1049,12 +1049,77 @@
             const cards = Array.from(document.querySelectorAll('.carousel-card'));
             if (!track || cards.length === 0) return;
 
-            // 1) Pause on touch (mouse hover sudah di-pause via CSS :hover)
+            // 1) Smooth drag-to-swipe marquee (mouse + touch, inertia, seamless resume)
             const pause = () => { track.style.animationPlayState = 'paused'; };
             const resume = () => { track.style.animationPlayState = ''; };
-            track.addEventListener('touchstart', () => { clearTimeout(resume._t); pause(); }, { passive: true });
-            track.addEventListener('touchend', () => { clearTimeout(resume._t); resume._t = setTimeout(resume, 1200); }, { passive: true });
-            track.addEventListener('touchcancel', resume, { passive: true });
+            const durSec = parseFloat(window.getComputedStyle(track).animationDuration) || 34;
+            const loopDist = (track.scrollWidth / 2) + 8;
+            const secFromPx = px => (-px / loopDist) * durSec;
+            const pxFromSec = sec => -(sec / durSec) * loopDist;
+            const clampPx = px => Math.max(-loopDist, Math.min(0, px));
+            const getSec = () => {
+                const tf = window.getComputedStyle(track).transform;
+                let tx = 0;
+                const m2 = tf.match(/matrix\(([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+)\)/);
+                if (m2) tx = parseFloat(m2[5]);
+                else {
+                    const m3 = tf.match(/matrix3d\(([^)]*)\)/);
+                    if (m3) { const a = m3[1].split(','); tx = parseFloat(a[12]); }
+                }
+                return Math.max(0, Math.min(durSec, secFromPx(tx)));
+            };
+            const scrub = sec => { track.style.animationDelay = '-' + sec + 's'; };
+            let justDragged = false;
+            track.style.touchAction = 'pan-y';
+            track.style.cursor = 'grab';
+
+            let dragState = null;
+            track.addEventListener('pointerdown', (e) => {
+                dragState = { id: e.pointerId, startX: e.clientX, lastX: e.clientX, lastT: performance.now(), startSec: getSec(), moved: false, v: 0 };
+                clearTimeout(resume._t);
+                pause();
+                try { track.setPointerCapture(e.pointerId); } catch (err) {}
+            });
+            track.addEventListener('pointermove', (e) => {
+                if (!dragState || dragState.id !== e.pointerId) return;
+                const dx = e.clientX - dragState.startX;
+                const px = clampPx(pxFromSec(dragState.startSec) + dx);
+                scrub(secFromPx(px));
+                const now = performance.now();
+                const dt = now - dragState.lastT;
+                if (dt > 0) dragState.v = 0.8 * dragState.v + 0.2 * ((e.clientX - dragState.lastX) / dt * 1000);
+                dragState.lastX = e.clientX;
+                dragState.lastT = now;
+                if (Math.abs(dx) > 10) dragState.moved = true;
+            });
+            const resumeAfter = () => {
+                clearTimeout(resume._t);
+                resume._t = setTimeout(() => {
+                    if (!dragState) { scrub(getSec()); resume(); }
+                }, 1200);
+            };
+            const endDrag = (e) => {
+                if (!dragState || dragState.id !== e.pointerId) return;
+                const st = dragState;
+                dragState = null;
+                if (st.moved && Math.abs(st.v) > 120) {
+                    let px = clampPx(pxFromSec(getSec()));
+                    const step = () => {
+                        px += st.v * 0.016;
+                        st.v *= 0.93;
+                        px = clampPx(px);
+                        scrub(secFromPx(px));
+                        if (Math.abs(st.v) > 8) requestAnimationFrame(step);
+                        else resumeAfter();
+                    };
+                    requestAnimationFrame(step);
+                } else {
+                    resumeAfter();
+                }
+                if (st.moved) justDragged = true;
+            };
+            track.addEventListener('pointerup', endDrag);
+            track.addEventListener('pointercancel', endDrag);
 
             // 2) Kumpulkan foto unik (duplikat marquee di-dedupe)
             const imgs = cards.map(c => c.querySelector('img')).filter(Boolean);
@@ -1106,7 +1171,11 @@
 
             imgs.forEach(img => {
                 img.style.cursor = 'zoom-in';
-                img.addEventListener('click', () => openModal(srcs.indexOf(img.getAttribute('src') || '')));
+                img.addEventListener('dragstart', (e) => e.preventDefault());
+                img.addEventListener('click', () => {
+                    if (justDragged) { justDragged = false; return; }
+                    openModal(srcs.indexOf(img.getAttribute('src') || ''));
+                });
             });
             modal.querySelector('.gm-close').addEventListener('click', closeModal);
             modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
