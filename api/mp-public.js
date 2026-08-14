@@ -209,6 +209,7 @@ export default async function handler(req) {
         query += `&limit=50`;
 
         let allProducts = [];
+        let vendors = [];
         const [vRes, prodRes] = await Promise.all([
           sbServiceFetch(query),
           sbServiceFetch(`/mp_products?select=vendor_id,price,cover_image_url,image_url&limit=500`)
