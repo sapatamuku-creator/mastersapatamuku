@@ -188,13 +188,19 @@
     .product-desc-text { font-size: 0.95rem; color: var(--text-light); line-height: 1.8; white-space: pre-line; }
 
     /* OTHER PRODUCTS CAROUSEL GRID */
-    .other-products-title { font-family: 'Lora', serif; font-size: 1.4rem; font-weight: 700; margin-bottom: 20px; color: var(--text-main); }
-    .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+    .other-products-title { font-family: 'Lora', serif; font-size: 1.4rem; font-weight: 700; color: var(--text-main); margin: 0; }
+    .pkg-grid { display: flex; overflow-x: auto; gap: 24px; scroll-snap-type: x proximity; scrollbar-width: thin; padding: 4px 4px 12px; }
+    .pkg-grid::-webkit-scrollbar { height: 6px; }
+    .pkg-grid::-webkit-scrollbar-track { background: transparent; }
+    .pkg-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
     .pkg-card {
       background: var(--white); border-radius: var(--radius); border: 1px solid var(--border);
       overflow: hidden; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; transition: var(--transition);
+      flex: 0 0 280px; scroll-snap-align: start;
     }
     .pkg-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: rgba(224,123,123,0.4); }
+    .carousel-arrow { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--white); color: var(--text-main); font-size: 1.35rem; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--transition); flex-shrink: 0; }
+    .carousel-arrow:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
   </style>
 </head>
 <body>
@@ -323,7 +329,13 @@
 
     <!-- OTHER PACKAGES CAROUSEL GRID -->
     <div style="margin-top:20px">
-      <h2 class="other-products-title">Paket Lainnya dari Vendor Ini</h2>
+      <div id="otherHeadingRow" style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px">
+        <h2 class="other-products-title">Paket Lainnya dari Vendor Ini</h2>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="carousel-arrow" id="btnOtherPrev" onclick="scrollOtherProducts(-1)" aria-label="Paket sebelumnya">&#8249;</button>
+          <button type="button" class="carousel-arrow" id="btnOtherNext" onclick="scrollOtherProducts(1)" aria-label="Paket berikutnya">&#8250;</button>
+        </div>
+      </div>
       <div class="pkg-grid" id="otherProductsGrid">
         <div class="pkg-card" style="pointer-events:none">
           <div class="img-skeleton-container" style="height:180px;width:100%"></div>
@@ -395,6 +407,39 @@
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
     }
 
+    function showProductError(title) {
+      document.title = `${title} | Sapatamu.id`;
+      const cc = $('coverContainer'); if (cc) cc.innerHTML = '';
+      const badge = $('vendorBadgeLink'); if (badge) badge.innerHTML = '';
+      $('productTitle').textContent = title;
+      const price = $('productPrice'); if (price) price.innerHTML = '';
+      const waBtn = $('btnWaOrder'); if (waBtn) waBtn.style.display = 'none';
+      const storeBtn = $('btnViewVendorStore'); if (storeBtn) storeBtn.style.display = 'none';
+      const desc = $('productDesc'); if (desc) desc.innerHTML = '<p style="color:var(--text-light);line-height:1.7">Paket yang Anda cari tidak ditemukan. Kemungkinan paket sudah dihapus atau tautan tidak berlaku. Silakan kembali ke <a href="/marketplace" style="color:var(--primary);text-decoration:underline">marketplace</a> untuk melihat paket lainnya.</p>';
+      const rev = $('reviewsContainer'); if (rev) rev.innerHTML = '';
+      const vsl = $('vendorSideLogo'); if (vsl) vsl.innerHTML = '';
+      const vsn = $('vendorSideName'); if (vsn) vsn.textContent = '-';
+      const vsc = $('vendorSideCity'); if (vsc) vsc.textContent = '-';
+      const vsd = $('vendorSideDesc'); if (vsd) vsd.textContent = '';
+      const waSide = $('btnWaSideDirect'); if (waSide) waSide.style.display = 'none';
+      const opg = $('otherProductsGrid'); if (opg) opg.innerHTML = '';
+      const ohr = $('otherHeadingRow'); if (ohr) ohr.style.display = 'none';
+    }
+
+    function scrollOtherProducts(dir) {
+      const grid = $('otherProductsGrid');
+      if (!grid) return;
+      grid.scrollBy({ left: dir * 320, behavior: 'smooth' });
+    }
+
+    function syncOtherArrows() {
+      const grid = $('otherProductsGrid');
+      if (!grid) return;
+      const show = grid.scrollWidth > grid.clientWidth + 8;
+      const prev = $('btnOtherPrev'); if (prev) prev.style.display = show ? 'flex' : 'none';
+      const next = $('btnOtherNext'); if (next) next.style.display = show ? 'flex' : 'none';
+    }
+
     async function loadProductDetail() {
       if (!productId) {
         alert('Produk tidak ditemukan');
@@ -405,7 +450,7 @@
       try {
         const res = await fetch(`/api/mp/product-detail?id=${encodeURIComponent(productId)}`);
         if (!res.ok) {
-          $('productTitle').textContent = 'Produk Tidak Ditemukan';
+          showProductError('Produk Tidak Ditemukan');
           return;
         }
 
@@ -416,7 +461,7 @@
         const reviews = data.reviews || [];
 
         if (!p || !v) {
-          $('productTitle').textContent = 'Detail Produk Tidak Ditemukan';
+          showProductError('Detail Produk Tidak Ditemukan');
           return;
         }
 
@@ -503,7 +548,7 @@
         // OTHER PRODUCTS
         const otherGrid = $('otherProductsGrid');
         if (otherProducts.length === 0) {
-          otherGrid.innerHTML = `<p style="color:var(--text-muted);grid-column:1/-1">Tidak ada paket lain dari vendor ini.</p>`;
+          otherGrid.innerHTML = `<p style="color:var(--text-muted);width:100%;text-align:center;padding:24px">Tidak ada paket lain dari vendor ini.</p>`;
         } else {
           otherGrid.innerHTML = otherProducts.map(op => {
             const opImg = op.cover_image_url || op.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
@@ -529,6 +574,7 @@
               </div>
             `;
           }).join('');
+          syncOtherArrows();
         }
 
       } catch (e) {
