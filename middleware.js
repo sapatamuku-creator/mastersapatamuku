@@ -1,7 +1,17 @@
-// Vercel Middleware (edge) — preview dinamis untuk crawler sosial di /invitation.
+// Vercel Middleware (edge) — preview dinamis untuk crawler sosial di /invitation,
+// /vendor/:slug, /vendor-product, dan /product/:id.
 // Pengunjung manusia tetap dilayani file statis (cepat + ter-cache); hanya bot
-// (WhatsApp/Facebook/Telegram/dll) yang mendapat HTML dengan meta OG per-wedding.
-import { resolveWeddingData, buildOgMeta, injectOgMeta } from './lib/og-shared.js';
+// (WhatsApp/Facebook/Telegram/dll) yang mendapat HTML dengan meta OG per-wedding / per-vendor.
+import {
+  resolveWeddingData,
+  buildOgMeta,
+  injectOgMeta,
+  ensureOgMeta,
+  resolveVendorBySlug,
+  resolveProductById,
+  buildVendorOgMeta,
+  buildProductOgMeta
+} from './lib/og-shared.js';
 
 // UA crawler media sosial & mesin pencari (untuk link preview)
 const BOT_RE = /whatsapp|facebook|facebot|twitterbot|telegrambot|slackbot|linkedinbot|viber|snapchat|skypeuripreview|discordbot|vkshare|pinterest|googlebot|bingbot|duckduckbot|yandex|baiduspider|applebot|line|instagram|outbrain|embedly|quora|mastodon|tumblr|slack/i;
@@ -18,8 +28,12 @@ export default async function middleware(request) {
   const reqUrl = new URL(request.url);
   const pathname = reqUrl.pathname;
 
-  // Hanya picu untuk path undangan
-  if (pathname !== '/invitation' && pathname !== '/invitation.html') return;
+  // Hanya picu untuk path undangan, vendor, dan produk
+  const isInvitation = pathname === '/invitation' || pathname === '/invitation.html';
+  const vendorMatch = pathname.match(/^\/vendor\/([a-z0-9-]+)$/i);
+  const prodPathMatch = pathname.match(/^\/product\/([^/]+)$/i);
+  const isProductPage = pathname === '/vendor-product' || pathname === '/vendor-product.html';
+  if (!isInvitation && !vendorMatch && !prodPathMatch && !isProductPage) return;
 
   // Guard loop: fetch internal salinan file statis memakai query ini
   if (reqUrl.searchParams.get('og-static')) return;
@@ -27,7 +41,44 @@ export default async function middleware(request) {
   const ua = request.headers.get('user-agent') || '';
   if (!BOT_RE.test(ua)) return;
 
+  const botHeaders = {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'public, max-age=300',
+    ...SAFETY_HEADERS
+  };
+
   try {
+    // ── Halaman vendor (/vendor/:slug) ──
+    if (vendorMatch) {
+      const vendor = await resolveVendorBySlug(decodeURIComponent(vendorMatch[1]));
+      if (!vendor) return;
+      const meta = buildVendorOgMeta(vendor);
+      const copy = await fetch(`${reqUrl.origin}/vendor-profile.html?og-static=1`);
+      if (!copy.ok) return;
+      return new Response(ensureOgMeta(await copy.text(), meta), {
+        status: 200,
+        headers: botHeaders
+      });
+    }
+
+    // ── Halaman detail produk (/vendor-product?id=… atau /product/:id) ──
+    const productId = prodPathMatch
+      ? decodeURIComponent(prodPathMatch[1])
+      : reqUrl.searchParams.get('id');
+    if (isProductPage || prodPathMatch) {
+      if (!productId) return;
+      const found = await resolveProductById(productId);
+      if (!found) return;
+      const meta = buildProductOgMeta(found.product, found.vendor);
+      const copy = await fetch(`${reqUrl.origin}/vendor-product.html?og-static=1`);
+      if (!copy.ok) return;
+      return new Response(ensureOgMeta(await copy.text(), meta), {
+        status: 200,
+        headers: botHeaders
+      });
+    }
+
+    // ── Halaman undangan (/invitation) ──
     const hostParts = (request.headers.get('host') || '').split(':')[0].split('.');
     const sub = (hostParts.length >= 3 && hostParts[0] !== 'www') ? hostParts[0] : null;
     if (!sub || !/^[a-z0-9-]{3,50}$/i.test(sub)) return;
@@ -46,7 +97,7 @@ export default async function middleware(request) {
 
     return new Response(html, {
       status: 200,
-      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', ...SAFETY_HEADERS }
+      headers: botHeaders
     });
   } catch (e) {
     // Gagal apa pun → biarkan routing normal (file statis)
@@ -55,5 +106,5 @@ export default async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/invitation', '/invitation.html']
+  matcher: ['/invitation', '/invitation.html', '/vendor/:slug*', '/vendor-product', '/vendor-product.html', '/product/:id*']
 };

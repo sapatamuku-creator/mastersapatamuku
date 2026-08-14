@@ -9,6 +9,44 @@ export default function handler(req) {
   try {
     const { searchParams } = new URL(req.url);
 
+    // Kartu generik untuk marketplace (vendor/product) — dipakai sbg fallback OG image
+    const kind = searchParams.get('kind');
+    if (kind === 'vendor' || kind === 'product') {
+      const cardName = String(searchParams.get('name') || 'Vendor Wedding').slice(0, 60);
+      const cardSub = String(searchParams.get('sub') || 'Temukan vendor wedding terbaik di SapaTamu.id').slice(0, 90);
+      return new ImageResponse(
+        (
+          <div
+            style={{
+              display: 'flex',
+              width: '100%',
+              height: '100%',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, #faf8f5 0%, #f3e7dd 55%, #eacfc0 100%)',
+              fontFamily: 'sans-serif',
+              position: 'relative',
+            }}
+          >
+            <div style={{ position: 'absolute', top: 40, fontSize: 28, fontWeight: 'bold', letterSpacing: 6, color: '#1b5e43' }}>
+              SAPATAMU.ID
+            </div>
+            <div style={{ display: 'flex', maxWidth: '82%', textAlign: 'center', fontSize: 72, fontWeight: 'bold', color: '#2c2420' }}>
+              {cardName}
+            </div>
+            <div style={{ display: 'flex', maxWidth: '82%', textAlign: 'center', marginTop: 20, fontSize: 34, color: '#63574e' }}>
+              {cardSub}
+            </div>
+          </div>
+        ),
+        {
+          width: 1200,
+          height: 630,
+        },
+      );
+    }
+
     // Ambil data dari URL parameter
     const username = searchParams.get('u')?.toUpperCase() || 'TAMU UNDANGAN';
     const guestId = searchParams.get('id') || '00000';
