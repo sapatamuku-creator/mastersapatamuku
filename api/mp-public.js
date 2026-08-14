@@ -329,12 +329,12 @@ export default async function handler(req) {
         const id = q.get('id');
         if (!id) return json({ error: 'Missing product ID' }, 400);
 
-        const pRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&select=id,cover_image_url,image_url&limit=1`);
+        const pRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&select=id,cover_image_url&limit=1`);
         const rows = pRes.ok ? await pRes.json() : [];
         const product = (Array.isArray(rows) && rows[0]) ? rows[0] : null;
         if (!product) return json({ error: 'Produk tidak ditemukan' }, 404);
 
-        const cover = product.cover_image_url || product.image_url;
+        const cover = product.cover_image_url;
         if (!cover) return json({ error: 'Produk tanpa foto' }, 404);
 
         const isData = /^data:/i.test(String(cover));
