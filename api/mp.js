@@ -587,7 +587,9 @@ export default async function handler(req, res) {
           status: 'new'
         };
 
-        const insertRes = await sbFetch('/mp_inquiries', {
+        // Trigger AFTER INSERT (increment inquiry_count) memerlukan akses UPDATE mp_vendors
+        // yang ditutup RLS untuk anon → gunakan service role (pola sama dgn mp-public).
+        const insertRes = await sbServiceFetch('/mp_inquiries', {
           method: 'POST',
           body: JSON.stringify(inquiryPayload),
           headers: { 'Prefer': 'return=representation' }
