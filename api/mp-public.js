@@ -321,6 +321,40 @@ export default async function handler(req) {
         }, 200, CACHE_PUBLIC);
       }
 
+      // === PRODUCT COVER (public) — serve og:image untuk produk yang
+      // cover_image_url-nya berupa data: URI (crawler sosial tidak bisa fetch).
+      // URL lain → redirect 302 biar crawler ikut ke sumber asli.
+      case 'product-cover': {
+        if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+        const id = q.get('id');
+        if (!id) return json({ error: 'Missing product ID' }, 400);
+
+        const pRes = await sbFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&select=id,cover_image_url,image_url&limit=1`);
+        const rows = pRes.ok ? await pRes.json() : [];
+        const product = (Array.isArray(rows) && rows[0]) ? rows[0] : null;
+        if (!product) return json({ error: 'Produk tidak ditemukan' }, 404);
+
+        const cover = product.cover_image_url || product.image_url;
+        if (!cover) return json({ error: 'Produk tanpa foto' }, 404);
+
+        const isData = /^data:/i.test(String(cover));
+        if (isData) {
+          const m = String(cover).match(/^data:(image\/[\w.+-]+);base64,([A-Za-z0-9+/=]+)$/);
+          if (!m) return json({ error: 'Format cover tidak didukung' }, 422);
+          const bytes = Uint8Array.from(atob(m[2]), c => c.charCodeAt(0));
+          return new Response(bytes, {
+            status: 200,
+            headers: {
+              'Content-Type': m[1],
+              'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+              ...CORS
+            }
+          });
+        }
+
+        return Response.redirect(new URL(cover, req.url).toString(), 302);
+      }
+
       // === PRODUCT DETAIL (public, cacheable) ===
       case 'product-detail': {
         if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
