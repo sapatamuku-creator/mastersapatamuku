@@ -456,7 +456,47 @@
       $('otpEmailTarget').textContent = email || '';
       $('otpPanel').style.display = 'block';
       startOtpTimer(120);
+      startEmailPoll();
     }
+
+    // ── Auto-detect klik link verifikasi di email → redirect otomatis ──
+    let _pollTimer = null;
+    let _pollStart = 0;
+    const POLL_INTERVAL_MS = 5000;
+    const POLL_TIMEOUT_MS = 10 * 60 * 1000;
+
+    async function checkEmailVerified() {
+      const token = localStorage.getItem('mp_vendor_token');
+      if (!token) return;
+      try {
+        const res = await fetch('/api/mp/vendor-me', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.vendor && json.vendor.email_verified_at) {
+          stopEmailPoll();
+          showToast('Email terverifikasi! Mengalihkan ke dashboard...', 'success');
+          setTimeout(() => window.location.href = '/vendor-dashboard?registered=true&verified=email', 1200);
+        }
+      } catch (e) {}
+    }
+
+    function startEmailPoll() {
+      stopEmailPoll();
+      _pollStart = Date.now();
+      checkEmailVerified();
+      _pollTimer = setInterval(() => {
+        if (Date.now() - _pollStart > POLL_TIMEOUT_MS) { stopEmailPoll(); return; }
+        checkEmailVerified();
+      }, POLL_INTERVAL_MS);
+    }
+
+    function stopEmailPoll() {
+      if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    }
+
+    window.addEventListener('focus', () => {
+      if ($('otpPanel') && $('otpPanel').style.display === 'block') checkEmailVerified();
+    });
 
     function startOtpTimer(seconds) {
       clearInterval(otpTimerId);
