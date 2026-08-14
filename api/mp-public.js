@@ -52,6 +52,29 @@ const DEFAULT_CATEGORIES = [
   { id: 'a1b2c3d4-0011-4000-8000-000000000011', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: 'âœˆï¸', is_active: true, sort_order: 11 }
 ];
 
+let _catNameMap = null;
+async function getCategoryNameMap() {
+  if (_catNameMap) return _catNameMap;
+  const map = {};
+  try {
+    const res = await sbServiceFetch('/mp_categories?select=id,name&limit=100');
+    const cats = res.ok ? await res.json() : [];
+    if (Array.isArray(cats)) {
+      for (const c of cats) if (c && c.id && c.name) map[c.id] = c.name;
+      if (Object.keys(map).length > 0) _catNameMap = map;
+    }
+  } catch (e) {}
+  return map;
+}
+
+async function resolveCategoryName(categoryId) {
+  if (!categoryId) return '';
+  const seeded = DEFAULT_CATEGORIES.find(c => c.id === categoryId);
+  if (seeded) return seeded.name;
+  const map = await getCategoryNameMap();
+  return map[categoryId] || '';
+}
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
@@ -347,6 +370,7 @@ export default async function handler(req) {
           vendors = Object.values(vendorMap);
         }
 
+        const catNameMap = await getCategoryNameMap();
         const enriched = (vendors || [])
           .sort((a, b) => {
             if ((b.is_verified ? 1 : 0) !== (a.is_verified ? 1 : 0)) return (b.is_verified ? 1 : 0) - (a.is_verified ? 1 : 0);
@@ -398,7 +422,7 @@ export default async function handler(req) {
             cover_image_url: coverImg,
             logo_url: logoImg,
             rating: v.rating_avg || 0,
-            category_name: (DEFAULT_CATEGORIES.find(c => c.id === v.category_id) || {}).name || 'Fotografi & Videografi'
+            category_name: (DEFAULT_CATEGORIES.find(c => c.id === v.category_id) || {}).name || catNameMap[v.category_id] || ''
           };
         });
 
@@ -423,8 +447,7 @@ export default async function handler(req) {
         const vendor = (Array.isArray(vendors) && vendors.length > 0) ? vendors[0] : null;
         if (!vendor) return json({ error: 'Vendor tidak ditemukan' }, 404);
 
-        const catObj = DEFAULT_CATEGORIES.find(c => c.id === vendor.category_id);
-        vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
+        vendor.category_name = await resolveCategoryName(vendor.category_id);
 
         const PRODUCT_COLS = '*';
         const [pRes, rRes] = await Promise.all([
@@ -511,8 +534,7 @@ export default async function handler(req) {
           whatsapp: '6287864752163'
         };
 
-        const catObj = DEFAULT_CATEGORIES.find(c => c.id === vendor.category_id);
-        vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
+        vendor.category_name = await resolveCategoryName(vendor.category_id);
 
         const otherProducts = (otherProdsRes.ok ? await otherProdsRes.json() : []).map(enrichPromo);
         const reviews = rRes.ok ? await rRes.json() : [];
