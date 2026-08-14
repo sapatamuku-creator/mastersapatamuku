@@ -125,15 +125,29 @@ export default async function handler(req) {
             const categories = await catRes.json();
             if (Array.isArray(categories) && categories.length > 0) {
               if (q.get('with_count') === 'true') {
-                const countRes = await sbFetch(`/mp_vendors?is_active=eq.true&select=category_id`);
-                if (countRes.ok) {
-                  const vendors = await countRes.json();
-                  const countMap = (vendors || []).reduce((acc, v) => {
-                    acc[v.category_id] = (acc[v.category_id] || 0) + 1;
-                    return acc;
-                  }, {});
-                  return json(categories.map(c => ({ ...c, vendor_count: countMap[c.id] || 0 })), 200, CACHE_PUBLIC);
+                const [countRes, prodsRes] = await Promise.all([
+                  sbServiceFetch(`/mp_vendors?select=id,category_id,is_active`),
+                  sbServiceFetch(`/mp_products?select=vendor_id,cover_image_url&limit=1000`)
+                ]);
+                const vendors = countRes.ok ? await countRes.json() : [];
+                const products = prodsRes.ok ? await prodsRes.json() : [];
+                const catOf = (vendors || []).reduce((m, v) => { m[v.id] = v.category_id; return m; }, {});
+                const byCat = {};
+                for (const p of products || []) {
+                  if (!p.cover_image_url) continue;
+                  const cid = catOf[p.vendor_id];
+                  if (!cid) continue;
+                  (byCat[cid] = byCat[cid] || []).push(p.cover_image_url);
                 }
+                const countMap = (vendors || []).reduce((acc, v) => {
+                  if (v.is_active) acc[v.category_id] = (acc[v.category_id] || 0) + 1;
+                  return acc;
+                }, {});
+                return json(categories.map(c => ({
+                  ...c,
+                  vendor_count: countMap[c.id] || 0,
+                  photos: byCat[c.id] ? byCat[c.id].sort(() => Math.random() - 0.5).slice(0, 8) : []
+                })), 200, CACHE_PUBLIC);
               }
               return json(categories, 200, CACHE_PUBLIC);
             }
