@@ -775,7 +775,15 @@ cur = next;
 
 function renderCategoryCards(grid, categories) {
 if (!grid || !Array.isArray(categories)) return;
-grid.innerHTML = categories.map(c => {
+const section = document.getElementById('kategori');
+const withPhotos = categories.filter(c => Array.isArray(c.photos) && c.photos.length > 0);
+if (withPhotos.length === 0) {
+grid.innerHTML = '';
+if (section) section.style.display = 'none';
+return;
+}
+if (section) section.style.display = '';
+grid.innerHTML = withPhotos.map(c => {
 const photos = Array.isArray(c.photos) ? c.photos.filter(Boolean) : [];
 if (photos.length > 1) photos.sort(() => Math.random() - 0.5);
 const imgs = photos.length
@@ -807,6 +815,10 @@ const categories = await res.json();
 if (Array.isArray(categories) && categories.length > 0) {
 apiCacheSet('categories', categories);
 renderCategoryCards(grid, categories);
+} else {
+grid.innerHTML = '';
+const sec = document.getElementById('kategori');
+if (sec) sec.style.display = 'none';
 }
 } catch (e) {
 console.error(e);
