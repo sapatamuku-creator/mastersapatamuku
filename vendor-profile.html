@@ -211,14 +211,26 @@
     }
     .pkg-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: rgba(224,123,123,0.4); }
     .pkg-img { width: 100%; height: 180px; object-fit: cover; background: #fce4e4; position: relative; }
-    .pkg-tag {
-      position: absolute; top: 12px; right: 12px; padding: 4px 12px; border-radius: 50px;
-      font-size: 0.75rem; font-weight: 700; background: linear-gradient(135deg, var(--gold), #d4a037); color: #fff;
-    }
+    .pkg-badges { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 2; pointer-events: none; }
+    .pkg-badges-right { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .pkg-badge-cat { background: rgba(0,0,0,0.65); color: #fff; font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; backdrop-filter: blur(4px); }
+    .pkg-tag { padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; background: linear-gradient(135deg, var(--gold), #d4a037); color: #fff; }
+    .pkg-badge-promo { background: rgba(225,29,72,0.95); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .pkg-overlay { display: none; }
     .pkg-body { padding: 20px; display: flex; flex-direction: column; flex: 1; }
     .pkg-name { font-family: 'Lora', serif; font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; color: var(--text-main); }
     .pkg-price { font-size: 1.2rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 12px; }
     .pkg-desc { font-size: 0.85rem; color: var(--text-light); white-space: pre-line; margin-bottom: 18px; flex: 1; line-height: 1.6; }
+
+    @media (max-width: 600px) {
+        .pkg-badges { flex-direction: column; align-items: flex-end; gap: 6px; }
+        .pkg-overlay { display: block; position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 30px 16px 12px; background: linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0)); }
+        .pkg-overlay-name { font-family: 'Lora', serif; font-size: 1.05rem; font-weight: 700; color: #fff; line-height: 1.3; }
+        .pkg-overlay-price { font-size: 1.05rem; font-weight: 700; color: #ffd9d9; margin-top: 2px; }
+        .pkg-overlay-price s { color: rgba(255,255,255,0.6) !important; font-size: 0.8rem; font-weight: 500; margin-right: 8px; }
+        .pkg-body .pkg-name, .pkg-body .pkg-price { display: none; }
+        .pkg-btn-wa { display: none !important; }
+    }
 
     /* SIDEBAR INFO */
     .sidebar-card { background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 24px; box-shadow: var(--shadow-sm); }
@@ -611,9 +623,13 @@
         const tagLabel = p.price_label || p.badge_tag;
         const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
         const catName = (p.category_name || p.short_desc || '').trim();
-        const catBadge = catName ? `<span style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.65);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;backdrop-filter:blur(4px);z-index:2">${catName}</span>` : '';
+        const catBadge = catName ? `<span class="pkg-badge-cat">${catName}</span>` : '';
         const promoActive = p.has_promo && p.price_display && p.price_display < (p.price || Infinity);
+        const promoBadge = promoActive ? `<span class="pkg-badge-promo">🔥 Promo</span>` : '';
         const showPrice = promoActive ? p.price_display : p.price;
+        const priceHtml = promoActive
+          ? `<s style="color:var(--text-muted);font-size:0.85rem;font-weight:500;margin-right:8px">${formatRupiah(p.price)}</s><span>${formatRupiah(p.price_display)}</span>`
+          : formatRupiah(p.price);
         const pkgWaUrl = `https://wa.me/${waNum}?text=Halo%20${encodeURIComponent(v.business_name || 'Vendor')},%20saya%20tertarik%20dengan%20paket%20"${encodeURIComponent(p.name)}"%20seharga%20${encodeURIComponent(formatRupiah(showPrice))}${promoActive ? `%20(Promo:%20hemat%20${encodeURIComponent(formatRupiah(p.price - p.price_display))}%20dari%20harga%20normal%20${encodeURIComponent(formatRupiah(p.price))})` : ''}`;
         const detailUrl = `/vendor-product.html?id=${encodeURIComponent(p.id)}&vendor=${encodeURIComponent(v.slug || '')}`;
 
@@ -630,19 +646,22 @@
                      onload="this.classList.add('img-loaded');this.parentElement.classList.add('img-loaded')"
                      onerror="this.style.display='none';this.parentElement.classList.add('img-loaded')">
               </div>
-              ${catBadge}
-              ${tag}
-              ${promoActive ? `<span style="position:absolute;top:10px;right:10px;background:rgba(225,29,72,0.95);color:#fff;font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:20px;z-index:2">🔥 Promo</span>` : ''}
+              <div class="pkg-badges">
+                ${catBadge}
+                <div class="pkg-badges-right">${tag}${promoBadge}</div>
+              </div>
+              <div class="pkg-overlay">
+                <div class="pkg-overlay-name">${p.name}</div>
+                <div class="pkg-overlay-price">${priceHtml}</div>
+              </div>
             </div>
             <div class="pkg-body" style="display:flex;flex-direction:column;flex:1">
               <h3 class="pkg-name" style="font-size:1.1rem;font-weight:700;margin-bottom:6px;line-height:1.3">${p.name}</h3>
-              <div class="pkg-price" style="font-size:1.15rem;font-weight:700;color:var(--primary);margin-bottom:8px">${promoActive
-                ? `<s style="color:var(--text-muted);font-size:0.85rem;font-weight:500;margin-right:8px">${formatRupiah(p.price)}</s><span>${formatRupiah(p.price_display)}</span>`
-                : formatRupiah(p.price)}</div>
+              <div class="pkg-price" style="font-size:1.15rem;font-weight:700;color:var(--primary);margin-bottom:8px">${priceHtml}</div>
               <div class="pkg-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;line-height:1.5">${p.description || '-'}</div>
               <div style="display:flex;gap:8px;margin-top:auto">
-                <a href="${detailUrl}" class="btn-wa" style="flex:1;background:var(--text-main);color:#fff;justify-content:center;font-size:0.8rem;padding:8px 12px;border-radius:10px;font-weight:600">Lihat Detail Paket ↗</a>
-                <a href="${pkgWaUrl}" target="_blank" class="btn-wa" style="padding:8px 12px;font-size:0.8rem;justify-content:center;border-radius:10px" title="Tanya via WA">💬 WA</a>
+                <a href="${detailUrl}" class="btn-wa pkg-btn-detail" style="flex:1;background:var(--text-main);color:#fff;justify-content:center;font-size:0.8rem;padding:8px 12px;border-radius:10px;font-weight:600">Lihat Detail Paket ↗</a>
+                <a href="${pkgWaUrl}" target="_blank" class="btn-wa pkg-btn-wa" style="padding:8px 12px;font-size:0.8rem;justify-content:center;border-radius:10px" title="Tanya via WA">💬 WA</a>
               </div>
             </div>
           </div>
