@@ -105,6 +105,13 @@
     /* MAIN CONTENT AREA */
     .main-content { padding: 32px 40px; overflow-y: auto; background: var(--bg); }
     @media (max-width: 600px) { .main-content { padding: 20px 16px; } }
+    .mobile-tabs { display: none; }
+    @media (max-width: 900px) {
+      .mobile-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; position: sticky; top: 0; background: var(--surface); border-bottom: 1px solid var(--surface-border); z-index: 50; scrollbar-width: none; }
+      .mobile-tabs::-webkit-scrollbar { display: none; }
+    }
+    .mtab { flex-shrink: 0; padding: 8px 16px; border-radius: 50px; border: 1px solid var(--surface-border); background: var(--surface); color: var(--text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--transition); white-space: nowrap; }
+    .mtab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
     .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
     .page-title { font-family: 'Lora', serif; font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
@@ -337,10 +344,18 @@
           <button class="btn-action-outline" onclick="logout()" style="color:#dc2626;border-color:rgba(220,38,38,0.2)">
             Keluar
           </button>
-        </div>
-      </div>
+</div>
+</div>
 
-      <!-- TAB 1: OVERVIEW -->
+<!-- MOBILE TAB NAV (sidebar hidden <900px) -->
+<div class="mobile-tabs" id="mobileTabs">
+<button class="mtab active" onclick="switchTab('tab-overview', this)">Ringkasan</button>
+<button class="mtab" onclick="switchTab('tab-products', this)">Paket</button>
+<button class="mtab" onclick="switchTab('tab-inquiries', this)">Inquiry</button>
+<button class="mtab" onclick="switchTab('tab-profile', this)">Profil</button>
+</div>
+
+<!-- TAB 1: OVERVIEW -->
       <div class="panel active" id="tab-overview">
         <div class="stats-grid">
           <div class="stat-card">
@@ -730,7 +745,7 @@
 
     function switchTab(tabId, btnEl) {
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(n => n.classList.remove('active'));
+      document.querySelectorAll('.nav-btn, .mtab').forEach(n => n.classList.remove('active'));
       $(tabId).classList.add('active');
       if (btnEl) btnEl.classList.add('active');
     }
