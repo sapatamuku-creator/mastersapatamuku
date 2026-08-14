@@ -179,6 +179,27 @@
           Sudah memiliki akun vendor? <a href="/vendor-dashboard" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Login Dashboard Vendor</a>
         </div>
       </form>
+
+      <!-- PANEL VERIFIKASI EMAIL (Phase 2) -->
+      <div id="otpPanel" style="display:none; text-align:center">
+        <h2 class="form-title">Verifikasi Email Anda</h2>
+        <p style="color: var(--text-light); font-size: 0.92rem; margin-bottom: 20px;">
+          Kode OTP telah dikirim ke <strong id="otpEmailTarget" style="color: var(--primary);"></strong>.
+          Masukkan kode 6 digit untuk mengaktifkan akun vendor Anda.
+          <em>(Jika email berisi link, klik link tersebut juga bisa.)</em>
+        </p>
+        <div class="form-group" style="max-width: 260px; margin: 0 auto;">
+          <label>Kode OTP *</label>
+          <input type="text" id="otpCode" inputmode="numeric" maxlength="6" placeholder="123456"
+            style="text-align:center; letter-spacing:8px; font-size:1.5rem; font-weight:700">
+        </div>
+        <button type="button" class="btn-submit" id="btnVerifyOtp" onclick="verifyEmailOtp()" style="margin-top: 18px;">Verifikasi &amp; Masuk Dashboard</button>
+        <div style="text-align: center; margin-top: 14px; font-size: 0.88rem; color: var(--text-light);">
+          Tidak menerima kode?
+          <a href="javascript:void(0)" id="btnResendOtp" onclick="resendEmailOtp()" style="color: var(--primary); font-weight: 700;">Kirim Ulang</a>
+          <span id="otpTimer"></span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -407,9 +428,13 @@
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          showToast('Pendaftaran Berhasil! Mengalihkan ke halaman login...', 'success');
-          localStorage.removeItem('mp_vendor_token');
-          setTimeout(() => window.location.href = '/vendor-dashboard?registered=true', 1500);
+          if (json.token) localStorage.setItem('mp_vendor_token', json.token);
+          if (json.needs_email_otp) {
+            showOtpPanel(payload.email);
+          } else {
+            showToast('Pendaftaran Berhasil! Mengalihkan...', 'success');
+            setTimeout(() => window.location.href = '/vendor-dashboard?registered=true', 1500);
+          }
         } else {
           showToast(json.error || json.message || 'Pendaftaran gagal, coba lagi.', 'error');
           btn.disabled = false;
@@ -421,6 +446,88 @@
         btn.textContent = 'Daftar Vendor Sekarang 🚀';
       }
     });
+
+    // ── Phase 2: Verifikasi OTP Email ──
+    let otpTimerId = null;
+    let otpResendAt = 0;
+
+    function showOtpPanel(email) {
+      $('regForm').style.display = 'none';
+      $('otpEmailTarget').textContent = email || '';
+      $('otpPanel').style.display = 'block';
+      startOtpTimer(120);
+    }
+
+    function startOtpTimer(seconds) {
+      clearInterval(otpTimerId);
+      otpResendAt = Date.now() + seconds * 1000;
+      const el = $('otpTimer');
+      const btn = $('btnResendOtp');
+      const tick = () => {
+        const left = Math.max(0, Math.round((otpResendAt - Date.now()) / 1000));
+        if (left <= 0) {
+          clearInterval(otpTimerId);
+          el.textContent = '';
+          btn.style.pointerEvents = 'auto';
+          btn.style.opacity = '1';
+        } else {
+          el.textContent = ` (${left}s)`;
+          btn.style.pointerEvents = 'none';
+          btn.style.opacity = '.5';
+        }
+      };
+      tick();
+      otpTimerId = setInterval(tick, 1000);
+    }
+
+    function otpAuthHeaders() {
+      return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('mp_vendor_token') || '') };
+    }
+
+    async function verifyEmailOtp() {
+      const code = $('otpCode').value.trim();
+      if (!/^\d{6}$/.test(code)) { showToast('Masukkan kode 6 digit.', 'error'); return; }
+      const btn = $('btnVerifyOtp');
+      btn.disabled = true;
+      btn.textContent = 'Memverifikasi...';
+      try {
+        const res = await fetch('/api/mp/verify-otp', {
+          method: 'POST',
+          headers: otpAuthHeaders(),
+          body: JSON.stringify({ purpose: 'email_verify', code })
+        });
+        const json = await res.json();
+        if (res.ok && json.email_verified) {
+          showToast('Email terverifikasi! Memasuki dashboard...', 'success');
+          setTimeout(() => window.location.href = '/vendor-dashboard?registered=true&verified=email', 1200);
+        } else {
+          showToast(json.error || 'Kode salah, coba lagi.', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Verifikasi & Masuk Dashboard';
+        }
+      } catch (e) {
+        showToast('Terjadi kesalahan koneksi.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Verifikasi & Masuk Dashboard';
+      }
+    }
+
+    async function resendEmailOtp() {
+      try {
+        const res = await fetch('/api/mp/send-otp', {
+          method: 'POST',
+          headers: otpAuthHeaders(),
+          body: JSON.stringify({ purpose: 'email_verify' })
+        });
+        const json = await res.json();
+        if (res.ok) {
+          showToast('Kode baru terkirim ke email Anda.', 'success');
+          startOtpTimer(120);
+        } else {
+          showToast(json.error || 'Gagal mengirim ulang, coba lagi.', 'error');
+        }
+      } catch (e) { showToast('Terjadi kesalahan koneksi.', 'error'); }
+    }
 
     loadProvinces();
     loadCategories();

@@ -508,11 +508,18 @@
 
         // PRODUCT TITLE & PRICE
         $('productTitle').textContent = p.name;
-        $('productPrice').textContent = formatRupiah(p.price);
+        const promoActive = p.has_promo && p.price_display && p.price_display < (p.price || Infinity);
+        $('productPrice').innerHTML = promoActive
+          ? `<s style="color:var(--text-muted);font-size:1.05rem;font-weight:500;margin-right:10px">${formatRupiah(p.price)}</s><span style="color:var(--primary)">${formatRupiah(p.price_display)}</span>`
+          : formatRupiah(p.price);
+        const displayPrice = promoActive ? p.price_display : p.price;
 
         // WHATSAPP CTA LINK
         const waNum = (v.whatsapp || '').replace(/[^0-9]/g, '');
-        const waMsg = `Halo%20${encodeURIComponent(v.business_name)},%20saya%20tertarik%20dengan%20paket%20"${encodeURIComponent(p.name)}"%20seharga%20${encodeURIComponent(formatRupiah(p.price))}%20di%20Sapatamu.id`;
+        let waMsg = `Halo%20${encodeURIComponent(v.business_name)},%20saya%20tertarik%20dengan%20paket%20"${encodeURIComponent(p.name)}"%20seharga%20${encodeURIComponent(formatRupiah(displayPrice))}%20di%20Sapatamu.id`;
+        if (promoActive) {
+          waMsg += `%20(Promo:%20hemat%20${encodeURIComponent(formatRupiah(p.price - p.price_display))}%20dari%20harga%20normal%20${encodeURIComponent(formatRupiah(p.price))})`;
+        }
         const waUrl = `https://wa.me/${waNum}?text=${waMsg}`;
         $('btnWaOrder').href = waUrl;
         $('btnViewVendorStore').href = vendorProfileUrl;
@@ -576,7 +583,9 @@
                 </div>
                 <div style="padding:16px;display:flex;flex-direction:column;flex:1">
                   <h4 style="font-family:'Lora',serif;font-size:1rem;font-weight:700;margin-bottom:4px;line-height:1.3">${op.name}</h4>
-                  <div style="font-size:1.05rem;font-weight:700;color:var(--primary);margin-bottom:12px">${formatRupiah(op.price)}</div>
+                  ${op.has_promo && op.price_display && op.price_display < (op.price || Infinity)
+                    ? `<div style="margin-bottom:12px"><s style="color:var(--text-muted);font-size:0.8rem;font-weight:500;margin-right:6px">${formatRupiah(op.price)}</s><span style="font-size:1.05rem;font-weight:700;color:var(--primary)">${formatRupiah(op.price_display)}</span></div>`
+                    : `<div style="font-size:1.05rem;font-weight:700;color:var(--primary);margin-bottom:12px">${formatRupiah(op.price)}</div>`}
                   <a href="${opDetailUrl}" class="btn-store-outline" style="padding:8px 14px;font-size:0.8rem;margin-top:auto;justify-content:center">Lihat Detail Paket ↗</a>
                 </div>
               </div>

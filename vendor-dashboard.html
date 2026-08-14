@@ -297,7 +297,22 @@
         <div style="margin-top:20px;font-size:0.85rem;color:var(--text-muted)">
           Belum terdaftar? <a href="/menjadi-vendor" style="color:var(--primary-dark);font-weight:700;text-decoration:underline">Daftar Vendor Gratis</a>
         </div>
+        <div style="margin-top:10px;font-size:0.85rem">
+          <a href="javascript:void(0)" onclick="openForgotModal()" style="color:var(--primary-dark);font-weight:600;text-decoration:underline">Lupa Password?</a>
+        </div>
       </form>
+
+      <div id="emailUnverifiedPanel" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--surface-border)">
+        <div style="font-weight:700;color:var(--primary-dark);margin-bottom:4px">Verifikasi Email Anda</div>
+        <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:14px">Kode OTP telah dikirim ke <strong id="evEmailTarget" style="color:var(--primary-dark)"></strong>. Masukkan kode 6 digit untuk mengaktifkan akun, lalu login kembali.</p>
+        <div class="form-group">
+          <input type="text" id="evOtpCode" inputmode="numeric" maxlength="6" placeholder="Kode OTP 6 digit" style="text-align:center;letter-spacing:6px;font-weight:700">
+        </div>
+        <button type="button" class="btn-primary-add" style="width:100%;justify-content:center" onclick="verifyEmailFromLogin()">Verifikasi Email</button>
+        <div style="margin-top:12px;font-size:0.83rem;color:var(--text-muted);text-align:center">
+          Belum dapat kode? <a href="javascript:void(0)" id="btnResendEv" onclick="resendEvOtp()" style="color:var(--primary-dark);font-weight:700">Kirim Ulang</a><span id="evTimer"></span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -326,7 +341,7 @@
 
       <div class="vendor-badge">
         <div class="v-name" id="sbVendorName">Knowhere Studio</div>
-        <div class="v-status"><span class="v-dot"></span> Akun Aktif &amp; Terverifikasi</div>
+        <div class="v-status" id="sbVendorStatus"><span class="v-dot"></span> Akun Aktif &amp; Terverifikasi</div>
       </div>
     </aside>
 
@@ -684,11 +699,87 @@
           <label>Deskripsi &amp; Rincian Fasilitas Paket *</label>
           <textarea id="pkgDesc" rows="5" required placeholder="• 2 Photographers &amp; 1 Videographer&#10;• All Unedited Photos in Flashdisk&#10;• 100 Edited Photos in Album Hardcover&#10;• Drone 4K Footage"></textarea>
         </div>
+        <div style="margin-top:16px;padding:14px;border:1.5px dashed var(--surface-border);border-radius:12px;background:var(--bg)">
+          <label style="font-weight:700;color:var(--primary-dark);display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="pkgPromoToggle" onchange="togglePromoFields()"> Aktifkan Promo / Diskon
+          </label>
+          <div id="pkgPromoFields" style="display:none;margin-top:14px">
+            <div class="form-group">
+              <label>Harga Diskon (Rp) *</label>
+              <input type="text" id="pkgDiscountPrice" inputmode="numeric" placeholder="cth: 4.500.000" oninput="handlePromoPriceFormatting(this)">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="form-group">
+                <label>Mulai Promo</label>
+                <input type="datetime-local" id="pkgPromoStart">
+              </div>
+              <div class="form-group">
+                <label>Selesai Promo</label>
+                <input type="datetime-local" id="pkgPromoEnd">
+              </div>
+            </div>
+            <p style="font-size:0.78rem;color:var(--text-muted)">Kosongkan tanggal = promo berlaku tanpa batas waktu. Harga diskon harus lebih kecil dari harga normal.</p>
+          </div>
+        </div>
         <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
           <button type="button" class="btn-action-outline" onclick="closeModalAddPackage()">Batal</button>
           <button type="submit" class="btn-primary-add" id="btnSubmitPkg">🚀 Simpan &amp; Publiskan Paket</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- VERIFY WA BANNER (Phase 2) -->
+  <div id="waVerifyBanner" style="display:none;align-items:center;justify-content:space-between;gap:14px;margin:0 24px 18px;padding:14px 18px;background:linear-gradient(90deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;border-radius:14px;font-size:0.88rem;color:#92400e">
+    <div>
+      <strong>📱 Verifikasi WhatsApp untuk memublikasikan paket</strong>
+      <div style="margin-top:2px;font-size:0.82rem;opacity:0.9">Paket baru akan berstatus <strong>Menunggu Verifikasi</strong> sampai nomor WhatsApp Anda terverifikasi.</div>
+    </div>
+    <button class="btn-primary-add" style="white-space:nowrap;flex-shrink:0" onclick="openWaVerifyModal('wa_verify')">Verifikasi Sekarang</button>
+  </div>
+
+  <!-- MODAL: VERIFIKASI WHATSAPP (Phase 2) -->
+  <div class="modal-overlay" id="modalWaVerify">
+    <div class="modal-box" style="max-width:420px;text-align:center">
+      <div class="modal-title" style="justify-content:center">📱 Verifikasi WhatsApp</div>
+      <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:18px">Kode OTP telah dikirim ke <strong id="waTarget" style="color:var(--primary-dark)"></strong> via WhatsApp. Masukkan kode 6 digit untuk memublikasikan paket Anda.</p>
+      <div class="form-group">
+        <input type="text" id="waOtpCode" inputmode="numeric" maxlength="6" placeholder="Kode OTP 6 digit" style="text-align:center;letter-spacing:6px;font-weight:700">
+      </div>
+      <button class="btn-primary-add" style="width:100%;justify-content:center" onclick="verifyWaOtp()">Verifikasi &amp; Publikasikan Paket</button>
+      <div style="margin-top:12px;font-size:0.83rem;color:var(--text-muted)">
+        Belum dapat kode? <a href="javascript:void(0)" id="btnResendWa" onclick="resendWaOtp()" style="color:var(--primary-dark);font-weight:700">Kirim Ulang</a><span id="waTimer"></span>
+      </div>
+      <button class="btn-action-outline" style="margin-top:16px;width:100%;justify-content:center" onclick="closeWaVerifyModal()">Tutup</button>
+    </div>
+  </div>
+
+  <!-- MODAL: LUPA PASSWORD (Phase 2) -->
+  <div class="modal-overlay" id="modalForgot">
+    <div class="modal-box" style="max-width:420px">
+      <div class="modal-title">🔑 Lupa Password</div>
+      <div id="forgotStep1">
+        <div class="form-group">
+          <label>Email Vendor</label>
+          <input type="email" id="fEmail" placeholder="nama@vendor.com">
+        </div>
+        <button class="btn-primary-add" style="width:100%;justify-content:center" onclick="forgotChoose('whatsapp')">Kirim Kode Reset via WhatsApp</button>
+        <button class="btn-action-outline" style="margin-top:10px;width:100%;justify-content:center" onclick="forgotChoose('email')">Kirim Link Reset via Email</button>
+      </div>
+      <div id="forgotStep2" style="display:none;text-align:center">
+        <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:18px">Kode reset 6 digit telah dikirim ke WhatsApp Anda. Masukkan kode beserta password baru.</p>
+        <div class="form-group">
+          <input type="text" id="fWaCode" inputmode="numeric" maxlength="6" placeholder="Kode OTP 6 digit" style="text-align:center;letter-spacing:6px;font-weight:700">
+        </div>
+        <div class="form-group">
+          <input type="password" id="fNewPass" placeholder="Password baru (min. 6 karakter)">
+        </div>
+        <div class="form-group">
+          <input type="password" id="fNewPass2" placeholder="Ulangi password baru">
+        </div>
+        <button class="btn-primary-add" style="width:100%;justify-content:center" onclick="forgotResetWa()">Reset Password</button>
+      </div>
+      <button class="btn-action-outline" style="margin-top:16px;width:100%;justify-content:center" onclick="closeForgotModal()">Tutup</button>
     </div>
   </div>
 
@@ -850,6 +941,8 @@
       $('filledPkg').style.display = 'none';
       $('phPkg').style.display = 'flex';
       $('loaderPkg').style.display = 'none';
+      $('pkgPromoToggle').checked = false;
+      togglePromoFields();
       $('modalAddPackage').classList.add('active');
     }
 
@@ -1272,6 +1365,14 @@
         const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
         const catName = (p.category_name || p.short_desc || '').trim();
         const catBadge = catName ? `<span style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.65);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;backdrop-filter:blur(4px);z-index:2">${catName}</span>` : '';
+        const isPending = p.status === 'pending';
+        const promo = getPromoInfo(p);
+        const statusBadge = isPending
+          ? `<span style="position:absolute;top:10px;right:10px;background:rgba(217,119,6,0.95);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;z-index:2">⏳ Menunggu Verifikasi</span>`
+          : (promo.active ? `<span style="position:absolute;top:10px;right:10px;background:rgba(225,29,72,0.95);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px;z-index:2">🔥 Promo Aktif</span>` : '');
+        const priceHtml = promo.active
+          ? `<div class="pkg-price"><s style="color:var(--text-muted);font-size:0.82rem;font-weight:500;margin-right:8px">${formatRupiah(promo.original)}</s><span style="color:var(--primary-dark)">${formatRupiah(promo.discount)}</span></div>`
+          : `<div class="pkg-price">${formatRupiah(p.price)}</div>`;
 
         return `
           <div class="pkg-card">
@@ -1279,10 +1380,11 @@
               ${imgTag}
               ${catBadge}
               ${tag}
+              ${statusBadge}
             </div>
             <div class="pkg-body">
-              <h3 class="pkg-name">${p.name}</h3>
-              <div class="pkg-price">${formatRupiah(p.price)}</div>
+              <h3 class="pkg-name">${p.name}${isPending ? ' <span style="font-size:0.68rem;font-weight:700;color:#d97706">(Pending)</span>' : ''}</h3>
+              ${priceHtml}
               <div class="pkg-desc">${p.description || '-'}</div>
               <div class="pkg-actions">
                 <button class="btn-edit-pkg" onclick="editPackage('${p.id}')">Edit Paket</button>
@@ -1336,6 +1438,15 @@
 
       $('loaderPkg').style.display = 'none';
       $('modalAddPackage').classList.add('active');
+
+      const hasPromo = p.discount_price && p.discount_price > 0 && p.discount_price < (p.price || 0);
+      $('pkgPromoToggle').checked = hasPromo;
+      togglePromoFields();
+      if (hasPromo) {
+        $('pkgDiscountPrice').value = new Intl.NumberFormat('id-ID').format(p.discount_price);
+        $('pkgPromoStart').value = toLocalInputValue(p.promo_start_at);
+        $('pkgPromoEnd').value = toLocalInputValue(p.promo_end_at);
+      }
     }
 
     function renderPackageSkeletons(count = 3) {
@@ -1444,6 +1555,38 @@
         description: $('pkgDesc').value.trim()
       };
 
+      if ($('pkgPromoToggle').checked) {
+        const discRaw = $('pkgDiscountPrice').value.replace(/[^0-9]/g, '');
+        const discountPrice = discRaw ? parseInt(discRaw, 10) : null;
+        if (!discountPrice || discountPrice <= 0) {
+          showToast('Masukkan harga diskon yang valid.');
+          btn.disabled = false;
+          btn.textContent = isEdit ? '💾 Simpan Perubahan Paket' : '🚀 Simpan & Publiskan Paket';
+          return;
+        }
+        if (discountPrice >= rawPrice) {
+          showToast('Harga diskon harus lebih kecil dari harga normal.');
+          btn.disabled = false;
+          btn.textContent = isEdit ? '💾 Simpan Perubahan Paket' : '🚀 Simpan & Publiskan Paket';
+          return;
+        }
+        const start = $('pkgPromoStart').value;
+        const end = $('pkgPromoEnd').value;
+        if (start && end && new Date(end).getTime() <= new Date(start).getTime()) {
+          showToast('Tanggal selesai promo harus setelah tanggal mulai.');
+          btn.disabled = false;
+          btn.textContent = isEdit ? '💾 Simpan Perubahan Paket' : '🚀 Simpan & Publiskan Paket';
+          return;
+        }
+        payload.discount_price = discountPrice;
+        if (start) payload.promo_start_at = new Date(start).toISOString();
+        if (end) payload.promo_end_at = new Date(end).toISOString();
+      } else {
+        payload.discount_price = null;
+        payload.promo_start_at = null;
+        payload.promo_end_at = null;
+      }
+
       const endpoint = isEdit ? `/api/mp/vendor-products?id=${encodeURIComponent(pkgId)}` : '/api/mp/vendor-products';
       const method = isEdit ? 'PATCH' : 'POST';
 
@@ -1458,7 +1601,10 @@
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          showToast(isEdit ? 'Paket berhasil diperbarui!' : 'Paket berhasil dipublikasikan!');
+          const pkgStatus = json.product && json.product.status;
+          showToast(pkgStatus === 'pending'
+            ? 'Paket disimpan! Menunggu verifikasi WhatsApp untuk dipublikasikan.'
+            : (isEdit ? 'Paket berhasil diperbarui!' : 'Paket berhasil dipublikasikan!'));
           closeModalAddPackage();
           loadPackages();
         } else {
@@ -1498,9 +1644,15 @@
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          showToast('Profil & foto berhasil diperbarui!');
+          showToast(json.wa_reverify_required
+            ? 'Nomor WhatsApp diperbarui. Paket dihentikan sementara — verifikasi ulang nomor baru.'
+            : 'Profil & foto berhasil diperbarui!');
           _currentVendor = json.vendor;
           populateVendorProfile(_currentVendor);
+          if (json.wa_reverify_required) {
+            openWaVerifyModal('wa_reverify');
+          }
+          loadPackages();
         } else {
           showToast(json.error || 'Gagal memperbarui profil.');
         }
@@ -1520,6 +1672,8 @@
 
       const email = $('loginEmail').value.trim();
       const password = $('loginPass').value;
+      _loginEmail = email;
+      _loginPassword = password;
 
       try {
         const res = await fetch('/api/mp/login-vendor', {
@@ -1537,6 +1691,12 @@
           $('dashLayout').style.display = 'grid';
           loadPackages();
           loadInquiries();
+        } else if (res.status === 403 && json.code === 'EMAIL_UNVERIFIED') {
+          $('evEmailTarget').textContent = email;
+          $('emailUnverifiedPanel').style.display = 'block';
+          $('emailUnverifiedPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          resendEvOtp(true);
+          showToast('Email belum diverifikasi. Kode OTP baru telah dikirim ke email Anda.');
         } else {
           alert(json.error || 'Login gagal, periksa email dan password Anda.');
         }
@@ -1580,12 +1740,241 @@
       if (v.slug) {
         $('linkPublicStore').href = `/vendor/${v.slug}`;
       }
+
+      const waVerified = Boolean(v.whatsapp_verified_at);
+      const waBadge = $('sbVendorStatus');
+      if (waBadge) {
+        waBadge.innerHTML = `<span class="v-dot"></span> ${waVerified ? 'Akun Aktif &amp; Terverifikasi' : 'Menunggu Verifikasi WhatsApp'}`;
+        waBadge.style.color = waVerified ? '' : '#d97706';
+      }
+      if (v.whatsapp) $('waTarget').textContent = v.whatsapp;
+      const banner = $('waVerifyBanner');
+      if (banner) banner.style.display = (!waVerified && v.whatsapp) ? 'flex' : 'none';
+    }
+
+    // ── Phase 2: Promo helpers ──
+    function getPromoInfo(p) {
+      const active = p && p.discount_price && p.discount_price > 0
+        && p.discount_price < (p.price || 0)
+        && (!p.promo_start_at || new Date(p.promo_start_at).getTime() <= Date.now())
+        && (!p.promo_end_at || new Date(p.promo_end_at).getTime() >= Date.now());
+      return active ? { active: true, discount: p.discount_price, original: p.price } : { active: false };
+    }
+
+    function togglePromoFields() {
+      const on = $('pkgPromoToggle').checked;
+      $('pkgPromoFields').style.display = on ? 'block' : 'none';
+    }
+
+    function handlePromoPriceFormatting(inputEl) {
+      if (!inputEl) return;
+      const raw = inputEl.value.replace(/[^0-9]/g, '');
+      inputEl.value = raw ? new Intl.NumberFormat('id-ID').format(parseInt(raw, 10)) : '';
+    }
+
+    function toLocalInputValue(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    // ── Phase 2: OTP timer ──
+    let _otpTimerId = null;
+    let _otpResendAt = 0;
+
+    function startOtpTimer(seconds, timerElId, btnElId) {
+      clearInterval(_otpTimerId);
+      _otpResendAt = Date.now() + seconds * 1000;
+      const el = $(timerElId);
+      const btn = $(btnElId);
+      if (!el || !btn) return;
+      const tick = () => {
+        const left = Math.max(0, Math.round((_otpResendAt - Date.now()) / 1000));
+        if (left <= 0) {
+          clearInterval(_otpTimerId);
+          el.textContent = '';
+          btn.style.pointerEvents = 'auto';
+          btn.style.opacity = '1';
+        } else {
+          el.textContent = ` (${left}s)`;
+          btn.style.pointerEvents = 'none';
+          btn.style.opacity = '.5';
+        }
+      };
+      tick();
+      _otpTimerId = setInterval(tick, 1000);
+    }
+
+    async function apiCall(path, opts = {}) {
+      const res = await fetch(path, {
+        ...opts,
+        headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) }
+      });
+      const json = await res.json().catch(() => ({}));
+      return { res, json };
+    }
+
+    // ── Phase 2: Verifikasi WhatsApp ──
+    let _waPurpose = 'wa_verify';
+
+    function openWaVerifyModal(purpose) {
+      if (!_currentVendor || !_currentVendor.whatsapp) {
+        showToast('Isi nomor WhatsApp di menu Profil Bisnis terlebih dahulu.');
+        switchTab('tab-profile', document.querySelector('.nav-btn[onclick*="tab-profile"]'));
+        return;
+      }
+      _waPurpose = purpose;
+      $('waTarget').textContent = _currentVendor.whatsapp;
+      $('waOtpCode').value = '';
+      $('modalWaVerify').classList.add('active');
+      sendOtpFor({
+        purpose: _waPurpose,
+        waTimer: 'waTimer',
+        waResend: 'btnResendWa',
+        silent: true
+      });
+    }
+
+    function closeWaVerifyModal() {
+      $('modalWaVerify').classList.remove('active');
+    }
+
+    async function sendOtpFor({ purpose, waTimer, waResend, silent, email }) {
+      const body = { purpose };
+      if (email) body.email = email;
+      const { res, json } = await apiCall('/api/mp/send-otp', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + (_token || '') },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        if (!silent) showToast('Kode baru telah dikirim.');
+        startOtpTimer(120, waTimer, waResend);
+      } else if (!silent || res.status === 429) {
+        showToast(json.error || 'Gagal mengirim kode.');
+      }
+      return res.ok;
+    }
+
+    async function verifyWaOtp() {
+      const code = $('waOtpCode').value.trim();
+      if (!/^\d{6}$/.test(code)) { showToast('Masukkan kode 6 digit.'); return; }
+      const { res, json } = await apiCall('/api/mp/verify-otp', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + (_token || '') },
+        body: JSON.stringify({ purpose: _waPurpose, code })
+      });
+      if (res.ok && json.whatsapp_verified) {
+        showToast('WhatsApp terverifikasi! Paket pending kini dipublikasikan.');
+        closeWaVerifyModal();
+        _currentVendor.whatsapp_verified_at = new Date().toISOString();
+        populateVendorProfile(_currentVendor);
+        loadPackages();
+      } else {
+        showToast(json.error || 'Kode salah, coba lagi.');
+      }
+    }
+
+    async function resendWaOtp() {
+      await sendOtpFor({ purpose: _waPurpose, waTimer: 'waTimer', waResend: 'btnResendWa', silent: false });
+    }
+
+    // ── Phase 2: Lupa password ──
+    let _forgotEmail = '';
+
+    function openForgotModal() {
+      $('forgotStep1').style.display = 'block';
+      $('forgotStep2').style.display = 'none';
+      $('modalForgot').classList.add('active');
+    }
+
+    function closeForgotModal() {
+      $('modalForgot').classList.remove('active');
+    }
+
+    async function forgotChoose(channel) {
+      const email = $('fEmail').value.trim();
+      if (!email) { showToast('Masukkan email vendor terlebih dahulu.'); return; }
+      _forgotEmail = email;
+      const { res, json } = await apiCall('/api/mp/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email, channel })
+      });
+      if (res.ok) {
+        if (channel === 'email') {
+          showToast('Cek email Anda untuk link reset password.');
+          closeForgotModal();
+        } else {
+          if (json.channel !== 'whatsapp') { showToast('Akun ini belum memiliki nomor WhatsApp.'); return; }
+          showToast('Kode reset dikirim via WhatsApp.');
+          $('forgotStep1').style.display = 'none';
+          $('forgotStep2').style.display = 'block';
+        }
+      } else {
+        showToast(json.error || 'Gagal mengirim kode reset.');
+      }
+    }
+
+    async function forgotResetWa() {
+      const code = $('fWaCode').value.trim();
+      const pass = $('fNewPass').value;
+      const pass2 = $('fNewPass2').value;
+      if (!/^\d{6}$/.test(code)) { showToast('Masukkan kode 6 digit.'); return; }
+      if (pass.length < 6) { showToast('Password baru minimal 6 karakter.'); return; }
+      if (pass !== pass2) { showToast('Konfirmasi password tidak cocok.'); return; }
+      const { res, json } = await apiCall('/api/mp/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ reset_token: code, new_password: pass })
+      });
+      if (res.ok) {
+        showToast('Password berhasil direset! Silakan login dengan password baru.');
+        closeForgotModal();
+        $('loginPass').value = '';
+        $('loginPass').focus();
+      } else {
+        showToast(json.error || 'Gagal mereset password.');
+      }
+    }
+
+    // ── Phase 2: Verifikasi email dari halaman login ──
+    let _loginEmail = '';
+    let _loginPassword = '';
+
+    async function verifyEmailFromLogin() {
+      const code = $('evOtpCode').value.trim();
+      if (!/^\d{6}$/.test(code)) { showToast('Masukkan kode 6 digit.'); return; }
+      const { res, json } = await apiCall('/api/mp/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ purpose: 'email_verify', code, email: _loginEmail })
+      });
+      if (res.ok && json.email_verified) {
+        showToast('Email terverifikasi! Silakan login kembali.');
+        $('emailUnverifiedPanel').style.display = 'none';
+        if (_loginEmail && _loginPassword) {
+          $('loginEmail').value = _loginEmail;
+          $('loginPass').value = _loginPassword;
+          $('loginForm').requestSubmit();
+        }
+      } else {
+        showToast(json.error || 'Kode salah, coba lagi.');
+      }
+    }
+
+    async function resendEvOtp(silent) {
+      if (!_loginEmail) return;
+      const ok = await sendOtpFor({ purpose: 'email_verify', email: _loginEmail, waTimer: 'evTimer', waResend: 'btnResendEv', silent: !!silent });
+      if (ok && !silent) $('evOtpCode').focus();
     }
 
     async function init() {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('registered') === 'true') {
         $('registeredMsg').style.display = 'block';
+      }
+      if (urlParams.get('verified') === 'email') {
+        showToast('Email berhasil diverifikasi! Selamat datang di dashboard vendor.');
       }
 
       if (!_token) {

@@ -578,6 +578,10 @@ if (rc) rc.textContent = json.data.length;
         const coverImg = v.cover_image_url || v.cover_image || null;
         const logoImg = v.logo_url || v.logo || coverImg || null;
         const price = v.price_from > 0 ? `Rp ${Number(v.price_from).toLocaleString('id-ID')}` : `Hubungi Vendor`;
+        const hasPromoFrom = v.price_from_display > 0 && v.price_from_original > 0 && v.price_from_display < v.price_from_original;
+        const priceHtml = hasPromoFrom
+          ? `<s style="color:#9CA3AF;font-weight:600;margin-right:6px">Rp ${Number(v.price_from_original).toLocaleString('id-ID')}</s><span style="color:var(--primary)">Rp ${Number(v.price_from_display).toLocaleString('id-ID')}</span>`
+          : price;
         const ratingVal = v.rating > 0 ? Number(v.rating).toFixed(1) : '5.0';
         const reviewsCount = v.review_count || 0;
 
@@ -634,7 +638,7 @@ if (rc) rc.textContent = json.data.length;
             <!-- Action Button / Price List -->
             <div style="width:100%;margin-top:auto">
               <div style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;background:#ffffff;color:var(--text-main);font-size:0.85rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:var(--transition);box-shadow:0 1px 3px rgba(0,0,0,0.04)">
-                Daftar Harga (${price})
+                Daftar Harga (${priceHtml})
               </div>
             </div>
 
