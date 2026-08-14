@@ -420,6 +420,10 @@
       try {
         const cacheKey = `vendor-detail:${slug}`;
         let data = getVendorCache(cacheKey);
+        if (data && Array.isArray(data.products) && data.products.length === 0) {
+          sessionStorage.removeItem(cacheKey);
+          data = null;
+        }
         if (!data) {
           const res = await fetch(`/api/mp/vendor-detail?slug=${encodeURIComponent(slug)}`);
           if (!res.ok) {
@@ -427,7 +431,9 @@
             return;
           }
           data = await res.json();
-          setVendorCache(cacheKey, data);
+          if (data && Array.isArray(data.products) && data.products.length > 0) {
+            setVendorCache(cacheKey, data);
+          }
         }
         const v = data.vendor;
         const products = data.products || [];
