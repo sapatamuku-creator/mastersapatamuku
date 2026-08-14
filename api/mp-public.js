@@ -120,7 +120,7 @@ export default async function handler(req) {
       case 'categories': {
         if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
         try {
-          const catRes = await sbFetch(`/mp_categories?is_active=eq.true&order=sort_order.asc&select=id,name,slug,icon,description`);
+          const catRes = await sbServiceFetch(`/mp_categories?is_active=eq.true&order=sort_order.asc&select=id,name,slug,icon,description`);
           if (catRes.ok) {
             const categories = await catRes.json();
             if (Array.isArray(categories) && categories.length > 0) {
