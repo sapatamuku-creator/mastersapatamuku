@@ -6,7 +6,10 @@
 export const config = { runtime: 'edge', regions: ['sin1'] };
 
 const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
-const SB_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+// SUPABASE_ANON_KEY legacy JWT pada Vercel tidak valid (401 "Invalid API key")
+// → gunakan publishable key (valid untuk GoTrue & PostgREST, lihat lib/og-shared.js).
+const SB_PUBLISHABLE_KEY = 'sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u';
+const SB_ANON_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || SB_PUBLISHABLE_KEY;
 const SB_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 function sbFetch(path, options = {}) {
