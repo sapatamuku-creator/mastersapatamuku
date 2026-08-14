@@ -342,6 +342,32 @@ async function ensureCategoryInDB(catId) {
   return targetUuid;
 }
 
+let _catNameMapCache = null;
+let _catNameMapTs = 0;
+async function getCategoryNameMap() {
+  const now = Date.now();
+  if (_catNameMapCache && now - _catNameMapTs < 5 * 60 * 1000) return _catNameMapCache;
+  const map = _catNameMapCache ? { ..._catNameMapCache } : {};
+  try {
+    const res = await sbServiceFetch('/mp_categories?select=id,name&limit=100');
+    const cats = res.ok ? await res.json() : [];
+    if (Array.isArray(cats) && cats.length > 0) {
+      for (const c of cats) if (c && c.id && c.name) map[c.id] = c.name;
+      _catNameMapCache = map;
+      _catNameMapTs = now;
+    }
+  } catch (e) {}
+  return map;
+}
+
+async function resolveCategoryName(categoryId) {
+  if (!categoryId) return '';
+  const seeded = DEFAULT_CATEGORIES.find(c => c.id === categoryId);
+  if (seeded) return seeded.name;
+  const map = await getCategoryNameMap();
+  return map[categoryId] || '';
+}
+
 export default async function handler(req, res) {
   if (handleOptions(req, res)) return;
   setCors(res);
@@ -468,6 +494,7 @@ export default async function handler(req, res) {
         }
 
         // Step 4: Enrich each vendor with price_from, cover_image_url, and logo_url from mp_products
+        const catNameMap = await getCategoryNameMap();
         const enriched = (vendors || []).map(v => {
           const vProds = (allProducts || []).filter(p => p.vendor_id === v.id);
           let minPrice = v.price_from || 0;
@@ -491,7 +518,7 @@ export default async function handler(req, res) {
             cover_image_url: coverImg,
             logo_url: logoImg,
             rating: v.rating_avg || 0,
-            category_name: (DEFAULT_CATEGORIES.find(c => c.id === v.category_id) || {}).name || 'Fotografi & Videografi'
+            category_name: (DEFAULT_CATEGORIES.find(c => c.id === v.category_id) || {}).name || catNameMap[v.category_id] || ''
           };
         });
 
@@ -517,8 +544,7 @@ export default async function handler(req, res) {
         const vendor = (Array.isArray(vendors) && vendors.length > 0) ? vendors[0] : null;
         if (!vendor) return res.status(404).json({ error: 'Vendor tidak ditemukan' });
 
-        const catObj = DEFAULT_CATEGORIES.find(c => c.id === vendor.category_id);
-        vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
+vendor.category_name = await resolveCategoryName(vendor.category_id);
 
         // 2. Produk + review vendor â€” paralel, satu round-trip (tanpa fetch seluruh tabel)
         const PRODUCT_COLS = '*';
@@ -570,8 +596,7 @@ export default async function handler(req, res) {
           whatsapp: '6287864752163'
         };
 
-        const catObj = DEFAULT_CATEGORIES.find(c => c.id === vendor.category_id);
-        vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
+vendor.category_name = await resolveCategoryName(vendor.category_id);
 
         const otherProducts = otherProdsRes.ok ? await otherProdsRes.json() : [];
         const reviews = rRes.ok ? await rRes.json() : [];
