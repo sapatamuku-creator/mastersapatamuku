@@ -1,0 +1,39 @@
+# Phase 2 — Verifikasi Vendor & Promo Diskon
+
+- [ ] T1: SQL migration `08_vendor_verification_promo.sql` (vendor_otp + kolom baru)
+  - Acceptance: file migration siap; kolom/table solid sesuai spec
+  - Verify: review file
+  - Files: sql/marketplace/08_vendor_verification_promo.sql
+- [ ] T2: Auth backend api/mp.js — register OTP email, send/verify-otp, login gate + hapus fallback, forgot/reset password
+  - Acceptance: register → needs_email_otp; verify sukses set email_verified_at; login tanpa verify → 403 EMAIL_UNVERIFIED; fallback tanpa password hilang; reset via email & WA berfungsi
+  - Verify: sim node + curl ke Vercel setelah deploy
+  - Files: api/mp.js, lib/mp-config.js (helper opsional)
+- [ ] T3: Product/vendor write — status pending/publish, discount fields, ganti WA (unverify+repend+otp)
+  - Acceptance: POST paket vendor unverified-WA → status pending; PATCH promo tersimpan; PATCH whatsapp → unverified + pending + OTP
+  - Verify: sim node + curl
+  - Files: api/mp.js
+- [ ] T4: Public API (api/mp-public.js) — status filter di 4 endpoint + payload/price_from promo-aware
+  - Acceptance: produk pending tidak muncul di vendor-detail/product-detail/product-cover/vendors; payload punya has_promo/price_display/price_original; price_from terdiskon untuk listing
+  - Verify: curl setelah deploy
+  - Files: api/mp-public.js
+- [ ] T5: OG — resolveProductById status filter + promo di description
+  - Acceptance: pending → og generic; promo aktif → hsl harga promo di description
+  - Verify: curl -A WhatsApp
+  - Files: lib/og-shared.js
+- [ ] T6: vendor-register.html — panel OTP email (6 digit, kirim ulang 120s)
+  - Acceptance: setelah submit muncul panel kode; verify → redirect dashboard; kirim ulang & salah kode tertangani
+  - Verify: browser manual
+  - Files: vendor-register.html
+- [ ] T7: vendor-dashboard.html — verify WA banner+modal, lupa/reset password, promo modal (datetime-local), badge pending/promo, ganti nomor WA
+  - Acceptance: semua alur fungsional di browser
+  - Verify: browser manual
+  - Files: vendor-dashboard.html
+- [ ] T8: vendor-profile.html + vendor-product.html — harga promo coret + pesan WA promo
+  - Acceptance: promo aktif tampil coret; WA message bawa promo; tanpa promo normal
+  - Verify: browser manual
+  - Files: vendor-profile.html, vendor-product.html
+- [ ] T9: marketplace.html (+ index.html jika perlu) — kartu harga promo coret
+  - Acceptance: kartu vendor dgn price_from terdiskon menampilkan promo
+  - Verify: browser manual
+  - Files: marketplace.html, index.html
+- [ ] T10: Verifikasi end-to-end + commit/push + test live (semua status OTP, pending<->publish, promo) + graphify update

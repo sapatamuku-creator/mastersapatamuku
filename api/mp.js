@@ -84,6 +84,127 @@ function generateSlug(text) {
   return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
 }
 
+// ── Phase 2: OTP & WhatsApp helpers ──
+
+const OTP_TTL_MS = 5 * 60 * 1000;           // kode berlaku 5 menit
+const OTP_MAX_ATTEMPTS = 5;                 // maks 5 percobaan salah
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;   // cooldown kirim ulang 60 detik
+
+function genOtpCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function maskTarget(channel, target) {
+  const s = String(target || '');
+  if (channel === 'email') {
+    const [user, dom] = s.split('@');
+    if (!dom) return s;
+    return `${user.slice(0, 2)}***@${dom}`;
+  }
+  return s.length > 7 ? s.slice(0, 4) + '****' + s.slice(-2) : s;
+}
+
+async function sbAuthOtpEmail(email) {
+  return fetch(`${SB_URL}/auth/v1/otp`, {
+    method: 'POST',
+    headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      create_user: false,
+      options: { redirectTo: 'https://sapatamu.id/vendor-dashboard?reset=email' }
+    })
+  });
+}
+
+async function sbAuthVerifyEmail(email, token) {
+  return fetch(`${SB_URL}/auth/v1/verify`, {
+    method: 'POST',
+    headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'email', email, token })
+  });
+}
+
+async function sbAuthRecover(email) {
+  return fetch(`${SB_URL}/auth/v1/recover`, {
+    method: 'POST',
+    headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      options: { redirectTo: 'https://sapatamu.id/vendor-dashboard?reset=email' }
+    })
+  });
+}
+
+async function sendWA(target, message) {
+  const token = process.env.FONNTE_TOKEN;
+  if (!token) throw new Error('FONNTE_TOKEN tidak dikonfigurasi');
+  return fetch('https://api.fonnte.com/send', {
+    method: 'POST',
+    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target, message, countryCode: '62' })
+  });
+}
+
+async function findVendorByEmail(email) {
+  const res = await sbServiceFetch(`/mp_vendors?email=ilike.${encodeURIComponent(email)}&select=*&limit=1`);
+  const rows = res.ok ? await res.json() : [];
+  return (Array.isArray(rows) && rows[0]) ? rows[0] : null;
+}
+
+async function latestOtp(vendorId, purpose) {
+  const res = await sbServiceFetch(`/vendor_otp?vendor_id=eq.${vendorId}&purpose=eq.${purpose}&order=created_at.desc&limit=1&select=*`);
+  const rows = res.ok ? await res.json() : [];
+  return (Array.isArray(rows) && rows[0]) ? rows[0] : null;
+}
+
+// Hapus OTP lama yang belum dipakai, buat kode baru, kembalikan kode
+async function issueOtp(vendor, purpose, channel, target) {
+  await sbServiceFetch(`/vendor_otp?vendor_id=eq.${vendor.id}&purpose=eq.${purpose}&verified_at=is.null`, { method: 'DELETE' });
+  const code = genOtpCode();
+  await sbServiceFetch('/vendor_otp', {
+    method: 'POST',
+    body: JSON.stringify({
+      vendor_id: vendor.id,
+      channel,
+      purpose,
+      target,
+      code,
+      expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString()
+    }),
+    headers: { 'Prefer': 'return=representation' }
+  });
+  return code;
+}
+
+// Validasi & simpan field promo (harga diskon harus < harga normal)
+function sanitizePromoFields(body) {
+  const out = {};
+  if (body.discount_price === undefined) return out;
+  const dp = Math.round(parseFloat(body.discount_price));
+  const price = Math.round(parseFloat(body.price));
+  if (Number.isFinite(dp) && Number.isFinite(price) && dp > 0 && dp < price) {
+    out.discount_price = dp;
+    out.promo_start_at = body.promo_start_at || null;
+    out.promo_end_at = body.promo_end_at || null;
+  } else {
+    out.discount_price = null;
+    out.promo_start_at = null;
+    out.promo_end_at = null;
+  }
+  return out;
+}
+
+// Ambil vendor dari token Bearer ATAU dari email (untuk endpoint OTP tanpa login)
+async function resolveVendor(req, email) {
+  const token = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+  if (token) {
+    const v = await getVendorFromToken(req);
+    if (v) return v;
+  }
+  if (email) return findVendorByEmail(email);
+  return null;
+}
+
 async function verifyAuth(req) {
   const authHeader = req.headers['authorization'];
   if (!authHeader?.startsWith('Bearer ')) return null;
@@ -568,11 +689,22 @@ export default async function handler(req, res) {
           } catch(e) {}
         }
 
+        // Phase 2: email wajib diverifikasi via OTP sebelum akun bisa login.
+        let otpSent = false;
+        try {
+          if (vendorId) {
+            await issueOtp({ id: vendorId }, 'email_verify', 'email', finalEmail);
+            await sbAuthOtpEmail(finalEmail);
+            otpSent = true;
+          }
+        } catch(e) { console.error('[register-vendor OTP Error]', e); }
+
         return res.status(201).json({
           success: true,
           vendor_id: vendorId,
           slug: vendorSlug,
-          token: authToken || `token_${vendorId || Date.now()}_${Date.now()}`
+          token: authToken || `token_${vendorId || Date.now()}_${Date.now()}`,
+          needs_email_otp: otpSent
         });
       }
 
@@ -582,37 +714,43 @@ export default async function handler(req, res) {
         const { email, password } = req.body;
         if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
 
-        const cleanEmail = email.toLowerCase().trim();
+const cleanEmail = email.toLowerCase().trim();
 
-        // 1. Try Supabase Auth Login
+        // Phase 2: hanya via Supabase Auth (email + password).
+        // Fallback tanpa password dihapus demi keamanan akun.
         try {
           const authRes = await sbAuthLogin(cleanEmail, password);
-          if (authRes.ok) {
-            const authJson = await authRes.json();
-            const token = authJson.access_token;
-            const vRes = await sbServiceFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
-            const vRows = vRes.ok ? await vRes.json() : [];
-            return res.status(200).json({
-              success: true,
-              token,
-              vendor: vRows[0] || null
+          if (!authRes.ok) {
+            const err = await authRes.json().catch(() => ({}));
+            const msg = err.error_description || err.msg || err.message || 'Email atau password salah';
+            return res.status(401).json({ error: msg });
+          }
+          const authJson = await authRes.json();
+          const token = authJson.access_token;
+
+          const vRes = await sbServiceFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
+          const vRows = vRes.ok ? await vRes.json() : [];
+          const vendor = (Array.isArray(vRows) && vRows[0]) ? vRows[0] : null;
+
+          // Phase 2: email harus diverifikasi dulu sebelum akun bisa dipakai
+          if (vendor && !vendor.email_verified_at) {
+            return res.status(403).json({
+              error: 'Email akun Anda belum diverifikasi. Periksa email untuk kode OTP, atau kirim ulang kode.',
+              code: 'EMAIL_UNVERIFIED',
+              vendor_id: vendor.id,
+              email: vendor.email
             });
           }
-        } catch(e) {}
 
-        // 2. Fallback check vendor email in database (using sbServiceFetch to bypass RLS)
-        const vendorCheck = await sbServiceFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=*&limit=1`);
-        const vendors = vendorCheck.ok ? await vendorCheck.json() : [];
-        if (vendors && vendors.length > 0) {
-          const vendor = vendors[0];
           return res.status(200).json({
             success: true,
-            token: `token_${vendor.id}_${Date.now()}`,
-            vendor
+            token,
+            vendor: vendor || null
           });
+        } catch(e) {
+          console.error('[login-vendor error]', e);
+          return res.status(500).json({ error: 'Gagal melakukan login, coba lagi.' });
         }
-
-        return res.status(404).json({ error: `Email "${cleanEmail}" belum terdaftar. Silakan lakukan pendaftaran vendor terlebih dahulu.` });
       }
 
       // â”€â”€ 7. UPLOAD IMAGE PROXY â”€â”€
@@ -683,7 +821,29 @@ export default async function handler(req, res) {
 
         if (!vendor) return res.status(401).json({ error: 'Unauthorized / Vendor tidak ditemukan' });
 
-        if (req.method === 'GET') return res.status(200).json({ vendor });
+        if (req.method === 'GET') {
+          // Phase 2: bila email sudah dikonfirmasi di Supabase Auth (mis. via
+          // link konfirmasi), tandai verified di mp_vendors secara otomatis.
+          if (!vendor.email_verified_at && vendor.user_id) {
+            try {
+              const uRes = await fetch(`${SB_URL}/auth/v1/admin/users/${vendor.user_id}`, {
+                headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+              });
+              if (uRes.ok) {
+                const u = await uRes.json();
+                if (u && u.email_confirmed_at) {
+                  await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ email_verified_at: new Date().toISOString() })
+                  });
+                  vendor.email_verified_at = u.email_confirmed_at;
+                }
+              }
+            } catch(e) {}
+          }
+          return res.status(200).json({ vendor });
+        }
+
         if (req.method === 'PATCH') {
           const allowedFields = [
             'business_name', 'city', 'province', 'owner_name',
@@ -700,6 +860,27 @@ export default async function handler(req, res) {
             cleanBody.cover_image_url = req.body.cover_image;
           }
 
+          // Phase 2: ganti nomor WhatsApp → wajib verify ulang, paket kembali pending
+          let waReverifyOtp = false;
+          if (cleanBody.whatsapp !== undefined) {
+            const newWA = normalizeWA(cleanBody.whatsapp);
+            if (newWA && newWA !== vendor.whatsapp) {
+              cleanBody.whatsapp = newWA;
+              cleanBody.whatsapp_verified_at = null;
+              await sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&status=eq.publish`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 'pending' })
+              });
+              try {
+                const code = await issueOtp({ id: vendor.id }, 'wa_reverify', 'whatsapp', newWA);
+                await sendWA(newWA, `Kode verifikasi WhatsApp SapaTamu.id Anda: ${code}\nBerlaku 5 menit. Jangan bagikan kode ini kepada siapa pun.`);
+                waReverifyOtp = true;
+              } catch(e) { console.error('[vendor-me wa-reverify OTP Error]', e); }
+            } else {
+              delete cleanBody.whatsapp;
+            }
+          }
+
           const patchRes = await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
             method: 'PATCH',
             body: JSON.stringify(cleanBody),
@@ -713,7 +894,7 @@ export default async function handler(req, res) {
           }
 
           const updated = Array.isArray(patchJson) ? patchJson[0] : patchJson;
-          return res.status(200).json({ success: true, vendor: updated || vendor });
+          return res.status(200).json({ success: true, vendor: updated || vendor, wa_reverify_required: waReverifyOtp });
         }
         return res.status(405).json({ error: 'Method not allowed' });
       }
@@ -733,13 +914,16 @@ export default async function handler(req, res) {
         }
 
         if (req.method === 'POST') {
-          const { name, price, description, image_url, cover_image_url, badge_tag, category_name } = req.body;
+          const { name, price, description, image_url, cover_image_url, badge_tag, category_name, discount_price, promo_start_at, promo_end_at } = req.body;
           if (!name || !price) return res.status(400).json({ error: 'Nama paket dan harga wajib diisi' });
 
           const slug = generateSlug(name) + '-' + Date.now().toString(36);
           const finalImage = image_url || cover_image_url || null;
           const finalPrice = Math.round(parseFloat(price)) || 0;
           const catVal = category_name ? category_name.trim() : '';
+
+          // Phase 2: vendor yang WhatsApp-nya belum verified → paket pending (tak tampil publik)
+          const promo = sanitizePromoFields({ ...req.body, price: finalPrice });
 
           const insertRes = await sbServiceFetch('/mp_products', {
             method: 'POST',
@@ -752,7 +936,9 @@ export default async function handler(req, res) {
               short_desc: catVal,
               cover_image_url: finalImage,
               price_label: badge_tag ? badge_tag.trim() : null,
-              is_active: true
+              is_active: true,
+              status: vendor.whatsapp_verified_at ? 'publish' : 'pending',
+              ...promo
             }),
             headers: { 'Prefer': 'return=representation' }
           });
@@ -771,7 +957,7 @@ export default async function handler(req, res) {
           const { id } = req.query;
           if (!id) return res.status(400).json({ error: 'Missing product ID' });
 
-          const { name, price, description, image_url, cover_image_url, badge_tag, category_name } = req.body;
+          const { name, price, description, image_url, cover_image_url, badge_tag, category_name, discount_price, promo_start_at, promo_end_at } = req.body;
           const updateBody = {};
 
           if (name) {
@@ -784,6 +970,18 @@ export default async function handler(req, res) {
           if (finalImage !== undefined) updateBody.cover_image_url = finalImage || null;
           if (badge_tag !== undefined) updateBody.price_label = badge_tag ? badge_tag.trim() : null;
           if (category_name !== undefined) updateBody.short_desc = category_name ? category_name.trim() : '';
+
+          // Phase 2: field promo (diskon). Validasi harga diskon < harga normal.
+          if (discount_price !== undefined) {
+            const current = price !== undefined
+              ? Math.round(parseFloat(price)) || 0
+              : await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&vendor_id=eq.${vendor.id}&select=price&limit=1`)
+                  .then(r => r.ok ? r.json() : []).then(r => (Array.isArray(r) && r[0] && r[0].price) || 0);
+            Object.assign(updateBody, sanitizePromoFields({ discount_price, promo_start_at, promo_end_at, price: current }));
+          } else {
+            if (promo_start_at !== undefined) updateBody.promo_start_at = promo_start_at || null;
+            if (promo_end_at !== undefined) updateBody.promo_end_at = promo_end_at || null;
+          }
           updateBody.updated_at = new Date().toISOString();
 
           const updateRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&vendor_id=eq.${vendor.id}`, {
@@ -844,6 +1042,191 @@ export default async function handler(req, res) {
             total_products: prodCount
           }
         });
+      }
+
+      // â”€â”€ 12. SEND OTP (Phase 2) â”€â”€
+      case 'send-otp': {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        const { purpose, email, whatsapp } = req.body;
+        if (!purpose) return res.status(400).json({ error: 'Missing purpose' });
+
+        const vendor = await resolveVendor(req, email);
+        if (!vendor) return res.status(404).json({ error: 'Vendor tidak ditemukan' });
+
+        let channel = null;
+        let target = null;
+        if (purpose === 'email_verify') {
+          channel = 'email';
+          target = vendor.email;
+        } else if (purpose === 'wa_verify') {
+          channel = 'whatsapp';
+          target = vendor.whatsapp;
+        } else if (purpose === 'wa_reverify') {
+          channel = 'whatsapp';
+          target = normalizeWA(whatsapp || vendor.whatsapp);
+        } else {
+          return res.status(400).json({ error: `Purpose "${purpose}" tidak valid untuk endpoint ini` });
+        }
+
+        if (!target) return res.status(400).json({ error: 'Tidak ada target valid (email/WhatsApp belum terisi)' });
+
+        // Cooldown kirim ulang 60 detik
+        const prev = await latestOtp(vendor.id, purpose);
+        if (prev && !prev.verified_at) {
+          const elapsed = Date.now() - new Date(prev.created_at).getTime();
+          if (elapsed < OTP_RESEND_COOLDOWN_MS) {
+            const wait = Math.ceil((OTP_RESEND_COOLDOWN_MS - elapsed) / 1000);
+            return res.status(429).json({ error: `Mohon tunggu ${wait} detik sebelum mengirim ulang kode.` });
+          }
+        }
+
+        try {
+          const code = await issueOtp(vendor, purpose, channel, target);
+          if (channel === 'whatsapp') {
+            const label = purpose === 'email_verify' ? 'verifikasi email' : 'verifikasi WhatsApp';
+            await sendWA(target, `Kode ${label} SapaTamu.id Anda: ${code}\nBerlaku 5 menit. Jangan bagikan kode ini kepada siapa pun.`);
+          } else {
+            await sbAuthOtpEmail(target);
+          }
+        } catch(e) {
+          console.error('[send-otp error]', e);
+          return res.status(502).json({ error: 'Gagal mengirim kode, silakan coba lagi.' });
+        }
+
+        return res.status(200).json({ success: true, channel, target: maskTarget(channel, target) });
+      }
+
+      // â”€â”€ 13. VERIFY OTP (Phase 2) â”€â”€
+      case 'verify-otp': {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        const { purpose, code, email } = req.body;
+        if (!purpose || !code) return res.status(400).json({ error: 'Missing purpose/code' });
+
+        const vendor = await resolveVendor(req, email);
+        if (!vendor) return res.status(404).json({ error: 'Vendor tidak ditemukan' });
+
+        const otp = await latestOtp(vendor.id, purpose);
+        if (!otp || otp.verified_at) return res.status(400).json({ error: 'Kode tidak ditemukan atau sudah dipakai' });
+        if (new Date(otp.expires_at).getTime() < Date.now()) return res.status(400).json({ error: 'Kode kedaluwarsa. Silakan kirim ulang.' });
+        if (otp.attempts >= OTP_MAX_ATTEMPTS) return res.status(400).json({ error: 'Terlalu banyak percobaan. Silakan kirim ulang kode.' });
+
+        if (String(code).trim() !== otp.code) {
+          await sbServiceFetch(`/vendor_otp?id=eq.${otp.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ attempts: (otp.attempts || 0) + 1 })
+          });
+          return res.status(400).json({ error: 'Kode salah.' });
+        }
+
+        await sbServiceFetch(`/vendor_otp?id=eq.${otp.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ verified_at: new Date().toISOString() })
+        });
+
+        if (purpose === 'email_verify') {
+          // Bonus: konfirmasi email juga di Supabase Auth bila kode valid di sana
+          // (bila proyek memakai magic link, langkah ini dilewati tanpa error).
+          try { await sbAuthVerifyEmail(otp.target, otp.code); } catch(e) {}
+          await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ email_verified_at: new Date().toISOString() })
+          });
+          return res.status(200).json({ success: true, email_verified: true });
+        }
+
+        if (purpose === 'wa_verify' || purpose === 'wa_reverify') {
+          const patch = { whatsapp_verified_at: new Date().toISOString() };
+          if (purpose === 'wa_reverify') patch.whatsapp = otp.target;
+          await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(patch)
+          });
+          // Paket pending otomatis publish
+          await sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&status=eq.pending`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'publish' })
+          });
+          return res.status(200).json({ success: true, whatsapp_verified: true, packages_published: true });
+        }
+
+        if (purpose === 'reset') {
+          return res.status(200).json({ success: true, reset_token: otp.id });
+        }
+
+        return res.status(400).json({ error: `Purpose "${purpose}" tidak valid` });
+      }
+
+      // â”€â”€ 14. FORGOT PASSWORD (Phase 2) â”€â”€
+      case 'forgot-password': {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        const { email, channel } = req.body;
+        const cleanEmail = String(email || '').toLowerCase().trim();
+        if (!cleanEmail) return res.status(400).json({ error: 'Email wajib diisi' });
+
+        // Jangan bocorkan apakah email terdaftar: selalu jawab sukses.
+        const vendor = await findVendorByEmail(cleanEmail);
+        if (!vendor) return res.status(200).json({ success: true });
+
+        if (channel === 'whatsapp') {
+          if (!vendor.whatsapp) return res.status(200).json({ success: true });
+          try {
+            const code = await issueOtp(vendor, 'reset', 'whatsapp', vendor.whatsapp);
+            await sendWA(vendor.whatsapp, `Kode reset password SapaTamu.id Anda: ${code}\nBerlaku 5 menit. Jangan bagikan kode ini kepada siapa pun.`);
+          } catch(e) {
+            console.error('[forgot-password wa error]', e);
+            return res.status(502).json({ error: 'Gagal mengirim kode via WhatsApp, coba lagi.' });
+          }
+          return res.status(200).json({ success: true, channel: 'whatsapp' });
+        }
+
+        // Default: email → link reset bawaan Supabase
+        try {
+          await sbAuthRecover(cleanEmail);
+        } catch(e) {
+          console.error('[forgot-password email error]', e);
+          return res.status(502).json({ error: 'Gagal mengirim email reset, coba lagi.' });
+        }
+        return res.status(200).json({ success: true, channel: 'email' });
+      }
+
+      // â”€â”€ 15. RESET PASSWORD (Phase 2, via kode WhatsApp) â”€â”€
+      case 'reset-password': {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        const { reset_token, new_password } = req.body;
+        if (!reset_token) return res.status(400).json({ error: 'Missing reset_token' });
+        if (!new_password || new_password.length < 6) return res.status(400).json({ error: 'Password baru minimal 6 karakter' });
+
+        const otpRes = await sbServiceFetch(`/vendor_otp?id=eq.${reset_token}&purpose=eq.reset&verified_at=not.is.null&select=*&limit=1`);
+        const otpRows = otpRes.ok ? await otpRes.json() : [];
+        const otp = (Array.isArray(otpRows) && otpRows[0]) ? otpRows[0] : null;
+        if (!otp) return res.status(400).json({ error: 'Token reset tidak valid atau sudah dipakai' });
+
+        const vRes = await sbServiceFetch(`/mp_vendors?id=eq.${otp.vendor_id}&select=id,user_id&limit=1`);
+        const vRows = vRes.ok ? await vRes.json() : [];
+        const vendor = (Array.isArray(vRows) && vRows[0]) ? vRows[0] : null;
+        if (!vendor || !vendor.user_id) {
+          return res.status(400).json({ error: 'Akun ini belum memiliki password terhubung. Silakan gunakan menu lupa password via email.' });
+        }
+
+        const updRes = await fetch(`${SB_URL}/auth/v1/admin/users/${vendor.user_id}`, {
+          method: 'PUT',
+          headers: {
+            'apikey': SB_SERVICE_KEY,
+            'Authorization': `Bearer ${SB_SERVICE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ password: new_password })
+        });
+        if (!updRes.ok) {
+          const errBody = await updRes.json().catch(() => ({}));
+          console.error('[reset-password admin error]', updRes.status, errBody);
+          return res.status(502).json({ error: errBody.message || 'Gagal mereset password, coba lagi.' });
+        }
+
+        // Kode reset hanya sekali pakai
+        await sbServiceFetch(`/vendor_otp?id=eq.${otp.id}`, { method: 'DELETE' });
+
+        return res.status(200).json({ success: true });
       }
 
       default:

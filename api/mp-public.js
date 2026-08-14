@@ -106,6 +106,103 @@ function generateSlug(text) {
   return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
 }
 
+function normalizeWA(raw) {
+  if (!raw) return '';
+  raw = String(raw).replace(/[^0-9]/g, '');
+  if (raw.startsWith('0')) return '62' + raw.slice(1);
+  if (raw.startsWith('8')) return '62' + raw;
+  return raw;
+}
+
+// ── Phase 2: promo & OTP helpers (edge) ──
+
+const OTP_TTL_MS = 5 * 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
+
+function genOtpCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+// Promo aktif ⇔ discount_price < price dan sekarang dalam periode
+function enrichPromo(p) {
+  const price = Number(p && p.price) || 0;
+  const dp = Number(p && p.discount_price) || 0;
+  const now = Date.now();
+  const start = p.promo_start_at ? new Date(p.promo_start_at).getTime() : null;
+  const end = p.promo_end_at ? new Date(p.promo_end_at).getTime() : null;
+  const active = price > 0 && dp > 0 && dp < price && start !== null && start <= now && end !== null && now <= end;
+  return {
+    ...p,
+    has_promo: active,
+    price_display: active ? dp : price,
+    price_original: active ? price : null,
+    promo_start_at: active ? p.promo_start_at : null,
+    promo_end_at: active ? p.promo_end_at : null
+  };
+}
+
+async function sendWA(target, message) {
+  const token = process.env.FONNTE_TOKEN;
+  if (!token) throw new Error('FONNTE_TOKEN tidak dikonfigurasi');
+  return fetch('https://api.fonnte.com/send', {
+    method: 'POST',
+    headers: { 'Authorization': token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target, message, countryCode: '62' })
+  });
+}
+
+async function latestOtp(vendorId, purpose) {
+  const res = await sbServiceFetch(`/vendor_otp?vendor_id=eq.${vendorId}&purpose=eq.${purpose}&order=created_at.desc&limit=1&select=*`);
+  const rows = res.ok ? await res.json() : [];
+  return (Array.isArray(rows) && rows[0]) ? rows[0] : null;
+}
+
+async function issueOtp(vendor, purpose, channel, target) {
+  await sbServiceFetch(`/vendor_otp?vendor_id=eq.${vendor.id}&purpose=eq.${purpose}&verified_at=is.null`, { method: 'DELETE' });
+  const code = genOtpCode();
+  await sbServiceFetch('/vendor_otp', {
+    method: 'POST',
+    body: JSON.stringify({
+      vendor_id: vendor.id,
+      channel,
+      purpose,
+      target,
+      code,
+      expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString()
+    }),
+    headers: { 'Prefer': 'return=representation' }
+  });
+  return code;
+}
+
+// Validasi & simpan field promo (harga diskon harus < harga normal)
+function sanitizePromoFields(body) {
+  const out = {};
+  if (body.discount_price === undefined) return out;
+  const dp = Math.round(parseFloat(body.discount_price));
+  const price = Math.round(parseFloat(body.price));
+  if (Number.isFinite(dp) && Number.isFinite(price) && dp > 0 && dp < price) {
+    out.discount_price = dp;
+    out.promo_start_at = body.promo_start_at || null;
+    out.promo_end_at = body.promo_end_at || null;
+  } else {
+    out.discount_price = null;
+    out.promo_start_at = null;
+    out.promo_end_at = null;
+  }
+  return out;
+}
+
+function maskTarget(channel, target) {
+  const s = String(target || '');
+  if (channel === 'email') {
+    const [user, dom] = s.split('@');
+    if (!dom) return s;
+    return `${user.slice(0, 2)}***@${dom}`;
+  }
+  return s.length > 7 ? s.slice(0, 4) + '****' + s.slice(-2) : s;
+}
+
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
@@ -212,7 +309,7 @@ export default async function handler(req) {
         let vendors = [];
         const [vRes, prodRes] = await Promise.all([
           sbServiceFetch(query),
-          sbServiceFetch(`/mp_products?select=vendor_id,price,cover_image_url,image_url&limit=500`)
+          sbServiceFetch(`/mp_products?select=vendor_id,price,discount_price,promo_start_at,promo_end_at,status,cover_image_url,image_url&limit=500&status=eq.publish`)
         ]);
         vendors = vRes.ok ? await vRes.json() : [];
         allProducts = prodRes.ok ? await prodRes.json() : [];
@@ -259,10 +356,29 @@ export default async function handler(req) {
           let minPrice = v.price_from || 0;
           let coverImg = v.cover_image_url || null;
           let logoImg = v.logo_url || null;
+          let priceFromDisplay = minPrice;
+          let priceFromOriginal = null;
 
           if (vProds.length > 0) {
             const prices = vProds.map(p => p.price).filter(p => p > 0);
             if (prices.length > 0) minPrice = Math.min(...prices);
+
+            // Phase 2: harga termurah promo-aware (paket termurah sedang promo → tampil coret)
+            const effPrices = vProds
+              .map(enrichPromo)
+              .filter(p => p.price_display > 0);
+            if (effPrices.length > 0) {
+              const eff = Math.min(...effPrices.map(p => p.price_display));
+              const normal = Math.min(...effPrices.map(p => p.price_original || p.price));
+              if (eff < normal) {
+                priceFromDisplay = eff;
+                priceFromOriginal = normal;
+              } else {
+                priceFromDisplay = normal;
+              }
+            } else {
+              priceFromDisplay = minPrice;
+            }
 
             const prodWithImg = vProds.find(p => p.cover_image_url || p.image_url);
             if (prodWithImg) {
@@ -274,6 +390,8 @@ export default async function handler(req) {
           return {
             ...v,
             price_from: minPrice,
+            price_from_display: priceFromDisplay,
+            price_from_original: priceFromOriginal,
             cover_image_url: coverImg,
             logo_url: logoImg,
             rating: v.rating_avg || 0,
@@ -307,11 +425,11 @@ export default async function handler(req) {
 
         const PRODUCT_COLS = '*';
         const [pRes, rRes] = await Promise.all([
-          sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&order=created_at.desc&select=${PRODUCT_COLS}`),
+          sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&status=eq.publish&order=created_at.desc&select=${PRODUCT_COLS}`),
           sbServiceFetch(`/mp_reviews?vendor_id=eq.${vendor.id}&order=created_at.desc&limit=10`)
         ]);
 
-        const products = pRes.ok ? await pRes.json() : [];
+        const products = (pRes.ok ? await pRes.json() : []).map(enrichPromo);
         const reviews = rRes.ok ? await rRes.json() : [];
 
         return json({
@@ -329,7 +447,7 @@ export default async function handler(req) {
         const id = q.get('id');
         if (!id) return json({ error: 'Missing product ID' }, 400);
 
-        const pRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&select=id,cover_image_url&limit=1`);
+        const pRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&status=eq.publish&select=id,cover_image_url&limit=1`);
         const rows = pRes.ok ? await pRes.json() : [];
         const product = (Array.isArray(rows) && rows[0]) ? rows[0] : null;
         if (!product) return json({ error: 'Produk tidak ditemukan' }, 404);
@@ -364,8 +482,8 @@ export default async function handler(req) {
 
         const PRODUCT_COLS = '*';
         let pQuery = id
-          ? `/mp_products?id=eq.${encodeURIComponent(id)}&select=${PRODUCT_COLS}&limit=1`
-          : `/mp_products?slug=eq.${encodeURIComponent(slug)}&select=${PRODUCT_COLS}&limit=1`;
+          ? `/mp_products?id=eq.${encodeURIComponent(id)}&status=eq.publish&select=${PRODUCT_COLS}&limit=1`
+          : `/mp_products?slug=eq.${encodeURIComponent(slug)}&status=eq.publish&select=${PRODUCT_COLS}&limit=1`;
         const pRes = await sbServiceFetch(pQuery);
         let products = pRes.ok ? await pRes.json() : [];
 
@@ -373,11 +491,11 @@ export default async function handler(req) {
           return json({ error: 'Paket produk tidak ditemukan' }, 404);
         }
 
-        const product = products[0];
+        const product = enrichPromo(products[0]);
 
         const [vRes, otherProdsRes, rRes] = await Promise.all([
           sbServiceFetch(`/mp_vendors?id=eq.${product.vendor_id}&select=id,slug,business_name,city,province,whatsapp,description,cover_image_url,logo_url,category_id,is_verified,rating_avg,review_count&limit=1`),
-          sbServiceFetch(`/mp_products?vendor_id=eq.${product.vendor_id}&id=neq.${product.id}&order=created_at.desc&select=${PRODUCT_COLS}`),
+          sbServiceFetch(`/mp_products?vendor_id=eq.${product.vendor_id}&id=neq.${product.id}&status=eq.publish&order=created_at.desc&select=${PRODUCT_COLS}`),
           sbServiceFetch(`/mp_reviews?vendor_id=eq.${product.vendor_id}&order=created_at.desc&limit=10`)
         ]);
 
@@ -393,7 +511,7 @@ export default async function handler(req) {
         const catObj = DEFAULT_CATEGORIES.find(c => c.id === vendor.category_id);
         vendor.category_name = catObj ? catObj.name : 'Fotografi & Videografi';
 
-        const otherProducts = otherProdsRes.ok ? await otherProdsRes.json() : [];
+        const otherProducts = (otherProdsRes.ok ? await otherProdsRes.json() : []).map(enrichPromo);
         const reviews = rRes.ok ? await rRes.json() : [];
 
         return json({ product, vendor, otherProducts, reviews }, 200, CACHE_PUBLIC);
@@ -404,7 +522,27 @@ export default async function handler(req) {
         const vendor = await getVendorFromToken(req);
         if (!vendor) return json({ error: 'Unauthorized / Vendor tidak ditemukan' }, 401, NO_CACHE);
 
-        if (req.method === 'GET') return json({ vendor }, 200, NO_CACHE);
+        if (req.method === 'GET') {
+          // Phase 2: bila email sudah dikonfirmasi di Supabase Auth, tandai verified
+          if (!vendor.email_verified_at && vendor.user_id) {
+            try {
+              const uRes = await fetch(`${SB_URL}/auth/v1/admin/users/${vendor.user_id}`, {
+                headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+              });
+              if (uRes.ok) {
+                const u = await uRes.json();
+                if (u && u.email_confirmed_at) {
+                  await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ email_verified_at: new Date().toISOString() })
+                  });
+                  vendor.email_verified_at = u.email_confirmed_at;
+                }
+              }
+            } catch(e) {}
+          }
+          return json({ vendor }, 200, NO_CACHE);
+        }
         if (req.method === 'PATCH') {
           const allowedFields = [
             'business_name', 'city', 'province', 'owner_name',
@@ -421,6 +559,27 @@ export default async function handler(req) {
             cleanBody.cover_image_url = body.cover_image;
           }
 
+          // Phase 2: ganti nomor WhatsApp → wajib verify ulang, paket kembali pending
+          let waReverifyOtp = false;
+          if (cleanBody.whatsapp !== undefined) {
+            const newWA = normalizeWA(cleanBody.whatsapp);
+            if (newWA && newWA !== vendor.whatsapp) {
+              cleanBody.whatsapp = newWA;
+              cleanBody.whatsapp_verified_at = null;
+              await sbServiceFetch(`/mp_products?vendor_id=eq.${vendor.id}&status=eq.publish`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 'pending' })
+              });
+              try {
+                const code = await issueOtp({ id: vendor.id }, 'wa_reverify', 'whatsapp', newWA);
+                await sendWA(newWA, `Kode verifikasi WhatsApp SapaTamu.id Anda: ${code}\nBerlaku 5 menit. Jangan bagikan kode ini kepada siapa pun.`);
+                waReverifyOtp = true;
+              } catch(e) { console.error('[vendor-me wa-reverify OTP Error]', e); }
+            } else {
+              delete cleanBody.whatsapp;
+            }
+          }
+
           const patchRes = await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
             method: 'PATCH',
             body: JSON.stringify(cleanBody),
@@ -434,7 +593,7 @@ export default async function handler(req) {
           }
 
           const updated = Array.isArray(patchJson) ? patchJson[0] : patchJson;
-          return json({ success: true, vendor: updated || vendor }, 200, NO_CACHE);
+          return json({ success: true, vendor: updated || vendor, wa_reverify_required: waReverifyOtp }, 200, NO_CACHE);
         }
         return json({ error: 'Method not allowed' }, 405);
       }
@@ -462,6 +621,9 @@ export default async function handler(req) {
           const finalPrice = Math.round(parseFloat(price)) || 0;
           const catVal = category_name ? category_name.trim() : '';
 
+          // Phase 2: vendor yang WhatsApp-nya belum verified → paket pending
+          const promo = sanitizePromoFields({ ...body, price: finalPrice });
+
           const insertRes = await sbServiceFetch('/mp_products', {
             method: 'POST',
             body: JSON.stringify({
@@ -473,7 +635,9 @@ export default async function handler(req) {
               short_desc: catVal,
               cover_image_url: finalImage,
               price_label: badge_tag ? badge_tag.trim() : null,
-              is_active: true
+              is_active: true,
+              status: vendor.whatsapp_verified_at ? 'publish' : 'pending',
+              ...promo
             }),
             headers: { 'Prefer': 'return=representation' }
           });
@@ -491,7 +655,7 @@ export default async function handler(req) {
           const id = q.get('id');
           if (!id) return json({ error: 'Missing product ID' }, 400);
 
-          const { name, price, description, image_url, cover_image_url, badge_tag, category_name } = body;
+          const { name, price, description, image_url, cover_image_url, badge_tag, category_name, discount_price, promo_start_at, promo_end_at } = body;
           const updateBody = {};
 
           if (name) {
@@ -504,6 +668,18 @@ export default async function handler(req) {
           if (finalImage !== undefined) updateBody.cover_image_url = finalImage || null;
           if (badge_tag !== undefined) updateBody.price_label = badge_tag ? badge_tag.trim() : null;
           if (category_name !== undefined) updateBody.short_desc = category_name ? category_name.trim() : '';
+
+          // Phase 2: field promo (diskon). Validasi harga diskon < harga normal.
+          if (discount_price !== undefined) {
+            const current = price !== undefined
+              ? Math.round(parseFloat(price)) || 0
+              : await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&vendor_id=eq.${vendor.id}&select=price&limit=1`)
+                  .then(r => r.ok ? r.json() : []).then(r => (Array.isArray(r) && r[0] && r[0].price) || 0);
+            Object.assign(updateBody, sanitizePromoFields({ discount_price, promo_start_at, promo_end_at, price: current }));
+          } else {
+            if (promo_start_at !== undefined) updateBody.promo_start_at = promo_start_at || null;
+            if (promo_end_at !== undefined) updateBody.promo_end_at = promo_end_at || null;
+          }
           updateBody.updated_at = new Date().toISOString();
 
           const updateRes = await sbServiceFetch(`/mp_products?id=eq.${encodeURIComponent(id)}&vendor_id=eq.${vendor.id}`, {
