@@ -24,16 +24,18 @@
   - Acceptance: setelah submit muncul panel kode; verify â†’ redirect dashboard; kirim ulang & salah kode tertangani
   - Verify: browser manual
   - Files: vendor-register.html
-- [x] T7: vendor-dashboard.html â€” verify WA banner+modal, lupa/reset password, promo modal (datetime-local), badge pending/promo, ganti nomor WA
+- [x] T7: vendor-dashboard.html (VERIFIKASI 2026-08-15: reset WA 2-langkah, endpoint recovery-reset + panel utk link reset email, forgot modal, gate EMAIL_UNVERIFIED) â€” verify WA banner+modal, lupa/reset password, promo modal (datetime-local), badge pending/promo, ganti nomor WA
   - Acceptance: semua alur fungsional di browser
   - Verify: browser manual
   - Files: vendor-dashboard.html
-- [ ] T8: vendor-profile.html + vendor-product.html â€” harga promo coret + pesan WA promo
+- [x] T8: vendor-profile.html + vendor-product.html â€” harga promo coret + pesan WA promo
   - Acceptance: promo aktif tampil coret; WA message bawa promo; tanpa promo normal
   - Verify: browser manual
   - Files: vendor-profile.html, vendor-product.html
-- [ ] T9: marketplace.html (+ index.html jika perlu) â€” kartu harga promo coret
+- [x] T9: marketplace.html (+ index.html jika perlu) â€” kartu harga promo coret
   - Acceptance: kartu vendor dgn price_from terdiskon menampilkan promo
   - Verify: browser manual
   - Files: marketplace.html, index.html
-- [ ] T10: Verifikasi end-to-end + commit/push + test live (semua status OTP, pending<->publish, promo) + graphify update
+- [ ] T10 (partial): API live verified (register/send/verify-otp/login gate/forgot/reset/inquiry). Sisa: e2e browser dgn email+WA asli user, bersihkan data probe (vendor 6119f8e5-1fff-4f26-a597-db46a4c288e9, inquiry 9b48075d-4bea-452e-8b5c-a2eef8a4caf0), verifikasi promo visual + graphify update
+
+
