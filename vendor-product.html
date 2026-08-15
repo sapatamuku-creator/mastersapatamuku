@@ -480,7 +480,9 @@
       }
 
       try {
-        const res = await fetch(`/api/mp/product-detail?id=${encodeURIComponent(productId)}`);
+        // cache-buster: hindari response basi dari CDN (s-maxage) agar produk
+        // baru/update langsung tampil tanpa menunggu cache kadaluwarsa.
+        const res = await fetch(`/api/mp/product-detail?id=${encodeURIComponent(productId)}&t=${Date.now()}`);
         if (!res.ok) {
           showProductError('Produk Tidak Ditemukan');
           return;

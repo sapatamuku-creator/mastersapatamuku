@@ -464,7 +464,9 @@
           data = null;
         }
         if (!data) {
-          const res = await fetch(`/api/mp/vendor-detail?slug=${encodeURIComponent(slug)}`);
+          // cache-buster: hindari response basi dari CDN (s-maxage) agar paket baru
+          // langsung tampil tanpa menunggu cache kadaluwarsa (hingga 1 jam).
+          const res = await fetch(`/api/mp/vendor-detail?slug=${encodeURIComponent(slug)}&t=${Date.now()}`);
           if (!res.ok) {
             $('vendorName').textContent = 'Vendor Tidak Ditemukan';
             return;
