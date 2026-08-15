@@ -314,6 +314,21 @@
           Belum dapat kode? <a href="javascript:void(0)" id="btnResendEv" onclick="resendEvOtp()" style="color:var(--primary-dark);font-weight:700">Kirim Ulang</a><span id="evTimer"></span>
         </div>
       </div>
+
+      <div id="recoveryPanel" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--surface-border)">
+        <div style="font-weight:700;color:var(--primary-dark);margin-bottom:4px">Atur Password Baru</div>
+        <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:14px">Link reset email terdeteksi. Buat password baru untuk akun vendor Anda.</p>
+        <div class="form-group">
+          <input type="password" id="recNewPass" placeholder="Password baru (min. 6 karakter)">
+        </div>
+        <div class="form-group">
+          <input type="password" id="recNewPass2" placeholder="Ulangi password baru">
+        </div>
+        <button type="button" class="btn-primary-add" style="width:100%;justify-content:center" onclick="submitRecoveryReset()">Simpan Password Baru</button>
+        <div style="margin-top:12px;font-size:0.83rem;color:var(--text-muted);text-align:center">
+          <a href="javascript:void(0)" onclick="hideRecoveryPanel()" style="color:var(--primary-dark);font-weight:700">Kembali ke Login</a>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1922,9 +1937,16 @@
       if (!/^\d{6}$/.test(code)) { showToast('Masukkan kode 6 digit.'); return; }
       if (pass.length < 6) { showToast('Password baru minimal 6 karakter.'); return; }
       if (pass !== pass2) { showToast('Konfirmasi password tidak cocok.'); return; }
+      // 1) Validasi kode reset via verify-otp → dapat reset_token (id OTP)
+      const { res: vr, json: vj } = await apiCall('/api/mp/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ purpose: 'reset', code, email: _forgotEmail })
+      });
+      if (!vr.ok || !vj.reset_token) { showToast(vj.error || 'Kode reset tidak valid.'); return; }
+      // 2) Terapkan password baru dengan reset_token
       const { res, json } = await apiCall('/api/mp/reset-password', {
         method: 'POST',
-        body: JSON.stringify({ reset_token: code, new_password: pass })
+        body: JSON.stringify({ reset_token: vj.reset_token, new_password: pass })
       });
       if (res.ok) {
         showToast('Password berhasil direset! Silakan login dengan password baru.');
@@ -1933,6 +1955,53 @@
         $('loginPass').focus();
       } else {
         showToast(json.error || 'Gagal mereset password.');
+      }
+    }
+
+    // ── Phase 2: Mengatur password baru dari link reset email (Supabase recovery) ──
+    let _recoveryToken = null;
+
+    function parseRecoveryHash() {
+      const h = window.location.hash || '';
+      const tok = h.match(/access_token=([^&]+)/);
+      const typ = h.match(/type=([^&]+)/);
+      if (tok && typ && typ[1].toLowerCase() === 'recovery') {
+        return decodeURIComponent(tok[1]);
+      }
+      return null;
+    }
+
+    function showRecoveryPanel() {
+      $('loginForm').style.display = 'none';
+      $('registeredMsg').style.display = 'none';
+      $('emailUnverifiedPanel').style.display = 'none';
+      $('recoveryPanel').style.display = 'block';
+    }
+
+    function hideRecoveryPanel() {
+      $('recoveryPanel').style.display = 'none';
+      $('loginForm').style.display = '';
+    }
+
+    async function submitRecoveryReset() {
+      const pass = $('recNewPass').value;
+      const pass2 = $('recNewPass2').value;
+      if (pass.length < 6) { showToast('Password baru minimal 6 karakter.'); return; }
+      if (pass !== pass2) { showToast('Konfirmasi password tidak cocok.'); return; }
+      if (!_recoveryToken) { showToast('Link reset tidak valid, minta link baru.'); return; }
+      const { res, json } = await apiCall('/api/mp/recovery-reset', {
+        method: 'POST',
+        body: JSON.stringify({ recovery_token: _recoveryToken, new_password: pass })
+      });
+      if (res.ok) {
+        showToast('Password berhasil direset! Silakan login dengan password baru.');
+        _recoveryToken = null;
+        window.history.replaceState({}, '', window.location.pathname);
+        hideRecoveryPanel();
+        $('loginPass').value = '';
+        $('loginPass').focus();
+      } else {
+        showToast(json.error || 'Gagal mereset password, coba lagi.');
       }
     }
 
@@ -1973,6 +2042,17 @@
       }
       if (urlParams.get('verified') === 'email') {
         showToast('Email berhasil diverifikasi! Selamat datang di dashboard vendor.');
+      }
+      if (urlParams.get('reset') === 'email') {
+        showToast('Cek email Anda untuk link reset password.');
+      }
+
+      // Link reset email Supabase → minta password baru sebelum login
+      _recoveryToken = parseRecoveryHash();
+      if (_recoveryToken) {
+        showLogin();
+        showRecoveryPanel();
+        return;
       }
 
       if (!_token) {

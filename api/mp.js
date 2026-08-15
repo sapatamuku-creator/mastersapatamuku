@@ -1302,10 +1302,40 @@ const cleanEmail = email.toLowerCase().trim();
           return res.status(502).json({ error: errBody.message || 'Gagal mereset password, coba lagi.' });
         }
 
-        // Kode reset hanya sekali pakai
+// Kode reset hanya sekali pakai
         await sbServiceFetch(`/vendor_otp?id=eq.${otp.id}`, { method: 'DELETE' });
 
         return res.status(200).json({ success: true });
+      }
+
+      // â”€â”€ 16. RECOVERY RESET (Phase 2, link email Supabase #access_token&type=recovery) â”€â”€
+      case 'recovery-reset': {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        const { recovery_token, new_password } = req.body;
+        if (!recovery_token) return res.status(400).json({ error: 'Missing recovery_token' });
+        if (!new_password || new_password.length < 6) return res.status(400).json({ error: 'Password baru minimal 6 karakter' });
+
+        try {
+          // Pakai recovery token sebagai sesi pemilik akun → user sendiri yang ganti password
+          const updRes = await fetch(`${SB_URL}/auth/v1/user`, {
+            method: 'PUT',
+            headers: {
+              'apikey': SB_ANON_KEY,
+              'Authorization': `Bearer ${recovery_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: new_password })
+          });
+          if (!updRes.ok) {
+            const errBody = await updRes.json().catch(() => ({}));
+            console.error('[recovery-reset error]', updRes.status, errBody);
+            return res.status(400).json({ error: errBody.msg || errBody.message || 'Link reset tidak valid atau sudah kedaluwarsa. Silakan minta link baru.' });
+          }
+          return res.status(200).json({ success: true });
+        } catch(e) {
+          console.error('[recovery-reset error]', e);
+          return res.status(502).json({ error: 'Gagal mereset password, coba lagi.' });
+        }
       }
 
       default:
