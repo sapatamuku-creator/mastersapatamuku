@@ -60,6 +60,85 @@ function sbAuthLogin(email, password) {
   });
 }
 
+// Auto-provision akun Supabase Auth untuk vendor legacy yang user_id-nya null.
+// Gunakan service key (admin endpoint) agar akun langsung confirmed, lalu
+// tautkan user_id ke mp_vendors + sinkronkan email_verified_at. Idempotent:
+// jika akun auth sudah ada (user_id ada), cukup reset password tanpa duplikat.
+async function linkAuthToVendor(vendor, password) {
+  if (!SB_SERVICE_KEY) {
+    console.error('[linkAuthToVendor] SUPABASE_SERVICE_ROLE_KEY tidak tersedia');
+    return;
+  }
+  const adminHeaders = {
+    'apikey': SB_SERVICE_KEY,
+    'Authorization': `Bearer ${SB_SERVICE_KEY}`,
+    'Content-Type': 'application/json'
+  };
+  const email = String(vendor.email).toLowerCase().trim();
+
+  if (vendor.user_id) {
+    // Akun auth sudah pernah dibuat → hanya reset password & pastikan confirmed
+    const upd = await fetch(`${SB_URL}/auth/v1/admin/users/${vendor.user_id}`, {
+      method: 'PUT',
+      headers: adminHeaders,
+      body: JSON.stringify({ password, email_confirm: true })
+    });
+    if (!upd.ok) console.error('[linkAuthToVendor] admin update', upd.status, await upd.text().catch(() => ''));
+    return;
+  }
+
+  // Coba buat user baru (confirmed). Jika email sudah dipakai GoTrue, admin
+  // API mengembalikan 422 — fallback ke lookup by email lalu update password.
+  let userId = null;
+  const create = await fetch(`${SB_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: adminHeaders,
+    body: JSON.stringify({ email, password, email_confirm: true })
+  });
+  if (create.ok) {
+    const created = await create.json();
+    userId = (created && created.id) || null;
+  } else {
+    const errText = await create.text().catch(() => '');
+    console.error('[linkAuthToVendor] create', create.status, errText);
+    userId = await findAuthUserIdByEmail(adminHeaders, email);
+    if (userId) {
+      await fetch(`${SB_URL}/auth/v1/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: adminHeaders,
+        body: JSON.stringify({ password, email_confirm: true })
+      });
+    }
+  }
+  if (!userId) {
+    console.error('[linkAuthToVendor] tidak dapat membuat/menemukan akun auth untuk', email);
+    return;
+  }
+
+  const patch = await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ user_id: userId, email_verified_at: new Date().toISOString() })
+  });
+  if (patch.ok) {
+    console.log('[linkAuthToVendor] user_id', userId, 'ditautkan ke vendor', vendor.id);
+  } else {
+    console.error('[linkAuthToVendor] patch vendor', patch.status, await patch.text().catch(() => ''));
+  }
+}
+
+async function findAuthUserIdByEmail(adminHeaders, email) {
+  const res = await fetch(`${SB_URL}/auth/v1/admin/users?filter=email:eq:${encodeURIComponent(email)}`, {
+    headers: adminHeaders
+  });
+  if (!res.ok) return null;
+  const users = await res.json();
+  if (Array.isArray(users)) return (users.find(u => (u.email || '').toLowerCase() === email) || {}).id || null;
+  if (users && users.users && Array.isArray(users.users)) {
+    return (users.users.find(u => (u.email || '').toLowerCase() === email) || {}).id || null;
+  }
+  return null;
+}
+
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
@@ -778,6 +857,17 @@ const cleanEmail = email.toLowerCase().trim();
         // Phase 2: hanya via Supabase Auth (email + password).
         // Fallback tanpa password dihapus demi keamanan akun.
         try {
+
+          // Auto-provision: vendor legacy (dibuat sebelum Phase 2 auth) punya
+          // user_id null sehingga belum punya akun auth → login pasti gagal.
+          // Tautkan / buat akun auth confirmed di sini (service key) agar vendor
+          // yang sudah terverifikasi bisa login dengan password yang sama.
+          const preV = await sbServiceFetch(`/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=id,business_name,email,user_id,email_verified_at&limit=1`);
+          const preRows = preV.ok ? await preV.json() : [];
+          const preVendor = (Array.isArray(preRows) && preRows[0]) ? preRows[0] : null;
+          if (preVendor && !preVendor.user_id && preVendor.email_verified_at) {
+            await linkAuthToVendor(preVendor, password);
+          }
           const authRes = await sbAuthLogin(cleanEmail, password);
           if (!authRes.ok) {
             const err = await authRes.json().catch(() => ({}));
