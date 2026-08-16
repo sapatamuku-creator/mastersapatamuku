@@ -655,6 +655,136 @@
             }
             .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.05); }
         }
+
+        /* ═══════════════════════════════════════════════════════════
+           BOTTOM SHEET SYSTEM — tablet vertical & mobile (< 1024px)
+           Form registrasi → drawer; semua modal → bottom sheet (maks 50vh;
+           fallback 90vh untuk konten besar spt sync compare). Tombol aksi
+           dikunci di area bawah.
+           ═══════════════════════════════════════════════════════════ */
+        .form-sheet-toggle { display: none; }
+        .form-sheet-handle {
+            display: none;
+            width: 44px; height: 5px; border-radius: 3px;
+            background: #E8DACC; margin: 2px auto 16px; flex-shrink: 0;
+        }
+
+        @media (max-width: 1023.98px) {
+            /* Floating toggle — di samping tombol guide (?) kiri bawah */
+            .form-sheet-toggle {
+                position: fixed;
+                bottom: 25px; left: 88px;
+                z-index: 99990;
+                display: flex; align-items: center; justify-content: center;
+                width: 50px; height: 50px;
+                border-radius: 50%;
+                border: none;
+                background: linear-gradient(135deg, var(--primary), #E2605F);
+                color: #fff; cursor: pointer;
+                box-shadow: 0 8px 25px rgba(224, 123, 123, 0.4);
+                transition: transform .25s ease, box-shadow .25s ease;
+            }
+            .form-sheet-toggle:active { transform: scale(.92); }
+            .form-sheet-toggle svg { transition: transform .3s ease; }
+            .form-sheet-toggle.is-open svg { transform: rotate(45deg); }
+
+            /* #form-container → bottom sheet registrasi */
+            #form-container {
+                position: fixed !important;
+                left: 0; right: 0; bottom: 0;
+                top: auto !important;
+                z-index: 99999;
+                box-sizing: border-box;
+                width: 100%;
+                max-width: 100%;
+                max-height: 50vh;
+                margin: 0 !important;
+                padding: 14px 16px calc(18px + env(safe-area-inset-bottom)) !important;
+                background: #fff;
+                border-radius: 24px 24px 0 0 !important;
+                border: 1.5px solid var(--border);
+                border-bottom: none;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                box-shadow: 0 -18px 45px rgba(74, 63, 53, 0.18);
+                transform: translateY(100%);
+                transition: transform .35s cubic-bezier(.32, .72, 0, 1);
+            }
+            #form-container.is-open { transform: translateY(0); }
+            #form-container .form-sheet-handle { display: block; }
+            #form-container h3 { width: 100%; }
+            #form-container #btn-submit {
+                position: sticky;
+                bottom: 0;
+                margin-top: 18px;
+                box-shadow: 0 -6px 16px rgba(74, 63, 53, 0.10);
+            }
+
+            /* Semua overlay modal → bottom sheet */
+            #editModalOverlay, #editGuestModalOverlay, #importExcelModalOverlay,
+            #syncCompareModalOverlay, #manageDupModalOverlay,
+            #sapatamu-custom-alert, #sapa-notify-modal {
+                align-items: flex-end !important;
+                justify-content: center;
+                padding: 0 !important;
+            }
+            #editModalOverlay .modal-content,
+            #editGuestModalOverlay .modal-content,
+            #importExcelModalOverlay .modal-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 50vh !important;
+                box-sizing: border-box;
+                margin: 0 !important;
+                border-radius: 24px 24px 0 0 !important;
+                box-shadow: 0 -18px 45px rgba(74, 63, 53, 0.18);
+                animation: sheetUp .35s cubic-bezier(.32, .72, 0, 1);
+                overflow-y: auto;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+            }
+            /* Aksi (Batal/Simpan) terpaku di bawah */
+            #editGuestModalOverlay .modal-content > :last-child,
+            #importExcelModalOverlay .modal-content > :last-child {
+                position: sticky;
+                bottom: 0;
+                background: #fff;
+                padding-top: 12px;
+            }
+            #editModalOverlay .modal-content #btn_update {
+                position: sticky;
+                bottom: 0;
+            }
+            #syncCompareModalOverlay #syncCompareModalBox {
+                width: 100% !important;
+                max-width: 100%;
+                max-height: 90vh;
+                border-radius: 24px 24px 0 0 !important;
+                overflow-y: auto;
+                animation: sheetUp .35s cubic-bezier(.32, .72, 0, 1);
+            }
+            #manageDupModalOverlay #manageDupModalBox {
+                width: 100% !important;
+                max-width: 100%;
+                max-height: 50vh;
+                border-radius: 24px 24px 0 0 !important;
+                animation: sheetUp .35s cubic-bezier(.32, .72, 0, 1);
+            }
+            #sapatamu-custom-alert > div,
+            #sapa-notify-modal > div {
+                width: 100% !important;
+                max-width: 100% !important;
+                border-radius: 24px 24px 0 0 !important;
+                margin: 0 !important;
+                box-sizing: border-box;
+                padding-bottom: calc(28px + env(safe-area-inset-bottom)) !important;
+                animation: sheetUp .35s cubic-bezier(.32, .72, 0, 1);
+            }
+
+            @keyframes sheetUp {
+                from { transform: translateY(100%); }
+                to   { transform: translateY(0); }
+            }
+        }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -747,6 +877,7 @@
             <div class="main-layout">
                 <!-- SISI KIRI: FORMULIR -->
                 <div id="form-container" style="padding: 10px 0 20px;">
+                    <div class="form-sheet-handle" aria-hidden="true"></div>
                     <h3 style="font-family: 'Lora', serif; font-size: 20px; font-weight: 700; color: var(--text-main); margin-bottom: 35px;">Registrasi Tamu Baru</h3>
                     
                     <div class="input-group"><label for="in-c7-nama">Nama Lengkap</label><input type="text" id="in-c7-nama" placeholder="Masukkan nama tamu..." autocomplete="off"></div>
@@ -4050,6 +4181,46 @@
 
 })();
 
+    /* ═══════════════════════════════════════════════════════════
+       BOTTOM SHEET — Registrasi Tamu (tablet/mobile)
+       Toggle via floating tombol "+" di samping tombol guide.
+       ═══════════════════════════════════════════════════════════ */
+    function sheetModeActive() {
+        return window.matchMedia('(max-width: 1023.98px)').matches;
+    }
+    function setFormSheetOpen(open) {
+        const sheet = document.getElementById('form-container');
+        const btn = document.getElementById('form-sheet-toggle');
+        if (!sheet) return;
+        sheet.classList.toggle('is-open', open);
+        if (btn) {
+            btn.classList.toggle('is-open', open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.setAttribute('aria-label', open ? 'Tutup form registrasi tamu' : 'Buka form registrasi tamu');
+            btn.title = open ? 'Tutup Form Registrasi Tamu' : 'Buka Form Registrasi Tamu';
+        }
+        if (open) {
+            // Fokus kolom nama setelah drawer terbuka
+            setTimeout(() => {
+                const first = document.getElementById('in-c7-nama');
+                if (first && sheetModeActive()) first.focus();
+            }, 380);
+        }
+    }
+    window.toggleFormSheet = function(force) {
+        const sheet = document.getElementById('form-container');
+        if (!sheet) return;
+        const willOpen = typeof force === 'boolean' ? force : !sheet.classList.contains('is-open');
+        setFormSheetOpen(willOpen);
+    };
+    window.openFormSheet = function() { setFormSheetOpen(true); };
+    window.closeFormSheet = function() { setFormSheetOpen(false); };
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.getElementById('form-container')?.classList.contains('is-open')) {
+            setFormSheetOpen(false);
+        }
+    });
+
     function initDynamicIslandNav() {
         const island = document.getElementById('nav-island');
         const labelText = document.getElementById('di-label-text');
@@ -4117,15 +4288,24 @@
         const TOUR_STEPS = [
             {
                 target: '#editDetailAcaraBox',
-                title: '1/12 — Selamat Datang!',
+                title: '1/13 — Selamat Datang!',
                 text: 'Sebelum memulai, <b>setting metadata acara terlebih dahulu</b>. Klik tombol ini untuk mengisi nama pengantin, tanggal, lokasi, waktu, dan sesi undangan. Data ini akan digunakan di seluruh fitur.',
                 position: 'bottom',
                 highlightPadding: 8,
                 action: 'highlight'
             },
             {
+                target: '#form-sheet-toggle',
+                title: '2/13 — Form Registrasi (Bottom Sheet)',
+                text: 'Di tablet/mobile, form <b>"Registrasi Tamu Baru"</b> tampil sebagai <b>drawer dari bawah</b>. Tekan tombol <b>"+"</b> ini untuk membuka/menutup form, sehingga Anda tetap bisa melihat daftar tamu sambil mengisi data.',
+                position: 'top',
+                highlightPadding: 6,
+                action: 'highlight',
+                onlySheetMode: true
+            },
+            {
                 target: '#in-c7-nama',
-                title: '2/12 — Isi Data Tamu (Sampel)',
+                title: '3/13 — Isi Data Tamu (Sampel)',
                 text: 'Ketik nama tamu contoh, misal: <b>"Budi Santoso"</b>. Kita akan isi data dummy untuk keperluan tour ini.',
                 position: 'right',
                 highlightPadding: 6,
@@ -4133,7 +4313,7 @@
             },
             {
                 target: '#in-d7-wa',
-                title: '3/12 — Nomor WhatsApp',
+                title: '4/13 — Nomor WhatsApp',
                 text: 'Isi nomor WA contoh: <b>08123456789</b>. Format 08xxx otomatis dikonversi ke 628xxx. Bisa juga isi <b>@username</b> untuk Instagram.',
                 position: 'right',
                 highlightPadding: 6,
@@ -4141,7 +4321,7 @@
             },
             {
                 target: '#in-e7-kategori',
-                title: '4/12 — Kategori Tamu',
+                title: '5/13 — Kategori Tamu',
                 text: 'Pilih kategori: <b>Umum, VIP, VVIP, atau Keluarga</b>. Kategori menentukan prioritas dan template pesan undangan.',
                 position: 'right',
                 highlightPadding: 6,
@@ -4149,7 +4329,7 @@
             },
             {
                 target: '#in-sesi-undangan',
-                title: '5/12 — Sesi Undangan',
+                title: '6/13 — Sesi Undangan',
                 text: 'Pilih sesi kehadiran tamu. Sesi ini diambil dari metadata acara yang sudah diisi sebelumnya. <b>Pastikan sesi sudah diisi di Edit Detail Acara.</b>',
                 position: 'right',
                 highlightPadding: 6,
@@ -4157,7 +4337,7 @@
             },
             {
                 target: '#btn-submit',
-                title: '6/12 — Simpan Tamu',
+                title: '7/13 — Simpan Tamu',
                 text: 'Klik <b>"TAMBAH DATA TAMU"</b> untuk menyimpan. Data langsung tersimpan ke Supabase dan disinkronkan ke Google Sheets di background.',
                 position: 'right',
                 highlightPadding: 10,
@@ -4165,7 +4345,7 @@
             },
             {
                 target: '#guest-search',
-                title: '7/12 — Cari & Filter Tamu',
+                title: '8/13 — Cari & Filter Tamu',
                 text: 'Gunakan kolom ini untuk mencari tamu berdasarkan nama, nomor WA, kategori, atau status. <b>Ketik langsung</b> untuk mulai mencari.',
                 position: 'bottom',
                 highlightPadding: 6,
@@ -4173,7 +4353,7 @@
             },
             {
                 target: '#btn-filter-dropdown',
-                title: '8/12 — Filter Lanjutan',
+                title: '9/13 — Filter Lanjutan',
                 text: 'Klik untuk memfilter tamu berdasarkan <b>Kategori, Pihak Pengundang, Sesi, Souvenir, dan Blast Status</b>. Bisa pilih beberapa sekaligus.',
                 position: 'bottom',
                 highlightPadding: 6,
@@ -4181,7 +4361,7 @@
             },
             {
                 target: '#btn-dup-filter',
-                title: '9/12 — Deteksi Duplikat Nama',
+                title: '10/13 — Deteksi Duplikat Nama',
                 text: 'Tampilkan hanya tamu dengan nama yang sama (duplikat). Berguna untuk <b>membersihkan data ganda</b> sebelum blast undangan.',
                 position: 'bottom',
                 highlightPadding: 6,
@@ -4189,7 +4369,7 @@
             },
             {
                 target: '#btn-sort-dropdown',
-                title: '10/12 — Urutkan Daftar',
+                title: '11/13 — Urutkan Daftar',
                 text: 'Urutkan tamu berdasarkan: <b>Terbaru, Terlama, Nama A-Z, atau Nama Z-A</b>. Klik untuk membuka pilihan sorting.',
                 position: 'bottom',
                 highlightPadding: 6,
@@ -4197,7 +4377,7 @@
             },
             {
                 target: '#openImportExcelModal',
-                title: '11/12 — Import dari Excel',
+                title: '12/13 — Import dari Excel',
                 text: 'Import tamu secara <b>massal dari file Excel (.xlsx)</b>. Tinggal pilih kolom yang sesuai, sistem auto-detect header otomatis.',
                 position: 'left',
                 highlightPadding: 6,
@@ -4205,7 +4385,7 @@
             },
             {
                 target: '#syncToSupabaseBtn',
-                title: '12/12 — Sinkronisasi Database',
+                title: '13/13 — Sinkronisasi Database',
                 text: 'Bandingkan & selaraskan data antara <b>Supabase dan Google Sheets</b>. Klik jika ada indikator data tidak sinkron (banner kuning).',
                 position: 'left',
                 highlightPadding: 6,
@@ -4445,6 +4625,11 @@
                 ?
                 <span class="tour-pulse"></span>
             </button>
+            <button id="form-sheet-toggle" class="form-sheet-toggle" title="Buka / Tutup Form Registrasi Tamu"
+                    aria-label="Buka atau tutup form registrasi tamu" aria-expanded="false" aria-controls="form-container"
+                    onclick="toggleFormSheet()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
         `;
         document.body.insertAdjacentHTML('beforeend', tourHTML);
 
@@ -4547,6 +4732,17 @@
             if (!targetEl) {
                 showStep(index + 1);
                 return;
+            }
+
+            // Step khusus bottom-sheet: lewati di desktop (≥1024px)
+            if (step.onlySheetMode && !sheetModeActive()) {
+                showStep(index + 1);
+                return;
+            }
+
+            // Di tablet/mobile: buka form bottom-sheet bila target ada di dalam form
+            if (sheetModeActive() && document.getElementById('form-container')?.contains(targetEl)) {
+                openFormSheet();
             }
 
             titleEl.innerHTML = step.title;
