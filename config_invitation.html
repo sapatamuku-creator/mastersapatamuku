@@ -1353,7 +1353,12 @@
             clearTimeout(collapseTimer);
             collapseTimer = setTimeout(function() { island.classList.remove('di-expanded'); }, delay || 3000);
         }
-        island.addEventListener('mouseenter', expandNav);
+        let lastTouch = 0;
+        island.addEventListener('touchstart', function() { lastTouch = Date.now(); }, { passive: true });
+        island.addEventListener('mouseenter', function() {
+            if (Date.now() - lastTouch < 500) return;
+            expandNav();
+        });
         island.addEventListener('mouseleave', function() { scheduleCollapse(3000); });
         island.addEventListener('click', function(e) {
             if (!island.classList.contains('di-expanded')) {

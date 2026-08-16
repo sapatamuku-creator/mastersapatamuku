@@ -1269,10 +1269,15 @@
         }
 
         // Hover (desktop)
-        island.addEventListener('mouseenter', expandNav);
+        let lastTouch = 0;
+        island.addEventListener('touchstart', () => { lastTouch = Date.now(); }, { passive: true });
+        island.addEventListener('mouseenter', () => {
+            if (Date.now() - lastTouch < 500) return;
+            expandNav();
+        });
         island.addEventListener('mouseleave', () => scheduleCollapse(3000));
 
-        // Touch (tablet/mobile): tap collapsed pill → expand
+        // Touch (tablet/mobile): tap collapsed pill → expand only
         island.addEventListener('click', (e) => {
             if (!island.classList.contains('di-expanded')) {
                 e.preventDefault();
