@@ -594,13 +594,23 @@ if (rc) rc.textContent = json.data.length;
       if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
       return String(Math.round(n));
     }
-    function dealSashHtml(original, display) {
+    function fmtEndDate(iso) {
+      const d = iso ? new Date(iso) : new Date(NaN);
+      if (isNaN(d.getTime())) return '';
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = d.toLocaleDateString('id-ID', { month: 'long' });
+      const yyyy = d.getFullYear();
+      return `${dd} ${mm} ${yyyy}`;
+    }
+    function dealSashHtml(original, display, promoEndAt) {
       if (!(original > 0 && display > 0 && display < original)) return '';
       const save = original - display;
-      return `<div class="card__deal__discount" role="status" aria-label="lebih hemat ${fmtCompact(save)} (harga normal ${fmtCompact(original)} - harga promo ${fmtCompact(display)})">
+      const endLabel = fmtEndDate(promoEndAt);
+      const detail = endLabel ? `<div class="detail">s/d ${endLabel}</div>` : '';
+      return `<div class="card__deal__discount" role="status" aria-label="lebih hemat ${fmtCompact(save)}${endLabel ? ` (s/d ${endLabel})` : ''}">
         <span>lebih hemat</span>
         <div class="value">${fmtCompact(save)}</div>
-        <div class="detail">harga normal ${fmtCompact(original)} - promo ${fmtCompact(display)}</div>
+        ${detail}
       </div>`;
     }
     function promoFirst(arr, isPromo) {
@@ -658,7 +668,7 @@ if (rc) rc.textContent = json.data.length;
                 ` : `<div style="font-size:2.8rem;font-weight:800;color:var(--primary)">${init}</div>`}
               </div>
             </div>
-            ${hasPromoFrom ? dealSashHtml(v.price_from_original, v.price_from_display) : ''}
+            ${hasPromoFrom ? dealSashHtml(v.price_from_original, v.price_from_display, v.promo_end_at) : ''}
 
             <!-- 2. TYPOGRAPHIC HIERARCHY -->
             <!-- Brand / Business Name (Primary Bold) + Verified Blue Checkmark -->

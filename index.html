@@ -789,13 +789,23 @@ console.error(e);
       if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
       return String(Math.round(n));
     }
-    function dealSashHtml(original, display) {
+    function fmtEndDate(iso) {
+      const d = iso ? new Date(iso) : new Date(NaN);
+      if (isNaN(d.getTime())) return '';
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = d.toLocaleDateString('id-ID', { month: 'long' });
+      const yyyy = d.getFullYear();
+      return `${dd} ${mm} ${yyyy}`;
+    }
+    function dealSashHtml(original, display, promoEndAt) {
       if (!(original > 0 && display > 0 && display < original)) return '';
       const save = original - display;
-      return `<div class="card__deal__discount" role="status" aria-label="lebih hemat ${fmtCompact(save)} (harga normal ${fmtCompact(original)} - harga promo ${fmtCompact(display)})">
+      const endLabel = fmtEndDate(promoEndAt);
+      const detail = endLabel ? `<div class="detail">s/d ${endLabel}</div>` : '';
+      return `<div class="card__deal__discount" role="status" aria-label="lebih hemat ${fmtCompact(save)}${endLabel ? ` (s/d ${endLabel})` : ''}">
         <span>lebih hemat</span>
         <div class="value">${fmtCompact(save)}</div>
-        <div class="detail">harga normal ${fmtCompact(original)} - promo ${fmtCompact(display)}</div>
+        ${detail}
       </div>`;
     }
     function promoFirst(arr, isPromo) {
@@ -824,7 +834,7 @@ console.error(e);
       // prioritas: vendor berpromo tampil di depan marquee
       vendors = promoFirst(vendors, v => Number(v.price_from_display) > 0 && Number(v.price_from_original) > 0 && Number(v.price_from_display) < Number(v.price_from_original));
       const card = v => {
-        const sash = dealSashHtml(Number(v.price_from_original), Number(v.price_from_display));
+        const sash = dealSashHtml(Number(v.price_from_original), Number(v.price_from_display), v.promo_end_at);
         return `<a class="marquee-card" href="/vendor/${v.slug}">
         <div class="mc-cover-wrap">
           <img class="mc-cover" src="${v.cover_image_url || v.cover_image || v.logo_url || ''}" alt="${v.business_name}" loading="lazy">

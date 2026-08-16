@@ -642,13 +642,23 @@
       if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
       return String(Math.round(n));
     }
-    function dealSashHtml(original, display) {
+    function fmtEndDate(iso) {
+      const d = iso ? new Date(iso) : new Date(NaN);
+      if (isNaN(d.getTime())) return '';
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = d.toLocaleDateString('id-ID', { month: 'long' });
+      const yyyy = d.getFullYear();
+      return `${dd} ${mm} ${yyyy}`;
+    }
+    function dealSashHtml(original, display, promoEndAt) {
       if (!(original > 0 && display > 0 && display < original)) return '';
       const save = original - display;
-      return `<div class="card__deal__discount" role="status" aria-label="lebih hemat ${fmtCompact(save)} (harga normal ${fmtCompact(original)} - harga promo ${fmtCompact(display)})">
+      const endLabel = fmtEndDate(promoEndAt);
+      const detail = endLabel ? `<div class="detail">s/d ${endLabel}</div>` : '';
+      return `<div class="card__deal__discount" role="status" aria-label="lebih hemat ${fmtCompact(save)}${endLabel ? ` (s/d ${endLabel})` : ''}">
         <span>lebih hemat</span>
         <div class="value">${fmtCompact(save)}</div>
-        <div class="detail">harga normal ${fmtCompact(original)} - promo ${fmtCompact(display)}</div>
+        ${detail}
       </div>`;
     }
     function promoFirst(arr, isPromo) {
@@ -685,7 +695,7 @@
         const tag = (tagLabel && !(promoActive && /promo/i.test(tagLabel))) ? `<span class="pkg-tag">${tagLabel}</span>` : '';
         const catName = (p.category_name || p.short_desc || '').trim();
         const catBadge = catName ? `<span class="pkg-badge-cat">${catName}</span>` : '';
-        const promoSash = promoActive ? dealSashHtml(Number(p.price), Number(p.price_display)) : '';
+        const promoSash = promoActive ? dealSashHtml(Number(p.price), Number(p.price_display), p.promo_end_at) : '';
         const showPrice = promoActive ? p.price_display : p.price;
         const priceHtml = promoActive
           ? `<s style="color:var(--text-muted);font-size:0.85rem;font-weight:500;margin-right:8px">${formatRupiah(p.price)}</s><span>${formatRupiah(p.price_display)}</span>`

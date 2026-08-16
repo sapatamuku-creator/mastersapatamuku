@@ -385,6 +385,7 @@ export default async function handler(req) {
           let logoImg = v.logo_url || null;
           let priceFromDisplay = minPrice;
           let priceFromOriginal = null;
+          let promoEndFrom = null;
 
           if (vProds.length > 0) {
             const prices = vProds.map(p => p.price).filter(p => p > 0);
@@ -400,6 +401,8 @@ export default async function handler(req) {
               if (eff < normal) {
                 priceFromDisplay = eff;
                 priceFromOriginal = normal;
+                const effProd = effPrices.find(p => p.price_display === eff);
+                promoEndFrom = (effProd && effProd.promo_end_at) || null;
               } else {
                 priceFromDisplay = normal;
               }
@@ -419,6 +422,7 @@ export default async function handler(req) {
             price_from: minPrice,
             price_from_display: priceFromDisplay,
             price_from_original: priceFromOriginal,
+            promo_end_at: promoEndFrom,
             cover_image_url: coverImg,
             logo_url: logoImg,
             rating: v.rating_avg || 0,
