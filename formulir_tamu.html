@@ -604,6 +604,33 @@
         .nav-link.sign-out { color: #E07B7B !important; }
         .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
 
+        /* ─── MOBILE-SAFE LAYOUT (anti horizontal scroll) ─────────────── */
+        .event-header-top { box-sizing: border-box; min-width: 0; }
+        #form-container, #list-section, .main-layout { min-width: 0; }
+        #list-section > div:first-child { flex-wrap: wrap; row-gap: 10px; }
+        #list-section > div:first-child > div:last-child { flex-wrap: wrap; justify-content: flex-end; row-gap: 8px; }
+        .guest-item-card { box-sizing: border-box; min-height: auto !important; }
+        .guest-item-card > div { min-width: 0; }
+        @media (max-width: 640px) {
+            body { overflow-x: hidden; }
+            #sapatamu-app { overflow-x: clip; min-width: 0; }
+            .event-header-top { padding: 60px 18px 28px !important; border-radius: 0 0 32px 32px !important; }
+            .event-header-top h2 { font-size: 24px !important; line-height: 1.25 !important; overflow-wrap: break-word; }
+            .event-header-top .grid { margin-top: 20px !important; padding-top: 20px !important; }
+            #app-body-container { padding-left: 14px !important; padding-right: 14px !important; padding-top: 18px !important; }
+            #list-section > div:first-child { align-items: flex-start !important; flex-direction: column; }
+            #list-section > div:first-child > div:last-child { width: 100%; justify-content: flex-start; }
+            #list-section > div:first-child > div:last-child > button,
+            #list-section > div:first-child > div:last-child > span,
+            #list-section > div:first-child > div:last-child > a { flex-shrink: 0; }
+            #list-section > div:first-child > div:last-child #openImportExcelModal,
+            #list-section > div:first-child > div:last-child #syncToSupabaseBtn { padding: 6px 10px !important; font-size: 9px !important; }
+            #list-section #guest-search { padding: 14px 18px !important; }
+            .input-group { margin-bottom: 18px !important; }
+            #form-container h3 { margin-bottom: 22px !important; }
+            .qty-btn { width: 36px !important; height: 36px !important; }
+        }
+
         /* ─── HOVER PROTECTION MEDIA QUERY ────────────────────────── */
         @media (hover: hover) and (pointer: fine) {
             .close-modal:hover { opacity: 1; }
@@ -690,7 +717,7 @@
     <div id="status-live" aria-live="polite" aria-atomic="true" class="sr-only"></div>
     <main id="sapatamu-app" role="main">
         <!-- Header Event -->
-        <div style="padding: 100px 30px 40px; background: #fff; border-radius: 0 0 50px 50px; box-shadow: 0 20px 40px rgba(140, 117, 96, 0.08); border-bottom: 1px solid var(--border);">
+        <div class="event-header-top" style="padding: 100px 30px 40px; background: #fff; border-radius: 0 0 50px 50px; box-shadow: 0 20px 40px rgba(140, 117, 96, 0.08); border-bottom: 1px solid var(--border);">
             <p style="font-size: 10px; font-weight: 800; color: var(--primary); letter-spacing: 3px; margin-bottom: 15px; text-transform: uppercase;">SapaTamu.Ku — Event Manager</p>
             <h2 id="view-wedding-name" style="font-family: 'Lora', serif; color: var(--text-main); font-size: 32px; font-weight: 700; margin: 0; line-height: 1.2;">Memuat...</h2>
             
@@ -2708,14 +2735,15 @@
                     ${deleteBtn}
                     <div>
                         <div>
-                            <div style="font-weight:700; font-size:14px; color:var(--text-main); line-height:1.2; padding-right:20px;">${g.nama}</div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
-                                <div style="font-size:9px; color:var(--gold); font-weight:800; text-transform:uppercase;">${g.kategori}</div>
-                                <div style="display:flex; align-items:center; gap:5px;">
-                                    ${(isDupNumber && !isPending) ? '<span style="font-size:7.5px; font-weight:900; background:#FEF3C7; color:#D97706; padding:2px 6px; border-radius:20px; white-space:nowrap;">⚠️  DUPLIKAT</span>' : ''}
-                                    ${isPending ? '<span style="font-size:7.5px; font-weight:900; background:#FEF3C7; color:#D97706; padding:2px 6px; border-radius:20px; white-space:nowrap;">⚠️  PENDING</span>' : ''}
-                                    <div style="font-size:9px; color:var(--text-muted); font-weight:700;">${isInstagram ? g.whatsapp : normalizePhone(g.whatsapp) || '-'}</div>
+<div style="font-weight:700; font-size:14px; color:var(--text-main); line-height:1.2; padding-right:20px; overflow-wrap:break-word; word-break:break-word;">${g.nama}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-top:6px; flex-wrap:wrap;">
+                                <div style="font-size:9px; color:var(--gold); font-weight:800; text-transform:uppercase; min-width:0;">${g.kategori}</div>
+                                <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">
+                                    ${(isDupNumber && !isPending) ? '<span style="font-size:7.5px; font-weight:900; background:#FEF3C7; color:#D97706; padding:2px 6px; border-radius:20px; white-space:nowrap;">⚠️  DUPLIKAT</span>' : ''}
+                                    ${isPending ? '<span style="font-size:7.5px; font-weight:900; background:#FEF3C7; color:#D97706; padding:2px 6px; border-radius:20px; white-space:nowrap;">⚠️  PENDING</span>' : ''}
+                                    <div style="font-size:9px; color:var(--text-muted); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;">${isInstagram ? g.whatsapp : normalizePhone(g.whatsapp) || '-'}</div>
                                 </div>
+                            </div>
                             </div>
                             <div style="font-size:10px; color:var(--text-muted); font-weight:600; margin-top:8px; line-height:1.4; border-top:1px solid var(--border); padding-top:8px;">
                                 <div style="display:flex; align-items:center; gap:5px;">
@@ -2731,7 +2759,7 @@
                                 <div style="font-size:10px; color:var(--text-muted); font-weight:700;">⏰ ${g.sesi || '-'}</div>
                                 <div style="font-size:11px; color:var(--gold);">${souvenirIcon}</div>
                             </div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
                                 <span style="font-size:11px; color:var(--text-main); font-weight:800;">Pax: ${g.rencanaHadir || 1}</span>
                                 ${canBlast 
                                     ? `<button 
