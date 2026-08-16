@@ -108,6 +108,86 @@ export default async function handler(req, res) {
 
       return res.status(200).json({ message: 'Password successfully updated' });
 
+    } else if (action === 'link_vendor_auth') {
+      // Memperbaiki vendor yang ada (dibuat sebelum Phase 2 auth) yang `user_id`-nya null.
+      // Tidak menghapus/duplikasi vendor atau pricelist-nya — hanya membuat/diperbaiki
+      // akun Supabase Auth lalu menautkan user_id ke baris mp_vendors yang sudah ada.
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Missing email or password' });
+      }
+      const cleanEmail = String(email).toLowerCase().trim();
+      if (password.length < 6) {
+        return res.status(400).json({ error: 'Password minimal 6 karakter' });
+      }
+
+      // 1. Temukan vendor by email (table mp_vendors, bukan sortir_vendors)
+      const findRes = await fetch(`${SB_URL}/rest/v1/mp_vendors?email=ilike.${encodeURIComponent(cleanEmail)}&select=id,email,user_id,business_name&limit=1`, {
+        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' }
+      });
+      const rows = findRes.ok ? await findRes.json() : [];
+      const vendor = Array.isArray(rows) && rows[0] ? rows[0] : null;
+      if (!vendor) {
+        return res.status(404).json({ error: `Vendor dengan email ${cleanEmail} tidak ditemukan di mp_vendors` });
+      }
+
+      // 2. Buat atau perbarui akun auth
+      let authUserId = null;
+      if (vendor.user_id) {
+        // Akun sudah pernah di-link → cukup reset password via admin
+        authUserId = vendor.user_id;
+        const updRes = await fetch(`${SB_URL}/auth/v1/admin/users/${authUserId}`, {
+          method: 'PUT',
+          headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password, email_confirm: true })
+        });
+        if (!updRes.ok) {
+          const errText = await updRes.text();
+          console.error('[auth update error]', errText);
+          return res.status(500).json({ error: 'Gagal memperbarui akun auth' });
+        }
+      } else {
+        // Tidak ada akun auth → buat baru (confirmed), lalu akan di-link
+        const createRes = await fetch(`${SB_URL}/auth/v1/admin/users`, {
+          method: 'POST',
+          headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, password, email_confirm: true })
+        });
+        if (!createRes.ok) {
+          const errText = await createRes.text();
+          console.error('[auth create error]', errText);
+          let errorMsg = 'Failed to create user account';
+          try { const parsed = JSON.parse(errText); if (parsed.msg) errorMsg = parsed.msg; } catch(e){}
+          return res.status(500).json({ error: errorMsg });
+        }
+        const created = await createRes.json();
+        authUserId = created.id || null;
+        if (!authUserId) {
+          return res.status(500).json({ error: 'Akun auth dibuat tapi tanpa user id' });
+        }
+      }
+
+      // 3. Tautkan user_id ke mp_vendors (hanya baris vendor ini, pricelist tak disentuh)
+      const patchRes = await fetch(`${SB_URL}/rest/v1/mp_vendors?id=eq.${vendor.id}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+        body: JSON.stringify({ user_id: authUserId })
+      });
+      if (!patchRes.ok) {
+        const errText = await patchRes.text();
+        console.error('[vendor link error]', errText);
+        return res.status(500).json({ error: 'Akun auth dibuat, tapi gagal menautkan user_id ke vendor' });
+      }
+      const patched = await patchRes.json();
+
+      return res.status(200).json({
+        success: true,
+        message: `Akun auth untuk ${cleanEmail} disiapkan & user_id ditautkan ke vendor "${vendor.business_name}". Pricelist tetap utuh.`,
+        user_id: authUserId,
+        vendor_id: vendor.id,
+        email_linked: !!vendor.user_id
+      });
+
     } else if (action === 'register_vendor_manual') {
       const { username, vendorName, whatsappAdmin, emailRecovery, password, clientName, driveFolderUrl, driveFolderId, quotaLimit } = req.body;
 

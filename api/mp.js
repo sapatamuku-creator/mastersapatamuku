@@ -799,6 +799,20 @@ const cleanEmail = email.toLowerCase().trim();
           const vRows = vRes.ok ? await vRes.json() : [];
           const vendor = (Array.isArray(vRows) && vRows[0]) ? vRows[0] : null;
 
+          // Self-heal: vendor legacy (dibuat sebelum Phase 2 auth) bisa saja tidak
+          // punya user_id. Jika login GoTrue sukses, tautkan user auth ke vendor
+          // tersebut — tanpa menghapus/menduplikasi data vendor & pricelist.
+          if (vendor && !vendor.user_id && authJson.user && authJson.user.id) {
+            const linkRes = await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ user_id: authJson.user.id })
+            });
+            if (linkRes.ok) {
+              vendor.user_id = authJson.user.id;
+              console.log('[login-vendor self-heal] user_id ditautkan untuk', cleanEmail);
+            }
+          }
+
           // Konfirmasi via link email (klik "Confirm email address") juga sah →
           // sinkronkan status konfirmasi GoTrue ke email_verified_at agar login lolos.
           const confirmedAt = (authJson.user && (authJson.user.confirmed_at || authJson.user.email_confirmed_at)) || null;
