@@ -149,22 +149,44 @@ export default async function handler(req, res) {
         }
 
         // Jalur B: cek user existing by email (bisa dari tes signup sebelumnya)
-        const listRes = await fetch(`${SB_URL}/auth/v1/admin/users?filter=email:eq:${encodeURIComponent(cleanEmail)}`, {
-          headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-        });
-        if (listRes.ok) {
-          const listJson = await listRes.json();
-          const userList = Array.isArray(listJson) ? listJson : (listJson.users || []);
-          const existing = userList.find(u => (u.email || '').toLowerCase() === cleanEmail);
-          if (existing) {
-            const upd = await fetch(`${SB_URL}/auth/v1/admin/users/${existing.id}`, {
-              method: 'PUT',
-              headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ password, email_confirm: true })
-            });
-            if (!upd.ok) console.error('[auth update existing]', await upd.text());
-            return existing.id;
+        let existing = null;
+        try {
+          const listRes = await fetch(`${SB_URL}/auth/v1/admin/users?filter=email:eq:${encodeURIComponent(cleanEmail)}`, {
+            headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+          });
+          if (listRes.ok) {
+            const listJson = await listRes.json();
+            const userList = Array.isArray(listJson) ? listJson : (listJson.users || []);
+            existing = userList.find(u => (u.email || '').toLowerCase() === cleanEmail) || null;
+          } else {
+            console.error('[auth list filter]', listRes.status, await listRes.text());
           }
+        } catch (e) {
+          console.error('[auth list filter err]', e.message);
+        }
+        // Fallback: list semua user bila filter tak didukung
+        if (!existing) {
+          try {
+            const allRes = await fetch(`${SB_URL}/auth/v1/admin/users?per_page=1000`, {
+              headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+            });
+            if (allRes.ok) {
+              const allJson = await allRes.json();
+              const userList = Array.isArray(allJson) ? allJson : (allJson.users || []);
+              existing = userList.find(u => (u.email || '').toLowerCase() === cleanEmail) || null;
+            }
+          } catch (e) {
+            console.error('[auth list all err]', e.message);
+          }
+        }
+        if (existing) {
+          const upd = await fetch(`${SB_URL}/auth/v1/admin/users/${existing.id}`, {
+            method: 'PUT',
+            headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, email_confirm: true })
+          });
+          if (!upd.ok) console.error('[auth update existing]', await upd.text());
+          return existing.id;
         }
 
         // Jalur C: buat akun baru (confirmed)
