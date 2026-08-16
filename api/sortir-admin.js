@@ -29,7 +29,12 @@ export default async function handler(req, res) {
     }
 
     const gasData = await gasRes.json();
-    if (gasData.status !== 'success') {
+
+    // Defense-in-depth: jika action verifyOwnerPass belum terpasang di GAS,
+    // endpoint/doGet lama mengembalikan {status:"success", message:"API Ready"}.
+    // Tolak agar sembarang pass tidak pernah lolos.
+    const readyMsg = (gasData && gasData.message) || '';
+    if (gasData.status !== 'success' || /API Ready/i.test(readyMsg)) {
       return res.status(401).json({ error: 'Unauthorized: Incorrect password' });
     }
 

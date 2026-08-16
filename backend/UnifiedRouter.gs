@@ -17,6 +17,7 @@ function doGet(e) {
     case 'resolveSubdomain':
     case 'sendOwnerOtp':
     case 'verifyOwnerOtp':
+    case 'verifyOwnerPass':
       return handleCentralPost(e.parameter);
     case 'logout':
       return handleLogout(e.parameter);

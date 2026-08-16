@@ -154,6 +154,7 @@ function handleCentralPost(request) {
     case 'register': return handleRegister(request); 
     case 'login': return handleLogin(request);
     case 'verifyAdminPassword': return handleVerifyAdminPassword(request);
+    case 'verifyOwnerPass': return handleVerifyOwnerPass(request);
     case 'forgotPassword': return handleForgotPassword(request); 
     case 'resetPasswordWithToken': return handleResetPasswordWithToken(request);
     case 'changePassword': return handleChangePassword(request);
@@ -1187,6 +1188,32 @@ function handleVerifyAdminPassword(data) {
     return createResponse({ status: "error", message: "Password salah" });
   } catch (err) {
     return createResponse({ status: "error", message: err.toString() });
+  }
+}
+
+// Owner/Super Admin pass verification untuk sortir-admin & owner.html.
+// Baca langsung dari Master Sheet (cell K1) & bandingkan secara ketat.
+// TIDAK pernah mengembalikan success tanpa kecocokan pass yang valid.
+function handleVerifyOwnerPass(data) {
+  try {
+    const ss    = SpreadsheetApp.openById(MASTER_SS_ID);
+    const sheet = ss.getSheetByName(MASTER_SHEET_NAME);
+    const storedPass = String(sheet.getRange(1, 11).getValue() || "").trim();
+    const inputPass = String(data.pass || "");
+    if (storedPass) {
+      // Plaintext ATAU bcrypt hash (sama seperti alur login usher di doPost)
+      if (inputPass === storedPass) {
+        return createResponse({ status: "success", message: "Password owner benar" });
+      }
+      if (storedPass.length === 60 && storedPass.startsWith('$2')) {
+        if (verifyPasswordRPC(inputPass, storedPass)) {
+          return createResponse({ status: "success", message: "Password owner benar" });
+        }
+      }
+    }
+    return createResponse({ status: "error", message: "Unauthorized: Incorrect password" });
+  } catch (err) {
+    return createResponse({ status: "error", message: "Error verifikasi: " + err.toString() });
   }
 }
 

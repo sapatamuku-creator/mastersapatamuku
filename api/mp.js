@@ -244,6 +244,21 @@ async function sbAuthRecover(email) {
   });
 }
 
+// Magic link auto-login: GoTrue /otp (create_user=false) mengirim link
+// "Sign in dengan email & password" → user klik → diarahkan ke
+// /vendor-dashboard#access_token=...&type=magiclink → frontend menangkap token.
+async function sbAuthMagicLink(email) {
+  return fetch(`${SB_URL}/auth/v1/otp`, {
+    method: 'POST',
+    headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      create_user: false,
+      options: { redirectTo: 'https://sapatamu.id/vendor-dashboard' }
+    })
+  });
+}
+
 async function sendWA(target, message) {
   const token = process.env.FONNTE_TOKEN;
   if (!token) throw new Error('FONNTE_TOKEN tidak dikonfigurasi');
@@ -256,6 +271,14 @@ async function sendWA(target, message) {
 
 async function findVendorByEmail(email) {
   const res = await sbServiceFetch(`/mp_vendors?email=ilike.${encodeURIComponent(email)}&select=*&limit=1`);
+  const rows = res.ok ? await res.json() : [];
+  return (Array.isArray(rows) && rows[0]) ? rows[0] : null;
+}
+
+async function findVendorByWhatsApp(wa) {
+  const clean = normalizeWA(wa);
+  if (!clean) return null;
+  const res = await sbServiceFetch(`/mp_vendors?whatsapp=eq.${encodeURIComponent(clean)}&select=*&limit=1`);
   const rows = res.ok ? await res.json() : [];
   return (Array.isArray(rows) && rows[0]) ? rows[0] : null;
 }
@@ -1339,7 +1362,127 @@ const cleanEmail = email.toLowerCase().trim();
         return res.status(400).json({ error: `Purpose "${purpose}" tidak valid` });
       }
 
-      // â”€â”€ 14. FORGOT PASSWORD (Phase 2) â”€â”€
+      // â”€â”€ 13b. OTP LOGIN — Kirim kode login via Email (GoTrue) / WhatsApp â”€â”€
+      case 'login-otp-send': {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        const { channel, email, whatsapp } = req.body;
+
+        if (channel === 'email') {
+          const cleanEmail = String(email || '').toLowerCase().trim();
+          if (!cleanEmail) return res.status(400).json({ error: 'Email wajib diisi' });
+          // Jangan bocorkan apakah email terdaftar
+          const vendor = await findVendorByEmail(cleanEmail);
+          if (!vendor) return res.status(200).json({ success: true, channel: 'email' });
+
+          // Pastikan akun GoTrue ada (confirmed) agar GoTrue mau mengirim kode OTP
+          if (!vendor.user_id) {
+            try {
+              await linkAuthToVendor(vendor, genOtpCode() + genOtpCode());
+            } catch (e) {
+              console.error('[login-otp-send email link error]', e);
+            }
+          }
+          try {
+            await sbAuthOtpEmail(cleanEmail);
+          } catch (e) {
+            console.error('[login-otp-send email error]', e);
+            return res.status(502).json({ error: 'Gagal mengirim kode email, coba lagi.' });
+          }
+          return res.status(200).json({ success: true, channel: 'email' });
+        }
+
+        if (channel === 'whatsapp') {
+          const vendor = await findVendorByWhatsApp(whatsapp || '');
+          if (!vendor) return res.status(200).json({ success: true, channel: 'whatsapp' });
+          const target = vendor.whatsapp || (whatsapp ? normalizeWA(whatsapp) : '');
+
+          // Cooldown kirim ulang 60 detik
+          const prev = await latestOtp(vendor.id, 'login_wa');
+          if (prev && !prev.verified_at) {
+            const elapsed = Date.now() - new Date(prev.created_at).getTime();
+            if (elapsed < OTP_RESEND_COOLDOWN_MS) {
+              const wait = Math.ceil((OTP_RESEND_COOLDOWN_MS - elapsed) / 1000);
+              return res.status(429).json({ error: `Mohon tunggu ${wait} detik sebelum mengirim ulang kode.` });
+            }
+          }
+          try {
+            const code = await issueOtp(vendor, 'login_wa', 'whatsapp', target);
+            await sendWA(target, `Kode login SapaTamu.id Anda: ${code}\nBerlaku 5 menit. Jangan bagikan kode ini kepada siapa pun.`);
+          } catch (e) {
+            console.error('[login-otp-send wa error]', e);
+            return res.status(502).json({ error: 'Gagal mengirim kode WhatsApp, coba lagi.' });
+          }
+          return res.status(200).json({ success: true, channel: 'whatsapp' });
+        }
+
+        return res.status(400).json({ error: 'Channel harus "email" atau "whatsapp"' });
+      }
+
+      // â”€â”€ 13c. OTP LOGIN — Verifikasi kode & dapatkan sesi login â”€â”€
+      case 'login-otp-verify': {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        const { channel, code, email, whatsapp } = req.body;
+        if (!code) return res.status(400).json({ error: 'Kode wajib diisi' });
+
+        if (channel === 'email') {
+          const cleanEmail = String(email || '').toLowerCase().trim();
+          if (!cleanEmail) return res.status(400).json({ error: 'Email wajib diisi' });
+          const vendor = await findVendorByEmail(cleanEmail);
+          if (!vendor) return res.status(401).json({ error: 'Kode tidak valid' });
+
+          // Verifikasi langsung ke GoTrue: /verify type=email mengembalikan sesi
+          // (access_token) bila kode cocok — token nyata, bukan legacy.
+          let verifyJson = null;
+          try {
+            const vRes = await sbAuthVerifyEmail(cleanEmail, String(code).trim());
+            if (vRes.ok) verifyJson = await vRes.json();
+          } catch (e) {
+            console.error('[login-otp-verify email error]', e);
+          }
+          const token = (verifyJson && verifyJson.access_token) ? verifyJson.access_token : null;
+          if (!token) return res.status(401).json({ error: 'Kode salah atau sudah kedaluwarsa.' });
+
+          // Sinkronkan user_id & email_verified_at bila perlu
+          const userId = (verifyJson.user && verifyJson.user.id) || null;
+          const patch = {};
+          if (userId && !vendor.user_id) patch.user_id = userId;
+          if (!vendor.email_verified_at) patch.email_verified_at = new Date().toISOString();
+          if (Object.keys(patch).length) {
+            try {
+              await sbServiceFetch(`/mp_vendors?id=eq.${vendor.id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+            } catch (e) { console.error('[login-otp-verify sync error]', e); }
+          }
+
+          // Ambil kembali vendor dengan data terlengkap setelah sinkron
+          const fresh = await findVendorByEmail(cleanEmail);
+          return res.status(200).json({ success: true, token, vendor: fresh || vendor });
+        }
+
+        if (channel === 'whatsapp') {
+          const vendor = await findVendorByWhatsApp(whatsapp || '');
+          if (!vendor) return res.status(401).json({ error: 'Kode tidak valid' });
+
+          const otp = await latestOtp(vendor.id, 'login_wa');
+          if (!otp || otp.verified_at) return res.status(400).json({ error: 'Kode tidak ditemukan atau sudah dipakai' });
+          if (new Date(otp.expires_at).getTime() < Date.now()) return res.status(400).json({ error: 'Kode kedaluwarsa. Silakan kirim ulang.' });
+          if (otp.attempts >= OTP_MAX_ATTEMPTS) return res.status(400).json({ error: 'Terlalu banyak percobaan. Silakan kirim ulang kode.' });
+
+          if (String(code).trim() !== otp.code) {
+            await sbServiceFetch(`/vendor_otp?id=eq.${otp.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ attempts: (otp.attempts || 0) + 1 })
+            });
+            return res.status(400).json({ error: 'Kode salah.' });
+          }
+
+          // OTP sah → buang (one-time) & terbitkan sesi login vendor
+          await sbServiceFetch(`/vendor_otp?id=eq.${otp.id}`, { method: 'DELETE' });
+          const token = `token_${vendor.id}_${Date.now()}`;
+          return res.status(200).json({ success: true, token, vendor });
+        }
+
+        return res.status(400).json({ error: 'Channel harus "email" atau "whatsapp"' });
+      }
       case 'forgot-password': {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         const { email, channel } = req.body;
