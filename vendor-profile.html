@@ -270,6 +270,7 @@
     .pkg-body { padding: 18px; display: flex; flex-direction: column; flex: 1; }
     .pkg-name { font-family: 'Lora', serif; font-size: 1.12rem; font-weight: 700; margin-bottom: 6px; color: var(--text-main); }
     .pkg-price { font-size: 1.18rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 12px; }
+    .pkg-price .pkg-promo-value { color: #ff2d78; font-weight: 800; text-shadow: 0 0 8px rgba(255,45,120,0.4); }
     .pkg-price s { font-size: 0.59rem; font-weight: 500; }
     .pkg-desc { font-size: 0.85rem; color: var(--text-light); white-space: pre-line; margin-bottom: 18px; flex: 1; line-height: 1.6; overflow-wrap: break-word; }
 
@@ -289,8 +290,7 @@
         .pkg-badge-cat { display: none; }
         .pkg-overlay { display: block; position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 22px 12px 10px; background: linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0)); }
         .pkg-overlay-name { font-family: 'Lora', serif; font-size: 0.98rem; font-weight: 700; color: #fff; line-height: 1.25; }
-        .pkg-overlay-price { font-size: 0.98rem; font-weight: 700; color: #ffd9d9; margin-top: 2px; }
-        .pkg-overlay-price .pkg-hot { font-size: 0.8rem; display: inline-block; margin-left: 2px; vertical-align: middle; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45)); }
+        .pkg-overlay-price { font-size: 0.98rem; font-weight: 700; color: #ff2d78; margin-top: 2px; text-shadow: 0 0 10px rgba(255, 45, 120, 0.55), 0 1px 2px rgba(0,0,0,0.5); }
         .pkg-overlay-price s { color: rgba(255,255,255,0.6) !important; font-size: 0.49rem; font-weight: 500; margin-right: 8px; }
         .pkg-body .pkg-name, .pkg-body .pkg-price { display: none; }
         .pkg-desc { display: none !important; }
@@ -735,7 +735,7 @@
         const promoSash = promoActive ? dealSashHtml(Number(p.price), Number(p.price_display), p.promo_end_at) : '';
         const showPrice = promoActive ? p.price_display : p.price;
         const priceHtml = promoActive
-          ? `<s style="color:var(--text-muted);font-size:0.5em;font-weight:500;margin-right:8px">${formatRupiah(p.price)}</s><span>${formatRupiah(p.price_display)}</span>`
+          ? `<s style="color:var(--text-muted);font-size:0.5em;font-weight:500;margin-right:8px">${formatRupiah(p.price)}</s><span class="pkg-promo-value">${formatRupiah(p.price_display)}</span>`
           : formatRupiah(p.price);
         const pkgWaUrl = `https://wa.me/${waNum}?text=Halo%20${encodeURIComponent(v.business_name || 'Vendor')},%20saya%20tertarik%20dengan%20paket%20${encodeURIComponent('"' + p.name + '"')}%20seharga%20${encodeURIComponent(formatRupiah(showPrice))}${promoActive ? `%20(Promo:%20hemat%20${encodeURIComponent(formatRupiah(p.price - p.price_display))}%20dari%20harga%20normal%20${encodeURIComponent(formatRupiah(p.price))})` : ''}`;
         const detailUrl = `/vendor-product.html?id=${encodeURIComponent(p.id)}&vendor=${encodeURIComponent(v.slug || '')}`;
@@ -760,7 +760,7 @@
               ${promoSash}
               <div class="pkg-overlay">
                 <div class="pkg-overlay-name">${p.name}</div>
-                <div class="pkg-overlay-price">${promoActive ? `<s style="color:rgba(255,255,255,0.6);font-size:0.5em;font-weight:500">${formatRupiah(p.price)}</s><span>${formatRupiah(p.price_display)} <span class="pkg-hot" aria-label="promo">🔥</span></span>` : priceHtml}</div>
+                <div class="pkg-overlay-price">${priceHtml}</div>
               </div>
             </div>
             <div class="pkg-body" style="display:flex;flex-direction:column;flex:1">
