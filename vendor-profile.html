@@ -216,6 +216,34 @@
     .pkg-badge-cat { background: rgba(0,0,0,0.65); color: #fff; font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; backdrop-filter: blur(4px); }
     .pkg-tag { padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; background: linear-gradient(135deg, var(--gold), #d4a037); color: #fff; }
     .pkg-badge-promo { background: rgba(225,29,72,0.95); color: #fff; font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    /* SASH DISKON (model bridestory card__deal__discount) — pojok bawah-kiri gambar kartu */
+    .card__deal__discount {
+      position: absolute; left: 0; bottom: 0; z-index: 3;
+      display: inline-flex; flex-direction: column; align-items: flex-start;
+      padding: 7px 22px 8px 10px;
+      background: linear-gradient(135deg, #f6685e, #e11d48);
+      color: #fff;
+      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.28);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.15;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .card__deal__discount > span {
+      font-size: .58rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; opacity: .92;
+    }
+    .card__deal__discount .value { font-family: 'Lora', serif; font-size: 1.05rem; font-weight: 800; line-height: 1.05; }
+    .card__deal__discount .detail { font-size: .56rem; font-weight: 600; opacity: .85; }
+    @media (max-width: 600px) {
+      .card__deal__discount { padding: 5px 16px 6px 8px; }
+      .card__deal__discount > span { font-size: .5rem; }
+      .card__deal__discount .value { font-size: .9rem; }
+      .card__deal__discount .detail { font-size: .48rem; }
+      .pkg-badge-promo { display: none; }
+      .pkg-card.has-promo .pkg-overlay { padding-left: 140px; }
+    }
     .pkg-overlay { display: none; }
     .pkg-body { padding: 20px; display: flex; flex-direction: column; flex: 1; }
     .pkg-name { font-family: 'Lora', serif; font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; color: var(--text-main); }
@@ -608,6 +636,30 @@
       renderVendorProductsGrid(filtered);
     }
 
+    function fmtCompact(n) {
+      n = Number(n) || 0;
+      if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'jt';
+      if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+      return String(Math.round(n));
+    }
+    function dealSashHtml(original, display) {
+      if (!(original > 0 && display > 0 && display < original)) return '';
+      const save = original - display;
+      return `<div class="card__deal__discount" role="status" aria-label="lebih hemat ${fmtCompact(save)} (harga normal ${fmtCompact(original)} - harga promo ${fmtCompact(display)})">
+        <span>lebih hemat</span>
+        <div class="value">${fmtCompact(save)}</div>
+        <div class="detail">harga normal ${fmtCompact(original)} - promo ${fmtCompact(display)}</div>
+      </div>`;
+    }
+    function promoFirst(arr, isPromo) {
+      const yes = [], no = [];
+      arr.forEach(it => (isPromo(it) ? yes : no).push(it));
+      return yes.concat(no);
+    }
+    function productHasPromo(p) {
+      return !!(p.has_promo && Number(p.price_display) > 0 && Number(p.price) > 0 && Number(p.price_display) < Number(p.price));
+    }
+
     let _productRenderGen = 0;
     function renderVendorProductsGrid(products) {
       const pkgContainer = $('paketGrid');
@@ -620,17 +672,20 @@
         return;
       }
 
+      // prioritas: paket berpromo tampil di depan (urutan lain dipertahankan)
+      products = promoFirst(products, productHasPromo);
+
       const v = window._currentVendorData || {};
       const waNum = window._vendorWaNum || '';
 
       const cardHtml = (p) => {
         const img = p.cover_image_url || p.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80';
         const tagLabel = p.price_label || p.badge_tag;
-        const tag = tagLabel ? `<span class="pkg-tag">${tagLabel}</span>` : '';
+        const promoActive = productHasPromo(p);
+        const tag = (tagLabel && !(promoActive && /promo/i.test(tagLabel))) ? `<span class="pkg-tag">${tagLabel}</span>` : '';
         const catName = (p.category_name || p.short_desc || '').trim();
         const catBadge = catName ? `<span class="pkg-badge-cat">${catName}</span>` : '';
-        const promoActive = p.has_promo && p.price_display && p.price_display < (p.price || Infinity);
-        const promoBadge = promoActive ? `<span class="pkg-badge-promo">🔥 Promo</span>` : '';
+        const promoSash = promoActive ? dealSashHtml(Number(p.price), Number(p.price_display)) : '';
         const showPrice = promoActive ? p.price_display : p.price;
         const priceHtml = promoActive
           ? `<s style="color:var(--text-muted);font-size:0.85rem;font-weight:500;margin-right:8px">${formatRupiah(p.price)}</s><span>${formatRupiah(p.price_display)}</span>`
@@ -639,7 +694,7 @@
         const detailUrl = `/vendor-product.html?id=${encodeURIComponent(p.id)}&vendor=${encodeURIComponent(v.slug || '')}`;
 
         return `
-          <div class="pkg-card">
+          <div class="pkg-card${promoActive ? ' has-promo' : ''}">
             <div style="position:relative;height:200px">
               <div class="img-skeleton-container" style="width:100%;height:100%">
                 <img src="${img}" 
@@ -653,8 +708,9 @@
               </div>
               <div class="pkg-badges">
                 ${catBadge}
-                <div class="pkg-badges-right">${tag}${promoBadge}</div>
+                <div class="pkg-badges-right">${tag}</div>
               </div>
+              ${promoSash}
               <div class="pkg-overlay">
                 <div class="pkg-overlay-name">${p.name}</div>
                 <div class="pkg-overlay-price">${priceHtml}</div>

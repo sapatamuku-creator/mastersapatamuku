@@ -226,6 +226,33 @@
     .vendor-price .from { font-size: .7rem; color: var(--text-muted); }
     .vendor-price .amt { font-family: 'Lora', serif; font-size: .95rem; font-weight: 700; color: var(--primary); }
 
+    /* SASH DISKON (model bridestory card__deal__discount) — pojok bawah-kiri gambar kartu */
+    .card__deal__discount {
+      position: absolute; left: 0; bottom: 0; z-index: 3;
+      display: inline-flex; flex-direction: column; align-items: flex-start;
+      padding: 7px 22px 8px 10px;
+      background: linear-gradient(135deg, #f6685e, #e11d48);
+      color: #fff;
+      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.28);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.15;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .card__deal__discount > span {
+      font-size: .58rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; opacity: .92;
+    }
+    .card__deal__discount .value { font-family: 'Lora', serif; font-size: 1.05rem; font-weight: 800; line-height: 1.05; }
+    .card__deal__discount .detail { font-size: .56rem; font-weight: 600; opacity: .85; }
+    @media (max-width: 600px) {
+      .card__deal__discount { padding: 5px 16px 6px 8px; }
+      .card__deal__discount > span { font-size: .5rem; }
+      .card__deal__discount .value { font-size: .9rem; }
+      .card__deal__discount .detail { font-size: .48rem; }
+    }
+
     .skel { animation: skel-anim 1.5s ease-in-out infinite; background: linear-gradient(90deg,var(--bg-alt) 25%,#f0ebe6 50%,var(--bg-alt) 75%); background-size: 200% 100%; border-radius: var(--radius-sm); }
     @keyframes skel-anim { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .sk-card { background: var(--white); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
@@ -561,6 +588,30 @@ if (rc) rc.textContent = json.data.length;
 } catch(e) {}
     }
 
+    function fmtCompact(n) {
+      n = Number(n) || 0;
+      if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'jt';
+      if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+      return String(Math.round(n));
+    }
+    function dealSashHtml(original, display) {
+      if (!(original > 0 && display > 0 && display < original)) return '';
+      const save = original - display;
+      return `<div class="card__deal__discount" role="status" aria-label="lebih hemat ${fmtCompact(save)} (harga normal ${fmtCompact(original)} - harga promo ${fmtCompact(display)})">
+        <span>lebih hemat</span>
+        <div class="value">${fmtCompact(save)}</div>
+        <div class="detail">harga normal ${fmtCompact(original)} - promo ${fmtCompact(display)}</div>
+      </div>`;
+    }
+    function promoFirst(arr, isPromo) {
+      const yes = [], no = [];
+      arr.forEach(it => (isPromo(it) ? yes : no).push(it));
+      return yes.concat(no);
+    }
+    function vendorHasPromo(v) {
+      return Number(v.price_from_display) > 0 && Number(v.price_from_original) > 0 && Number(v.price_from_display) < Number(v.price_from_original);
+    }
+
     function renderVendors(vendors) {
       const grid = document.getElementById('vendorGrid');
       if (!grid) return;
@@ -573,12 +624,14 @@ if (rc) rc.textContent = json.data.length;
         `;
         return;
       }
+      // prioritas: kartu berpromo tampil di depan (urutan lain dipertahankan)
+      vendors = promoFirst(vendors, vendorHasPromo);
       grid.innerHTML = vendors.map(v => {
         const init = v.business_name ? v.business_name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase() : 'V';
         const coverImg = v.cover_image_url || v.cover_image || null;
         const logoImg = v.logo_url || v.logo || coverImg || null;
         const price = v.price_from > 0 ? `Rp ${Number(v.price_from).toLocaleString('id-ID')}` : `Hubungi Vendor`;
-        const hasPromoFrom = v.price_from_display > 0 && v.price_from_original > 0 && v.price_from_display < v.price_from_original;
+        const hasPromoFrom = vendorHasPromo(v);
         const priceHtml = hasPromoFrom
           ? `<s style="color:#9CA3AF;font-weight:600;margin-right:6px">Rp ${Number(v.price_from_original).toLocaleString('id-ID')}</s><span style="color:var(--primary)">Rp ${Number(v.price_from_display).toLocaleString('id-ID')}</span>`
           : price;
@@ -605,6 +658,7 @@ if (rc) rc.textContent = json.data.length;
                 ` : `<div style="font-size:2.8rem;font-weight:800;color:var(--primary)">${init}</div>`}
               </div>
             </div>
+            ${hasPromoFrom ? dealSashHtml(v.price_from_original, v.price_from_display) : ''}
 
             <!-- 2. TYPOGRAPHIC HIERARCHY -->
             <!-- Brand / Business Name (Primary Bold) + Verified Blue Checkmark -->

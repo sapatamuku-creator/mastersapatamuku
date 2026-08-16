@@ -363,6 +363,33 @@
     .marquee-card .mc-body { padding: 12px 14px; }
     .marquee-card .mc-name { font-size: 0.9rem; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
     .marquee-card .mc-meta { font-size: 0.78rem; color: var(--text-light); display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+    .mc-cover-wrap { position: relative; overflow: hidden; }
+    /* SASH DISKON (model bridestory card__deal__discount) — pojok bawah-kiri gambar */
+    .card__deal__discount {
+      position: absolute; left: 0; bottom: 0; z-index: 3;
+      display: inline-flex; flex-direction: column; align-items: flex-start;
+      padding: 7px 22px 8px 10px;
+      background: linear-gradient(135deg, #f6685e, #e11d48);
+      color: #fff;
+      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.28);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.15;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .card__deal__discount > span {
+      font-size: .58rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; opacity: .92;
+    }
+    .card__deal__discount .value { font-family: 'Lora', serif; font-size: 1.05rem; font-weight: 800; line-height: 1.05; }
+    .card__deal__discount .detail { font-size: .56rem; font-weight: 600; opacity: .85; }
+    @media (max-width: 600px) {
+      .card__deal__discount { padding: 5px 16px 6px 8px; }
+      .card__deal__discount > span { font-size: .5rem; }
+      .card__deal__discount .value { font-size: .9rem; }
+      .card__deal__discount .detail { font-size: .48rem; }
+    }
     .marquee-explore { text-align: center; margin-top: 28px; }
     .marquee-explore a { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.95rem; color: var(--primary-dark); border-bottom: 2px solid var(--primary-light); padding-bottom: 2px; transition: var(--transition); }
     .marquee-explore a:hover { color: var(--primary); border-color: var(--primary); }
@@ -756,6 +783,27 @@ console.error(e);
 }
 }
 
+    function fmtCompact(n) {
+      n = Number(n) || 0;
+      if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'jt';
+      if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+      return String(Math.round(n));
+    }
+    function dealSashHtml(original, display) {
+      if (!(original > 0 && display > 0 && display < original)) return '';
+      const save = original - display;
+      return `<div class="card__deal__discount" role="status" aria-label="lebih hemat ${fmtCompact(save)} (harga normal ${fmtCompact(original)} - harga promo ${fmtCompact(display)})">
+        <span>lebih hemat</span>
+        <div class="value">${fmtCompact(save)}</div>
+        <div class="detail">harga normal ${fmtCompact(original)} - promo ${fmtCompact(display)}</div>
+      </div>`;
+    }
+    function promoFirst(arr, isPromo) {
+      const yes = [], no = [];
+      arr.forEach(it => (isPromo(it) ? yes : no).push(it));
+      return yes.concat(no);
+    }
+
     async function loadMarqueeVendors() {
       const track = document.getElementById('vendorMarqueeTrack');
       if (!track) return;
@@ -773,13 +821,21 @@ console.error(e);
         if (sec) sec.style.display = 'none';
         return;
       }
-      const card = v => `<a class="marquee-card" href="/vendor/${v.slug}">
-        <img class="mc-cover" src="${v.cover_image_url || v.cover_image || v.logo_url || ''}" alt="${v.business_name}" loading="lazy">
+      // prioritas: vendor berpromo tampil di depan marquee
+      vendors = promoFirst(vendors, v => Number(v.price_from_display) > 0 && Number(v.price_from_original) > 0 && Number(v.price_from_display) < Number(v.price_from_original));
+      const card = v => {
+        const sash = dealSashHtml(Number(v.price_from_original), Number(v.price_from_display));
+        return `<a class="marquee-card" href="/vendor/${v.slug}">
+        <div class="mc-cover-wrap">
+          <img class="mc-cover" src="${v.cover_image_url || v.cover_image || v.logo_url || ''}" alt="${v.business_name}" loading="lazy">
+          ${sash}
+        </div>
         <div class="mc-body">
           <div class="mc-name">${v.business_name}</div>
           <div class="mc-meta">&#11088; ${v.rating_avg || '5.0'}${v.city ? ' &middot; ' + v.city : ''}</div>
         </div>
       </a>`;
+      };
       const inner = vendors.map(card).join('');
       track.innerHTML = inner + inner;
     }
@@ -789,5 +845,7 @@ console.error(e);
       loadMarqueeVendors();
     });
   </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/animejs@4.5.0/dist/bundles/anime.umd.min.js"></script>
+  <script defer src="/animations.js"></script>
 </body>
 </html>
