@@ -1374,7 +1374,7 @@ const cleanEmail = email.toLowerCase().trim();
           const vendor = await findVendorByEmail(cleanEmail);
           if (!vendor) return res.status(200).json({ success: true, channel: 'email' });
 
-          // Pastikan akun GoTrue ada (confirmed) agar GoTrue mau mengirim kode OTP
+          // Pastikan akun GoTrue ada (confirmed) agar GoTrue mau mengirim link masuk
           if (!vendor.user_id) {
             try {
               await linkAuthToVendor(vendor, genOtpCode() + genOtpCode());
@@ -1382,13 +1382,15 @@ const cleanEmail = email.toLowerCase().trim();
               console.error('[login-otp-send email link error]', e);
             }
           }
+          // GoTrue proyek ini dikonfigurasi magic-link: kirim link "Sign in"
+          // → user klik → redirect ke /vendor-dashboard#access_token=...&type=magiclink.
           try {
-            await sbAuthOtpEmail(cleanEmail);
+            await sbAuthMagicLink(cleanEmail);
           } catch (e) {
             console.error('[login-otp-send email error]', e);
-            return res.status(502).json({ error: 'Gagal mengirim kode email, coba lagi.' });
+            return res.status(502).json({ error: 'Gagal mengirim link masuk, coba lagi.' });
           }
-          return res.status(200).json({ success: true, channel: 'email' });
+          return res.status(200).json({ success: true, channel: 'email', mode: 'link' });
         }
 
         if (channel === 'whatsapp') {

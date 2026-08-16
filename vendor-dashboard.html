@@ -287,7 +287,7 @@
 
       <div class="login-tabs" style="display:flex;gap:6px;background:var(--surface-hover);border:1px solid var(--surface-border);border-radius:12px;padding:5px;margin-bottom:22px">
         <button type="button" class="login-tab active" data-tab="password" onclick="setLoginTab('password', this)">Password</button>
-        <button type="button" class="login-tab" data-tab="emailOtp" onclick="setLoginTab('emailOtp', this)">Email OTP</button>
+        <button type="button" class="login-tab" data-tab="emailOtp" onclick="setLoginTab('emailOtp', this)">Email</button>
         <button type="button" class="login-tab" data-tab="waOtp" onclick="setLoginTab('waOtp', this)">WhatsApp OTP</button>
         <style>
           .login-tab{flex:1;padding:9px 0;border:none;background:transparent;border-radius:9px;cursor:pointer;font-weight:600;font-size:0.82rem;color:var(--text-muted);transition:all .2s ease}
@@ -321,12 +321,8 @@
           <label>Email Vendor</label>
           <input type="email" id="otpLoginEmail" placeholder="nama@vendor.com">
         </div>
-        <div class="form-group">
-          <label>Kode OTP</label>
-          <input type="text" id="otpEmailCode" inputmode="numeric" maxlength="6" placeholder="Kode 6 digit" style="text-align:center;letter-spacing:6px;font-weight:700">
-        </div>
-        <button type="button" class="btn-primary-add" style="width:100%;justify-content:center;margin-top:8px" onclick="sendEmailOtpLogin()" id="btnSendEmailOtp">Kirim Kode ke Email</button>
-        <button type="button" class="btn-primary-add" style="width:100%;justify-content:center;margin-top:8px;display:none" id="btnVerifyEmailOtp" onclick="verifyEmailOtpLogin()">Verifikasi &amp; Masuk</button>
+        <p style="font-size:0.83rem;color:var(--text-muted);margin:8px 0 4px;text-align:center">Login tanpa password. Masukkan email, lalu klik link <strong>"Sign in"</strong> yang dikirim ke inbox Anda.</p>
+        <button type="button" class="btn-primary-add" style="width:100%;justify-content:center;margin-top:8px" onclick="sendEmailOtpLogin()" id="btnSendEmailOtp">Kirim Link Masuk</button>
         <div style="margin-top:12px;font-size:0.83rem;color:var(--text-muted);text-align:center">
           <span id="otpEmailTimer"></span>
         </div>
@@ -1814,33 +1810,12 @@
         method: 'POST',
         body: JSON.stringify({ channel: 'email', email })
       });
-      btn.disabled = false; btn.textContent = 'Kirim Ulang Kode';
+      btn.disabled = false; btn.textContent = 'Kirim Ulang Link';
       if (res.ok) {
-        showToast('Kode OTP telah dikirim ke email.');
-        _setBtn('btnSendEmailOtp', false);
-        _setBtn('btnVerifyEmailOtp', true);
+        showToast('Link masuk telah dikirim ke email Anda. Klik link "Sign in" di email untuk masuk.');
         startOtpLoginTimer('otpEmailTimer', 'btnSendEmailOtp');
-        $('otpEmailCode').focus();
       } else {
-        showToast(json.error || 'Gagal mengirim kode.');
-      }
-    }
-
-    async function verifyEmailOtpLogin() {
-      const email = $('otpLoginEmail').value.trim();
-      const code = $('otpEmailCode').value.trim();
-      if (!/^\d{6}$/.test(code)) { showToast('Masukkan kode 6 digit.'); return; }
-      const btn = $('btnVerifyEmailOtp');
-      btn.disabled = true; btn.textContent = 'Memverifikasi...';
-      const { res, json } = await apiCall('/api/mp/login-otp-verify', {
-        method: 'POST',
-        body: JSON.stringify({ channel: 'email', email, code })
-      });
-      btn.disabled = false; btn.textContent = 'Verifikasi & Masuk';
-      if (res.ok && json.success && json.token) {
-        await completeLogin(json.token, json.vendor);
-      } else {
-        showToast(json.error || 'Kode salah, coba lagi.');
+        showToast(json.error || 'Gagal mengirim link.');
       }
     }
 
@@ -2145,6 +2120,16 @@
       return null;
     }
 
+    function parseMagicHash() {
+      const h = window.location.hash || '';
+      const tok = h.match(/access_token=([^&]+)/);
+      const typ = h.match(/type=([^&]+)/);
+      if (!tok) return null;
+      const t = (typ && typ[1] || '').toLowerCase();
+      if (t === 'recovery') return null; // ditangani panel reset password
+      return decodeURIComponent(tok[1]);
+    }
+
     function showRecoveryPanel() {
       $('loginForm').style.display = 'none';
       $('registeredMsg').style.display = 'none';
@@ -2226,6 +2211,35 @@
       if (_recoveryToken) {
         showLogin();
         showRecoveryPanel();
+        return;
+      }
+
+      // Magic link "Sign in" dari tab Email → auto-login dengan access_token
+      const magicToken = parseMagicHash();
+      if (magicToken) {
+        localStorage.setItem('mp_vendor_token', magicToken);
+        _token = magicToken;
+        const urlClean = window.location.origin + window.location.pathname + window.location.search;
+        window.history.replaceState({}, '', urlClean);
+        try {
+          const res = await fetch('/api/mp/vendor-me', {
+            headers: { 'Authorization': `Bearer ${_token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.vendor) {
+              _currentVendor = data.vendor;
+              populateVendorProfile(_currentVendor);
+              $('authSection').style.display = 'none';
+              $('dashLayout').style.display = 'grid';
+              loadPackages();
+              loadInquiries();
+              showToast('Login berhasil via link email!');
+              return;
+            }
+          }
+        } catch (e) {}
+        logout();
         return;
       }
 
