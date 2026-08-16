@@ -131,40 +131,62 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: `Vendor dengan email ${cleanEmail} tidak ditemukan di mp_vendors` });
       }
 
-      // 2. Buat atau perbarui akun auth
-      let authUserId = null;
-      if (vendor.user_id) {
-        // Akun sudah pernah di-link → cukup reset password via admin
-        authUserId = vendor.user_id;
-        const updRes = await fetch(`${SB_URL}/auth/v1/admin/users/${authUserId}`, {
-          method: 'PUT',
-          headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password, email_confirm: true })
-        });
-        if (!updRes.ok) {
-          const errText = await updRes.text();
-          console.error('[auth update error]', errText);
-          return res.status(500).json({ error: 'Gagal memperbarui akun auth' });
+      // Yakin akun auth (confirmed) ADA untuk email ini:
+      const ensureAuth = async () => {
+        // Pakai password yang valid di semua jalur (satu-satunya cara pasti).
+        const body = JSON.stringify({ email: cleanEmail, password, email_confirm: true });
+
+        // Jalur A: user_id sudah ter-link → update akun itu
+        if (vendor.user_id) {
+          const upd = await fetch(`${SB_URL}/auth/v1/admin/users/${vendor.user_id}`, {
+            method: 'PUT',
+            headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, email_confirm: true })
+          });
+          if (upd.ok) return vendor.user_id;
+          console.error('[auth update error]', await upd.text());
+          throw new Error('Gagal memperbarui akun auth');
         }
-      } else {
-        // Tidak ada akun auth → buat baru (confirmed), lalu akan di-link
+
+        // Jalur B: cek user existing by email (bisa dari tes signup sebelumnya)
+        const listRes = await fetch(`${SB_URL}/auth/v1/admin/users?filter=email:eq:${encodeURIComponent(cleanEmail)}`, {
+          headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+        });
+        if (listRes.ok) {
+          const listJson = await listRes.json();
+          const userList = Array.isArray(listJson) ? listJson : (listJson.users || []);
+          const existing = userList.find(u => (u.email || '').toLowerCase() === cleanEmail);
+          if (existing) {
+            const upd = await fetch(`${SB_URL}/auth/v1/admin/users/${existing.id}`, {
+              method: 'PUT',
+              headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password, email_confirm: true })
+            });
+            if (!upd.ok) console.error('[auth update existing]', await upd.text());
+            return existing.id;
+          }
+        }
+
+        // Jalur C: buat akun baru (confirmed)
         const createRes = await fetch(`${SB_URL}/auth/v1/admin/users`, {
           method: 'POST',
           headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: cleanEmail, password, email_confirm: true })
+          body
         });
         if (!createRes.ok) {
           const errText = await createRes.text();
           console.error('[auth create error]', errText);
           let errorMsg = 'Failed to create user account';
           try { const parsed = JSON.parse(errText); if (parsed.msg) errorMsg = parsed.msg; } catch(e){}
-          return res.status(500).json({ error: errorMsg });
+          throw new Error(errorMsg);
         }
         const created = await createRes.json();
-        authUserId = created.id || null;
-        if (!authUserId) {
-          return res.status(500).json({ error: 'Akun auth dibuat tapi tanpa user id' });
-        }
+        return created.id || null;
+      };
+
+      const authUserId = await ensureAuth();
+      if (!authUserId) {
+        return res.status(500).json({ error: 'Tidak dapat memastikan akun auth untuk vendor ini' });
       }
 
       // 3. Tautkan user_id ke mp_vendors (hanya baris vendor ini, pricelist tak disentuh)
