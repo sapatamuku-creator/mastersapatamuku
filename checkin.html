@@ -231,6 +231,124 @@
         #cards-container::-webkit-scrollbar-track, #selfie-grid-container::-webkit-scrollbar-track { background: transparent !important; }
         #cards-container::-webkit-scrollbar-thumb, #selfie-grid-container::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2) !important; border-radius: 10px !important; }
         #cards-container::-webkit-scrollbar-thumb:hover, #selfie-grid-container::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.4) !important; }
+
+        /* ═══ MOBILE (<768px): laci kiri + bottomsheet daftar tamu + bottomsheet modal ═══ */
+        .mob-kartu-tab,
+        .mob-kartu-overlay,
+        .mob-kartu-panel {
+            display: none;
+        }
+        .guest-sheet-grip,
+        .sheet-chevron {
+            display: none;
+        }
+
+        @media (max-width: 767.98px) {
+            /* ── Laci kiri (drawer) ala formulir_tamu & analytics ── */
+            .mob-kartu-tab {
+                position: fixed; left: -2px; top: 50%; transform: translateY(-50%);
+                z-index: 100010; display: flex; align-items: center; justify-content: center; gap: 7px;
+                writing-mode: vertical-rl; text-orientation: mixed;
+                padding: 13px 9px; border-radius: 0 12px 12px 0;
+                background: #fff; border: 1.5px solid #f0f0f0; border-left: none;
+                color: #1a1a1a; cursor: pointer;
+                box-shadow: 6px 0 16px rgba(0,0,0,0.05);
+                transition: padding .2s ease, transform .25s ease;
+            }
+            .mob-kartu-tab:active { transform: translateY(-50%) scale(0.95); }
+            .mob-kartu-tab svg { transform: rotate(90deg); color: var(--gold); flex-shrink: 0; }
+            .mob-kartu-tab .kartu-tab-label { font-size: 9px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: #1a1a1a; white-space: nowrap; }
+
+            .mob-kartu-overlay {
+                display: block; position: fixed; inset: 0; background: rgba(15,23,42,0.5);
+                backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+                z-index: 100011; opacity: 0; pointer-events: none; transition: opacity .3s ease;
+            }
+            .mob-kartu-overlay.is-open { opacity: 1; pointer-events: auto; }
+
+            .mob-kartu-panel {
+                position: fixed; top: 0; left: 0; bottom: 0; z-index: 100012;
+                width: min(320px, 84vw); box-sizing: border-box; background: #fff;
+                border-radius: 0 28px 28px 0;
+                padding: calc(28px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
+                display: flex; flex-direction: column; gap: 14px;
+                transform: translateX(-105%); transition: transform .38s cubic-bezier(.32,.72,0,1);
+                box-shadow: 20px 0 50px rgba(15,23,42,0.2); overflow-y: auto;
+            }
+            .mob-kartu-panel.is-open { transform: translateX(0); }
+            .mob-kartu-panel .kartu-title { font-family: 'Lora', serif; font-size: 18px; font-weight: 700; color: var(--text-main); }
+            .mob-kartu-panel .kartu-sub { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
+            .mob-kartu-panel .kartu-demarc { height: 1px; background: var(--border); margin: 2px 0; }
+
+            /* station-selector + HID di-move ke drawer → list vertikal */
+            .mob-kartu-panel .station-selector {
+                position: static !important; top: auto !important; left: auto !important;
+                display: flex !important; flex-direction: column !important; gap: 10px !important;
+                width: 100% !important; background: transparent !important;
+                backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+                border: none !important; border-radius: 0 !important; padding: 0 !important;
+                box-shadow: none !important; z-index: auto !important;
+            }
+            .mob-kartu-panel .station-selector > * { margin: 0 !important; }
+            .mob-kartu-panel .station-selector > span:not(#realtime-status) { display: none; }
+            .mob-kartu-panel .station-selector select {
+                width: 100%; padding: 12px 14px; background: #fff;
+                border: 1px solid var(--border); border-radius: 14px;
+                font-size: 11px; font-weight: 800; color: var(--text-main);
+                text-transform: uppercase; outline: none; cursor: pointer;
+            }
+            .mob-kartu-panel .station-selector #realtime-status {
+                margin-left: 0 !important; width: 100%; text-align: center;
+                padding: 10px 14px; border-radius: 14px; font-size: 9px;
+                box-sizing: border-box;
+            }
+            .mob-kartu-panel .cam-toggle-wrap {
+                width: 100%; justify-content: space-between; align-items: center;
+                background: #fff !important; border: 1px solid var(--border) !important;
+                border-radius: 14px !important; padding: 12px 14px !important;
+                height: auto !important; box-sizing: border-box;
+            }
+            .mob-kartu-panel .cam-toggle-label { font-size: 10px; font-weight: 800; color: var(--text-main); }
+
+            /* ── Bottomsheet daftar tamu ── */
+            .guest-sheet-grip {
+                display: flex; justify-content: center; align-items: center;
+                padding: 10px 0 2px; cursor: pointer; flex-shrink: 0;
+            }
+            .guest-sheet-grip .grip-bar {
+                width: 44px; height: 5px; border-radius: 5px; background: #d8d8d8;
+            }
+            .sheet-chevron {
+                display: inline-flex; align-items: center; justify-content: center;
+                width: 28px; height: 28px; margin-left: 4px; border: 1px solid var(--border);
+                border-radius: 50%; background: #fff; color: var(--text-muted); cursor: pointer;
+                transition: transform .3s ease;
+            }
+            .bottom-section.is-expanded .sheet-chevron { transform: rotate(180deg); }
+            .bottom-section {
+                position: fixed; left: 0; right: 0; bottom: 0; z-index: 300;
+                max-height: 86vh; border-radius: 25px 25px 0 0;
+                transform: translateY(calc(100% - 64px));
+                transition: transform .38s cubic-bezier(.32,.72,0,1);
+                box-shadow: 0 -12px 30px rgba(74,63,53,0.15);
+            }
+            .bottom-section.is-expanded { transform: translateY(0); }
+            .bottom-section .list-wrapper { min-height: 0; }
+            .search-container { padding: 10px 12px; }
+            .list-wrapper { grid-template-columns: 1fr; }
+
+            /* ── Bottomsheet modal konfirmasi & alert ── */
+            .modal-overlay { align-items: flex-end; justify-content: center; padding: 0; }
+            .modal-card {
+                width: 100%; max-width: none; border-radius: 28px 28px 0 0;
+                max-height: 92vh; overflow-y: auto;
+                padding: 20px 20px calc(24px + env(safe-area-inset-bottom));
+                animation: sheetUp .38s cubic-bezier(.32,.72,0,1);
+            }
+            .st-modal-overlay { align-items: flex-end; justify-content: center; padding: 0; }
+            .st-modal-content { width: 100%; max-width: none; border-radius: 28px 28px 0 0; padding: 28px 22px calc(28px + env(safe-area-inset-bottom)); }
+            @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -238,6 +356,20 @@
 <body onload="initApp()">
 
 <div id="app-root">
+
+    <!-- MOBILE DRAWER (laci kiri): panel pengaturan scanner -->
+    <button class="mob-kartu-tab" id="mob-kartu-tab" aria-label="Buka panel pengaturan"
+            aria-expanded="false" aria-controls="mob-kartu-panel" onclick="toggleMobKartu()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="kartu-tab-label">pengaturan</span>
+    </button>
+    <div class="mob-kartu-overlay" id="mob-kartu-overlay"></div>
+    <aside class="mob-kartu-panel" id="mob-kartu-panel" role="dialog" aria-label="Pengaturan scanner">
+        <div class="kartu-title">Pengaturan</div>
+        <div class="kartu-sub">Kamera, countdown, quick check-in, dan jalur.</div>
+        <div class="kartu-demarc"></div>
+    </aside>
+
     <nav class="sapatamu-navbar">
         <div class="nav-outer-wrapper di-expanded" id="nav-island">
         <!-- Dynamic Island collapsed label -->
@@ -302,7 +434,7 @@
     
     <div class="header" style="position: relative;">
         <!-- STATION SELECTOR -->
-        <div style="position: absolute; top: 60px; left: 15px; z-index: 200; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+        <div class="station-selector" style="position: absolute; top: 60px; left: 15px; z-index: 200; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
             <span style="font-size: 8px; color: var(--text-muted); font-weight: 800; margin-right: 5px; text-transform: uppercase;">JALUR:</span>
             <select id="jalur-selector" style="background: transparent; border: none; color: var(--text-main); font-size: 9px; font-weight: 800; text-transform: uppercase; outline: none; cursor: pointer;">
                 <option value="ALL">ALL JALUR</option>
@@ -358,16 +490,22 @@
         </div>
 
         <div class="bottom-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 15px 0;">
+            <div class="guest-sheet-grip" id="guest-sheet-grip" onclick="toggleGuestSheet()">
+                <span class="grip-bar"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px 0;">
                 <span style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Status Kehadiran</span>
-                <div style="display: flex; gap: 8px;">
+                <div style="display: flex; gap: 8px; align-items: center;">
                     <span id="checkedin-guests" style="background: var(--gold); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 GUESTS</span>
                     <span id="checkedin-pax" style="background: var(--primary); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0 PAX</span>
+                    <button class="sheet-chevron" id="guest-sheet-chevron" onclick="toggleGuestSheet()" aria-label="Buka atau tutup daftar tamu">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
                 </div>
             </div>
             <div class="search-container" style="display: flex; align-items: center; gap: 8px;">
                 <input type="text" class="search-input" id="search-box" placeholder="Cari nama atau kode..." oninput="renderUI()" style="flex: 1;">
-                <div class="cam-toggle-wrap" style="flex-shrink: 0; background: #FFF9F5; border: 1px solid var(--border); padding: 6px 10px; border-radius: 12px; height: 38px;">
+                <div class="cam-toggle-wrap station-toggle-hid" style="flex-shrink: 0; background: #FFF9F5; border: 1px solid var(--border); padding: 6px 10px; border-radius: 12px; height: 38px;">
                     <span class="cam-toggle-label">HID</span>
                     <label class="cam-toggle">
                         <input type="checkbox" id="hid-barcode-toggle" onchange="localStorage.setItem('hid_barcode_on', this.checked ? '1' : '0')">
@@ -1834,6 +1972,66 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initDynamicIslandNav);
     } else { initDynamicIslandNav(); }
+</script>
+<script>
+/* ── Mobile: laci kiri (drawer pengaturan) + bottomsheet daftar tamu ── */
+(function () {
+    var mobileQuery = window.matchMedia('(max-width: 767.98px)');
+    var moved = false;
+
+    function ensureDrawerPlacement(mobile) {
+        var stationSel = document.querySelector('.station-selector');
+        var hidWrap = document.querySelector('.station-toggle-hid');
+        var panel = document.getElementById('mob-kartu-panel');
+        var header = document.querySelector('.header');
+        var searchC = document.querySelector('.search-container');
+        if (!stationSel || !hidWrap || !panel) return;
+        if (mobile && !moved) {
+            panel.appendChild(stationSel);
+            panel.appendChild(hidWrap);
+            moved = true;
+        } else if (!mobile && moved) {
+            header.insertBefore(stationSel, header.querySelector('h1'));
+            searchC.insertBefore(hidWrap, searchC.querySelector('#bulk-btn'));
+            moved = false;
+        }
+    }
+
+    function setMobKartu(open) {
+        var panel = document.getElementById('mob-kartu-panel');
+        var overlay = document.getElementById('mob-kartu-overlay');
+        var tab = document.getElementById('mob-kartu-tab');
+        if (!panel) return;
+        if (open && !mobileQuery.matches) return;
+        ensureDrawerPlacement(mobileQuery.matches);
+        panel.classList.toggle('is-open', open);
+        if (overlay) overlay.classList.toggle('is-open', open);
+        if (tab) {
+            tab.setAttribute('aria-expanded', open ? 'true' : 'false');
+            tab.setAttribute('aria-label', open ? 'Tutup panel pengaturan' : 'Buka panel pengaturan');
+        }
+    }
+    window.toggleMobKartu = function () {
+        var panel = document.getElementById('mob-kartu-panel');
+        if (panel) setMobKartu(!panel.classList.contains('is-open'));
+    };
+    window.openMobKartu = function () { setMobKartu(true); };
+    window.closeMobKartu = function () { setMobKartu(false); };
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setMobKartu(false); });
+    document.addEventListener('click', function (e) { if (e.target && e.target.id === 'mob-kartu-overlay') setMobKartu(false); });
+    ensureDrawerPlacement(mobileQuery.matches);
+    if (typeof mobileQuery.addEventListener === 'function') {
+        mobileQuery.addEventListener('change', function (e) {
+            ensureDrawerPlacement(e.matches);
+            if (!e.matches) setMobKartu(false);
+        });
+    }
+})();
+
+window.toggleGuestSheet = function () {
+    var bs = document.querySelector('.bottom-section');
+    if (bs) bs.classList.toggle('is-expanded');
+};
 </script>
 <script src="offline-db.js"></script>
 <script src="sync-engine.js"></script>
