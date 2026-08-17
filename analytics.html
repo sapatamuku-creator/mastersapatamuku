@@ -656,11 +656,120 @@
             background: #ddd;
             border-radius: 10px;
         }
+
+        /* ═══ MOBILE DRAWER (LACI) — ala formulir_tamu ═══ */
+        .mob-kartu-tab,
+        .mob-kartu-overlay {
+            display: none;
+        }
+        @media (max-width: 767.98px) {
+            .master-container {
+                grid-template-columns: 1fr;
+                overflow-x: hidden;
+            }
+            #content-panel {
+                padding: 3vh 4vw;
+                overflow-x: hidden;
+            }
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .full-width { grid-column: span 1; }
+            .flow-column { min-width: 0; }
+            .section-box { padding: 18px 16px; }
+            .time-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+            .regional-grid { grid-template-columns: repeat(2, 1fr); }
+
+            /* Sidebar jadi laci kiri */
+            #sidebar-panel {
+                position: fixed;
+                top: 70px; left: 0; bottom: 0;
+                width: min(320px, 84vw);
+                z-index: 100012;
+                border-right: 1px solid #eee;
+                border-radius: 0 28px 28px 0;
+                transform: translateX(-105%);
+                transition: transform .38s cubic-bezier(.32, .72, 0, 1);
+                box-shadow: 20px 0 50px rgba(15, 23, 42, 0.2);
+                overflow: hidden;
+            }
+            #sidebar-panel.is-open { transform: translateX(0); }
+
+            /* Tab tipis vertikal di tepi kiri */
+            .mob-kartu-tab {
+                position: fixed;
+                left: -2px; top: 50%;
+                transform: translateY(-50%);
+                z-index: 100010;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 7px;
+                writing-mode: vertical-rl;
+                text-orientation: mixed;
+                padding: 13px 9px;
+                border-radius: 0 12px 12px 0;
+                background: #fff;
+                border: 1.5px solid #f0f0f0;
+                border-left: none;
+                color: #1a1a1a;
+                cursor: pointer;
+                box-shadow: 6px 0 16px rgba(0, 0, 0, 0.05);
+                transition: padding .2s ease, transform .25s ease;
+            }
+            .mob-kartu-tab:active { transform: translateY(-50%) scale(0.95); }
+            .mob-kartu-tab svg {
+                transform: rotate(90deg);
+                color: var(--gold);
+                flex-shrink: 0;
+            }
+            .mob-kartu-tab .kartu-tab-label {
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.15em;
+                text-transform: uppercase;
+                color: #1a1a1a;
+                white-space: nowrap;
+            }
+
+            /* Backdrop gelap + blur */
+            .mob-kartu-overlay {
+                display: block;
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.5);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                z-index: 100011;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity .3s ease;
+            }
+            .mob-kartu-overlay.is-open {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            #fs-btn { bottom: 20px; right: 16px; }
+        }
+        @media (min-width: 768px) and (max-width: 1023.98px) {
+            .flow-column { min-width: 0; }
+            #content-panel { overflow-x: hidden; }
+        }
     </style>
     <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 
 <body class="cursor-visible" onload="initApp()">
+
+    <button class="mob-kartu-tab" id="mob-kartu-tab" aria-label="Buka panel analytics"
+            aria-expanded="false" aria-controls="sidebar-panel"
+            onclick="toggleMobKartu()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="kartu-tab-label">analytics</span>
+    </button>
+    <div class="mob-kartu-overlay" id="mob-kartu-overlay"></div>
 
     <button id="fs-btn" onclick="toggleFS()"><svg width="20" height="20" fill="none" stroke="currentColor"
             stroke-width="2" viewBox="0 0 24 24">
@@ -1400,3 +1509,36 @@
 .is-offline::before{content:'⚠️ OFFLINE — Data tersimpan lokal';position:fixed;top:0;left:0;right:0;z-index:99999;background:#FEE2E2;color:#991B1B;text-align:center;padding:6px;font-size:10px;font-weight:700;}
 @media(min-width:1024px){.is-offline::before{display:none;}}
 </style>
+<script>
+/* ── Mobile drawer (laci kiri) — model "Kartu Akses" ala formulir_tamu ── */
+(function () {
+    var mobileQuery = window.matchMedia('(max-width: 767.98px)');
+    function setMobKartu(open) {
+        var panel = document.getElementById('sidebar-panel');
+        var overlay = document.getElementById('mob-kartu-overlay');
+        var tab = document.getElementById('mob-kartu-tab');
+        if (!panel || !mobileQuery.matches) return;
+        panel.classList.toggle('is-open', open);
+        if (overlay) overlay.classList.toggle('is-open', open);
+        if (tab) {
+            tab.setAttribute('aria-expanded', open ? 'true' : 'false');
+            tab.setAttribute('aria-label', open ? 'Tutup panel analytics' : 'Buka panel analytics');
+        }
+    }
+    window.toggleMobKartu = function () {
+        var panel = document.getElementById('sidebar-panel');
+        if (panel) setMobKartu(!panel.classList.contains('is-open'));
+    };
+    window.openMobKartu = function () { setMobKartu(true); };
+    window.closeMobKartu = function () { setMobKartu(false); };
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') setMobKartu(false);
+    });
+    document.addEventListener('click', function (e) {
+        if (e.target && e.target.id === 'mob-kartu-overlay') setMobKartu(false);
+    });
+    if (typeof mobileQuery.addEventListener === 'function') {
+        mobileQuery.addEventListener('change', function (e) { if (!e.matches) setMobKartu(false); });
+    }
+})();
+</script>
