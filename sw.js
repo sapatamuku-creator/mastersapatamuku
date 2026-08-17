@@ -2,8 +2,8 @@
    SERVICE WORKER — SapaTamu PWA Offline Mode
    ═══════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'sapatamu-pwa-v4';
-const CACHE_VERSION = '4.0.0';
+const CACHE_NAME = 'sapatamu-pwa-v5';
+const CACHE_VERSION = '4.1.0';
 
 // Files to cache on install (lokal saja — CDN tidak di-cache untuk hindari supply chain risk)
 const PRECACHE_ASSETS = [
@@ -72,6 +72,34 @@ self.addEventListener('fetch', (event) => {
   // Skip cross-origin requests (Google Drive, Googleusercontent, Supabase, CDNs)
   // Biarkan browser memuatnya secara native via pipeline img-src tanpa interupsi Service Worker
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // HTML navigation → network-first, agar update kode langsung tampil
+  // (fallback ke cache hanya saat offline, bukan saat online)
+  if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return networkResponse;
+      }).catch(() =>
+        caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          return caches.match('./formulir_tamu.html');
+        }).then((offlinePage) => {
+          if (offlinePage) return offlinePage;
+          return new Response(
+            '<!DOCTYPE html><html><head><title>Offline</title></head><body style="text-align:center;padding:50px;font-family:sans-serif;"><h2>Mode Offline</h2><p>Koneksi internet Anda terputus. Silakan hubungkan kembali perangkat Anda.</p></body></html>',
+            { headers: { 'Content-Type': 'text/html' } }
+          );
+        })
+      )
+    );
     return;
   }
 
