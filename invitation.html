@@ -1041,11 +1041,15 @@
             // Init Countdown
             setInterval(updateCountdown, 1000);
             
-            // Init Intersection Observer untuk Animasi
+            // Init Intersection Observer untuk Animasi masuk & keluar (siklus berulang saat scroll)
+            const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
             const obs = new IntersectionObserver((entries) => {
-                entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('active'); });
+                entries.forEach(e => e.target.classList.toggle('active', e.isIntersecting));
             }, { threshold: 0.1 });
-            document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => obs.observe(el));
+            revealEls.forEach(el => obs.observe(el));
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                revealEls.forEach(el => el.classList.add('active'));
+            }
 
             loadWishes();
 
