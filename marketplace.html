@@ -169,6 +169,16 @@
     .quick-cat-pill:hover { border-color: var(--primary); color: var(--primary); }
     .quick-cat-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 3px 10px rgba(224,123,123,.3); }
 
+    /* SIDEBAR CATEGORY FILTER */
+    .cat-filter-item {
+      display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px;
+      cursor: pointer; font-size: .85rem; font-weight: 500; color: var(--text-main);
+      transition: background .15s;
+    }
+    .cat-filter-item:hover { background: var(--bg-alt); }
+    .cat-filter-item input { accent-color: var(--primary); flex-shrink: 0; }
+    .cat-filter-item span { line-height: 1.35; }
+
     /* ACTIVE FILTER CHIPS */
     .active-filters-bar { display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
     .filter-chip {
@@ -503,8 +513,17 @@
           <h4 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.82rem;font-weight:700;color:#fff;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em">MARKETPLACE</h4>
           <ul style="list-style:none;display:flex;flex-direction:column;gap:10px;font-size:0.85rem">
             <li><a href="/marketplace" style="color:rgba(255,255,255,0.65)">Semua Vendor</a></li>
-            <li><a href="/marketplace?cat=wedding-organizer" style="color:rgba(255,255,255,0.65)">Wedding Organizer</a></li>
-            <li><a href="/marketplace?cat=foto-video" style="color:rgba(255,255,255,0.65)">Fotografer</a></li>
+            <li><a href="/marketplace?kategori=wedding-organizer" style="color:rgba(255,255,255,0.65)">Wedding Organizer</a></li>
+            <li><a href="/marketplace?kategori=foto-video" style="color:rgba(255,255,255,0.65)">Fotografer</a></li>
+            <li><a href="/marketplace?kategori=undangan-souvenir" style="color:rgba(255,255,255,0.65)">Undangan &amp; Souvenir</a></li>
+            <li><a href="/marketplace?kategori=venue" style="color:rgba(255,255,255,0.65)">Venue &amp; Gedung</a></li>
+            <li><a href="/marketplace?kategori=dekorasi" style="color:rgba(255,255,255,0.65)">Dekorasi &amp; Florist</a></li>
+            <li><a href="/marketplace?kategori=katering" style="color:rgba(255,255,255,0.65)">Katering</a></li>
+            <li><a href="/marketplace?kategori=music-entertainment" style="color:rgba(255,255,255,0.65)">Musik &amp; MC</a></li>
+            <li><a href="/marketplace?kategori=photobooth" style="color:rgba(255,255,255,0.65)">Photobooth</a></li>
+            <li><a href="/marketplace?kategori=makeup-attire" style="color:rgba(255,255,255,0.65)">Rias &amp; Gaun</a></li>
+            <li><a href="/marketplace?kategori=jewellery-rings" style="color:rgba(255,255,255,0.65)">Perhiasan</a></li>
+            <li><a href="/marketplace?kategori=honeymoon" style="color:rgba(255,255,255,0.65)">Honeymoon</a></li>
           </ul>
         </div>
         <div class="footer-col">
@@ -886,8 +905,47 @@ if (rc) rc.textContent = json.data.length;
     }
 
     function applyFilters() { currentPage = 1; loadVendors(); }
-    function resetFilters() { searchInput.value = ''; selectedCat = ''; applyFilters(); }
-    function quickSelectCat(slug) { selectedCat = slug; applyFilters(); }
+    function resetFilters() { searchInput.value = ''; selectedCat = ''; updateCategoryUI(); applyFilters(); }
+    function quickSelectCat(slug) { selectedCat = slug; updateCategoryUI(); applyFilters(); }
+
+    function updateCategoryUI() {
+      document.querySelectorAll('#quickCatBar .quick-cat-pill').forEach(p => p.classList.toggle('active', p.dataset.slug === selectedCat));
+      document.querySelectorAll('#catFilters input[name="catFilter"]').forEach(r => { r.checked = (r.value === selectedCat); });
+    }
+
+    async function loadCategoryFilters() {
+      const quickBar = document.getElementById('quickCatBar');
+      const catBox = document.getElementById('catFilters');
+      let cats = [];
+      try {
+        const res = await fetch('/api/mp/categories');
+        const json = await res.json();
+        cats = Array.isArray(json) ? json : (json.data || []);
+      } catch (e) {}
+      if (!Array.isArray(cats) || cats.length === 0) return;
+      cats = cats.filter(c => c && c.slug && c.name);
+
+      const canon = cats.find(c => c.slug === selectedCat);
+      if (!canon && selectedCat) {
+        const k = String(selectedCat).toLowerCase();
+        const hit = cats.find(c => c.slug.startsWith(k)) ||
+                    cats.find(c => (c.name || '').toLowerCase().includes(k));
+        if (hit) selectedCat = hit.slug;
+      }
+
+      if (quickBar) {
+        const all = '<div class="quick-cat-pill' + (selectedCat === '' ? ' active' : '') + '" data-slug="" onclick="quickSelectCat(\'\')">Semua Kategori</div>';
+        quickBar.innerHTML = all + cats.map(c =>
+          '<div class="quick-cat-pill' + (selectedCat === c.slug ? ' active' : '') + '" data-slug="' + c.slug + '" onclick="quickSelectCat(\'' + c.slug + '\')">' + c.name + '</div>'
+        ).join('');
+      }
+      if (catBox) {
+        const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        const item = (slug, name) =>
+          '<label class="cat-filter-item"><input type="radio" name="catFilter" value="' + slug + '"' + (selectedCat === slug ? ' checked' : '') + ' onchange="quickSelectCat(\'' + slug + '\')"><span>' + esc(name) + '</span></label>';
+        catBox.innerHTML = item('', 'Semua Kategori') + cats.map(c => item(c.slug, c.name)).join('');
+      }
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -896,6 +954,7 @@ if (rc) rc.textContent = json.data.length;
       if (urlParams.get('cat')) selectedCat = urlParams.get('cat');
       if (urlParams.get('kota')) selectedKotaName = urlParams.get('kota');
       loadVendors();
+      loadCategoryFilters();
       initRegionFilters();
     });
   </script>

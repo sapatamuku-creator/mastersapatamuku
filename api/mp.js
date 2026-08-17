@@ -7,6 +7,14 @@ const SB_URL = 'https://llrapesaaoliyjrrrsjh.supabase.co';
 const SB_PUBLISHABLE_KEY = 'sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u';
 const SB_ANON_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || SB_PUBLISHABLE_KEY;
 const SB_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const VENDOR_DASHBOARD_REDIRECT = 'https://sapatamu.id/vendor-dashboard';
+const VENDOR_RECOVERY_REDIRECT = `${VENDOR_DASHBOARD_REDIRECT}?reset=email`;
+
+function sbAuthUrl(path, redirectTo) {
+  const url = new URL(`${SB_URL}/auth/v1/${path}`);
+  if (redirectTo) url.searchParams.set('redirect_to', redirectTo);
+  return url.toString();
+}
 
 function sbFetch(path, options = {}) {
   const url = `${SB_URL}/rest/v1${path}`;
@@ -37,7 +45,7 @@ function sbServiceFetch(path, options = {}) {
 }
 
 function sbAuthSignup(email, password) {
-  const url = `${SB_URL}/auth/v1/signup`;
+  const url = sbAuthUrl('signup', VENDOR_DASHBOARD_REDIRECT);
   return fetch(url, {
     method: 'POST',
     headers: {
@@ -214,13 +222,12 @@ function maskTarget(channel, target) {
 }
 
 async function sbAuthOtpEmail(email) {
-  return fetch(`${SB_URL}/auth/v1/otp`, {
+  return fetch(sbAuthUrl('otp', VENDOR_DASHBOARD_REDIRECT), {
     method: 'POST',
     headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email,
-      create_user: false,
-      options: { redirectTo: 'https://sapatamu.id/vendor-dashboard?reset=email' }
+      create_user: false
     })
   });
 }
@@ -234,13 +241,10 @@ async function sbAuthVerifyEmail(email, token) {
 }
 
 async function sbAuthRecover(email) {
-  return fetch(`${SB_URL}/auth/v1/recover`, {
+  return fetch(sbAuthUrl('recover', VENDOR_RECOVERY_REDIRECT), {
     method: 'POST',
     headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email,
-      options: { redirectTo: 'https://sapatamu.id/vendor-dashboard?reset=email' }
-    })
+    body: JSON.stringify({ email })
   });
 }
 
@@ -248,13 +252,12 @@ async function sbAuthRecover(email) {
 // "Sign in dengan email & password" → user klik → diarahkan ke
 // /vendor-dashboard#access_token=...&type=magiclink → frontend menangkap token.
 async function sbAuthMagicLink(email) {
-  return fetch(`${SB_URL}/auth/v1/otp`, {
+  return fetch(sbAuthUrl('otp', VENDOR_DASHBOARD_REDIRECT), {
     method: 'POST',
     headers: { 'apikey': SB_ANON_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email,
-      create_user: false,
-      options: { redirectTo: 'https://sapatamu.id/vendor-dashboard' }
+      create_user: false
     })
   });
 }
@@ -399,8 +402,27 @@ const DEFAULT_CATEGORIES = [
   { id: 'a1b2c3d4-0008-4000-8000-000000000008', name: 'Undangan & Souvenir', slug: 'undangan-souvenir', icon: 'ðŸ’Œ', is_active: true, sort_order: 8 },
   { id: 'a1b2c3d4-0009-4000-8000-000000000009', name: 'Perhiasan & Cincin Kawin', slug: 'jewellery-rings', icon: 'ðŸ’', is_active: true, sort_order: 9 },
   { id: 'a1b2c3d4-0010-4000-8000-000000000010', name: 'Photobooth & Interactive', slug: 'photobooth', icon: 'ðŸ“¸', is_active: true, sort_order: 10 },
-  { id: 'a1b2c3d4-0011-4000-8000-000000000011', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: 'âœˆï¸', is_active: true, sort_order: 11 }
+{ id: 'a1b2c3d4-0011-4000-8000-000000000011', name: 'Honeymoon & Travel', slug: 'honeymoon', icon: 'âœˆï¸', is_active: true, sort_order: 11 }
 ];
+
+function resolveCategoryByQuery(kategori) {
+  if (!kategori) return null;
+  const key = String(kategori).trim().toLowerCase();
+  let hit = DEFAULT_CATEGORIES.find(c => c.slug === key);
+  if (hit) return hit;
+  hit = DEFAULT_CATEGORIES.find(c => c.slug.startsWith(key));
+  if (hit) return hit;
+  const norm = s => String(s).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim();
+  const keyNorm = norm(key.replace(/-/g, ' '));
+  if (keyNorm) {
+    hit = DEFAULT_CATEGORIES.find(c => {
+      const name = norm(c.name);
+      return name === keyNorm || name.startsWith(keyNorm) || name.includes(keyNorm) || keyNorm.startsWith(name) || keyNorm.includes(name);
+    });
+    if (hit) return hit;
+  }
+  return null;
+}
 
 function getValidUuidCategory(catId) {
   if (!catId) return CATEGORY_UUID_MAP['cat-foto'];
@@ -540,10 +562,10 @@ export default async function handler(req, res) {
         // Step 1: Fetch vendors from mp_vendors
         let query = `/mp_vendors?select=id,slug,business_name,category_id,city,province,rating_avg,review_count,price_from,cover_image_url,logo_url,is_verified,is_active`;
 
-        if (category_id) {
+if (category_id) {
           query += `&category_id=eq.${encodeURIComponent(category_id)}`;
         } else if (kategori) {
-          const catObj = DEFAULT_CATEGORIES.find(c => c.slug === kategori);
+          const catObj = resolveCategoryByQuery(kategori);
           if (catObj) query += `&category_id=eq.${encodeURIComponent(catObj.id)}`;
         }
 
@@ -850,22 +872,26 @@ vendor.category_name = await resolveCategoryName(vendor.category_id);
           } catch(e) {}
         }
 
-        // Phase 2: email wajib diverifikasi via OTP sebelum akun bisa login.
-        let otpSent = false;
+        // Phase 2: email wajib diverifikasi lewat magic link sebelum akun bisa login.
+        let emailLinkSent = false;
         try {
           if (vendorId) {
             await issueOtp({ id: vendorId }, 'email_verify', 'email', finalEmail);
-            await sbAuthOtpEmail(finalEmail);
-            otpSent = true;
+            const linkRes = await sbAuthOtpEmail(finalEmail);
+            if (linkRes.ok) {
+              emailLinkSent = true;
+            } else {
+              console.error('[register-vendor email link error]', linkRes.status, await linkRes.text().catch(() => ''));
+            }
           }
-        } catch(e) { console.error('[register-vendor OTP Error]', e); }
+        } catch(e) { console.error('[register-vendor email link error]', e); }
 
         return res.status(201).json({
           success: true,
           vendor_id: vendorId,
           slug: vendorSlug,
           token: authToken || `token_${vendorId || Date.now()}_${Date.now()}`,
-          needs_email_otp: otpSent
+          email_link_sent: emailLinkSent
         });
       }
 
@@ -1282,7 +1308,7 @@ const cleanEmail = email.toLowerCase().trim();
           const elapsed = Date.now() - new Date(prev.created_at).getTime();
           if (elapsed < OTP_RESEND_COOLDOWN_MS) {
             const wait = Math.ceil((OTP_RESEND_COOLDOWN_MS - elapsed) / 1000);
-            return res.status(429).json({ error: `Mohon tunggu ${wait} detik sebelum mengirim ulang kode.` });
+            return res.status(429).json({ error: `Mohon tunggu ${wait} detik sebelum mengirim ulang.` });
           }
         }
 
@@ -1292,14 +1318,24 @@ const cleanEmail = email.toLowerCase().trim();
             const label = purpose === 'email_verify' ? 'verifikasi email' : 'verifikasi WhatsApp';
             await sendWA(target, `Kode ${label} SapaTamu.id Anda: ${code}\nBerlaku 5 menit. Jangan bagikan kode ini kepada siapa pun.`);
           } else {
-            await sbAuthOtpEmail(target);
+            const linkRes = await sbAuthOtpEmail(target);
+            if (!linkRes.ok) throw new Error(`Auth email link failed (${linkRes.status})`);
           }
         } catch(e) {
-          console.error('[send-otp error]', e);
-          return res.status(502).json({ error: 'Gagal mengirim kode, silakan coba lagi.' });
+          console.error('[send verification error]', e);
+          return res.status(502).json({
+            error: channel === 'email'
+              ? 'Gagal mengirim link aktivasi, silakan coba lagi.'
+              : 'Gagal mengirim kode, silakan coba lagi.'
+          });
         }
 
-        return res.status(200).json({ success: true, channel, target: maskTarget(channel, target) });
+        return res.status(200).json({
+          success: true,
+          channel,
+          mode: channel === 'email' ? 'link' : 'otp',
+          target: maskTarget(channel, target)
+        });
       }
 
       // â”€â”€ 13. VERIFY OTP (Phase 2) â”€â”€

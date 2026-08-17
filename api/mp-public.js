@@ -67,6 +67,25 @@ async function getCategoryNameMap() {
   return map;
 }
 
+function resolveCategoryByQuery(kategori) {
+  if (!kategori) return null;
+  const key = String(kategori).trim().toLowerCase();
+  let hit = DEFAULT_CATEGORIES.find(c => c.slug === key);
+  if (hit) return hit;
+  hit = DEFAULT_CATEGORIES.find(c => c.slug.startsWith(key));
+  if (hit) return hit;
+  const norm = s => String(s).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim();
+  const keyNorm = norm(key.replace(/-/g, ' '));
+  if (keyNorm) {
+    hit = DEFAULT_CATEGORIES.find(c => {
+      const name = norm(c.name);
+      return name === keyNorm || name.startsWith(keyNorm) || name.includes(keyNorm) || keyNorm.startsWith(name) || keyNorm.includes(name);
+    });
+    if (hit) return hit;
+  }
+  return null;
+}
+
 async function resolveCategoryName(categoryId) {
   if (!categoryId) return '';
   const seeded = DEFAULT_CATEGORIES.find(c => c.id === categoryId);
@@ -321,7 +340,7 @@ export default async function handler(req) {
         if (category_id) {
           query += `&category_id=eq.${encodeURIComponent(category_id)}`;
         } else if (kategori) {
-          const catObj = DEFAULT_CATEGORIES.find(c => c.slug === kategori);
+          const catObj = resolveCategoryByQuery(kategori);
           if (catObj) query += `&category_id=eq.${encodeURIComponent(catObj.id)}`;
         }
 
