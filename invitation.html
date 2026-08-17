@@ -1041,44 +1041,53 @@
             // Init Countdown
             setInterval(updateCountdown, 1000);
             
-            // Init Reveal dua arah (reverse): arah datang mengikuti arah scroll, konten selalu tampil
-            let lastScrollY = window.scrollY;
-            let scrollDir = 'down';
-            window.addEventListener('scroll', function () {
-                const y = window.scrollY;
-                if (y > lastScrollY) scrollDir = 'down';
-                else if (y < lastScrollY) scrollDir = 'up';
-                lastScrollY = y;
-            }, { passive: true });
-
-            const REVEAL_OFFSET = 40;
-            const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
-            const obs = new IntersectionObserver((entries) => {
-                entries.forEach(e => {
-                    const el = e.target;
-                    if (!e.isIntersecting || el.classList.contains('active')) return;
-                    const isUp = scrollDir === 'up';
-                    if (el.classList.contains('reveal-left')) {
-                        // down: dari kiri (-x), up: dari kanan (+x)
-                        el.style.setProperty('--reveal-x', (isUp ? 1 : -1) * REVEAL_OFFSET + 'px');
-                        el.style.setProperty('--reveal-y', '0px');
-                    } else if (el.classList.contains('reveal-right')) {
-                        // down: dari kanan (+x), up: dari kiri (-x)
-                        el.style.setProperty('--reveal-x', (isUp ? -1 : 1) * REVEAL_OFFSET + 'px');
-                        el.style.setProperty('--reveal-y', '0px');
-                    } else {
-                        // down: dari bawah (+y), up: dari atas (-y)
-                        el.style.setProperty('--reveal-x', '0px');
-                        el.style.setProperty('--reveal-y', (isUp ? -1 : 1) * REVEAL_OFFSET + 'px');
+            // Reveal SCRUB: progres animasi terikat posisi scroll (seperti scrubbing timeline video).
+            // Scroll down = animasi maju, objek masuk frame. Scroll up = animasi mundur, objek keluar frame.
+            (function initRevealScrub() {
+                const els = Array.from(document.querySelectorAll('.reveal, .reveal-left, .reveal-right'));
+                if (!els.length) return;
+                const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                if (reduced) {
+                    els.forEach(el => el.classList.add('active'));
+                    return;
+                }
+                const OFFSET = 40;
+                els.forEach(el => { el.style.transition = 'none'; });
+                const apply = (el, p) => {
+                    if (p >= 1) {
+                        el.classList.add('active');
+                        el.style.opacity = '';
+                        el.style.transform = '';
+                        return;
                     }
-                    void el.offsetWidth;
-                    el.classList.add('active');
-                });
-            }, { threshold: 0.12 });
-            revealEls.forEach(el => obs.observe(el));
-            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                revealEls.forEach(el => el.classList.add('active'));
-            }
+                    el.classList.remove('active');
+                    const dirX = el.classList.contains('reveal-left') ? -1 : (el.classList.contains('reveal-right') ? 1 : 0);
+                    el.style.opacity = p.toFixed(3);
+                    el.style.transform = dirX
+                        ? 'translateX(' + (dirX * (1 - p) * OFFSET).toFixed(1) + 'px)'
+                        : 'translateY(' + ((1 - p) * OFFSET).toFixed(1) + 'px)';
+                };
+                let ticking = false;
+                const update = () => {
+                    ticking = false;
+                    const vh = window.innerHeight || 800;
+                    els.forEach(el => {
+                        const h = el.offsetHeight || 1;
+                        if (h >= vh) { el.classList.add('active'); return; }
+                        const r = el.getBoundingClientRect();
+                        const p = r.top >= vh - h ? (vh - r.top) / h
+                                : r.top <= 0 ? 1 + r.top / h
+                                : 1;
+                        apply(el, Math.max(0, Math.min(1, p)));
+                    });
+                };
+                const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
+                window.addEventListener('scroll', onScroll, { passive: true });
+                window.addEventListener('resize', onScroll);
+                window.addEventListener('load', onScroll);
+                update();
+                setTimeout(onScroll, 400);
+            })();
 
             loadWishes();
 
