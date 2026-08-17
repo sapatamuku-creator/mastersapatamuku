@@ -16,3 +16,9 @@ Rules:
 - Use the `ui-ux-pro-max` skill (`.claude/skills/ui-ux-pro-max/`) when designing, building, reviewing, or fixing any interface (pages, components, layout, typography, color, interaction, accessibility).
 - Setiap instruksi update code yang menyentuh UI/frontend wajib ditulis untuk **tiga versi responsif**: desktop, tablet, dan mobile. Selalu pertimbangkan breakpoint kontainer/grid (bucket desktop ≥1024px, tablet 768–1023px, mobile <768px) agar tidak ada bug saat berpindah mode. Jangan hanya menyelesaikan satu layout lalu mengabaikan yang lain.
 - Gunakan teknik container/grid responsive atau media query yang konsisten dengan file yang diedit; uji logika layout di ketiga mode sebelum dianggap selesai.
+
+## Website Cloner (ai-website-cloner)
+
+- Skill `clone-website` terpasang di `.agents/skills/clone-website/` dan `.claude/skills/clone-website/` (command opencode: `/clone-website`).
+- Template Next.js dari JCodesMore/ai-website-cloner-template berada di `ai-website-cloner/` (app terpisah, bukan bagian dari situs statis ini).
+- Saat menjalankan `/clone-website <url>`, project root repo ini adalah situs statis (bukan Next.js). Gunakan `ai-website-cloner/` sebagai `<app-root>` untuk hasil kloning.
