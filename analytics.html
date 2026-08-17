@@ -666,6 +666,7 @@
             .master-container {
                 grid-template-columns: 1fr;
                 overflow-x: hidden;
+                z-index: auto;
             }
             #content-panel {
                 padding: 3vh 4vw;
@@ -1513,11 +1514,32 @@
 /* ── Mobile drawer (laci kiri) — model "Kartu Akses" ala formulir_tamu ── */
 (function () {
     var mobileQuery = window.matchMedia('(max-width: 767.98px)');
+    var moved = false;
+
+    /* Pindahkan sidebar ke body saat mobile agar tidak terjebak di dalam
+       stacking context `.master-container` (position:fixed) yang membuatnya
+       tertimpa overlay blur. Kembalikan ke grid saat desktop. */
+    function ensureDrawerPlacement(mobile) {
+        var panel = document.getElementById('sidebar-panel');
+        var master = document.querySelector('.master-container');
+        var content = document.getElementById('content-panel');
+        if (!panel || !master) return;
+        if (mobile && !moved) {
+            document.body.appendChild(panel);
+            moved = true;
+        } else if (!mobile && moved) {
+            master.insertBefore(panel, content);
+            moved = false;
+        }
+    }
+
     function setMobKartu(open) {
         var panel = document.getElementById('sidebar-panel');
         var overlay = document.getElementById('mob-kartu-overlay');
         var tab = document.getElementById('mob-kartu-tab');
-        if (!panel || !mobileQuery.matches) return;
+        if (!panel) return;
+        if (open && !mobileQuery.matches) return;
+        ensureDrawerPlacement(mobileQuery.matches);
         panel.classList.toggle('is-open', open);
         if (overlay) overlay.classList.toggle('is-open', open);
         if (tab) {
@@ -1537,8 +1559,12 @@
     document.addEventListener('click', function (e) {
         if (e.target && e.target.id === 'mob-kartu-overlay') setMobKartu(false);
     });
+    ensureDrawerPlacement(mobileQuery.matches);
     if (typeof mobileQuery.addEventListener === 'function') {
-        mobileQuery.addEventListener('change', function (e) { if (!e.matches) setMobKartu(false); });
+        mobileQuery.addEventListener('change', function (e) {
+            ensureDrawerPlacement(e.matches);
+            if (!e.matches) setMobKartu(false);
+        });
     }
 })();
 </script>
