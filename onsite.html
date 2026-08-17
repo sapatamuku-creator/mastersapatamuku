@@ -902,6 +902,15 @@
         .sheet-chevron {
             display: none;
         }
+        .kartu-fs-btn {
+            width: 100%; display: flex; align-items: center; justify-content: space-between;
+            background: #fff; border: 1px solid var(--border); border-radius: 14px;
+            padding: 12px 14px; box-sizing: border-box; cursor: pointer;
+            font-size: 10px; font-weight: 800; color: var(--text-main); font-family: inherit;
+            transition: background-color .2s ease;
+        }
+        .kartu-fs-btn svg { color: var(--gold); }
+        .kartu-fs-btn:active { background: #fafafa; }
 
         @media (max-width: 767.98px) {
             /* ── Laci kiri (drawer) ala formulir_tamu & analytics ── */
@@ -996,6 +1005,7 @@
             .bottom-section .list-wrapper { min-height: 0; }
             .search-container { padding: 10px 12px; }
             .list-wrapper { grid-template-columns: 1fr; }
+            .fab-fullscreen { display: none; }
 
             /* ── Bottomsheet modal konfirmasi & alert ── */
             .modal-overlay { align-items: flex-end; justify-content: center; padding: 0; }
@@ -1029,6 +1039,10 @@
             <div class="kartu-title">Pengaturan</div>
             <div class="kartu-sub">Kamera, countdown, quick check-in, dan jalur.</div>
             <div class="kartu-demarc"></div>
+            <button type="button" class="kartu-fs-btn" id="btn-fs-drawer" aria-label="Layar penuh">
+                <span>Layar Penuh</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
         </aside>
 
         <nav class="sapatamu-navbar">
@@ -1711,8 +1725,8 @@
         }
 
         function setupFullscreen() {
-            const btn = document.getElementById('btn-fs');
-            btn.addEventListener('click', function() {
+            const btns = [document.getElementById('btn-fs'), document.getElementById('btn-fs-drawer')].filter(Boolean);
+            function toggleFs() {
                 const doc = document.documentElement;
                 if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
                     if (doc.requestFullscreen) doc.requestFullscreen();
@@ -1721,16 +1735,15 @@
                     if (document.exitFullscreen) document.exitFullscreen();
                     else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
                 }
-            });
+            }
+            btns.forEach(b => b.addEventListener('click', toggleFs));
 
             const handleFsChange = () => {
-                if (document.fullscreenElement || document.webkitFullscreenElement) {
-                    btn.style.opacity = '0';
-                    btn.style.pointerEvents = 'none';
-                } else {
-                    btn.style.opacity = '1';
-                    btn.style.pointerEvents = 'auto';
-                }
+                const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+                btns.forEach(b => {
+                    b.style.opacity = isFs ? '0' : '1';
+                    b.style.pointerEvents = isFs ? 'none' : 'auto';
+                });
             };
 
             document.addEventListener('fullscreenchange', handleFsChange);
@@ -2958,8 +2971,9 @@
         var searchC = document.querySelector('.search-container');
         if (!stationSel || !hidWrap || !panel) return;
         if (mobile && !moved) {
-            panel.appendChild(stationSel);
-            panel.appendChild(hidWrap);
+            const fsBtn = document.getElementById('btn-fs-drawer');
+            panel.insertBefore(stationSel, fsBtn);
+            panel.insertBefore(hidWrap, fsBtn);
             moved = true;
         } else if (!mobile && moved) {
             header.insertBefore(stationSel, header.querySelector('h1'));
