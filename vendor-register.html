@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/animations.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@29.2.3/dist/css/intlTelInput.css">
 
   <style>
     :root {
@@ -99,6 +100,11 @@
     .form-hint { display: block; margin-top: 5px; font-size: .78rem; color: var(--text-light); min-height: 1.1em; }
     .form-hint.ok { color: #059669; }
     .form-hint.err { color: #DC2626; }
+    :root { --iti-border-color: rgba(200, 150, 46, .28); --iti-hover-color: rgba(224, 123, 123, .08); }
+    .iti { width: 100%; }
+    .form-group .iti__tel-input { padding-left: 14px; }
+    .form-group .iti__country-container button { background: transparent; }
+    .form-group .iti__country-list { max-height: 240px; z-index: 900; }
 
     .btn-submit {
       width: 100%; padding: 14px; border-radius: 50px; font-weight: 700; font-size: .95rem;
@@ -239,7 +245,7 @@
 
         <div class="form-group">
           <label>Nomor WhatsApp *</label>
-          <input type="tel" id="whatsapp" placeholder="08xxxxxxxxxx" required inputmode="numeric">
+          <input type="tel" id="whatsapp" required inputmode="tel" autocomplete="tel">
           <small id="whatsappHint" class="form-hint"></small>
         </div>
 
@@ -277,6 +283,7 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@29.2.3/dist/js/intlTelInput.js"></script>
   <script>
     const $ = id => document.getElementById(id);
     const VENDOR_DASHBOARD_URL = 'https://sapatamu.id/vendor-dashboard';
@@ -329,39 +336,49 @@
       setTimeout(() => toast.className = 'toast', 4000);
     }
 
-    function normalizeWA(raw) {
-      if (!raw) return '';
-      const digits = String(raw).replace(/[^0-9]/g, '');
-      if (digits.startsWith('0')) return '62' + digits.slice(1);
-      if (digits.startsWith('8')) return '62' + digits;
-      return digits;
+    let iti = null;
+    function waFullNumber() {
+      if (iti) {
+        try {
+          return iti.getNumber().replace(/\+/g, '');
+        } catch (e) {}
+      }
+      const c = iti ? iti.getSelectedCountry() : { dialCode: '62' };
+      return (c.dialCode || '') + $('whatsapp').value.replace(/[^0-9]/g, '').replace(/^0/, '');
     }
-
     function updateWAHint() {
-      const input = $('whatsapp');
       const hint = $('whatsappHint');
-      const digits = input.value.replace(/[^0-9]/g, '');
-      if (!digits) {
-        hint.textContent = 'Contoh: 08123456789 akan disimpan sebagai 628123456789';
+      const raw = $('whatsapp').value.trim();
+      if (!raw) {
+        hint.textContent = '';
         hint.className = 'form-hint';
         return;
       }
-      const norm = normalizeWA(input.value);
-      if (norm.length < 10 || norm.length > 15) {
-        hint.textContent = 'Nomor tampak tidak valid (' + norm.length + ' digit).';
-        hint.className = 'form-hint err';
-      } else {
-        hint.textContent = 'Akan disimpan sebagai ' + norm;
-        hint.className = 'form-hint ok';
-      }
+      if (!iti) { hint.textContent = ''; hint.className = 'form-hint'; return; }
+      iti.promise.then(() => {
+        const valid = iti.isValidNumber();
+        if (valid) {
+          hint.textContent = 'Nomor lengkap: ' + iti.getNumber();
+          hint.className = 'form-hint ok';
+        } else {
+          hint.textContent = 'Nomor WhatsApp tidak valid untuk negara terpilih.';
+          hint.className = 'form-hint err';
+        }
+      }).catch(() => {});
     }
     {
       const waInput = $('whatsapp');
+      if (window.intlTelInput) {
+        iti = window.intlTelInput(waInput, {
+          initialCountry: 'id',
+          separateDialCode: true,
+          countrySearch: true,
+          placeholderNumberType: 'MOBILE',
+          loadUtils: () => import('https://cdn.jsdelivr.net/npm/intl-tel-input@29.2.3/dist/js/utils.js')
+        });
+      }
       waInput.addEventListener('input', updateWAHint);
-      waInput.addEventListener('blur', () => {
-        const v = waInput.value.trim();
-        if (v) { waInput.value = normalizeWA(v); updateWAHint(); }
-      });
+      waInput.addEventListener('countrychange', updateWAHint);
       updateWAHint();
     }
 
@@ -525,18 +542,30 @@
         district: distName,
         email: $('email').value.trim(),
         password: $('password').value,
-        whatsapp: normalizeWA($('whatsapp').value.trim()),
+        whatsapp: waFullNumber(),
         description: $('description').value.trim()
       };
 
-      const normWA = normalizeWA(payload.whatsapp);
-      if (!normWA || normWA.length < 10 || normWA.length > 15) {
-        showToast('Nomor WhatsApp tidak valid. Gunakan 08xx atau 628xx (10–15 digit).', 'error');
+      let waFinal = waFullNumber();
+      if (iti) {
+        try {
+          await iti.promise;
+          if (!iti.isValidNumber()) {
+            showToast('Nomor WhatsApp tidak valid untuk negara terpilih.', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Daftar Vendor Sekarang 🚀';
+            return;
+          }
+          waFinal = iti.getNumber().replace(/\+/g, '');
+        } catch (e) {}
+      }
+      if (!waFinal || waFinal.length < 10 || waFinal.length > 15) {
+        showToast('Nomor WhatsApp tidak valid. Lengkapi nomor sesuai contoh placeholder.', 'error');
         btn.disabled = false;
         btn.textContent = 'Daftar Vendor Sekarang 🚀';
         return;
       }
-      payload.whatsapp = normWA;
+      payload.whatsapp = waFinal;
 
       try {
         const res = await fetch('/api/mp/register-vendor', {
