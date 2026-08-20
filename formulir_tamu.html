@@ -1367,6 +1367,34 @@
                 <input type="file" id="imp-file-input" accept=".xlsx, .xls" style="display: none;" onchange="handleExcelUpload(event)">
             </div>
 
+            <!-- Excel Sheet Selection -->
+            <div id="imp-sheet-section" style="display: none; margin-bottom: 20px;">
+                <div style="background: #FFFDFB; border: 1.5px solid var(--border); border-radius: 20px; padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">Pilih Sheet / Tab Excel</h3>
+                        <span id="imp-sheet-file-name" style="font-size: 9px; color: var(--text-muted); max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                    </div>
+                    <p style="font-size: 10px; color: var(--text-muted); margin: 8px 0 14px;">File Anda memiliki beberapa sheet. Pilih sheet yang berisi daftar tamu yang ingin diimpor.</p>
+
+                    <div id="imp-sheet-list" role="radiogroup" aria-label="Pilih sheet Excel" class="grid grid-cols-1 md:grid-cols-2 gap-2.5"></div>
+
+                    <label id="imp-sheet-all-wrap" style="display: none; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 12px; border: 1.5px dashed var(--border); border-radius: 14px; cursor: pointer; background: #fff;">
+                        <input type="checkbox" id="imp-sheet-all" onchange="toggleSheetAll()" style="accent-color: var(--gold); margin-top: 2px; flex-shrink: 0;">
+                        <span style="min-width: 0;">
+                            <span style="display: block; font-size: 11px; font-weight: 800; color: var(--text-main);">Import Semua Sheet Sekaligus</span>
+                            <span style="display: block; font-size: 9px; color: var(--text-muted); margin-top: 3px;">Kategori otomatis dari nama sheet (UMUM &rarr; Umum, VIP &rarr; VIP, VVIP &rarr; VVIP, KELUARGA &rarr; Keluarga). Kolom dideteksi otomatis.</span>
+                        </span>
+                    </label>
+
+                    <div id="imp-sheet-detail" style="display: none; margin-top: 12px; font-size: 9px; color: var(--text-muted); background: #FAF7F2; border-radius: 12px; padding: 10px; line-height: 1.6;"></div>
+
+                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 14px;">
+                        <button type="button" onclick="backToFilePicker()" style="background: #E5E7EB; border: none; cursor: pointer; color: #374151; padding: 10px 16px; border-radius: 50px; font-size: 11px; font-weight: 800; transition: 0.3s;" onmouseover="this.style.background='#D1D5DB'" onmouseout="this.style.background='#E5E7EB'">GANTI FILE</button>
+                        <button type="button" onclick="confirmSheetSelection()" id="btn-sheet-next" disabled style="background: #1a1a1a; border: none; cursor: pointer; color: #fff; padding: 10px 18px; border-radius: 50px; font-size: 11px; font-weight: 800; transition: 0.3s; opacity: 0.4; display: inline-flex; align-items: center; gap: 6px;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='none'">LANJUT &rarr; PETA KOLOM</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Column Mapping Controls -->
             <div id="imp-mapping-section" style="display: none; background: #FFFDFB; border: 1.5px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
                 <h3 style="font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">Peta Kolom Excel</h3>
@@ -1414,7 +1442,10 @@
                 </div>
             </div>
             
-            <button onclick="startExcelImport()" id="btn-imp-submit" class="sapatamu-btn" style="background: #1a1a1a; display: none;">MULAI IMPOR KE DRAFT</button>
+            <div id="imp-footer" style="display: none; align-items: center; justify-content: space-between; gap: 8px;">
+                <button type="button" onclick="goBackFromMapping()" id="btn-imp-back" style="background: #E5E7EB; border: none; cursor: pointer; color: #374151; padding: 10px 16px; border-radius: 50px; font-size: 11px; font-weight: 800; transition: 0.3s;" onmouseover="this.style.background='#D1D5DB'" onmouseout="this.style.background='#E5E7EB'">&larr; KEMBALI</button>
+                <button type="button" onclick="startExcelImport()" id="btn-imp-submit" class="sapatamu-btn" style="background: #1a1a1a; display: none;">MULAI IMPOR KE DRAFT</button>
+            </div>
         </div>
     </div>
 
@@ -3334,6 +3365,10 @@
     // --- EXCEL IMPORT LOGIC ---
     let parsedExcelRows = [];
     let parsedExcelHeaders = [];
+    let parsedWorkbook = null;
+    let parsedSheetMeta = [];
+    let selectedSheetName = "";
+    let importAllSheets = false;
 
     window.openImportExcelModal = function() {
         // Copy option values from Sisi Kiri
@@ -3348,8 +3383,19 @@
         // Reset elements
         document.getElementById('imp-file-input').value = "";
         document.getElementById('imp-dropzone').style.display = "block";
+        document.getElementById('imp-sheet-section').style.display = "none";
+        document.getElementById('imp-sheet-list').innerHTML = "";
+        document.getElementById('imp-sheet-all').checked = false;
+        document.getElementById('imp-sheet-detail').style.display = "none";
         document.getElementById('imp-mapping-section').style.display = "none";
+        document.getElementById('imp-footer').style.display = "none";
         document.getElementById('btn-imp-submit').style.display = "none";
+        document.getElementById('btn-sheet-next').disabled = true;
+        document.getElementById('btn-sheet-next').style.opacity = "0.4";
+        parsedWorkbook = null;
+        parsedSheetMeta = [];
+        selectedSheetName = "";
+        importAllSheets = false;
         parsedExcelRows = [];
         parsedExcelHeaders = [];
 
@@ -3389,80 +3435,53 @@
         reader.onload = function(e) {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                if (rawRows.length === 0) {
-                    return showSapaModal("File Kosong", "Berkas Excel tidak memiliki data.", "⚠️");
-                }
+                parsedWorkbook = XLSX.read(data, { type: 'array' });
 
-                parsedExcelHeaders = rawRows[0];
-                parsedExcelRows = rawRows.slice(1);
-
-                if (parsedExcelRows.length === 0) {
-                    return showSapaModal("File Kosong", "Berkas Excel tidak memiliki data baris tamu.", "⚠️");
-                }
-
-                // Populate column selectors
-                const selNama = document.getElementById('imp-map-nama');
-                const selAlamat = document.getElementById('imp-map-alamat');
-                const selWa = document.getElementById('imp-map-wa');
-                const selPax = document.getElementById('imp-map-pax');
-
-                selNama.innerHTML = "";
-                selAlamat.innerHTML = "";
-                selWa.innerHTML = '<option value="">-- Abaikan --</option>';
-                selPax.innerHTML = '<option value="">-- Bawaan (1) --</option>';
-
-                parsedExcelHeaders.forEach((h, idx) => {
-                    const cleanHeader = (h || "").toString().trim() || `Kolom ${idx + 1}`;
-                    
-                    const optNama = document.createElement('option');
-                    optNama.value = idx;
-                    optNama.innerText = cleanHeader;
-                    selNama.appendChild(optNama);
-
-                    const optAlamat = document.createElement('option');
-                    optAlamat.value = idx;
-                    optAlamat.innerText = cleanHeader;
-                    selAlamat.appendChild(optAlamat);
-
-                    const optWa = document.createElement('option');
-                    optWa.value = idx;
-                    optWa.innerText = cleanHeader;
-                    selWa.appendChild(optWa);
-
-                    const optPax = document.createElement('option');
-                    optPax.value = idx;
-                    optPax.innerText = cleanHeader;
-                    selPax.appendChild(optPax);
+                // Kumpulkan metadata semua sheet (nama, header, jumlah baris data)
+                parsedSheetMeta = parsedWorkbook.SheetNames.map(name => {
+                    const ws = parsedWorkbook.Sheets[name];
+                    const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                    return {
+                        name: name,
+                        headers: raw[0] || [],
+                        rowCount: raw.length > 0 ? raw.length - 1 : 0
+                    };
                 });
 
-                // Auto-detect columns based on names
-                parsedExcelHeaders.forEach((h, idx) => {
-                    const lowerHeader = (h || "").toString().toLowerCase();
-                    if (lowerHeader.includes("nama") || lowerHeader.includes("guest") || lowerHeader.includes("tamu")) {
-                        selNama.value = idx;
-                    }
-                    if (lowerHeader.includes("alamat") || lowerHeader.includes("instansi") || lowerHeader.includes("kota") || lowerHeader.includes("address")) {
-                        selAlamat.value = idx;
-                    }
-                    if (lowerHeader.includes("wa") || lowerHeader.includes("telp") || lowerHeader.includes("phone") || lowerHeader.includes("hp") || lowerHeader.includes("whatsapp")) {
-                        selWa.value = idx;
-                    }
-                    if (lowerHeader.includes("pax") || lowerHeader.includes("jumlah") || lowerHeader.includes("qty") || lowerHeader.includes("hadir")) {
-                        selPax.value = idx;
-                    }
-                });
+                const totalRows = parsedSheetMeta.reduce((sum, m) => sum + m.rowCount, 0);
+                if (totalRows === 0) {
+                    return showSapaModal("File Kosong", "Berkas Excel tidak memiliki data tamu di sheet mana pun.", "⚠️");
+                }
 
-                // Display UI
+                document.getElementById('imp-sheet-file-name').innerText = file.name;
                 document.getElementById('imp-dropzone').style.display = "none";
-                document.getElementById('imp-mapping-section').style.display = "block";
-                document.getElementById('btn-imp-submit').style.display = "block";
 
-                updateExcelPreview();
+                // Satu sheet → langsung ke pemetaan kolom (alur lebih cepat)
+                if (parsedSheetMeta.length === 1) {
+                    selectedSheetName = parsedSheetMeta[0].name;
+                    const kart = detectSheetKategori(selectedSheetName);
+                    if (kart) document.getElementById('imp-kategori').value = kart;
+
+                    parsedExcelHeaders = parsedSheetMeta[0].headers;
+                    parsedExcelRows = buildSheetRows(selectedSheetName);
+                    if (parsedExcelRows.length === 0) {
+                        return showSapaModal("File Kosong", "Berkas Excel tidak memiliki data baris tamu.", "⚠️");
+                    }
+
+                    populateColumnMapping();
+                    document.getElementById('imp-mapping-section').style.display = "block";
+                    document.getElementById('imp-footer').style.display = "flex";
+                    document.getElementById('btn-imp-submit').style.display = "block";
+                    updateExcelPreview();
+                    return;
+                }
+
+                // Banyak sheet → tampilkan pemilih sheet
+                document.getElementById('imp-mapping-section').style.display = "none";
+                document.getElementById('imp-footer').style.display = "none";
+                document.getElementById('btn-imp-submit').style.display = "none";
+                document.getElementById('imp-sheet-section').style.display = "block";
+                renderSheetPicker();
 
             } catch (err) {
                 console.error(err);
@@ -3471,6 +3490,332 @@
         };
         reader.readAsArrayBuffer(file);
     };
+
+    function esc(s) {
+        return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    function detectSheetKategori(sheetName) {
+        const n = (sheetName || "").toString().toUpperCase();
+        if (n.includes("KELUARGA")) return "Keluarga";
+        if (n.includes("VVIP")) return "VVIP";
+        if (n.includes("VIP")) return "VIP";
+        if (n.includes("UMUM") || n.includes("GENERAL")) return "Umum";
+        return "";
+    }
+
+    function autoDetectColumns(headers) {
+        const cols = { nama: "", alamat: "", wa: "", pax: "" };
+        (headers || []).forEach((h, idx) => {
+            const lowerHeader = (h || "").toString().toLowerCase();
+            if (lowerHeader.includes("nama") || lowerHeader.includes("guest") || lowerHeader.includes("tamu")) cols.nama = idx;
+            if (lowerHeader.includes("alamat") || lowerHeader.includes("instansi") || lowerHeader.includes("kota") || lowerHeader.includes("address")) cols.alamat = idx;
+            if (lowerHeader.includes("wa") || lowerHeader.includes("telp") || lowerHeader.includes("phone") || lowerHeader.includes("hp") || lowerHeader.includes("whatsapp")) cols.wa = idx;
+            if (lowerHeader.includes("pax") || lowerHeader.includes("jumlah") || lowerHeader.includes("qty") || lowerHeader.includes("hadir")) cols.pax = idx;
+        });
+        return cols;
+    }
+
+    function buildSheetRows(sheetName) {
+        const ws = parsedWorkbook.Sheets[sheetName];
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        return raw.slice(1);
+    }
+
+    function populateColumnMapping() {
+        const selNama = document.getElementById('imp-map-nama');
+        const selAlamat = document.getElementById('imp-map-alamat');
+        const selWa = document.getElementById('imp-map-wa');
+        const selPax = document.getElementById('imp-map-pax');
+
+        selNama.innerHTML = "";
+        selAlamat.innerHTML = "";
+        selWa.innerHTML = '<option value="">-- Abaikan --</option>';
+        selPax.innerHTML = '<option value="">-- Bawaan (1) --</option>';
+
+        parsedExcelHeaders.forEach((h, idx) => {
+            const cleanHeader = (h || "").toString().trim() || `Kolom ${idx + 1}`;
+
+            const optNama = document.createElement('option');
+            optNama.value = idx;
+            optNama.innerText = cleanHeader;
+            selNama.appendChild(optNama);
+
+            const optAlamat = document.createElement('option');
+            optAlamat.value = idx;
+            optAlamat.innerText = cleanHeader;
+            selAlamat.appendChild(optAlamat);
+
+            const optWa = document.createElement('option');
+            optWa.value = idx;
+            optWa.innerText = cleanHeader;
+            selWa.appendChild(optWa);
+
+            const optPax = document.createElement('option');
+            optPax.value = idx;
+            optPax.innerText = cleanHeader;
+            selPax.appendChild(optPax);
+        });
+
+        // Auto-detect columns based on names
+        const cols = autoDetectColumns(parsedExcelHeaders);
+        if (cols.nama !== "") selNama.value = cols.nama;
+        if (cols.alamat !== "") selAlamat.value = cols.alamat;
+        if (cols.wa !== "") selWa.value = cols.wa;
+        if (cols.pax !== "") selPax.value = cols.pax;
+    }
+
+    function renderSheetPicker() {
+        const container = document.getElementById('imp-sheet-list');
+        container.innerHTML = "";
+
+        const multi = parsedSheetMeta.length > 1;
+        document.getElementById('imp-sheet-all-wrap').style.display = multi ? "flex" : "none";
+
+        parsedSheetMeta.forEach(meta => {
+            const kart = detectSheetKategori(meta.name);
+            const kategoriText = kart ? `Kategori terdeteksi: <b>${esc(kart)}</b>` : "Kategori: mengikuti pilihan di atas";
+            const headersPreview = (meta.headers || []).slice(0, 6).map(h => (h || "").toString().trim() || "-").join(" • ") || "-";
+
+            const label = document.createElement('label');
+            label.className = "imp-sheet-card";
+            label.style.cssText = "display:flex; gap:10px; align-items:flex-start; border:1.5px solid var(--border); border-radius:14px; padding:12px; cursor:pointer; background:#fff; transition:border-color .2s, background .2s;";
+            label.innerHTML = `
+                <input type="radio" name="imp-sheet" value="${esc(meta.name)}" style="accent-color:var(--gold); margin-top:3px; flex-shrink:0;">
+                <span style="min-width:0; flex:1;">
+                    <span style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:800; color:var(--text-main);">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        ${esc(meta.name)}
+                    </span>
+                    <span style="display:block; font-size:9px; color:var(--text-muted); margin-top:3px;">${meta.rowCount} baris data • ${kategoriText}</span>
+                    <span style="display:block; font-size:8px; color:#B9A994; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Header: ${esc(headersPreview)}</span>
+                </span>`;
+            container.appendChild(label);
+        });
+
+        container.querySelectorAll('input[name="imp-sheet"]').forEach(radio => {
+            radio.addEventListener('change', () => onSheetPick(radio.value));
+        });
+    }
+
+    function onSheetPick(name) {
+        selectedSheetName = name;
+        document.getElementById('imp-sheet-all').checked = false;
+        importAllSheets = false;
+
+        document.querySelectorAll('#imp-sheet-list .imp-sheet-card').forEach(card => {
+            const radio = card.querySelector('input[name="imp-sheet"]');
+            const active = radio.value === name;
+            card.style.border = active ? "1.5px solid var(--gold)" : "1.5px solid var(--border)";
+            card.style.background = active ? "#FFFBF2" : "#fff";
+        });
+
+        const kart = detectSheetKategori(name);
+        if (kart) document.getElementById('imp-kategori').value = kart;
+
+        const meta = parsedSheetMeta.find(m => m.name === name);
+        const detail = document.getElementById('imp-sheet-detail');
+        if (meta) {
+            detail.style.display = "block";
+            detail.innerHTML = `Sheet <b>${esc(meta.name)}</b> &mdash; ${meta.rowCount} baris data. Kolom: ${esc((meta.headers || []).map(h => (h || "").toString().trim() || "?").join(", ") || "-")}`;
+        } else {
+            detail.style.display = "none";
+        }
+
+        const btn = document.getElementById('btn-sheet-next');
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.innerHTML = "LANJUT &rarr; PETA KOLOM";
+    }
+
+    window.toggleSheetAll = function() {
+        importAllSheets = document.getElementById('imp-sheet-all').checked;
+        const btn = document.getElementById('btn-sheet-next');
+        const detail = document.getElementById('imp-sheet-detail');
+
+        document.querySelectorAll('#imp-sheet-list input[name="imp-sheet"]').forEach(r => {
+            r.checked = false;
+        });
+        document.querySelectorAll('#imp-sheet-list .imp-sheet-card').forEach(card => {
+            card.style.border = "1.5px solid var(--border)";
+            card.style.background = "#fff";
+        });
+
+        if (importAllSheets) {
+            selectedSheetName = "";
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.innerHTML = "MULAI IMPORT SEMUA SHEET";
+            detail.style.display = "block";
+            detail.innerHTML = "Mode <b>Import Semua Sheet</b>: tiap sheet diproses sekaligus. Kategori disetel otomatis dari nama sheet (UMUM &rarr; Umum, VIP &rarr; VIP, VVIP &rarr; VVIP, KELUARGA &rarr; Keluarga).";
+        } else {
+            btn.innerHTML = "LANJUT &rarr; PETA KOLOM";
+            if (selectedSheetName) {
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                onSheetPick(selectedSheetName);
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = "0.4";
+                detail.style.display = "none";
+            }
+        }
+    };
+
+    window.confirmSheetSelection = function() {
+        if (importAllSheets) {
+            startImportAllSheets();
+            return;
+        }
+        if (!selectedSheetName) {
+            showSapaModal("Pilih Sheet", "Silakan pilih sheet yang berisi daftar tamu terlebih dahulu.", "⚠️");
+            return;
+        }
+        const meta = parsedSheetMeta.find(m => m.name === selectedSheetName);
+        if (!meta || meta.rowCount === 0) {
+            showSapaModal("Sheet Kosong", "Sheet yang dipilih tidak memiliki data baris tamu.", "⚠️");
+            return;
+        }
+        parsedExcelHeaders = meta.headers;
+        parsedExcelRows = buildSheetRows(selectedSheetName);
+        populateColumnMapping();
+        document.getElementById('imp-sheet-section').style.display = "none";
+        document.getElementById('imp-mapping-section').style.display = "block";
+        document.getElementById('imp-footer').style.display = "flex";
+        document.getElementById('btn-imp-submit').style.display = "block";
+        updateExcelPreview();
+    };
+
+    window.backToFilePicker = function() {
+        document.getElementById('imp-file-input').value = "";
+        document.getElementById('imp-sheet-section').style.display = "none";
+        document.getElementById('imp-dropzone').style.display = "block";
+        document.getElementById('imp-sheet-all').checked = false;
+        document.getElementById('imp-sheet-list').innerHTML = "";
+        document.getElementById('imp-sheet-detail').style.display = "none";
+        parsedWorkbook = null;
+        parsedSheetMeta = [];
+        selectedSheetName = "";
+        importAllSheets = false;
+    };
+
+    window.goBackFromMapping = function() {
+        document.getElementById('imp-mapping-section').style.display = "none";
+        document.getElementById('imp-footer').style.display = "none";
+        document.getElementById('btn-imp-submit').style.display = "none";
+        if (parsedSheetMeta.length > 1) {
+            document.getElementById('imp-sheet-section').style.display = "block";
+            if (!selectedSheetName && parsedSheetMeta[0]) onSheetPick(parsedSheetMeta[0].name);
+        } else {
+            document.getElementById('imp-sheet-section').style.display = "none";
+            document.getElementById('imp-dropzone').style.display = "block";
+        }
+    };
+
+    function buildGuestObject(parsed) {
+        const metadata = {
+            pihak: document.getElementById('imp-pihak').value,
+            sesi: document.getElementById('imp-sesi').value,
+            souvenir: document.getElementById('imp-souvenir').value
+        };
+        const sessionStr = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
+        const sessionObj = sessionStr ? JSON.parse(sessionStr) : {};
+        const CURRENT_SUBDOMAIN = (sessionObj.subdomain || sessionObj.username || "").toLowerCase().trim();
+
+        const kodeUnik = generateKodeUnik(window.CURRENT_CATEGORY, "form");
+        const tempId = "imp_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
+
+        return {
+            id: tempId,
+            row: null,
+            kode: kodeUnik,
+            nama: parsed.nama,
+            whatsapp: parsed.whatsapp,
+            kategori: parsed.kategori,
+            pihakPengundang: metadata.pihak,
+            souvenir: metadata.souvenir,
+            alamat: parsed.alamat,
+            rencanaHadir: parsed.rencanaHadir,
+            sesi: metadata.sesi,
+            statusWA: "BELUM TERKIRIM",
+            syncStatus: "syncing",
+            subdomain: CURRENT_SUBDOMAIN
+        };
+    }
+
+    async function commitExcelGuests(addedGuests) {
+        toggleProcessing(true, "MEMASUKKAN TAMU KE SUPABASE...");
+        try {
+            // Simpan ke Supabase secara batch (100 per request)
+            const chunkSize = 100;
+            for (let i = 0; i < addedGuests.length; i += chunkSize) {
+                const chunk = addedGuests.slice(i, i + chunkSize);
+                const payloads = chunk.map(g => ({
+                    ssid: CURRENT_SS_ID,
+                    kode: g.kode,
+                    nama: g.nama,
+                    whatsapp: g.whatsapp,
+                    kategori: g.kategori || "Umum",
+                    rencana_hadir: g.rencanaHadir,
+                    real_hadir: "0",
+                    souvenir: g.souvenir || "tidak",
+                    pihak_pengundang: g.pihakPengundang || "-",
+                    alamat: g.alamat || "-",
+                    status_hadir: "0",
+                    status_wa: "BELUM TERKIRIM",
+                    status_hadiah: "-",
+                    tanda_kasih: 0,
+                    jam_datang: "-",
+                    sesi: g.sesi || "-",
+                    subdomain: g.subdomain,
+                    event_date: window.EVENT_DATE || new Date().toISOString().split('T')[0]
+                }));
+
+                const sbRes = await fetch(`${SB_URL}/rest/v1/tamu`, {
+                    method: 'POST',
+                    headers: {
+                        ...SB_HEADERS,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify(payloads)
+                });
+
+                if (!sbRes.ok) {
+                    const errText = await sbRes.text();
+                    throw new Error("Supabase batch insert failed: " + errText);
+                }
+            }
+
+            // Tambahkan tamu ke local list dan render (Optimistic & responsif)
+            addedGuests.forEach(g => MASTER_LIST.unshift(g));
+            render(MASTER_LIST);
+            closeImportExcelModal();
+            toggleProcessing(false);
+
+            // Buat queue untuk disinkronisasikan ke Google Sheets secara background
+            syncQueue = addedGuests.map(g => ({
+                tempId: g.id,
+                kode: g.kode,
+                nama: g.nama,
+                whatsapp: g.whatsapp,
+                kategori: g.kategori,
+                pihakPengundang: g.pihakPengundang,
+                souvenir: g.souvenir,
+                alamat: g.alamat,
+                rencanaHadir: g.rencanaHadir,
+                sesi: g.sesi
+            }));
+
+            showSapaModal("Import Berhasil", `${addedGuests.length} tamu berhasil disimpan ke database. Sinkronisasi Spreadsheet berjalan di latar belakang...`, "📥");
+            startQueueProcessor();
+
+        } catch (err) {
+            toggleProcessing(false);
+            console.error("Bulk Supabase Insert Error:", err);
+            showSapaModal("Gagal Import", "Gagal menyimpan tamu ke Supabase: " + err.message, "❌");
+        }
+    }
 
     function parseRowSmart(row, selNama, selAlamat, selWa, selPax, defaultKategori) {
         let nama = "";
@@ -3633,121 +3978,48 @@
         const selAlamat = document.getElementById('imp-map-alamat').value;
         const selWa = document.getElementById('imp-map-wa').value;
         const selPax = document.getElementById('imp-map-pax').value;
+        const defaultKategori = document.getElementById('imp-kategori').value;
 
-        const metadata = {
-            pihak: document.getElementById('imp-pihak').value,
-            kategori: document.getElementById('imp-kategori').value,
-            sesi: document.getElementById('imp-sesi').value,
-            souvenir: document.getElementById('imp-souvenir').value
-        };
-
-        const sessionStr = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
-        const sessionObj = sessionStr ? JSON.parse(sessionStr) : {};
-        const CURRENT_SUBDOMAIN = (sessionObj.subdomain || sessionObj.username || "").toLowerCase().trim();
-
-        let addedGuests = [];
-
+        const addedGuests = [];
         parsedExcelRows.forEach(row => {
-            const parsed = parseRowSmart(row, selNama, selAlamat, selWa, selPax, metadata.kategori);
+            const parsed = parseRowSmart(row, selNama, selAlamat, selWa, selPax, defaultKategori);
             if (!parsed.nama) return; // Skip empty rows
-
-            const kodeUnik = generateKodeUnik(window.CURRENT_CATEGORY, "form");
-            const tempId = "imp_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
-
-            addedGuests.push({
-                id: tempId,
-                row: null,
-                kode: kodeUnik,
-                nama: parsed.nama,
-                whatsapp: parsed.whatsapp,
-                kategori: parsed.kategori,
-                pihakPengundang: metadata.pihak,
-                souvenir: metadata.souvenir,
-                alamat: parsed.alamat,
-                rencanaHadir: parsed.rencanaHadir,
-                sesi: metadata.sesi,
-                statusWA: "BELUM TERKIRIM",
-                syncStatus: "syncing",
-                subdomain: CURRENT_SUBDOMAIN
-            });
+            addedGuests.push(buildGuestObject(parsed));
         });
 
         if (addedGuests.length > 0) {
-            toggleProcessing(true, "MEMASUKKAN TAMU KE SUPABASE...");
-            try {
-                // Simpan ke Supabase secara batch (100 per request)
-                const chunkSize = 100;
-                for (let i = 0; i < addedGuests.length; i += chunkSize) {
-                    const chunk = addedGuests.slice(i, i + chunkSize);
-                    const payloads = chunk.map(g => ({
-                        ssid: CURRENT_SS_ID,
-                        kode: g.kode,
-                        nama: g.nama,
-                        whatsapp: g.whatsapp,
-                        kategori: g.kategori || "Umum",
-                        rencana_hadir: g.rencanaHadir,
-                        real_hadir: "0",
-                        souvenir: g.souvenir || "tidak",
-                        pihak_pengundang: g.pihakPengundang || "-",
-                        alamat: g.alamat || "-",
-                        status_hadir: "0",
-                        status_wa: "BELUM TERKIRIM",
-                        status_hadiah: "-",
-                        tanda_kasih: 0,
-                        jam_datang: "-",
-                        sesi: g.sesi || "-",
-                        subdomain: g.subdomain,
-                        event_date: window.EVENT_DATE || new Date().toISOString().split('T')[0]
-                    }));
-
-                    const sbRes = await fetch(`${SB_URL}/rest/v1/tamu`, {
-                        method: 'POST',
-                        headers: {
-                            ...SB_HEADERS,
-                            'Content-Type': 'application/json',
-                            'Prefer': 'return=minimal'
-                        },
-                        body: JSON.stringify(payloads)
-                    });
-
-                    if (!sbRes.ok) {
-                        const errText = await sbRes.text();
-                        throw new Error("Supabase batch insert failed: " + errText);
-                    }
-                }
-
-                // Tambahkan tamu ke local list dan render (Optimistic & responsif)
-                addedGuests.forEach(g => MASTER_LIST.unshift(g));
-                render(MASTER_LIST);
-                closeImportExcelModal();
-                toggleProcessing(false);
-
-                // Buat queue untuk disinkronisasikan ke Google Sheets secara background
-                syncQueue = addedGuests.map(g => ({
-                    tempId: g.id,
-                    kode: g.kode,
-                    nama: g.nama,
-                    whatsapp: g.whatsapp,
-                    kategori: g.kategori,
-                    pihakPengundang: g.pihakPengundang,
-                    souvenir: g.souvenir,
-                    alamat: g.alamat,
-                    rencanaHadir: g.rencanaHadir,
-                    sesi: g.sesi
-                }));
-
-                showSapaModal("Import Berhasil", `${addedGuests.length} tamu berhasil disimpan ke database. Sinkronisasi Spreadsheet berjalan di latar belakang...`, "📥");
-                startQueueProcessor();
-
-            } catch (err) {
-                toggleProcessing(false);
-                console.error("Bulk Supabase Insert Error:", err);
-                showSapaModal("Gagal Import", "Gagal menyimpan tamu ke Supabase: " + err.message, "❌");
-            }
+            await commitExcelGuests(addedGuests);
         } else {
             showSapaModal("Gagal Import", "Tidak ada baris tamu valid untuk diimpor.", "⚠️ ");
         }
     };
+
+    async function startImportAllSheets() {
+        const defaultKategori = document.getElementById('imp-kategori').value;
+        const addedGuests = [];
+
+        parsedSheetMeta.forEach(meta => {
+            if (!meta.rowCount) return;
+            const ws = parsedWorkbook.Sheets[meta.name];
+            const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
+            const headers = raw[0] || [];
+            const rows = raw.slice(1);
+            const cols = autoDetectColumns(headers);
+            const kategori = detectSheetKategori(meta.name) || defaultKategori;
+
+            rows.forEach(row => {
+                const parsed = parseRowSmart(row, cols.nama, cols.alamat, cols.wa, cols.pax, kategori);
+                if (!parsed.nama) return; // Skip empty rows
+                addedGuests.push(buildGuestObject(parsed));
+            });
+        });
+
+        if (addedGuests.length > 0) {
+            await commitExcelGuests(addedGuests);
+        } else {
+            showSapaModal("Gagal Import", "Tidak ada baris tamu valid di seluruh sheet.", "⚠️ ");
+        }
+    }
 
     async function startQueueProcessor() {
         if (isQueueRunning || syncQueue.length === 0) return;
@@ -4673,7 +4945,7 @@
             {
                 target: '#openImportExcelModal',
                 title: '12/13 — Import dari Excel',
-                text: 'Import tamu secara <b>massal dari file Excel (.xlsx)</b>. Tinggal pilih kolom yang sesuai, sistem auto-detect header otomatis.',
+                text: 'Import tamu secara <b>massal dari file Excel (.xlsx)</b>. Pilih sheet/tab yang diinginkan, lalu sesuaikan kolom — sistem auto-detect header otomatis, bahkan bisa import semua sheet sekaligus dengan kategori otomatis dari nama sheet.',
                 position: 'left',
                 highlightPadding: 6,
                 action: 'highlight'
