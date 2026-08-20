@@ -786,6 +786,7 @@
 
             /* Semua overlay modal → bottom sheet */
             #editModalOverlay, #editGuestModalOverlay, #importExcelModalOverlay,
+            #impReportModalOverlay,
             #syncCompareModalOverlay, #manageDupModalOverlay,
             #sapatamu-custom-alert, #sapa-notify-modal {
                 align-items: flex-end !important;
@@ -794,7 +795,8 @@
             }
             #editModalOverlay .modal-content,
             #editGuestModalOverlay .modal-content,
-            #importExcelModalOverlay .modal-content {
+            #importExcelModalOverlay .modal-content,
+            #impReportModalOverlay .modal-content {
                 width: 100% !important;
                 max-width: 100% !important;
                 max-height: 50vh !important;
@@ -1304,6 +1306,13 @@
                         </span>
                         <span id="dup-filter-info"></span>
                     </div>
+                    <div id="imp-undo-banner" role="status" aria-live="polite" style="display: none; align-items: center; justify-content: space-between; gap: 10px; margin-top: 15px; padding: 12px 14px; background: #EFF6FF; border: 1.5px solid #BFDBFE; border-radius: 14px; font-size: 11px; font-weight: 700; color: #1D4ED8;">
+                        <span id="imp-undo-banner-text">Import berhasil.</span>
+                        <button type="button" onclick="undoImportLastBatch()" style="flex-shrink: 0; background: #1D4ED8; border: none; cursor: pointer; color: #fff; padding: 8px 14px; border-radius: 50px; font-size: 10px; font-weight: 800; transition: 0.3s; display: inline-flex; align-items: center; gap: 5px;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='none'">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                            BATAL IMPORT
+                        </button>
+                    </div>
                     <div id="v3-draft-list-container">
                         <div id="v3-draft-list" role="list" aria-label="Daftar tamu undangan"></div>
                         <!-- Empty state — shown by JS when list is empty -->
@@ -1322,9 +1331,15 @@
     <div id="importExcelModalOverlay" role="dialog" aria-modal="true" aria-labelledby="importExcelModalTitle" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.3); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
         <div class="modal-content" style="max-width: 600px; padding: 30px;">
             <button class="close-modal" onclick="closeImportExcelModal()" aria-label="Tutup dialog import Excel">&times;</button>
-            <div style="margin-bottom: 20px;">
-                <h2 id="importExcelModalTitle" style="font-size: 20px; font-weight: 800; color: #1a1a1a; font-family: 'Lora', serif;">📥 Import Tamu via Excel</h2>
-                <p style="font-size: 10px; font-weight: 600; color: #666; margin-top: 5px;">Unggah file Excel untuk mendaftarkan tamu secara massal per kategori.</p>
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                <div>
+                    <h2 id="importExcelModalTitle" style="font-size: 20px; font-weight: 800; color: #1a1a1a; font-family: 'Lora', serif; margin: 0;">📥 Import Tamu via Excel</h2>
+                    <p style="font-size: 10px; font-weight: 600; color: #666; margin-top: 5px;">Unggah file Excel untuk mendaftarkan tamu secara massal per kategori.</p>
+                </div>
+                <button type="button" onclick="downloadImportTemplate()" style="flex-shrink: 0; background: rgba(212, 175, 55, 0.12); border: 1.5px solid var(--gold); cursor: pointer; color: var(--gold); padding: 8px 14px; border-radius: 50px; font-size: 10px; font-weight: 800; transition: 0.3s; display: inline-flex; align-items: center; gap: 6px;" onmouseover="this.style.background='rgba(212,175,55,0.22)'" onmouseout="this.style.background='rgba(212,175,55,0.12)'">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    TEMPLATE
+                </button>
             </div>
             
             <!-- Metadata Selection -->
@@ -1397,7 +1412,9 @@
 
             <!-- Column Mapping Controls -->
             <div id="imp-mapping-section" style="display: none; background: #FFFDFB; border: 1.5px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
-                <h3 style="font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">Peta Kolom Excel</h3>
+                <h3 style="font-size: 11px; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">Peta Kolom Excel
+                    <button type="button" onclick="resetSavedMapping()" id="btn-reset-map" style="display: none; background: none; border: none; cursor: pointer; color: #B45309; font-size: 9px; font-weight: 700; text-decoration: underline; padding: 0;">Reset pemetaan tersimpan</button>
+                </h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-[15px] mb-[15px]">
                     <div>
                         <label for="imp-map-nama" style="font-size: 9px;">Kolom Nama Lengkap</label>
@@ -1421,6 +1438,20 @@
                     </div>
                 </div>
 
+                <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); padding: 10px 0; margin-bottom: 12px;">
+                    <label style="display: flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 700; color: var(--text-main); cursor: pointer;">
+                        <input type="checkbox" id="imp-skip-dup" checked style="accent-color: var(--gold);" onchange="updateExcelPreview()">
+                        Lewati tamu duplikat (nama / WA sama)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 700; color: var(--text-main); cursor: pointer;">
+                        <input type="checkbox" id="imp-remember-map" checked style="accent-color: var(--gold);">
+                        Ingat pemetaan kolom
+                    </label>
+                </div>
+
+                <!-- Duplicate / Warning Summary -->
+                <div id="imp-dup-summary" style="display: none; font-size: 9px; font-weight: 700; color: #92400E; background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 10px; padding: 8px 10px; margin-bottom: 12px; line-height: 1.6;"></div>
+
                 <!-- Preview Table -->
                 <div style="border-top: 1px dashed var(--border); padding-top: 15px;">
                     <h4 style="font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Preview Data (5 Baris Pertama)</h4>
@@ -1432,6 +1463,7 @@
                                     <th style="padding: 4px;">Alamat</th>
                                     <th style="padding: 4px;">WA</th>
                                     <th style="padding: 4px;">Pax</th>
+                                    <th style="padding: 4px;">Cek</th>
                                 </tr>
                             </thead>
                             <tbody id="imp-preview-tbody">
@@ -1446,6 +1478,43 @@
                 <button type="button" onclick="goBackFromMapping()" id="btn-imp-back" style="background: #E5E7EB; border: none; cursor: pointer; color: #374151; padding: 10px 16px; border-radius: 50px; font-size: 11px; font-weight: 800; transition: 0.3s;" onmouseover="this.style.background='#D1D5DB'" onmouseout="this.style.background='#E5E7EB'">&larr; KEMBALI</button>
                 <button type="button" onclick="startExcelImport()" id="btn-imp-submit" class="sapatamu-btn" style="background: #1a1a1a; display: none;">MULAI IMPOR KE DRAFT</button>
             </div>
+        </div>
+    </div>
+
+    <!-- IMPORT REPORT POPUP -->
+    <div id="impReportModalOverlay" role="dialog" aria-modal="true" aria-labelledby="impReportModalTitle" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.3); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; z-index: 999999; padding: 20px;">
+        <div class="modal-content" style="max-width: 560px; padding: 30px;">
+            <button class="close-modal" onclick="closeImportReportModal()" aria-label="Tutup dialog laporan import">&times;</button>
+            <div style="margin-bottom: 20px;">
+                <h2 id="impReportModalTitle" style="font-size: 20px; font-weight: 800; color: #1a1a1a; font-family: 'Lora', serif; margin: 0;">📊 Laporan Hasil Import</h2>
+                <p style="font-size: 10px; font-weight: 600; color: #666; margin-top: 5px;">Ringkasan data yang berhasil, dilewati, dan perlu dicek.</p>
+            </div>
+            <div id="imp-report-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 16px;"></div>
+            <div style="border: 1.5px solid var(--border); border-radius: 16px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h4 style="font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin: 0;">Rincian (maks 50 baris)</h4>
+                    <button type="button" onclick="downloadImportReport()" style="background: #1a1a1a; border: none; cursor: pointer; color: #fff; padding: 7px 12px; border-radius: 50px; font-size: 9px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; transition: 0.3s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='none'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        DOWNLOAD CSV
+                    </button>
+                </div>
+                <div style="overflow-x: auto; max-height: 220px;">
+                    <table style="width: 100%; font-size: 10px; text-align: left; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
+                                <th style="padding: 4px;">Nama</th>
+                                <th style="padding: 4px;">Kategori</th>
+                                <th style="padding: 4px;">WA / IG</th>
+                                <th style="padding: 4px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="imp-report-tbody">
+                            <!-- Will be filled dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <button type="button" onclick="closeImportReportModal()" class="sapatamu-btn" style="background: #1a1a1a; margin-top: 16px;">TUTUP</button>
         </div>
     </div>
 
@@ -3369,6 +3438,8 @@
     let parsedSheetMeta = [];
     let selectedSheetName = "";
     let importAllSheets = false;
+    let lastImportBatch = null;
+    let lastImportReport = null;
 
     window.openImportExcelModal = function() {
         // Copy option values from Sisi Kiri
@@ -3563,6 +3634,27 @@
         if (cols.alamat !== "") selAlamat.value = cols.alamat;
         if (cols.wa !== "") selWa.value = cols.wa;
         if (cols.pax !== "") selPax.value = cols.pax;
+
+        // Terapkan pemetaan tersimpan jika pola header sama
+        const saved = loadSavedMapping();
+        const hasSaved = !!(saved && saved.key === mappingKeyOf(parsedExcelHeaders));
+        const resetBtn = document.getElementById('btn-reset-map');
+        if (resetBtn) resetBtn.style.display = hasSaved ? "inline-flex" : "none";
+        if (hasSaved) {
+            const idxMax = parsedExcelHeaders.length - 1;
+            if (saved.nama !== "" && saved.nama !== null && saved.nama <= idxMax) selNama.value = saved.nama;
+            if (saved.alamat !== "" && saved.alamat !== null && saved.alamat <= idxMax) selAlamat.value = saved.alamat;
+            if (saved.wa !== "" && saved.wa !== null && saved.wa <= idxMax) selWa.value = saved.wa;
+            if (saved.pax !== "" && saved.pax !== null && saved.pax <= idxMax) selPax.value = saved.pax;
+        }
+
+        saveCurrentMapping();
+
+        // Simpan pemetaan tiap kali user mengganti pilihan
+        [selNama, selAlamat, selWa, selPax].forEach(sel => {
+            sel.removeEventListener('change', saveCurrentMapping);
+            sel.addEventListener('change', saveCurrentMapping);
+        });
     }
 
     function renderSheetPicker() {
@@ -3712,6 +3804,282 @@
         }
     };
 
+    // ===== Kontak hybrid (WhatsApp / User IG) =====
+    function classifyContact(value) {
+        const raw = String(value == null ? "" : value).trim();
+        if (!raw || raw === "-") return { type: "empty", normalized: "", raw };
+        if (raw.startsWith("@")) return { type: "ig", normalized: raw, raw };
+        if (/[a-zA-Z]/.test(raw)) return { type: "ig", normalized: raw, raw };
+        const digits = raw.replace(/\D/g, "");
+        if (digits.length >= 8 && digits.length <= 15) {
+            let num = digits;
+            if (num.startsWith("0")) num = "62" + num.substring(1);
+            else if (!num.startsWith("62")) num = "62" + num;
+            return { type: "wa", normalized: num, raw };
+        }
+        return { type: "invalid", normalized: raw, raw };
+    }
+
+    function getExistingGuestKeys() {
+        const nameKeys = new Set();
+        const waKeys = new Set();
+        (MASTER_LIST || []).forEach(g => {
+            const nk = String(g.nama || "").toLowerCase().replace(/\s+/g, "").trim();
+            if (nk) nameKeys.add(nk);
+            const wp = normalizePhone(g.whatsapp);
+            if (wp) waKeys.add(wp);
+        });
+        return { nameKeys, waKeys };
+    }
+
+    // Analisis semua baris terpilih: duplikat + peringatan WA (untuk preview & laporan)
+    function analyzeParsedRows() {
+        const selNama = document.getElementById('imp-map-nama').value;
+        const selAlamat = document.getElementById('imp-map-alamat').value;
+        const selWa = document.getElementById('imp-map-wa').value;
+        const selPax = document.getElementById('imp-map-pax').value;
+        const defaultKategori = document.getElementById('imp-kategori').value;
+
+        const existing = getExistingGuestKeys();
+        const batchSeenName = new Set();
+        const batchSeenWa = new Set();
+        const rows = [];
+        let dupCount = 0;
+        let waInvalidCount = 0;
+
+        parsedExcelRows.forEach(row => {
+            const parsed = parseRowSmart(row, selNama, selAlamat, selWa, selPax, defaultKategori);
+            if (!parsed.nama) return;
+
+            const nameKey = parsed.nama.toLowerCase().replace(/\s+/g, "").trim();
+            const waDigits = normalizePhone(parsed.whatsapp);
+
+            let isDup = false;
+            if (nameKey && (existing.nameKeys.has(nameKey) || batchSeenName.has(nameKey))) isDup = true;
+            else if (waDigits && (existing.waKeys.has(waDigits) || batchSeenWa.has(waDigits))) isDup = true;
+
+            if (nameKey) batchSeenName.add(nameKey);
+            if (waDigits) batchSeenWa.add(waDigits);
+
+            const waFlag = parsed.waFlag === "invalid" ? "invalid" : "";
+            if (isDup) dupCount++;
+            if (waFlag === "invalid") waInvalidCount++;
+
+            rows.push({ parsed, isDup, waFlag });
+        });
+
+        return { rows, dupCount, waInvalidCount };
+    }
+
+    // Susun payload guest + laporan; lewati duplikat jika checkbox aktif
+    function buildImportPayloadFromRows(rows, getCols, defaultKategori) {
+        const skipDup = document.getElementById('imp-skip-dup').checked;
+        const existing = getExistingGuestKeys();
+        const batchSeenName = new Set();
+        const batchSeenWa = new Set();
+        const guests = [];
+        const report = [];
+
+        rows.forEach(row => {
+            const hasAnyValue = (row || []).some(v => v !== undefined && v !== null && String(v).trim() !== "");
+            const parsed = parseRowSmart(row, getCols.nama, getCols.alamat, getCols.wa, getCols.pax, defaultKategori);
+            if (!parsed.nama) {
+                if (hasAnyValue) report.push({ nama: "(kosong)", kategori: "-", wa: "-", status: "Kosong - dilewati" });
+                return;
+            }
+            const nameKey = parsed.nama.toLowerCase().replace(/\s+/g, "").trim();
+            const waDigits = normalizePhone(parsed.whatsapp);
+
+            let isDup = false;
+            if (nameKey && (existing.nameKeys.has(nameKey) || batchSeenName.has(nameKey))) isDup = true;
+            else if (waDigits && (existing.waKeys.has(waDigits) || batchSeenWa.has(waDigits))) isDup = true;
+
+            if (isDup && skipDup) {
+                report.push({ nama: parsed.nama, kategori: parsed.kategori, wa: parsed.whatsapp, status: "Duplikat - dilewati" });
+                return;
+            }
+            if (nameKey) batchSeenName.add(nameKey);
+            if (waDigits) batchSeenWa.add(waDigits);
+
+            const waInvalid = parsed.waFlag === "invalid";
+            guests.push(buildGuestObject(parsed));
+            report.push({
+                nama: parsed.nama,
+                kategori: parsed.kategori,
+                wa: parsed.whatsapp,
+                status: waInvalid ? "Impor OK - WA perlu dicek" : "Berhasil diimpor"
+            });
+        });
+
+        return { guests, report };
+    }
+
+    // ===== Ingat pemetaan kolom =====
+    const MAPPING_STORAGE_KEY = "sapatamu_import_mapping_v1";
+
+    function mappingKeyOf(headers) {
+        return (headers || []).map(h => (h || "").toString().trim().toLowerCase().replace(/\s+/g, "")).join("|");
+    }
+
+    function loadSavedMapping() {
+        try { return JSON.parse(localStorage.getItem(MAPPING_STORAGE_KEY) || "null"); } catch (e) { return null; }
+    }
+
+    function saveCurrentMapping() {
+        const remember = document.getElementById('imp-remember-map').checked;
+        if (!remember) return;
+        const saved = {
+            key: mappingKeyOf(parsedExcelHeaders),
+            nama: document.getElementById('imp-map-nama').value,
+            alamat: document.getElementById('imp-map-alamat').value,
+            wa: document.getElementById('imp-map-wa').value,
+            pax: document.getElementById('imp-map-pax').value,
+            at: Date.now()
+        };
+        try { localStorage.setItem(MAPPING_STORAGE_KEY, JSON.stringify(saved)); } catch (e) {}
+    }
+
+    window.resetSavedMapping = function() {
+        try { localStorage.removeItem(MAPPING_STORAGE_KEY); } catch (e) {}
+        document.getElementById('btn-reset-map').style.display = "none";
+        populateColumnMapping();
+    };
+
+    // ===== Undo batch import terakhir =====
+    function showUndoBanner() {
+        const el = document.getElementById('imp-undo-banner');
+        document.getElementById('imp-undo-banner-text').innerText = `Import ${lastImportBatch ? lastImportBatch.count : 0} tamu berhasil. Salah impor?`;
+        el.style.display = "flex";
+    }
+
+    function hideUndoBanner() {
+        document.getElementById('imp-undo-banner').style.display = "none";
+    }
+
+    window.undoImportLastBatch = async function() {
+        if (!lastImportBatch || !lastImportBatch.kodes.length) return;
+        const confirmed = await showConfirm("Batal Import", `Hapus ${lastImportBatch.kodes.length} tamu dari batch import terakhir? Data akan dihapus dari Supabase & Google Sheets.`);
+        if (!confirmed) return;
+
+        const codes = lastImportBatch.kodes.slice();
+        toggleProcessing(true, "MEMBATALKAN IMPORT...");
+        try {
+            const chunkSize = 100;
+            for (let i = 0; i < codes.length; i += chunkSize) {
+                const chunk = codes.slice(i, i + chunkSize);
+                const deleteUrl = `${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=in.(${chunk.map(c => `"${c}"`).join(',')})`;
+                const sbRes = await fetch(deleteUrl, { method: 'DELETE', headers: SB_HEADERS });
+                if (!sbRes.ok) throw new Error("Gagal menghapus dari Supabase.");
+            }
+
+            const gasRes = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "deleteGuestsFromSheet", ssId: CURRENT_SS_ID, codes: codes })
+            });
+            const gasResult = await gasRes.json();
+            if (gasResult.status !== 'success') console.warn("GAS deleteGuestsFromSheet gagal:", gasResult.message);
+
+            const codeSet = new Set(codes);
+            MASTER_LIST = MASTER_LIST.filter(g => !codeSet.has(g.kode));
+            render(MASTER_LIST);
+            hideUndoBanner();
+            lastImportBatch = null;
+            toggleProcessing(false);
+            showSapaModal("Import Dibatalkan", `${codes.length} tamu berhasil dihapus dari database & spreadsheet.`, "↩️");
+        } catch (err) {
+            toggleProcessing(false);
+            console.error("Undo import error:", err);
+            showSapaModal("Gagal Batal", "Gagal membatalkan import: " + err.message, "❌");
+        }
+    };
+
+    // ===== Laporan hasil import =====
+    window.openImportReportModal = function(report, totalImported) {
+        lastImportReport = report || [];
+        const dup = lastImportReport.filter(r => r.status.includes("Duplikat")).length;
+        const warn = lastImportReport.filter(r => r.status.includes("perlu dicek")).length;
+        const kosong = lastImportReport.filter(r => r.status.includes("Kosong")).length;
+
+        document.getElementById('imp-report-stats').innerHTML = `
+            <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:10px;text-align:center;">
+                <div style="font-size:16px;font-weight:800;color:#059669;">${totalImported}</div>
+                <div style="font-size:8px;font-weight:700;color:#059669;text-transform:uppercase;">Berhasil</div>
+            </div>
+            <div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:12px;padding:10px;text-align:center;">
+                <div style="font-size:16px;font-weight:800;color:#B45309;">${dup}</div>
+                <div style="font-size:8px;font-weight:700;color:#B45309;text-transform:uppercase;">Duplikat</div>
+            </div>
+            <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:10px;text-align:center;">
+                <div style="font-size:16px;font-weight:800;color:#DC2626;">${warn}</div>
+                <div style="font-size:8px;font-weight:700;color:#DC2626;text-transform:uppercase;">WA Dicek</div>
+            </div>
+            <div style="background:#F3F4F6;border:1px solid #E5E7EB;border-radius:12px;padding:10px;text-align:center;">
+                <div style="font-size:16px;font-weight:800;color:#6B7280;">${kosong}</div>
+                <div style="font-size:8px;font-weight:700;color:#6B7280;text-transform:uppercase;">Kosong</div>
+            </div>`;
+
+        const tbody = document.getElementById('imp-report-tbody');
+        tbody.innerHTML = "";
+        const shown = lastImportReport.slice(0, 50);
+        shown.forEach(r => {
+            const color = r.status.includes("Berhasil") ? "#059669" : r.status.includes("Duplikat") ? "#B45309" : r.status.includes("Kosong") ? "#6B7280" : "#DC2626";
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = "1px solid #f9f9f9";
+            tr.innerHTML = `
+                <td style="padding:4px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>${esc(r.nama)}</b></td>
+                <td style="padding:4px;">${esc(r.kategori)}</td>
+                <td style="padding:4px; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(r.wa)}</td>
+                <td style="padding:4px; color:${color}; font-weight:700; white-space:nowrap;">${esc(r.status)}</td>`;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('impReportModalOverlay').style.display = 'flex';
+    };
+
+    window.closeImportReportModal = function() {
+        document.getElementById('impReportModalOverlay').style.display = 'none';
+    };
+
+    window.downloadImportReport = function() {
+        if (!lastImportReport) return;
+        const escCsv = (v) => {
+            const s = String(v == null ? "" : v);
+            return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+        };
+        const lines = ["Nama,Kategori,WA/IG,Status"];
+        lastImportReport.forEach(r => {
+            lines.push([escCsv(r.nama), escCsv(r.kategori), escCsv(r.wa), escCsv(r.status)].join(","));
+        });
+        const blob = new Blob([lines.join("\n")], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "laporan_import_tamu.csv";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+    };
+
+    // ===== Template Excel siap pakai =====
+    window.downloadImportTemplate = async function() {
+        try { await loadExcelLibrary(); }
+        catch (err) { return showSapaModal("Error", "Gagal memuat pustaka Excel. Periksa koneksi internet.", "⚠️"); }
+
+        const wb = XLSX.utils.book_new();
+        const header = ["Nama Lengkap", "Alamat / Instansi", "WhatsApp / User IG", "Jumlah Pax"];
+        const defs = [
+            ["UMUM", [["Budi Santoso", "Jl. Merdeka No. 1", "081234567890", 2], ["Siti Aminah", "Jl. Sudirman No. 2", "@siti.aminah", 1]]],
+            ["VIP", [["Andi Wijaya", "PT Maju Jaya", "081399887766", 1], ["Rina Kartika", "Dinas Kesehatan", "6281277889900", 3]]],
+            ["KELUARGA", [["Pakde Bambang", "Surabaya", "082233445566", 4], ["Budhe Sri", "Bandung", "@budhe.sri", 2]]]
+        ];
+        defs.forEach(([name, rows]) => {
+            const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+            ws['!cols'] = [{ wch: 20 }, { wch: 22 }, { wch: 20 }, { wch: 12 }];
+            XLSX.utils.book_append_sheet(wb, ws, name);
+        });
+        XLSX.writeFile(wb, "template_import_tamu.xlsx");
+    };
+
     function buildGuestObject(parsed) {
         const metadata = {
             pihak: document.getElementById('imp-pihak').value,
@@ -3743,7 +4111,7 @@
         };
     }
 
-    async function commitExcelGuests(addedGuests) {
+    async function commitExcelGuests(addedGuests, report) {
         toggleProcessing(true, "MEMASUKKAN TAMU KE SUPABASE...");
         try {
             // Simpan ke Supabase secara batch (100 per request)
@@ -3807,8 +4175,16 @@
                 sesi: g.sesi
             }));
 
-            showSapaModal("Import Berhasil", `${addedGuests.length} tamu berhasil disimpan ke database. Sinkronisasi Spreadsheet berjalan di latar belakang...`, "📥");
             startQueueProcessor();
+
+            // Aktifkan undo + buka laporan hasil import
+            lastImportBatch = {
+                kodes: addedGuests.map(g => g.kode),
+                count: addedGuests.length,
+                at: Date.now()
+            };
+            showUndoBanner();
+            openImportReportModal(report || [], addedGuests.length);
 
         } catch (err) {
             toggleProcessing(false);
@@ -3922,39 +4298,57 @@
             pax = isNaN(paxRaw) || paxRaw < 1 ? 1 : paxRaw;
         }
 
+        let waFlag = "empty";
+        if (wa && wa !== "-") waFlag = classifyContact(wa).type;
+
         return {
             nama: nama || "",
             alamat: alamat || "-",
             whatsapp: wa || "-",
             kategori: kategori,
-            rencanaHadir: pax
+            rencanaHadir: pax,
+            waFlag: waFlag
         };
     }
 
     window.updateExcelPreview = function() {
-        const selNama = document.getElementById('imp-map-nama').value;
-        const selAlamat = document.getElementById('imp-map-alamat').value;
-        const selWa = document.getElementById('imp-map-wa').value;
-        const selPax = document.getElementById('imp-map-pax').value;
-        const defaultKategori = document.getElementById('imp-kategori').value;
+        const skipDup = document.getElementById('imp-skip-dup').checked;
 
         const tbody = document.getElementById('imp-preview-tbody');
         tbody.innerHTML = "";
 
-        const previewRows = parsedExcelRows.slice(0, 5);
-        previewRows.forEach(row => {
-            const parsed = parseRowSmart(row, selNama, selAlamat, selWa, selPax, defaultKategori);
-
+        const analysis = analyzeParsedRows();
+        analysis.rows.slice(0, 5).forEach(item => {
+            const parsed = item.parsed;
             const tr = document.createElement('tr');
             tr.style.borderBottom = "1px solid #f9f9f9";
+
+            let cekBadge = "-";
+            if (item.isDup) cekBadge = '<span style="display:inline-block;background:#FEF3C7;color:#B45309;font-size:8px;font-weight:800;border-radius:99px;padding:2px 8px;">DUPLIKAT</span>';
+            else if (item.waFlag === "invalid") cekBadge = '<span style="display:inline-block;background:#FEF2F2;color:#DC2626;font-size:8px;font-weight:800;border-radius:99px;padding:2px 8px;">CEK WA</span>';
+
             tr.innerHTML = `
-                <td style="padding:4px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>${parsed.nama || '-'}</b></td>
-                <td style="padding:4px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${parsed.alamat}</td>
-                <td style="padding:4px;">${parsed.whatsapp}</td>
+                <td style="padding:4px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>${esc(parsed.nama) || '-'}</b></td>
+                <td style="padding:4px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(parsed.alamat)}</td>
+                <td style="padding:4px; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(parsed.whatsapp)}</td>
                 <td style="padding:4px;">${parsed.rencanaHadir}</td>
+                <td style="padding:4px;">${cekBadge}</td>
             `;
             tbody.appendChild(tr);
         });
+
+        const summaryEl = document.getElementById('imp-dup-summary');
+        const notes = [];
+        if (analysis.dupCount > 0) notes.push(`${analysis.dupCount} tamu duplikat ${skipDup ? "akan dilewati" : "(duplikat tetap diimpor)"}`);
+        if (analysis.waInvalidCount > 0) notes.push(`${analysis.waInvalidCount} nomor kontak perlu dicek (bukan WA/IG valid)`);
+        if (summaryEl) {
+            if (notes.length > 0) {
+                summaryEl.style.display = "block";
+                summaryEl.innerHTML = "⚠️ " + notes.join(" • ");
+            } else {
+                summaryEl.style.display = "none";
+            }
+        }
     };
 
     // Global background sync queue state
@@ -3974,29 +4368,27 @@
     });
 
     window.startExcelImport = async function() {
-        const selNama = document.getElementById('imp-map-nama').value;
-        const selAlamat = document.getElementById('imp-map-alamat').value;
-        const selWa = document.getElementById('imp-map-wa').value;
-        const selPax = document.getElementById('imp-map-pax').value;
+        const sel = {
+            nama: document.getElementById('imp-map-nama').value,
+            alamat: document.getElementById('imp-map-alamat').value,
+            wa: document.getElementById('imp-map-wa').value,
+            pax: document.getElementById('imp-map-pax').value
+        };
         const defaultKategori = document.getElementById('imp-kategori').value;
 
-        const addedGuests = [];
-        parsedExcelRows.forEach(row => {
-            const parsed = parseRowSmart(row, selNama, selAlamat, selWa, selPax, defaultKategori);
-            if (!parsed.nama) return; // Skip empty rows
-            addedGuests.push(buildGuestObject(parsed));
-        });
+        const { guests, report } = buildImportPayloadFromRows(parsedExcelRows, sel, defaultKategori);
 
-        if (addedGuests.length > 0) {
-            await commitExcelGuests(addedGuests);
+        if (guests.length > 0) {
+            await commitExcelGuests(guests, report);
         } else {
-            showSapaModal("Gagal Import", "Tidak ada baris tamu valid untuk diimpor.", "⚠️ ");
+            showSapaModal("Gagal Import", "Tidak ada baris tamu valid untuk diimpor (semua mungkin kosong atau duplikat).", "⚠️");
         }
     };
 
     async function startImportAllSheets() {
         const defaultKategori = document.getElementById('imp-kategori').value;
-        const addedGuests = [];
+        const guests = [];
+        const report = [];
 
         parsedSheetMeta.forEach(meta => {
             if (!meta.rowCount) return;
@@ -4007,17 +4399,15 @@
             const cols = autoDetectColumns(headers);
             const kategori = detectSheetKategori(meta.name) || defaultKategori;
 
-            rows.forEach(row => {
-                const parsed = parseRowSmart(row, cols.nama, cols.alamat, cols.wa, cols.pax, kategori);
-                if (!parsed.nama) return; // Skip empty rows
-                addedGuests.push(buildGuestObject(parsed));
-            });
+            const payload = buildImportPayloadFromRows(rows, cols, kategori);
+            guests.push(...payload.guests);
+            report.push(...payload.report);
         });
 
-        if (addedGuests.length > 0) {
-            await commitExcelGuests(addedGuests);
+        if (guests.length > 0) {
+            await commitExcelGuests(guests, report);
         } else {
-            showSapaModal("Gagal Import", "Tidak ada baris tamu valid di seluruh sheet.", "⚠️ ");
+            showSapaModal("Gagal Import", "Tidak ada baris tamu valid di seluruh sheet.", "⚠️");
         }
     }
 
