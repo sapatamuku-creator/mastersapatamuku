@@ -153,9 +153,9 @@
     </style>
     <script src="config.js"></script>
     <script type="module">
-      // [v3.0 T2.1] import core — no route change, fallback to inline if fail
-      import { fetchTamu, createScanner } from './lib/guestbook-core.js';
-      window.__guestbookCore = { fetchTamu, createScanner };
+      // [v3.0 T2.1/T2.6] import core — no route change, fallback to inline if fail
+      import { fetchTamu, createScanner, createRealtimeTamu } from './lib/guestbook-core.js';
+      window.__guestbookCore = { fetchTamu, createScanner, createRealtimeTamu };
     </script>
     <script src="subdomain_resolver.js?v=3.5"></script>
     <script src="auth_guard.js?v=1.0"></script>
@@ -451,8 +451,10 @@
         let SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
         let CURRENT_SS_ID = null;
         let masterData = [];
+        let guestMap = new Map(); // [v3.0 T2.6] Map O(1) untuk realtime
         let html5QrCode = null;
         let _coreScanner = null; // [v3.0 T2.1] core scanner instance
+        let _realtimeCtrl = null; // [v3.0 T2.6] realtime tamu
         let selectedGuest = null;
         let scanCooldown = false;
         
@@ -564,7 +566,9 @@
             if(window.__guestbookCore && window.__guestbookCore.fetchTamu){
               try{
                 masterData = await window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit: 1000 });
+                try{ guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g])); }catch(e){}
                 try{ window.__sapaPerf.measure('kiosk:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
+                initKioskRealtime(); // [v3.0 T2.6] start realtime after first fetch
                 return;
               }catch(e){ console.warn('[kiosk] core fetch fallback', e); }
             }
@@ -598,8 +602,41 @@
                     tandaKasih: item.tanda_kasih,
                     sesi: item.sesi
                 }));
+                try{ guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g])); }catch(e){}
                 try{ window.__sapaPerf.measure('kiosk:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
+                initKioskRealtime(); // [v3.0 T2.6]
             } catch (e) { console.error("Gagal load data tamu:", e); try{ window.__sapaPerf.measure('kiosk:fetchData:error', _perfStart, String(e)); }catch(e2){} }
+        }
+        // [v3.0 T2.6] realtime tamu untuk kiosk — no route change
+        function initKioskRealtime(){
+            if(_realtimeCtrl || !CURRENT_SS_ID) return;
+            if(!window.__guestbookCore || !window.__guestbookCore.createRealtimeTamu) return;
+            if(!window.supabase) return;
+            const handlers={
+                onInsert: (item)=>{
+                    const newItem={ row:item.row, nama:item.nama, whatsapp:item.whatsapp, kategori:item.kategori, kode:item.kode, barcode:`https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`, rencanaHadir:item.rencana_hadir, statusHadir:String(item.status_hadir), jamDatang:item.jam_datang, souvenir:item.souvenir, pihakPengundang:item.pihak_pengundang, alamat:item.alamat, realHadir:item.real_hadir, statusWA:item.status_wa, statusHadiah:item.status_hadiah, tandaKasih:item.tanda_kasih, sesi:item.sesi };
+                    if(!masterData.some(g=>String(g.kode).toUpperCase()===String(newItem.kode).toUpperCase())){
+                        masterData.unshift(newItem);
+                        try{ guestMap.set(String(newItem.kode).trim().toUpperCase(), newItem); }catch(e){}
+                        if(!document.getElementById('search-modal').classList.contains('hidden')) try{ renderKioskSearch(); }catch(e){}
+                    }
+                },
+                onUpdate: (item)=>{
+                    const idx=masterData.findIndex(g=>String(g.kode).toUpperCase()===String(item.kode).toUpperCase() || g.row===item.row);
+                    if(idx!==-1){
+                        masterData[idx]={ ...masterData[idx], nama:item.nama, whatsapp:item.whatsapp, kategori:item.kategori, rencanaHadir:item.rencana_hadir, statusHadir:String(item.status_hadir), jamDatang:item.jam_datang, souvenir:item.souvenir, pihakPengundang:item.pihak_pengundang, alamat:item.alamat, realHadir:item.real_hadir, statusWA:item.status_wa, statusHadiah:item.status_hadiah, tandaKasih:item.tanda_kasih, sesi:item.sesi };
+                        try{ guestMap.set(String(masterData[idx].kode).trim().toUpperCase(), masterData[idx]); }catch(e){}
+                        if(!document.getElementById('search-modal').classList.contains('hidden')) try{ renderKioskSearch(); }catch(e){}
+                        // if currently open confirm for same guest, update UI? not needed
+                    }
+                },
+                onDelete: (item)=>{
+                    try{ guestMap.delete(String(item.kode).trim().toUpperCase()); }catch(e){}
+                    masterData=masterData.filter(g=>String(g.kode).toUpperCase()!==String(item.kode).toUpperCase() && g.row!==item.row);
+                    if(!document.getElementById('search-modal').classList.contains('hidden')) try{ renderKioskSearch(); }catch(e){}
+                }
+            };
+            _realtimeCtrl = window.__guestbookCore.createRealtimeTamu(CURRENT_SS_ID, handlers);
         }
 
         function toggleFrontcamMode(enabled) {
@@ -703,7 +740,7 @@
             const match = scCode.match(/id=([^&]+)/i);
             if (match) scCode = match[1];
             
-            const guest = masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase());
+            const guest = (typeof guestMap !== 'undefined' && guestMap.get) ? (guestMap.get(String(scCode).trim().toUpperCase()) || masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase())) : masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase());
             
             if (guest) {
                 if (String(guest.statusHadir) === "1") {

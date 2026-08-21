@@ -14,6 +14,7 @@
 | 2026-05-13 | T2.1 Shared core + kiosk migrasi | LANJUT | Buat lib/guestbook-core.js + jalur-store.js, kiosk delegate fetch/scanner ke core (fallback inline). Risiko sedang: 1 file baru, blast radius hanya kiosk dulu, checkin/onsite tetap lama. Tidak ubah route. User: lanjut |
 | 2026-05-13 | T2.2 Checkin migrasi + Map | LANJUT | Checkin delegate ke core + Map O(1) untuk scan, realtime sync Map. Risiko rendah-sedang, core sudah teruji di kiosk. Tidak ubah route. User: lanjut |
 | 2026-05-13 | T2.4 Onsite migrasi + Map | LANJUT | Onsite tab SCAN delegate ke core + Map O(1), realtime sync Map, tab REG tetap. Risiko rendah, reuse core. Tidak ubah route. User: lanjut |
+| 2026-05-13 | T2.6 Realtime kiosk | LANJUT | Tambah createRealtimeTamu di core + kiosk guestMap + initKioskRealtime (onInsert/Update/Delete + refresh search). Risiko rendah, 1 channel WS ekstra. Tidak ubah route. User: ya terapkan |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
