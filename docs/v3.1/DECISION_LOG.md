@@ -9,6 +9,7 @@
 | 2026-08-21 | T1.3 `sortir.html` Standardisasi Modal SapaTamu | LANJUT | Menyeragamkan modal progress `#progress-modal` pada direct browser export dan local photo copy dengan visual SapaTamu (Warm Sand, Gold gradient bar, percentage pill). User: lanjut |
 | 2026-08-21 | T1.4 `sync_queue.js` Offline Telemetry Sync | LANJUT | Menambahkan pelacakan peak antrean offline, live percentage `Sync: X/Y (Z%)`, dan popup sukses transien saat semua data tersinkronisasi. User: lanjut |
 | 2026-08-21 | T1.5 `analytics.html` & `dashboard.html` Loaders | LANJUT | Menambahkan skeleton placeholder shimmer saat inisialisasi analitik dan transisi lembut saat sync data client di dashboard. User: lanjut |
+| 2026-08-21 | T1.6 `formulir_tamu.html` Dynamic Hero Ambient Photo Slideshow | LANJUT | Menambahkan random starting photo on refresh, smooth crossfade looping (8.5s), frosted glass overlay, dan 3 responsive breakpoints menggunakan aset `config_welcome`. User: lanjut |
 
 ---
 

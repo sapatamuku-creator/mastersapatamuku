@@ -1,11 +1,11 @@
 # Graph Report - mastersapatamuku  (2026-08-21)
 
 ## Corpus Check
-- 167 files · ~966,154 words
+- 167 files · ~966,011 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1633 nodes · 1689 edges · 158 communities (132 shown, 26 thin omitted)
+- 1632 nodes · 1688 edges · 158 communities (132 shown, 26 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
@@ -574,15 +574,15 @@ Cohesion: 0.50
 Nodes (3): Cara pakai, Decision Log — SapaTamu Guestbook v3.0, Guardrail v3.0 (diulang agar jelas)
 
 ### Community 156 - "Tasks Breakdown — SapaTamu v3.1 (Live Progress UX & Telemetry)"
-Cohesion: 0.33
-Nodes (5): Phase 1 — Core Batch & Sync Engines (P0), Phase 2 — Reception & Offline Resilience (P1), Phase 3 — Executive Dashboards & Analytics (P2), 📑 Status & Peta Halaman, Tasks Breakdown — SapaTamu v3.1 (Live Progress UX & Telemetry)
+Cohesion: 0.40
+Nodes (4): Phase 1 — Core Batch & Sync Engines (P0), Phase 2 — Reception & Offline Resilience (P1), 📑 Status & Peta Halaman, Tasks Breakdown — SapaTamu v3.1 (Live Progress UX & Telemetry)
 
 ### Community 157 - "Decision Log — SapaTamu v3.1 (Live Progress UX & Telemetry)"
 Cohesion: 0.50
 Nodes (3): Cara pakai, Decision Log — SapaTamu v3.1 (Live Progress UX & Telemetry), Guardrail v3.1
 
 ## Knowledge Gaps
-- **1037 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1032 more)
+- **1036 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1031 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **26 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -594,7 +594,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1037 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1036 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
   _Cohesion score 0.07142857142857142 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: Get Email Handler` be split into smaller, more focused modules?**

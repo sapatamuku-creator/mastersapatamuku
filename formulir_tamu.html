@@ -617,18 +617,79 @@
         .nav-divider { width: 1px; height: 18px; background: #EEE0D5; margin: 0 8px; flex-shrink: 0; }
 
         /* ─── MOBILE-SAFE LAYOUT (anti horizontal scroll) ─────────────── */
-        .event-header-top { box-sizing: border-box; min-width: 0; }
+        /* ─── DYNAMIC HERO AMBIENT SLIDESHOW (3 Responsive Breakpoints) ─── */
+        .event-header-top {
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+            min-width: 0;
+            padding: 100px 30px 40px;
+            background: #FFF9F5;
+            border-radius: 0 0 50px 50px;
+            box-shadow: 0 20px 40px rgba(140, 117, 96, 0.08);
+            border-bottom: 1px solid var(--border);
+            transition: background 0.3s ease;
+        }
+        .hero-bg-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .hero-bg-slide {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transform: scale(1.05);
+            transition: opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1), transform 9s cubic-bezier(0.1, 0, 0.3, 1);
+        }
+        .hero-bg-slide.active {
+            opacity: 1;
+            transform: scale(1);
+            z-index: 1;
+        }
+        .hero-overlay-frost {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.93) 0%, rgba(255, 249, 245, 0.86) 55%, rgba(255, 255, 255, 0.78) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .event-header-content {
+            position: relative;
+            z-index: 3;
+        }
+
         #form-container, #list-section, .main-layout { min-width: 0; }
         #list-section > div:first-child { flex-wrap: wrap; row-gap: 10px; }
         #list-section > div:first-child > div:last-child { flex-wrap: wrap; justify-content: flex-end; row-gap: 8px; }
         .guest-item-card { box-sizing: border-box; min-height: auto !important; }
         .guest-item-card > div { min-width: 0; }
+
+        @media (min-width: 768px) and (max-width: 1023.98px) {
+            .event-header-top { padding: 80px 24px 34px !important; border-radius: 0 0 40px 40px !important; }
+        }
+
         @media (max-width: 640px) {
             body { overflow-x: hidden; }
             #sapatamu-app { overflow-x: clip; min-width: 0; }
             .event-header-top { padding: 60px 18px 28px !important; border-radius: 0 0 32px 32px !important; }
             .event-header-top h2 { font-size: 24px !important; line-height: 1.25 !important; overflow-wrap: break-word; }
             .event-header-top .grid { margin-top: 20px !important; padding-top: 20px !important; }
+            .hero-overlay-frost {
+                background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 249, 245, 0.90) 100%);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
             #app-body-container { padding-left: 14px !important; padding-right: 14px !important; padding-top: 18px !important; }
             #list-section > div:first-child { align-items: flex-start !important; flex-direction: column; }
             #list-section > div:first-child > div:last-child { width: 100%; justify-content: flex-start; }
@@ -1079,22 +1140,27 @@
     <!-- Aria live region for status announcements -->
     <div id="status-live" aria-live="polite" aria-atomic="true" class="sr-only"></div>
     <main id="sapatamu-app" role="main">
-        <!-- Header Event -->
-        <div class="event-header-top" style="padding: 100px 30px 40px; background: #fff; border-radius: 0 0 50px 50px; box-shadow: 0 20px 40px rgba(140, 117, 96, 0.08); border-bottom: 1px solid var(--border);">
-            <p style="font-size: 10px; font-weight: 800; color: var(--primary); letter-spacing: 3px; margin-bottom: 15px; text-transform: uppercase;">SapaTamu.Ku — Event Manager</p>
-            <h2 id="view-wedding-name" style="font-family: 'Lora', serif; color: var(--text-main); font-size: 32px; font-weight: 700; margin: 0; line-height: 1.2;">Memuat...</h2>
+        <!-- Header Event with Dynamic Ambient Slideshow -->
+        <div class="event-header-top">
+            <div id="hero-slides-wrapper" class="hero-bg-container"></div>
+            <div class="hero-overlay-frost"></div>
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-[20px] mt-[30px]" style="border-top: 1px solid var(--border); padding-top: 25px;">
-                <div>
-                    <p style="font-size: 10px; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 8px;">Schedule</p>
-                    <p id="view-schedule" style="color: var(--text-main); font-size: 13px; font-weight: 600; margin: 0;">-</p>
+            <div class="event-header-content">
+                <p style="font-size: 10px; font-weight: 800; color: var(--primary); letter-spacing: 3px; margin-bottom: 15px; text-transform: uppercase;">SapaTamu.Ku — Event Manager</p>
+                <h2 id="view-wedding-name" style="font-family: 'Lora', serif; color: var(--text-main); font-size: 32px; font-weight: 700; margin: 0; line-height: 1.2;">Memuat...</h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-[20px] mt-[30px]" style="border-top: 1px solid var(--border); padding-top: 25px;">
+                    <div>
+                        <p style="font-size: 10px; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 8px;">Schedule</p>
+                        <p id="view-schedule" style="color: var(--text-main); font-size: 13px; font-weight: 600; margin: 0;">-</p>
+                    </div>
+                    <div>
+                        <p style="font-size: 10px; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 8px;">Venue</p>
+                        <p id="view-location" style="color: var(--text-main); font-size: 13px; font-weight: 600; margin: 0;">-</p>
+                    </div>
                 </div>
-                <div>
-                    <p style="font-size: 10px; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 8px;">Venue</p>
-                    <p id="view-location" style="color: var(--text-main); font-size: 13px; font-weight: 600; margin: 0;">-</p>
-                </div>
+                <span id="view-link" style="display:none;"></span>
             </div>
-            <span id="view-link" style="display:none;"></span>
         </div>
 
         <!-- Form Entry -->
@@ -2007,7 +2073,71 @@
         
         return `${dayName}, ${day} ${monthName} ${year}`;
     }
-    window.formatIndonesianDate = formatIndonesianDate;
+    // --- DYNAMIC HERO BACKGROUND SLIDESHOW ---
+    let _heroPhotos = [];
+    let _heroActiveIdx = 0;
+    let _heroSlideTimer = null;
+
+    function parseHeroPhotoUrl(rawUrl) {
+        if (!rawUrl) return "";
+        let url = String(rawUrl).trim();
+        const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+        const match = url.match(driveRegex);
+        if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file"))) {
+            return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1280`;
+        }
+        return url;
+    }
+
+    function initHeroSlideshow(rawPhotoList) {
+        if (!rawPhotoList || rawPhotoList.length === 0) return;
+        const validUrls = rawPhotoList.map(parseHeroPhotoUrl).filter(Boolean);
+        if (validUrls.length === 0) return;
+
+        _heroPhotos = validUrls;
+        const container = document.getElementById('hero-slides-wrapper');
+        if (!container) return;
+
+        // Clear existing
+        container.innerHTML = '';
+        if (_heroSlideTimer) {
+            clearTimeout(_heroSlideTimer);
+            _heroSlideTimer = null;
+        }
+
+        // Build slide divs
+        _heroPhotos.forEach((src) => {
+            const slide = document.createElement('div');
+            slide.className = 'hero-bg-slide';
+            slide.style.backgroundImage = `url('${src}')`;
+            container.appendChild(slide);
+        });
+
+        const slides = container.querySelectorAll('.hero-bg-slide');
+        if (slides.length === 0) return;
+
+        // Random starting photo on page load/refresh
+        _heroActiveIdx = Math.floor(Math.random() * slides.length);
+        slides[_heroActiveIdx].classList.add('active');
+
+        // If more than 1 photo, start smooth fade loop every 8.5 seconds
+        if (slides.length > 1) {
+            function loopHeroSlides() {
+                _heroSlideTimer = setTimeout(() => {
+                    const currentSlide = slides[_heroActiveIdx];
+                    _heroActiveIdx = (_heroActiveIdx + 1) % slides.length;
+                    const nextSlide = slides[_heroActiveIdx];
+
+                    if (currentSlide) currentSlide.classList.remove('active');
+                    if (nextSlide) nextSlide.classList.add('active');
+
+                    loopHeroSlides();
+                }, 8500);
+            }
+            loopHeroSlides();
+        }
+    }
+    window.initHeroSlideshow = initHeroSlideshow;
 
     // --- UTILITIES ---
     window.toggleFullScreen = function() {
@@ -2141,14 +2271,24 @@
             render(MASTER_LIST);
             toggleProcessing(false); // ← Spinner hilang SEKARANG, tidak tunggu metadata
 
-            // ===== STEP 2: Fetch METADATA & SUBDOMAIN di background (tidak blokir UI) =====
+            // ===== STEP 2: Fetch METADATA, SUBDOMAIN, & WELCOME PHOTOS di background (tidak blokir UI) =====
             Promise.all([
                 fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${ssId}&select=*`, { headers: SB_HEADERS })
                     .then(r => r.ok ? r.json() : Promise.reject("meta fetch failed")),
                 fetch(`${SB_URL}/rest/v1/client_public_profile?ssid=eq.${ssId}&select=subdomain`, { headers: SB_HEADERS })
+                    .then(r => r.ok ? r.json() : Promise.resolve([])),
+                fetch(`${SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data&limit=1`, { headers: SB_HEADERS })
                     .then(r => r.ok ? r.json() : Promise.resolve([]))
             ])
-            .then(([metaData, profileData]) => {
+            .then(([metaData, profileData, welcomeData]) => {
+                if (welcomeData && welcomeData.length > 0 && welcomeData[0].data && welcomeData[0].data.urlFoto) {
+                    const photos = welcomeData[0].data.urlFoto.split(',').map(u => u.trim()).filter(Boolean);
+                    initHeroSlideshow(photos);
+                } else {
+                    const cachedAvatar = localStorage.getItem('sapatamu_avatar');
+                    if (cachedAvatar) initHeroSlideshow([cachedAvatar]);
+                }
+
                 if (!metaData || metaData.length === 0) return;
                 const meta = metaData[0];
                 const profile = profileData && profileData.length > 0 ? profileData[0] : null;
@@ -2308,6 +2448,17 @@
                             if (index < 3) document.getElementById(`edit_ev_s${index+1}`).value = val;
                             return `<option value="${val}">Sesi ${index + 1} (${val})</option>`;
                         }).join('');
+                    }
+
+                    if (result.urlFoto) {
+                        const photos = result.urlFoto.split(',').map(u => u.trim()).filter(Boolean);
+                        initHeroSlideshow(photos);
+                    } else if (result.eventMeta && result.eventMeta.urlFoto) {
+                        const photos = result.eventMeta.urlFoto.split(',').map(u => u.trim()).filter(Boolean);
+                        initHeroSlideshow(photos);
+                    } else {
+                        const cachedAvatar = localStorage.getItem('sapatamu_avatar');
+                        if (cachedAvatar) initHeroSlideshow([cachedAvatar]);
                     }
                 }
                 const banner = document.getElementById('mismatch-banner');

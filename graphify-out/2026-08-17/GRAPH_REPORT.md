@@ -1,16 +1,16 @@
-# Graph Report - mastersapatamuku  (2026-08-21)
+# Graph Report - mastersapatamuku  (2026-08-17)
 
 ## Corpus Check
-- 167 files · ~966,154 words
+- 155 files · ~946,121 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1633 nodes · 1689 edges · 158 communities (132 shown, 26 thin omitted)
+- 1545 nodes · 1604 edges · 147 communities (121 shown, 26 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5092c96a`
+- Built from commit: `3f3de56b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -133,19 +133,9 @@
 - eslint.config.mjs
 - next.config.ts
 - postcss.config.mjs
-- 2) Implementation Phases
-- guestbook-core.js
-- Guestbook v3.0 — Decision Gate
-- Todo Checklist — SapaTamu Guestbook v3.0
-- Perf Baseline — SapaTamu Guestbook v3.0 (Phase 0)
-- Tasks Breakdown — SapaTamu Guestbook v3.0
-- Tasks Breakdown — SapaTamu Guestbook v3.0
-- Decision Log — SapaTamu Guestbook v3.0
-- Tasks Breakdown — SapaTamu v3.1 (Live Progress UX & Telemetry)
-- Decision Log — SapaTamu v3.1 (Live Progress UX & Telemetry)
 
 ## God Nodes (most connected - your core abstractions)
-1. `handler()` - 30 edges
+1. `handler()` - 29 edges
 2. `HIGH — Temuan Detail` - 17 edges
 3. `HIGH TASKS (16)` - 17 edges
 4. `compilerOptions` - 16 edges
@@ -153,8 +143,8 @@
 6. `AI Website Cloner Template` - 15 edges
 7. `AI Website Cloner Template 中文版` - 15 edges
 8. `LOW TASKS (14)` - 15 edges
-9. `handler()` - 13 edges
-10. `Clone Website` - 13 edges
+9. `Clone Website` - 13 edges
+10. `AGENT.md — SapaTamu Project Agent Operating System` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `handler()` --calls--> `buildOgMeta()`  [EXTRACTED]
@@ -171,11 +161,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (158 total, 26 thin omitted)
+## Communities (147 total, 26 thin omitted)
 
 ### Community 0 - "Project Dependencies & Package Config"
-Cohesion: 0.07
-Nodes (27): @omniroute/opencode-plugin, antigravity.ide.project, engine, plugins, dependencies, pdf.js-extract, pdf-parse, playwright (+19 more)
+Cohesion: 0.08
+Nodes (23): @omniroute/opencode-plugin, antigravity.ide.project, engine, plugins, dependencies, pdf.js-extract, pdf-parse, playwright (+15 more)
 
 ### Community 1 - "Authentication Guard & Session Management"
 Cohesion: 0.18
@@ -287,7 +277,7 @@ Nodes (20): 📋 Checklist Migrasi (Urutan Pelaksanaan), Deploy function:, Ganti
 
 ### Community 62 - "mp.js"
 Cohesion: 0.14
-Nodes (35): CATEGORY_UUID_MAP, DEFAULT_CATEGORIES, ensureCategoryInDB(), findAuthUserIdByEmail(), findVendorByEmail(), findVendorByWhatsApp(), generateSlug(), genOtpCode() (+27 more)
+Nodes (34): CATEGORY_UUID_MAP, DEFAULT_CATEGORIES, ensureCategoryInDB(), findAuthUserIdByEmail(), findVendorByEmail(), findVendorByWhatsApp(), generateSlug(), genOtpCode() (+26 more)
 
 ### Community 63 - "manifest.json"
 Cohesion: 0.12
@@ -307,7 +297,7 @@ Nodes (20): Milestone 0.1 — Database Schema, Milestone 0.2 — Shared Config, 
 
 ### Community 67 - "MEDIUM — Temuan Detail"
 Cohesion: 0.16
-Nodes (22): CACHE_LONG, CACHE_PUBLIC, config, CORS, DEFAULT_CATEGORIES, enrichPromo(), generateSlug(), genOtpCode() (+14 more)
+Nodes (21): CACHE_LONG, CACHE_PUBLIC, config, CORS, DEFAULT_CATEGORIES, enrichPromo(), generateSlug(), genOtpCode() (+13 more)
 
 ### Community 68 - "Implementation Phases"
 Cohesion: 0.17
@@ -398,8 +388,8 @@ Cohesion: 0.83
 Nodes (3): mp_reviews, mp_sync_vendor_rating(), trg_mp_reviews_sync_rating
 
 ### Community 95 - "AGENTS.md"
-Cohesion: 0.40
-Nodes (4): Decision Gate, graphify, Skill Installation Dual-Sync Policy, UI/UX & Responsive Rules
+Cohesion: 0.50
+Nodes (3): graphify, UI/UX & Responsive Rules, Website Cloner (ai-website-cloner)
 
 ### Community 102 - "HIGH TASKS (16)"
 Cohesion: 0.09
@@ -541,48 +531,8 @@ Nodes (3): geistMono, geistSans, metadata
 Cohesion: 0.70
 Nodes (3): Button(), buttonVariants, cn()
 
-### Community 147 - "2) Implementation Phases"
-Cohesion: 0.15
-Nodes (12): 1) Architecture Decisions, 2) Implementation Phases, 3) Risks & Mitigations, 4) Verification Checkpoints, 5) Out of Scope / Guardrails v3.0, Phase 0 — Baseline & Observability (1 hari), Phase 1 — Quick Wins P0 (1-2 hari), Phase 2 — Core Extraction + Dual View P1 (3-4 hari) (+4 more)
-
-### Community 148 - "guestbook-core.js"
-Cohesion: 0.29
-Nodes (5): getCamEnabled(), getJalur(), LEGACY_MAP, setCamEnabled(), setJalur()
-
-### Community 149 - "Guestbook v3.0 — Decision Gate"
-Cohesion: 0.22
-Nodes (8): Aturan Wajib (Gate), Contoh (jangan dianggap janji), Format Penjelasan (wajib 5 poin, jujur apa adanya), Guestbook v3.0 — Decision Gate, Kapan Skill Ini Aktif, Larangan, Log Keputusan, Verifikasi
-
-### Community 150 - "Todo Checklist — SapaTamu Guestbook v3.0"
-Cohesion: 0.22
-Nodes (8): Next, Phase 0 — Baseline, Phase 1 — Quick Wins, Phase 2 — Core Extraction, Phase 3 — UX & Resilience (tanpa ubah route/backend), Phase 4 — Analytics & Welcome, Todo Checklist — SapaTamu Guestbook v3.0, Verification
-
-### Community 151 - "Perf Baseline — SapaTamu Guestbook v3.0 (Phase 0)"
-Cohesion: 0.25
-Nodes (7): 1) RLS Audit — `tamu` (T0.2), 2) Payload `tamu` — `fetchData` (T0.1 marks), 3) Render — `renderUI` / `renderKioskSearch`, 4) Scanner — `initScanner`, 5) Bundle — Tailwind, Next — Phase 1 akan pakai baseline ini untuk klaim "sebelum vs sesudah" (T1.2 debounce, T2.5 chunked+Details windowed)., Perf Baseline — SapaTamu Guestbook v3.0 (Phase 0)
-
-### Community 152 - "Tasks Breakdown — SapaTamu Guestbook v3.0"
-Cohesion: 0.25
-Nodes (7): Phase 0 — Baseline & Observability, Phase 1 — Quick Wins (P0), Phase 2 — Core Extraction (P1), Phase 3 — UX & Resilience (tanpa ubah route/backend), Phase 4 — Analytics & Welcome Polish, Tasks Breakdown — SapaTamu Guestbook v3.0, Verification
-
-### Community 153 - "Tasks Breakdown — SapaTamu Guestbook v3.0"
-Cohesion: 0.25
-Nodes (7): Phase 0 — Baseline & Observability, Phase 1 — Quick Wins (P0), Phase 2 — Core Extraction (P1), Phase 3 — UX & Resilience (tanpa ubah route/backend), Phase 4 — Analytics & Welcome Polish, Tasks Breakdown — SapaTamu Guestbook v3.0, Verification
-
-### Community 154 - "Decision Log — SapaTamu Guestbook v3.0"
-Cohesion: 0.50
-Nodes (3): Cara pakai, Decision Log — SapaTamu Guestbook v3.0, Guardrail v3.0 (diulang agar jelas)
-
-### Community 156 - "Tasks Breakdown — SapaTamu v3.1 (Live Progress UX & Telemetry)"
-Cohesion: 0.33
-Nodes (5): Phase 1 — Core Batch & Sync Engines (P0), Phase 2 — Reception & Offline Resilience (P1), Phase 3 — Executive Dashboards & Analytics (P2), 📑 Status & Peta Halaman, Tasks Breakdown — SapaTamu v3.1 (Live Progress UX & Telemetry)
-
-### Community 157 - "Decision Log — SapaTamu v3.1 (Live Progress UX & Telemetry)"
-Cohesion: 0.50
-Nodes (3): Cara pakai, Decision Log — SapaTamu v3.1 (Live Progress UX & Telemetry), Guardrail v3.1
-
 ## Knowledge Gaps
-- **1037 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1032 more)
+- **983 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+978 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **26 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -594,9 +544,9 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1037 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _983 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
-  _Cohesion score 0.07142857142857142 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08333333333333333 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: Get Email Handler` be split into smaller, more focused modules?**
   _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._
 - **Should `AGENT.md — SapaTamu Project Agent Operating System` be split into smaller, more focused modules?**
