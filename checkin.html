@@ -1060,6 +1060,8 @@
         updateStats();
         try{ var _cnt = listBody.children ? listBody.children.length : filtered.length; window.__sapaPerf.measure('checkin:renderUI', _perfR, _cnt+'/'+masterData.length); }catch(e){}
     };
+    // [v3.0 T1.2] debounce input only — window.renderUI immediate, input debounced (no route change)
+    try{ var _origRenderUI2=window.renderUI; var _debouncedRenderUI=window.__sapaDebounce(_origRenderUI2, 250); var _cBox=document.getElementById('search-box'); if(_cBox){ _cBox.removeAttribute('oninput'); _cBox.addEventListener('input', _debouncedRenderUI); } }catch(e){}
 
     function onScanSuccess(decodedText) {
         if (isBusy || document.getElementById('modalConfirm').style.display === 'flex') return;

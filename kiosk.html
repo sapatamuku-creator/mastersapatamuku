@@ -881,6 +881,8 @@
             }).join('');
             try{ window.__sapaPerf.measure('kiosk:renderKioskSearch', _perfR, filtered.length+'/'+masterData.length); }catch(e){}
         }
+        // [v3.0 T1.2] debounce input only — global immediate, input debounced 250ms (no route change)
+        try{ var _origKioskSearch=renderKioskSearch; var _debouncedKioskSearch=window.__sapaDebounce(_origKioskSearch, 250); var _kBox=document.getElementById('kiosk-search-box'); if(_kBox){ _kBox.removeAttribute('oninput'); _kBox.addEventListener('input', _debouncedKioskSearch); } }catch(e){}
 
         function handleSearchClick(encodedGuest, isDone) {
             if (isDone) {
