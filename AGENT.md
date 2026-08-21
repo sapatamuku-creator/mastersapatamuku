@@ -28,14 +28,14 @@ Semua agent eksekusi di proyek ini HARUS merujuk pada hierarki berikut:
 
 ```
 AGENT.md                              ← DOKUMEN UTAMA (Anda sedang membaca)
-├── skills-lock.json                  ← Index skill yang terinstal (34 skill)
+├── skills-lock.json                  ← Index skill yang terinstal (37 skill)
 ├── .agents/                          ← SEMUA komponen agent (sumber utama)
 │   ├── AGENTS.md                     ← Agent rules dari addyosmani
 │   ├── CLAUDE.md                     ← Claude Code instructions
-│   ├── skills/                       ← 34 Skill definition files
+│   ├── skills/                       ← 37 Skill definition files
 │   │   ├── (5) animation-vocabulary, apple-design, emil-design-eng, improve-animations, review-animations
 │   │   ├── (2) supabase, supabase-postgres-best-practices
-│   │   ├── (3) deploy-to-vercel, frontend-design, skill-decision-gate
+│   │   ├── (6) deploy-to-vercel, frontend-design, ui-ux-pro-max, clone-website, skill-decision-gate, guestbook-v3-gate
 │   │   └── (24) addyosmani skills (spec-driven, code-review, security, dll)
 │   ├── agents/                       ← 4 Persona definitions
 │   │   ├── code-reviewer.md
@@ -172,13 +172,16 @@ Persona adalah role dengan perspektif dan format output tertentu. Persona **tida
 | `supabase` | General Supabase best practices | Bekerja dengan Supabase API, auth, realtime |
 | `supabase-postgres-best-practices` | PostgreSQL optimization | Menulis/mengoptimasi SQL query, schema, RLS, indexing |
 
-### 5.3 Deployment & Frontend Skills (vercel-labs & anthropics)
+### 5.3 Deployment, Design & Tooling Skills
 
 | Skill | Sumber | Fungsi | Status |
 |-------|--------|--------|--------|
 | `deploy-to-vercel` | vercel-labs/agent-skills | Deployment config, routing, cache header & optimization | ✅ Terinstal |
 | `frontend-design` | anthropics/skills | Bold, distinctive, production-grade UI design & typography | ✅ Terinstal |
+| `ui-ux-pro-max` | local/mastersapatamuku | Standar desain responsif 3 mode (Desktop, Tablet, Mobile) & WCAG | ✅ Terinstal |
+| `clone-website` | local/mastersapatamuku | Reverse-engineer & clone website structure/assets | ✅ Terinstal |
 | `skill-decision-gate` | local/mastersapatamuku | 5-point decision gate validation sebelum implementasi kode | ✅ Terinstal |
+| `guestbook-v3-gate` | local/mastersapatamuku | Gate validasi khusus task/todo docs/v3.0/ | ✅ Terinstal |
 
 ---
 
