@@ -44,7 +44,12 @@
             overflow: hidden;
             background: #fff;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            cursor: none;
+            cursor: default;
+        }
+        body.is-fullscreen, html.is-fullscreen { cursor: none; }
+        @media (prefers-reduced-motion: reduce) {
+            .dynamic-bg li, .dynamic-bg li::before,
+            .dynamic-bg-main li, .dynamic-bg-main li::before { animation: none !important; }
         }
 
         .master-container {
@@ -1449,6 +1454,12 @@
             if (!document.fullscreenElement) document.documentElement.requestFullscreen();
             else document.exitFullscreen();
         };
+        // [v3.0 T1.3] cursor only in fullscreen (no route change)
+        document.addEventListener('fullscreenchange', () => {
+            const isFs = !!document.fullscreenElement;
+            document.body.classList.toggle('is-fullscreen', isFs);
+            document.documentElement.classList.toggle('is-fullscreen', isFs);
+        });
 
         let idleTimer;
         function showUI() {

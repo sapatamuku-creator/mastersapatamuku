@@ -31,7 +31,12 @@
             overflow: hidden;
             background: #000;
             font-family: 'Montserrat', sans-serif;
-            cursor: none;
+            cursor: default;
+        }
+        body.is-fullscreen, html.is-fullscreen { cursor: none; }
+        @media (prefers-reduced-motion: reduce) {
+            .char-span, .dynamic-bg li, .dynamic-bg li::before { animation: none !important; }
+            .slide { transition: opacity 0.2s ease !important; }
         }
 
         .master-container {
@@ -1185,6 +1190,12 @@
             if (!document.fullscreenElement) document.documentElement.requestFullscreen();
             else document.exitFullscreen();
         };
+        // [v3.0 T1.3] cursor only in fullscreen + respect reduced-motion (no route change)
+        document.addEventListener('fullscreenchange', () => {
+            const isFs = !!document.fullscreenElement;
+            document.body.classList.toggle('is-fullscreen', isFs);
+            document.documentElement.classList.toggle('is-fullscreen', isFs);
+        });
 
         window.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
