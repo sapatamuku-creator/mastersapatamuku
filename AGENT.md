@@ -28,14 +28,14 @@ Semua agent eksekusi di proyek ini HARUS merujuk pada hierarki berikut:
 
 ```
 AGENT.md                              ← DOKUMEN UTAMA (Anda sedang membaca)
-├── skills-lock.json                  ← Index skill yang terinstal (37 skill)
+├── skills-lock.json                  ← Index skill yang terinstal (38 skill)
 ├── .agents/                          ← SEMUA komponen agent (sumber utama)
 │   ├── AGENTS.md                     ← Agent rules dari addyosmani
 │   ├── CLAUDE.md                     ← Claude Code instructions
-│   ├── skills/                       ← 37 Skill definition files
+│   ├── skills/                       ← 38 Skill definition files
 │   │   ├── (5) animation-vocabulary, apple-design, emil-design-eng, improve-animations, review-animations
 │   │   ├── (2) supabase, supabase-postgres-best-practices
-│   │   ├── (6) deploy-to-vercel, frontend-design, ui-ux-pro-max, clone-website, skill-decision-gate, guestbook-v3-gate
+│   │   ├── (7) deploy-to-vercel, frontend-design, ui-ux-pro-max, clone-website, skill-decision-gate, guestbook-v3-gate, live-progress-ux
 │   │   └── (24) addyosmani skills (spec-driven, code-review, security, dll)
 │   ├── agents/                       ← 4 Persona definitions
 │   │   ├── code-reviewer.md
@@ -182,6 +182,7 @@ Persona adalah role dengan perspektif dan format output tertentu. Persona **tida
 | `clone-website` | local/mastersapatamuku | Reverse-engineer & clone website structure/assets | ✅ Terinstal |
 | `skill-decision-gate` | local/mastersapatamuku | 5-point decision gate validation sebelum implementasi kode | ✅ Terinstal |
 | `guestbook-v3-gate` | local/mastersapatamuku | Gate validasi khusus task/todo docs/v3.0/ | ✅ Terinstal |
+| `live-progress-ux` | local/mastersapatamuku | Determinate progress & live telemetry (X dari Y) bertema SapaTamu | ✅ Terinstal |
 
 ---
 
