@@ -17,8 +17,9 @@ Rules:
 - Setiap instruksi update code yang menyentuh UI/frontend wajib ditulis untuk **tiga versi responsif**: desktop, tablet, dan mobile. Selalu pertimbangkan breakpoint kontainer/grid (bucket desktop ≥1024px, tablet 768–1023px, mobile <768px) agar tidak ada bug saat berpindah mode. Jangan hanya menyelesaikan satu layout lalu mengabaikan yang lain.
 - Gunakan teknik container/grid responsive atau media query yang konsisten dengan file yang diedit; uji logika layout di ketiga mode sebelum dianggap selesai.
 
-## Website Cloner (ai-website-cloner)
+## Decision Gate
 
-- Skill `clone-website` terpasang di `.agents/skills/clone-website/` dan `.claude/skills/clone-website/` (command opencode: `/clone-website`).
-- Template Next.js dari JCodesMore/ai-website-cloner-template berada di `ai-website-cloner/` (app terpisah, bukan bagian dari situs statis ini).
-- Saat menjalankan `/clone-website <url>`, project root repo ini adalah situs statis (bukan Next.js). Gunakan `ai-website-cloner/` sebagai `<app-root>` untuk hasil kloning.
+- Use the `skill-decision-gate` skill (`.agents/skills/skill-decision-gate/` & `.claude/skills/skill-decision-gate/`) before implementing any task, feature, refactor, or bugfix in this project.
+- Wajib jelaskan 5 poin format (fungsi perubahan, dari kode sebelumnya, mengarah kemana, cabang routing terdampak, risiko & trade-off jujur).
+- Tunggu persetujuan eksplisit user sebelum mulai menulis kode.
+
