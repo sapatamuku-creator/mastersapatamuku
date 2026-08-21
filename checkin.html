@@ -14,6 +14,13 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <script src="config.js"></script>
+    <script type="module">
+      // [v3.0 T2.2] import core — no route change, fallback to inline if fail
+      import { fetchTamu, createScanner } from './lib/guestbook-core.js';
+      window.__guestbookCore = window.__guestbookCore || {};
+      window.__guestbookCore.fetchTamu = fetchTamu;
+      window.__guestbookCore.createScanner = createScanner;
+    </script>
     <script src="subdomain_resolver.js?v=3.5"></script>
     <script src="scripts/printer_widget.js"></script>
     <script src="sync_queue.js"></script>
@@ -678,6 +685,7 @@
         if (enabled) {
             initScanner();
         } else {
+            if(_coreScanner){ try{ _coreScanner.stop(); }catch(e){} }
             if (html5QrCode) {
                 html5QrCode.stop().catch(() => {});
                 html5QrCode = null;
@@ -686,6 +694,8 @@
     }
     let activeGuestIndex = 0;
     let html5QrCode = null;
+    let _coreScanner = null; // [v3.0 T2.2] core scanner
+    let guestMap = new Map(); // [v3.0 T2.2] Map<codeUpper, guest> O(1)
     let currentStream = null;
     let capturedBase64 = null;
     let JALUR_ID = "ALL";
@@ -739,6 +749,7 @@
                                 };
                                 if (!masterData.some(g => g.kode === newItem.kode)) {
                                     masterData.unshift(newItem);
+                                    try{ guestMap.set(String(newItem.kode).trim().toUpperCase(), newItem); }catch(e){}
                                     renderUI();
                                 }
                             } else if (eventType === 'UPDATE') {
@@ -762,10 +773,12 @@
                                         tandaKasih: item.tanda_kasih,
                                         sesi: item.sesi
                                     };
+                                    try{ guestMap.set(String(masterData[idx].kode).trim().toUpperCase(), masterData[idx]); }catch(e){}
                                     renderUI();
                                 }
                             } else if (eventType === 'DELETE') {
                                 const item = payload.old;
+                                try{ guestMap.delete(String(item.kode).trim().toUpperCase()); }catch(e){}
                                 masterData = masterData.filter(g => g.kode !== item.kode && g.row !== item.row);
                                 renderUI();
                             }
@@ -929,6 +942,10 @@
 
 
     function toggleFrontcamMode(enabled) {
+        // [v3.0 T2.2] delegate to core if available
+        if(_coreScanner && _coreScanner.toggleFrontcam){
+          try{ _coreScanner.toggleFrontcam(enabled); return; }catch(e){ console.warn('core frontcam fallback',e); }
+        }
         localStorage.setItem('force_frontcam_on', enabled ? '1' : '0');
         document.getElementById('reader')?.classList.toggle('mirror-mode', enabled);
         if (scannerEnabled) {
@@ -947,6 +964,14 @@
     }
 
     function initScanner() {
+        // [v3.0 T2.2] core delegation — no route change, fallback to inline
+        if(window.__guestbookCore && window.__guestbookCore.createScanner){
+          try{
+            if(!_coreScanner) _coreScanner = window.__guestbookCore.createScanner({ readerId: "reader", onScan: onScanSuccess, fps: 25, qrbox: 220 });
+            _coreScanner.start();
+            return;
+          }catch(e){ console.warn('[checkin] core scanner fallback', e); }
+        }
         var _perfS='checkin:scanner:start'; try{ performance.mark(_perfS); }catch(e){}
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
         const useFront = localStorage.getItem('force_frontcam_on') === '1';
@@ -963,6 +988,17 @@
 
     async function fetchData() {
         var _perfStart='checkin:fetch:start'; try{ performance.mark(_perfStart); }catch(e){}
+        // [v3.0 T2.2] core delegation — no route change, fallback to inline
+        if(window.__guestbookCore && window.__guestbookCore.fetchTamu){
+          try{
+            masterData = await window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit: 1000 });
+            guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g]));
+            try{ window.__sapaPerf.measure('checkin:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
+            renderUI();
+            toggleProcessing(false);
+            return;
+          }catch(e){ console.warn('[checkin] core fetch fallback', e); }
+        }
         try {
             // Fetch guest list dari Supabase REST API (Super Fast)
             const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
@@ -994,6 +1030,7 @@
                 tandaKasih: item.tanda_kasih,
                 sesi: item.sesi
             }));
+            try{ guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g])); }catch(e){}
             
             renderUI();
             try{ window.__sapaPerf.measure('checkin:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
@@ -1070,7 +1107,7 @@
     function onScanSuccess(decodedText) {
         if (isBusy || document.getElementById('modalConfirm').style.display === 'flex') return;
         const frame = document.getElementById('target-frame');
-        const guest = masterData.find(r => r.kode && r.kode.toString() === decodedText);
+        const guest = (typeof guestMap !== 'undefined' && guestMap.get) ? (guestMap.get(String(decodedText).trim().toUpperCase()) || masterData.find(r => r.kode && r.kode.toString() === decodedText)) : masterData.find(r => r.kode && r.kode.toString() === decodedText);
         
         frame.classList.add('qr-detected');
         if (guest && (!guest.jamDatang || guest.jamDatang === "-")) {

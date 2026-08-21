@@ -12,6 +12,7 @@
 | 2026-05-13 | T1.3 Cursor & reduced-motion | LANJUT | Cursor none hanya saat fullscreen (is-fullscreen), reduce-motion matikan hearts/char. Risiko sangat rendah, debug jadi mudah. Tidak ubah route. User: setuju |
 | 2026-05-13 | T1.4 Fix radio/checkbox 14px | LANJUT | Scoped 14px untuk guest-item/#guest-list/#kiosk-search-list, cegah melar 100%. Risiko sangat rendah, tidak ubah cam-toggle. Tidak ubah route. User: lanjut |
 | 2026-05-13 | T2.1 Shared core + kiosk migrasi | LANJUT | Buat lib/guestbook-core.js + jalur-store.js, kiosk delegate fetch/scanner ke core (fallback inline). Risiko sedang: 1 file baru, blast radius hanya kiosk dulu, checkin/onsite tetap lama. Tidak ubah route. User: lanjut |
+| 2026-05-13 | T2.2 Checkin migrasi + Map | LANJUT | Checkin delegate ke core + Map O(1) untuk scan, realtime sync Map. Risiko rendah-sedang, core sudah teruji di kiosk. Tidak ubah route. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
