@@ -28,13 +28,14 @@ Semua agent eksekusi di proyek ini HARUS merujuk pada hierarki berikut:
 
 ```
 AGENT.md                              ← DOKUMEN UTAMA (Anda sedang membaca)
-├── skills-lock.json                  ← Index skill yang terinstal (31 skill)
+├── skills-lock.json                  ← Index skill yang terinstal (34 skill)
 ├── .agents/                          ← SEMUA komponen agent (sumber utama)
 │   ├── AGENTS.md                     ← Agent rules dari addyosmani
 │   ├── CLAUDE.md                     ← Claude Code instructions
-│   ├── skills/                       ← 31 Skill definition files
+│   ├── skills/                       ← 34 Skill definition files
 │   │   ├── (5) animation-vocabulary, apple-design, emil-design-eng, improve-animations, review-animations
 │   │   ├── (2) supabase, supabase-postgres-best-practices
+│   │   ├── (3) deploy-to-vercel, frontend-design, skill-decision-gate
 │   │   └── (24) addyosmani skills (spec-driven, code-review, security, dll)
 │   ├── agents/                       ← 4 Persona definitions
 │   │   ├── code-reviewer.md
@@ -171,15 +172,13 @@ Persona adalah role dengan perspektif dan format output tertentu. Persona **tida
 | `supabase` | General Supabase best practices | Bekerja dengan Supabase API, auth, realtime |
 | `supabase-postgres-best-practices` | PostgreSQL optimization | Menulis/mengoptimasi SQL query, schema, RLS, indexing |
 
-### 5.3 Rekomendasi Skill Tambahan (Belum Terinstal)
+### 5.3 Deployment & Frontend Skills (vercel-labs & anthropics)
 
-| Skill | Sumber | Fungsi | Prioritas |
-|-------|--------|--------|-----------|
-| `deploy-to-vercel` | vercel-labs/agent-skills | Deployment config & optimization | ⚠️ Tinggi |
-| `frontend-design` | anthropics/skills | Bold, non-generic UI design | ⚠️ Menengah |
-
-> **Catatan:** Skill di atas direkomendasikan oleh agenticskills.io untuk stack Vercel + Supabase.
-> Install jika diperlukan: `npx skills add vercel-labs/agent-skills/deploy-to-vercel`
+| Skill | Sumber | Fungsi | Status |
+|-------|--------|--------|--------|
+| `deploy-to-vercel` | vercel-labs/agent-skills | Deployment config, routing, cache header & optimization | ✅ Terinstal |
+| `frontend-design` | anthropics/skills | Bold, distinctive, production-grade UI design & typography | ✅ Terinstal |
+| `skill-decision-gate` | local/mastersapatamuku | 5-point decision gate validation sebelum implementasi kode | ✅ Terinstal |
 
 ---
 
