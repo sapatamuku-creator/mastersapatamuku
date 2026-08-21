@@ -701,14 +701,22 @@
         function startScanning() {
             document.getElementById('kiosk-idle-state').style.opacity = '0';
             document.getElementById('kiosk-idle-state').style.pointerEvents = 'none';
+            // [v3.0 T3.1] Pause welcome iframe animations to save memory & GPU
+            try {
+                const iframe = document.getElementById('welcome-frame');
+                if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage('pause', '*');
+            } catch(e) {}
             if (scannerEnabled && !html5QrCode) initScanner();
         }
 
         function returnToIdle() {
-            // Trigger iframe to sync and show latest check-in
+            // [v3.0 T3.1] Resume & sync welcome iframe
             try {
                 const iframe = document.getElementById('welcome-frame');
-                if(iframe.contentWindow && iframe.contentWindow.syncData) iframe.contentWindow.syncData();
+                if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage('play', '*');
+                    if (iframe.contentWindow.syncData) iframe.contentWindow.syncData();
+                }
             } catch(e) {}
             
             document.getElementById('kiosk-idle-state').style.opacity = '1';
@@ -769,6 +777,25 @@
         }
 
         /* --- SELFIE LOGIC --- */
+        // [v3.0 T3.3] resizeAndCompress — resize max maxDim px + jpeg quality. No route change.
+        function resizeAndCompress(srcCanvas, maxDim, quality) {
+            return new Promise((resolve) => {
+                const w = srcCanvas.width, h = srcCanvas.height;
+                const scale = Math.min(1, maxDim / Math.max(w, h, 1));
+                const nw = Math.round(w * scale), nh = Math.round(h * scale);
+                const out = document.createElement('canvas');
+                out.width = nw; out.height = nh;
+                out.getContext('2d').drawImage(srcCanvas, 0, 0, nw, nh);
+                out.toBlob(blob => {
+                    if (!blob) { resolve(srcCanvas.toDataURL('image/jpeg', quality)); return; }
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = () => resolve(srcCanvas.toDataURL('image/jpeg', quality));
+                    reader.readAsDataURL(blob);
+                }, 'image/jpeg', quality);
+            });
+        }
+
         async function toggleSelfieBox() {
             document.getElementById('btn-show-selfie').classList.add('hidden');
             document.getElementById('selfie-container').classList.remove('hidden');
@@ -831,7 +858,7 @@
             }, 800);
         }
 
-        function executePhotoCaptureKiosk() {
+        async function executePhotoCaptureKiosk() {
             const video = document.getElementById('camera-preview');
             const canvas = document.getElementById('capture-canvas');
             const ctx = canvas.getContext('2d');
@@ -847,7 +874,12 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             ctx.restore();
             
-            capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            // [v3.0 T3.3] kompresi max 480px + jpeg 0.7
+            try {
+                capturedBase64 = await resizeAndCompress(canvas, 480, 0.7);
+            } catch(e) {
+                capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            }
             
             const btnSnap = document.getElementById('btn-snap');
             btnSnap.disabled = false;

@@ -13,6 +13,7 @@
         href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="animations.css">
+    <link rel="stylesheet" href="assets/guestbook-shared.css">
     <link rel="stylesheet" href="assets/tailwind.css" onerror="this.onerror=null;var s=document.createElement(&quot;script&quot;);s.src=&quot;https://cdn.tailwindcss.com&quot;;document.head.appendChild(s)">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1041,6 +1042,14 @@
             .st-modal-content { width: 100%; max-width: none; border-radius: 28px 28px 0 0; padding: 28px 22px calc(28px + env(safe-area-inset-bottom)); }
             @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         }
+
+        /* Responsive Pihak Tamu: Desktop & Tablet tampil lengkap, Mobile (<768px) pakai singkatan */
+        .pihak-full { display: inline; }
+        .pihak-short { display: none; font-weight: 700; }
+        @media (max-width: 767.98px) {
+            .pihak-full { display: none !important; }
+            .pihak-short { display: inline !important; font-weight: 700; }
+        }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -1938,6 +1947,15 @@
             else if (html5QrCode) html5QrCode.stop();
         }
 
+        // [v3.0 Pihak Singkatan] formatPihakShort — dinamis ambil inisial kata tanpa hardcode
+        window._formatPihakShort = window._formatPihakShort || function(str) {
+            if (!str || str === '-') return str || '-';
+            const s = str.trim();
+            const words = s.split(/[\s\-\/]+/).filter(Boolean);
+            if (words.length === 1) return s.length <= 4 ? s.toUpperCase() : s.substring(0, 3).toUpperCase();
+            return words.map(w => w[0].toUpperCase()).join('');
+        };
+
         function renderUI() {
             var _perfR='onsite:render:start'; try{ performance.mark(_perfR); }catch(e){}
             const checkedInGuests = masterData.filter(r => r.jamDatang && r.jamDatang !== "-");
@@ -1983,7 +2001,7 @@
 
                     <div class="guest-details">
                         <div class="detail-item">📍 <span>${row.alamat || '-'}</span></div>
-                        <div class="detail-item">💌 Inv by: <span>${row.pihakPengundang || '-'}</span></div>
+                        <div class="detail-item">💌 Inv by: <span title="${row.pihakPengundang || '-'}"><span class="pihak-full">${row.pihakPengundang || '-'}</span><span class="pihak-short">${window._formatPihakShort(row.pihakPengundang || '-')}</span></span></div>
                         <div class="detail-item">⏰ Sesi: <span>${row.sesi || row.rencanaJamHadir || row.jamHadir || '-'}</span></div>
                     </div>
 
@@ -2033,7 +2051,7 @@
                     <span style="width:18px; flex-shrink:0;">${isDone?'✅':'<input type="checkbox" '+(isChecked?'checked':'')+' style="accent-color:var(--gold); width:14px; height:14px;" onclick="event.stopPropagation(); toggleSelect(\''+row.kode+'\')"> '}</span>
                     <span class="d-name">${row.nama||'-'}</span>
                     <span class="d-cat">${row.kategori||'UMUM'}</span>
-                    <span class="d-pihak">${row.pihakPengundang||row.alamat||'-'}</span>
+                    <span class="d-pihak" title="${row.pihakPengundang||row.alamat||'-'}"><span class="pihak-full">${row.pihakPengundang||row.alamat||'-'}</span><span class="pihak-short">${window._formatPihakShort(row.pihakPengundang||row.alamat||'-')}</span></span>
                     <span class="d-status" style="color:${isDone?'var(--success)':'var(--text-muted)'}">${isDone?'✓ '+(row.realHadir||''):'● BELUM'}</span>
                 </div>`;
             }).join('');
@@ -2429,12 +2447,31 @@
                     btnSnap.style.background = "none";
                     btnSnap.style.color = "var(--gold)";
                 } catch (e) {
-                    showAlert("Akses Kamera", "Kamera tidak diizinkan.", "⚠️");
+                    showAlert("Akses Kamera", "Kamera tidak diizinkan.", "⚠️ ");
                 }
             }
         }
 
-        function executePhotoCaptureOnsite() {
+        // [v3.0 T3.3] resizeAndCompress — resize max maxDim px + jpeg quality. No route change.
+        function resizeAndCompress(srcCanvas, maxDim, quality) {
+            return new Promise((resolve) => {
+                const w = srcCanvas.width, h = srcCanvas.height;
+                const scale = Math.min(1, maxDim / Math.max(w, h, 1));
+                const nw = Math.round(w * scale), nh = Math.round(h * scale);
+                const out = document.createElement('canvas');
+                out.width = nw; out.height = nh;
+                out.getContext('2d').drawImage(srcCanvas, 0, 0, nw, nh);
+                out.toBlob(blob => {
+                    if (!blob) { resolve(srcCanvas.toDataURL('image/jpeg', quality)); return; }
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = () => resolve(srcCanvas.toDataURL('image/jpeg', quality));
+                    reader.readAsDataURL(blob);
+                }, 'image/jpeg', quality);
+            });
+        }
+
+        async function executePhotoCaptureOnsite() {
             const v = document.getElementById('camera-preview');
             const c = document.getElementById('capture-canvas');
             const ctx = c.getContext('2d');
@@ -2446,7 +2483,13 @@
             ctx.translate(c.width, 0);
             ctx.scale(-1, 1);
             ctx.drawImage(v, 0, 0, c.width, c.height);
-            capturedBase64 = c.toDataURL('image/jpeg', 0.8);
+            
+            // [v3.0 T3.3] kompresi max 480px + jpeg 0.7
+            try {
+                capturedBase64 = await resizeAndCompress(c, 480, 0.7);
+            } catch(e) {
+                capturedBase64 = c.toDataURL('image/jpeg', 0.8);
+            }
 
             // Stop stream
             if (currentStream) {

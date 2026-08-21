@@ -1081,7 +1081,10 @@
                         isDriveVideo = true;
                         finalUrl = `https://drive.google.com/file/d/${driveFileId}/preview`;
                     } else {
-                        finalUrl = `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w1920`;
+                        // [v3.0 T4.3] Drive sz=w800 (kiosk/portrait) / w1280 (TV landscape) — hemat bandwidth & cepat masuk cache
+                        const isKioskMode = new URLSearchParams(window.location.search).get('mode') === 'kiosk';
+                        const thumbWidth = isKioskMode ? 800 : 1280;
+                        finalUrl = `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w${thumbWidth}`;
                     }
                 }
                 return { rawUrl, finalUrl, isVideo, isDriveVideo, isYT };
@@ -1114,14 +1117,12 @@
                     }
                 } else {
                     slideDiv.classList.add('photo-slide');
-                    const img = new Image();
-                    img.onload = () => {
+                    // [v3.0 T4.3] Load first slide immediately; others will be preloaded on demand
+                    if (i === 0) {
                         slideDiv.style.backgroundImage = `url('${item.finalUrl}')`;
-                    };
-                    img.onerror = () => {
-                        slideDiv.style.background = `linear-gradient(135deg, #1A1A24 0%, #0F0F14 100%)`;
-                    };
-                    img.src = item.finalUrl;
+                    } else {
+                        slideDiv.dataset.src = item.finalUrl;
+                    }
                 }
 
                 container.appendChild(slideDiv);
@@ -1129,6 +1130,24 @@
 
             slideIdx = 0;
             playCurrentSlide();
+        }
+
+        // [v3.0 T4.3] Preload next slide image into browser cache
+        function preloadNextSlide(nextIdx) {
+            const slides = document.querySelectorAll('#slideshow-container .slide');
+            if (!slides || !slides[nextIdx]) return;
+            const nextSlide = slides[nextIdx];
+            if (nextSlide.classList.contains('photo-slide') && nextSlide.dataset.src) {
+                const img = new Image();
+                img.onload = () => {
+                    nextSlide.style.backgroundImage = `url('${nextSlide.dataset.src}')`;
+                    delete nextSlide.dataset.src;
+                };
+                img.onerror = () => {
+                    nextSlide.style.background = `linear-gradient(135deg, #1A1A24 0%, #0F0F14 100%)`;
+                };
+                img.src = nextSlide.dataset.src;
+            }
         }
 
         function playCurrentSlide() {
@@ -1156,6 +1175,10 @@
             });
 
             if (slides.length <= 1) return;
+
+            // [v3.0 T4.3] Preload next slide into cache ahead of time
+            const nextIdx = (slideIdx + 1) % slides.length;
+            preloadNextSlide(nextIdx);
 
             const currentSlide = slides[slideIdx];
             const isVideo = currentSlide.dataset.isVideo === "true";
@@ -1195,6 +1218,22 @@
             const isFs = !!document.fullscreenElement;
             document.body.classList.toggle('is-fullscreen', isFs);
             document.documentElement.classList.toggle('is-fullscreen', isFs);
+        });
+
+        // [v3.0 T3.1] iframe idle control via postMessage (no route change)
+        window.addEventListener('message', (e) => {
+            if (!e.data) return;
+            if (e.data === 'pause') {
+                if (typeof slideTimer !== 'undefined') clearTimeout(slideTimer);
+                document.querySelectorAll('#slideshow-container video').forEach(v => {
+                    try { v.pause(); } catch(err){}
+                });
+            } else if (e.data === 'play') {
+                if (typeof playCurrentSlide === 'function') playCurrentSlide();
+                if (typeof syncData === 'function') syncData();
+            } else if (e.data === 'sync') {
+                if (typeof syncData === 'function') syncData();
+            }
         });
 
         window.addEventListener('DOMContentLoaded', () => {

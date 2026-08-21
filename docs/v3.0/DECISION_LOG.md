@@ -17,6 +17,14 @@
 | 2026-05-13 | T2.6 Realtime kiosk | LANJUT | Tambah createRealtimeTamu di core + kiosk guestMap + initKioskRealtime (onInsert/Update/Delete + refresh search). Risiko rendah, 1 channel WS ekstra. Tidak ubah route. User: ya terapkan |
 | 2026-05-13 | T2.5 Dual View Card↔Details + chunked | LANJUT | Checkin/onsite: toggle Card/Details windowed, chunked fetch 100/offset + infinite sentinel + view-aware render/toggle/realtime. Kiosk tetap Card. Risiko sedang-tinggi, fallback Card. Tidak ubah route. User: lanjut |
 | 2026-05-13 | Fix mobile bulk-btn overflow | LANJUT | checkin/onsite search-container flex-wrap + bulk-btn 100% width di <768px agar KONFIRMASI tidak keluar frame. Risiko sangat rendah. Tidak ubah route. User: lanjut |
+| 2026-08-21 | Pihak Singkatan Mobile | LANJUT | CSS .pihak-full/.pihak-short + _formatPihakShort() murni dinamis inisial kata (tanpa hardcode map) di checkin.html & onsite.html. Mobile <768px tampil akronim, desktop/tablet full. User: lanjut |
+| 2026-08-21 | T3.1 Kiosk Idle iframe | LANJUT | postMessage 'pause'/'play' ke #welcome-frame saat scan/idle. Route welcome.html?mode=kiosk tidak berubah. User: lanjut |
+| 2026-08-21 | T3.2 Unify CSS Drawer | LANJUT | Ekstrak CSS mob-kartu, sheet, drawer dari checkin/onsite ke assets/guestbook-shared.css. User: lanjut |
+| 2026-08-21 | T3.3 Selfie Kompresi | LANJUT | resizeAndCompress() di kiosk/onsite: resize max 480px + jpeg 0.7 via canvas.toBlob. Endpoint SCRIPT_URL tetap sama. User: lanjut |
+| 2026-08-21 | T3.4 Offline Queue | LANJUT | Guard sync_queue.js intercept fetch Supabase & GAS offline, auto-replay on online. User: lanjut |
+| 2026-08-21 | T4.1 Analytics Mirror Ringan | LANJUT | Kurangi floating hearts ke 6 partikel + lazy load iframe welcome mirror via IntersectionObserver. User: lanjut |
+| 2026-08-21 | T4.2 Memoize Flow Monitoring | LANJUT | Memoize komputasi grouping renderFlow() di analytics.html via _cachedFlowKey. User: lanjut |
+| 2026-08-21 | T4.3 Welcome Slideshow Preload | LANJUT | Resolusi adaptive Drive sz=w800 (kiosk) / w1280 (TV) + preloading next slide memanfaatkan browser HTTP cache. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.

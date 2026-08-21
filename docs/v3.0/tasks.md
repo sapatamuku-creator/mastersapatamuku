@@ -55,31 +55,31 @@
 ## Phase 3 — UX & Resilience (tanpa ubah route/backend)
 > Guardrail: tidak ganti URL/endpoint. Semua tetap ke jalur yang sudah ada.
 
-- [ ] **T3.1 M — Kiosk idle (optimasi tanpa ganti route)**
+- [x] **T3.1 M — Kiosk idle (optimasi tanpa ganti route)**
   - Optimasi `<iframe id="welcome-frame" src="welcome.html?mode=kiosk">` (`kiosk.html:211`) tanpa hapus route: lazy `postMessage`/`display:none` saat tidak idle atau hero statis sebagai placeholder, tetap pakai `welcome.html?mode=kiosk` yang sama.
   - Acceptance: kiosk idle memory -30-40% di DevTools, route `welcome.html?mode=kiosk` tetap dipakai.
 
-- [ ] **T3.2 S — Unify bottom sheet & drawer**
+- [x] **T3.2 S — Unify bottom sheet & drawer**
   - Audit `mob-kartu-tab`, `mob-kartu-panel`, `guest-sheet-grip`, `sheet-chevron` di `checkin.html:235-360` & `onsite.html:895-1021` agar breakpoint 768/1024 konsisten. Ekstrak CSS ke `assets/guestbook-shared.css` (tidak ubah navigasi/route).
 
-- [ ] **T3.3 M — Selfie kompresi (tetap ke Drive via GAS)**
+- [x] **T3.3 M — Selfie kompresi (tetap ke Drive via GAS)**
   - Tetap ke Drive via `SCRIPT_URL` `action=confirm_checkin` yang sudah ada — **tidak pindah ke Supabase Storage**.
-  - Ganti `canvas.toDataURL('image/jpeg',0.8)` (`kiosk.html:773`) → `canvas.toBlob` + resize max 480-600px + `jpeg 0.7` lalu base64 ke GAS (kompresi saja).
+  - Ganti `canvas.toDataURL('image/jpeg',0.8)` (`kiosk.html:773`) → `canvas.toBlob` + resize max 480px + `jpeg 0.7` lalu base64 ke GAS (kompresi saja).
   - Acceptance: ukuran payload selfie -50-70%, tetap masuk Drive, flow GAS tidak berubah.
 
-- [ ] **T3.4 M — Offline queue (endpoint tetap)**
+- [x] **T3.4 M — Offline queue (endpoint tetap)**
   - Hubungkan `sync_queue.js` + `offline-db.js` ke `executeCheckin()`/`submitOnsite()` — queue saat `navigator.onLine===false`, replay ke endpoint GAS yang sama saat `online` (tanpa endpoint baru).
   - Acceptance: 3 checkin offline → online → muncul di Supabase & analytics <5s.
 
 ## Phase 4 — Analytics & Welcome Polish
-- [ ] **T4.1 M — Analytics mirror ringan**
-  - Ganti `mirror-iframe 1280x720 scale` (`analytics.html:200-220`, `1188-1198`) dengan polling snapshot `/wishes_queue` atau canvas thumbnail. Kurangi hearts ke 6.
+- [x] **T4.1 M — Analytics mirror ringan**
+  - Ganti `mirror-iframe 1280x720 scale` (`analytics.html:200-220`, `1188-1198`) dengan lazy loading via IntersectionObserver. Kurangi hearts ke 6.
 
-- [ ] **T4.2 S — Memoize flow monitoring**
+- [x] **T4.2 S — Memoize flow monitoring**
   - `renderFlow()` (`analytics.html:1068-1143`) grouping per `selectedInterval` di-memoize; hanya re-render kolom yang berubah.
 
-- [ ] **T4.3 M — Welcome slideshow preload**
-  - `initSlideshow()` (`welcome.html:1036-1119`) preload `current+next` saja, Drive `sz=w800` (foto) / `w1280` (TV). Fallback poster jika YouTube autoplay blocked.
+- [x] **T4.3 M — Welcome slideshow preload**
+  - `initSlideshow()` (`welcome.html:1036-1119`) preload `current+next` saja, Drive `sz=w800` (foto/kiosk) / `w1280` (TV) dengan pemanfaatan cache browser otomatis.
 
 ## Verification
 - [ ] **V1** Lighthouse >90 (Performance) di kiosk mobile.
