@@ -7,7 +7,7 @@
 | 2026-05-13 | T0.1 Instrumentasi performa | LANJUT | Overhead <1ms, 20 entri terakhir di localStorage, jujur tanpa ubah route. User: lanjut |
 | 2026-05-13 | T2.5 Dual View vs Paginasi | LANJUT (ubah) | Ganti paginasi halaman → Card (default) + Details windowed infinite + chunked fetch 100/offset di checkin/onsite; kiosk tetap 1 mode. Alasan: UX lapangan butuh scan padat tanpa ingat halaman. Tidak ubah backend route. |
 | 2026-05-13 | T0.2 Audit RLS & payload | LANJUT | Hanya baca & catat baseline, tidak ubah RLS/endpoint. Jika longgar, RFC terpisah. User: lanjut Phase 0 |
-| | | | |
+| 2026-05-13 | T1.1 Tailwind build statis | LANJUT | Ganti cdn.tailwindcss.com → assets/tailwind.css 19KB (fallback onerror ke CDN). Risiko purge miss: mitigasi staging visual check. Tidak ubah route. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
