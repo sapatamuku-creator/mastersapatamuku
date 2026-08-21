@@ -152,6 +152,11 @@
         #kiosk-search-list input[type="radio"] { width: 14px; height: 14px; max-width: 14px; padding: 0; margin: 0; flex-shrink: 0; }
     </style>
     <script src="config.js"></script>
+    <script type="module">
+      // [v3.0 T2.1] import core — no route change, fallback to inline if fail
+      import { fetchTamu, createScanner } from './lib/guestbook-core.js';
+      window.__guestbookCore = { fetchTamu, createScanner };
+    </script>
     <script src="subdomain_resolver.js?v=3.5"></script>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -447,6 +452,7 @@
         let CURRENT_SS_ID = null;
         let masterData = [];
         let html5QrCode = null;
+        let _coreScanner = null; // [v3.0 T2.1] core scanner instance
         let selectedGuest = null;
         let scanCooldown = false;
         
@@ -458,10 +464,11 @@
             scannerEnabled = enabled;
             localStorage.setItem('kiosk_cam_on', enabled ? '1' : '0');
             if (enabled) {
-                // Hanya aktifkan jika sudah di scan-state (idle state tersembunyi)
                 const idleVisible = document.getElementById('kiosk-idle-state').style.opacity !== '0';
                 if (!idleVisible) initScanner();
             } else {
+                // [v3.0 T2.1] stop core scanner if used
+                if(_coreScanner){ try{ _coreScanner.stop(); }catch(e){} }
                 if (html5QrCode) {
                     html5QrCode.stop().catch(() => {});
                     html5QrCode.clear();
@@ -553,6 +560,14 @@
 
         async function fetchData() {
             var _perfStart='kiosk:fetch:start'; try{ performance.mark(_perfStart); }catch(e){}
+            // [v3.0 T2.1] core delegation — no route change, fallback to inline
+            if(window.__guestbookCore && window.__guestbookCore.fetchTamu){
+              try{
+                masterData = await window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit: 1000 });
+                try{ window.__sapaPerf.measure('kiosk:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
+                return;
+              }catch(e){ console.warn('[kiosk] core fetch fallback', e); }
+            }
             try {
                 const supabaseUrl = SB_URL + "/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
                 const response = await fetch(supabaseUrl, {
@@ -588,6 +603,10 @@
         }
 
         function toggleFrontcamMode(enabled) {
+            // [v3.0 T2.1] delegate to core if available
+            if(_coreScanner && _coreScanner.toggleFrontcam){
+              try{ _coreScanner.toggleFrontcam(enabled); return; }catch(e){ console.warn('core frontcam fallback',e); }
+            }
             localStorage.setItem('force_frontcam_on', enabled ? '1' : '0');
             document.getElementById('reader')?.classList.toggle('mirror-mode', enabled);
             if (scannerEnabled) {
@@ -606,6 +625,14 @@
         }
 
         function initScanner() {
+            // [v3.0 T2.1] delegate to core if available
+            if(window.__guestbookCore && window.__guestbookCore.createScanner){
+              try{
+                if(!_coreScanner) _coreScanner = window.__guestbookCore.createScanner({ readerId: "reader", onScan: onScanSuccess, fps: 15 });
+                _coreScanner.start();
+                return;
+              }catch(e){ console.warn('[kiosk] core scanner fallback', e); }
+            }
             var _perfS='kiosk:scanner:start'; try{ performance.mark(_perfS); }catch(e){}
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             const useFront = localStorage.getItem('force_frontcam_on') === '1';
