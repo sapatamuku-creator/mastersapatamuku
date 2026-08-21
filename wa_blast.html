@@ -603,6 +603,30 @@
             id="loading-text">Menyiapkan Sistem...</div>
     </div>
 
+    <!-- LIVE PROGRESS & TELEMETRY OVERLAY (live-progress-ux) -->
+    <div id="liveProgressOverlay" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); display: none; align-items: center; justify-content: center; z-index: 99999999; padding: 20px;">
+        <div style="background: #FFFFFF; border: 1px solid var(--border); border-radius: 28px; padding: 36px 30px; width: 100%; max-width: 440px; box-shadow: 0 25px 50px -12px rgba(74, 63, 53, 0.22); text-align: center; animation: modalPop 0.35s cubic-bezier(0.32, 0.72, 0, 1);">
+            <div style="width: 52px; height: 52px; margin: 0 auto 16px; border-radius: 18px; background: rgba(200, 150, 46, 0.12); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 24px;">
+                <span id="progressIcon" class="animate-pulse">🚀</span>
+            </div>
+            <h3 id="progressTitle" style="font-family: 'Lora', serif; font-size: 19px; font-weight: 700; color: var(--text-main); margin: 0 0 6px;">Mengirim WA Blast</h3>
+            <p id="progressSubtitle" style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin: 0 0 20px;">Mohon jangan menutup tab atau memuat ulang halaman...</p>
+            
+            <div style="width: 100%; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 12px;">
+                <div id="progressBarFill" style="height: 100%; background: linear-gradient(90deg, var(--gold) 0%, var(--primary) 100%); width: 0%; border-radius: 999px; transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1);"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                <span id="progressCountText" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; background: #FDF8F4; border: 1px solid var(--border); font-size: 10px; font-weight: 800; color: var(--text-main); letter-spacing: 0.5px;">0 / 0 Pesan</span>
+                <span id="progressPercentText" style="font-size: 12px; font-weight: 900; color: var(--gold);">0%</span>
+            </div>
+
+            <p id="progressCurrentItem" style="font-size: 10.5px; color: var(--text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 16px 0 0; opacity: 0.85;">
+                Menyiapkan antrean blast...
+            </p>
+        </div>
+    </div>
+
     <div id="st-modal" class="st-modal-overlay">
         <div id="modal-container" class="st-modal-content">
             <span id="st-modal-icon" style="font-size: 50px; margin-bottom: 20px; display: block;">⚠️</span>
@@ -1449,12 +1473,14 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                     const pad = n => String(n).padStart(2, '0');
                     const nowStr = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
 
+                    let processedCount = 0;
                     for (let i = 0; i < payload.length; i += batchSize) {
                         const batch = payload.slice(i, i + batchSize);
                         const batchNum = Math.floor(i / batchSize) + 1;
                         const totalBatches = Math.ceil(payload.length / batchSize);
                         
-                        toggleProcessing(true, `Mengirim Batch ${batchNum}/${totalBatches} (${batch.length} pesan)...`);
+                        showLiveProgress("Mengirim WA Blast", "Menghubungkan ke gateway Fonnte...", "🚀");
+                        updateLiveProgress(processedCount, totalEntries, "Mengirim Batch " + batchNum + "/" + totalBatches + " (" + batch.length + " pesan)...");
                         
                         try {
                             const res = await fetch(SCRIPT_URL, {
@@ -1484,14 +1510,13 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                                 });
 
                                 // Sinkronisasikan status ke Supabase secara langsung dan asinkron (background)
-
                                 await Promise.all(
                                     successRows.map(t => 
                                         fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&row=eq.${t.row}`, {
                                             method: "PATCH",
                                             headers: {
-                                        "apikey": SB_KEY,
-                                        "Authorization": "Bearer " + SB_KEY,
+                                                "apikey": SB_KEY,
+                                                "Authorization": "Bearer " + SB_KEY,
                                                 "Content-Type": "application/json"
                                             },
                                             body: JSON.stringify({ status_wa: '✅ [' + nowStr + ']' })
@@ -1512,19 +1537,23 @@ Hanya ${uniqueTargets.length} tamu dengan nomor unik yang akan dikirim.`;
                                 allFailedRows.push({ row: item.row, reason: serverError });
                             });
                         }
+
+                        processedCount = Math.min(i + batch.length, totalEntries);
+                        updateLiveProgress(processedCount, totalEntries, "Selesai memproses Batch " + batchNum + "/" + totalBatches);
                         
-                        // Cooldown logic
+                        // Cooldown logic with live telemetry
                         if (needsCooldown && (i + batchSize) < payload.length) {
                             let cooldownTime = 60;
                             while (cooldownTime > 0) {
-                                toggleProcessing(true, `Cooldown Pengiriman...\nMenunggu ${cooldownTime} detik sebelum batch berikutnya.`);
+                                showLiveProgress("Jeda Keamanan (Cooldown)", "Mencegah pembatasan WhatsApp...", "⏳");
+                                updateLiveProgress(processedCount, totalEntries, "Menunggu jeda antrean: " + cooldownTime + " detik sebelum batch berikutnya...");
                                 await new Promise(r => setTimeout(r, 1000));
                                 cooldownTime--;
                             }
                         }
                     }
 
-                    toggleProcessing(false);
+                    closeLiveProgress();
 
                     // Sinkronisasikan status duplikat ke Supabase jika ada
                     if (duplicates.length > 0) {

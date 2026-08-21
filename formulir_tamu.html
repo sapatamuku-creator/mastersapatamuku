@@ -1759,6 +1759,30 @@
         </div>
     </div>
 
+    <!-- LIVE PROGRESS & TELEMETRY OVERLAY (live-progress-ux) -->
+    <div id="liveProgressOverlay" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); display: none; align-items: center; justify-content: center; z-index: 99999999; padding: 20px;">
+        <div style="background: #FFFFFF; border: 1px solid var(--border); border-radius: 28px; padding: 36px 30px; width: 100%; max-width: 440px; box-shadow: 0 25px 50px -12px rgba(74, 63, 53, 0.22); text-align: center; animation: modalPop 0.35s cubic-bezier(0.32, 0.72, 0, 1);">
+            <div style="width: 52px; height: 52px; margin: 0 auto 16px; border-radius: 18px; background: rgba(200, 150, 46, 0.12); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 24px;">
+                <span id="progressIcon" class="animate-pulse">⏳</span>
+            </div>
+            <h3 id="progressTitle" style="font-family: 'Lora', serif; font-size: 19px; font-weight: 700; color: var(--text-main); margin: 0 0 6px;">Memproses Data</h3>
+            <p id="progressSubtitle" style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin: 0 0 20px;">Mohon jangan menutup atau memuat ulang halaman...</p>
+            
+            <div style="width: 100%; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 12px;">
+                <div id="progressBarFill" style="height: 100%; background: linear-gradient(90deg, var(--gold) 0%, var(--primary) 100%); width: 0%; border-radius: 999px; transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1);"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                <span id="progressCountText" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; background: #FDF8F4; border: 1px solid var(--border); font-size: 10px; font-weight: 800; color: var(--text-main); letter-spacing: 0.5px;">0 / 0 Data</span>
+                <span id="progressPercentText" style="font-size: 12px; font-weight: 900; color: var(--gold);">0%</span>
+            </div>
+
+            <p id="progressCurrentItem" style="font-size: 10.5px; color: var(--text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 16px 0 0; opacity: 0.85;">
+                Menyiapkan antrean...
+            </p>
+        </div>
+    </div>
+
     <!-- CUSTOM NOTIFICATION MODAL -->
     <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.4); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
         <div style="background: #fff; width: 90%; max-width: 400px; border-radius: 35px; padding: 50px 40px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
@@ -1839,6 +1863,46 @@
 
         window.closeSapaModal = function() {
             document.getElementById('sapa-notify-modal').style.display = 'none';
+        };
+
+        // ── LIVE PROGRESS & TELEMETRY CONTROLLER (live-progress-ux) ──
+        window.showLiveProgress = function(title = "Memproses Data", subtitle = "Mohon jangan menutup halaman...", icon = "⏳") {
+            const overlay = document.getElementById('liveProgressOverlay');
+            if (!overlay) return;
+            const titleEl = document.getElementById('progressTitle');
+            const subEl = document.getElementById('progressSubtitle');
+            const iconEl = document.getElementById('progressIcon');
+            const barFill = document.getElementById('progressBarFill');
+            const countText = document.getElementById('progressCountText');
+            const percentText = document.getElementById('progressPercentText');
+            const itemText = document.getElementById('progressCurrentItem');
+
+            if (titleEl) titleEl.innerText = title;
+            if (subEl) subEl.innerText = subtitle;
+            if (iconEl) iconEl.innerText = icon;
+            if (barFill) barFill.style.width = '0%';
+            if (countText) countText.innerText = '0 / 0 Data';
+            if (percentText) percentText.innerText = '0%';
+            if (itemText) itemText.innerText = 'Menyiapkan antrean...';
+            overlay.style.display = 'flex';
+        };
+
+        window.updateLiveProgress = function(current, total, currentItemName = '') {
+            const barFill = document.getElementById('progressBarFill');
+            const countText = document.getElementById('progressCountText');
+            const percentText = document.getElementById('progressPercentText');
+            const itemText = document.getElementById('progressCurrentItem');
+
+            const percent = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+            if (barFill) barFill.style.width = percent + '%';
+            if (countText) countText.innerText = current + ' / ' + total + ' Diproses';
+            if (percentText) percentText.innerText = percent + '%';
+            if (itemText && currentItemName) itemText.innerText = 'Memproses: ' + currentItemName;
+        };
+
+        window.closeLiveProgress = function() {
+            const overlay = document.getElementById('liveProgressOverlay');
+            if (overlay) overlay.style.display = 'none';
         };
 
 
@@ -4129,11 +4193,12 @@
     }
 
     async function commitExcelGuests(addedGuests, report) {
-        toggleProcessing(true, "MEMASUKKAN TAMU KE SUPABASE...");
+        showLiveProgress("Mengimpor Tamu", "Menyimpan tamu ke database...", "📊");
         try {
-            // Simpan ke Supabase secara batch (100 per request)
+            // Simpan ke Supabase secara batch (100 per request) dengan live progress feedback
             const chunkSize = 100;
-            for (let i = 0; i < addedGuests.length; i += chunkSize) {
+            const total = addedGuests.length;
+            for (let i = 0; i < total; i += chunkSize) {
                 const chunk = addedGuests.slice(i, i + chunkSize);
                 const payloads = chunk.map(g => ({
                     ssid: CURRENT_SS_ID,
@@ -4690,12 +4755,14 @@
         if (!confirmed) return;
         
         window.closeSyncCompareModal();
-        toggleProcessing(true, "MEMPROSES SINKRONISASI...");
+        const totalItems = codesSb.length + codesSheet.length;
+        showLiveProgress(actionType === 'delete' ? 'Menghapus Data' : 'Menyelaraskan Data', 'Memproses data tamu terpilih...', actionType === 'delete' ? '🗑️' : '🔄');
         
         try {
             if (actionType === 'delete') {
                 // 1. Delete selected from Supabase
                 if (codesSb.length > 0) {
+                    updateLiveProgress(0, totalItems, `Menghapus ${codesSb.length} tamu dari Supabase...`);
                     const deleteUrl = `${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=in.(${codesSb.map(c => `"${c}"`).join(',')})`;
                     const sbRes = await fetch(deleteUrl, {
                         method: 'DELETE',
@@ -4706,6 +4773,7 @@
                 
                 // 2. Delete selected from Spreadsheet via GAS
                 if (codesSheet.length > 0) {
+                    updateLiveProgress(codesSb.length, totalItems, `Menghapus ${codesSheet.length} tamu dari Google Sheets...`);
                     const gasRes = await fetch(SCRIPT_URL, {
                         method: 'POST',
                         body: JSON.stringify({
@@ -4718,6 +4786,8 @@
                     if (gasResult.status !== 'success') throw new Error(gasResult.message || "Gagal menghapus dari Spreadsheet.");
                 }
                 
+                updateLiveProgress(totalItems, totalItems, "Selesai!");
+                closeLiveProgress();
                 showSapaModal("Sukses Hapus ✅", `Berhasil menghapus ${codesSb.length} tamu dari Supabase dan ${codesSheet.length} tamu dari Google Sheets.`, "✅");
                 
             } else {
@@ -4725,6 +4795,7 @@
                 
                 // 1. Simpan tamu dari Supabase ke Spreadsheet
                 if (codesSb.length > 0) {
+                    updateLiveProgress(0, totalItems, `Menyinkronkan ${codesSb.length} tamu ke Spreadsheet...`);
                     const guestsToSaveToSheet = window.SYNC_ONLY_IN_SB.filter(g => codesSb.includes(g.kode)).map(g => ({
                         nama: g.nama,
                         whatsapp: g.whatsapp,
@@ -4757,6 +4828,7 @@
                 
                 // 2. Simpan tamu dari Spreadsheet ke Supabase
                 if (codesSheet.length > 0) {
+                    updateLiveProgress(codesSb.length, totalItems, `Menyinkronkan ${codesSheet.length} tamu ke Supabase...`);
                     const guestsToSaveToSb = window.SYNC_ONLY_IN_SHEET.filter(g => codesSheet.includes(g.kode)).map(g => {
                         let cleanPhone = String(g.whatsapp || "").replace(/\D/g, ''); 
                         if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
@@ -4792,6 +4864,8 @@
                     if (!sbRes.ok) throw new Error("Gagal menyimpan ke Supabase.");
                 }
                 
+                updateLiveProgress(totalItems, totalItems, "Selesai!");
+                closeLiveProgress();
                 showSapaModal("Sukses Sinkron ✅", `Berhasil menyelaraskan ${codesSb.length} tamu ke Google Sheets dan ${codesSheet.length} tamu ke Supabase.`, "✅");
             }
             
@@ -4799,10 +4873,9 @@
             await refreshApp();
             
         } catch (error) {
+            closeLiveProgress();
             console.error("processSyncAction error:", error);
             showSapaModal("Error Sinkronisasi ❌", error.message, "❌");
-        } finally {
-            toggleProcessing(false);
         }
     };
 
@@ -4969,34 +5042,39 @@
             if (!confirmed) return;
 
             closeManageDuplicatesModal();
-            toggleProcessing(true, 'MENGHAPUS ' + total + ' TAMU DARI SUPABASE...');
+            showLiveProgress("Menghapus Duplikat", "Menghapus data duplikat terpilih dari database...", "🗑️");
 
-            // ===== STEP 1: Supabase — batch parallel (semua sekaligus, cepat) =====
-            var sbPromises = toDeleteKodes.map(function(kode) {
-                return fetch(SB_URL + '/rest/v1/tamu?ssid=eq.' + CURRENT_SS_ID + '&kode=eq.' + kode, {
-                    method: 'DELETE',
-                    headers: SB_HEADERS
-                }).then(function(res) {
-                    return { kode: kode, ok: res.ok || res.status === 204 };
-                }).catch(function() {
-                    return { kode: kode, ok: false };
-                });
-            });
-
-            var sbResults = await Promise.all(sbPromises);
-
-            // Remove successful ones from MASTER_LIST immediately
+            // ===== STEP 1: Supabase — batch deletion dengan live telemetry =====
             var deletedKodes = [];
-            sbResults.forEach(function(r) {
-                if (r.ok) {
-                    var idx = MASTER_LIST.findIndex(function(g) { return g.kode === r.kode; });
-                    if (idx !== -1) MASTER_LIST.splice(idx, 1);
-                    deletedKodes.push(r.kode);
-                }
-            });
+            var batchSize = 10;
+            for (var bi = 0; bi < toDeleteKodes.length; bi += batchSize) {
+                var chunk = toDeleteKodes.slice(bi, bi + batchSize);
+                var sbPromises = chunk.map(function(kode) {
+                    return fetch(SB_URL + "/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&kode=eq." + kode, {
+                        method: "DELETE",
+                        headers: SB_HEADERS
+                    }).then(function(res) {
+                        return { kode: kode, ok: res.ok || res.status === 204 };
+                    }).catch(function() {
+                        return { kode: kode, ok: false };
+                    });
+                });
+
+                var sbResults = await Promise.all(sbPromises);
+                sbResults.forEach(function(r) {
+                    if (r.ok) {
+                        var idx = MASTER_LIST.findIndex(function(g) { return g.kode === r.kode; });
+                        if (idx !== -1) MASTER_LIST.splice(idx, 1);
+                        deletedKodes.push(r.kode);
+                    }
+                });
+
+                updateLiveProgress(deletedKodes.length, total, "Kode: " + chunk[chunk.length - 1]);
+                await new Promise(function(r) { setTimeout(r, 15); });
+            }
 
             render(MASTER_LIST);
-            toggleProcessing(false);
+            closeLiveProgress();
 
             // Show brief success — Supabase done
             var sbFail = total - deletedKodes.length;

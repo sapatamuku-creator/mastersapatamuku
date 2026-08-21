@@ -1178,28 +1178,27 @@
     </div>
 </div>
 
-<!-- Realtime Progress Loading Modal -->
-<div id="progress-modal" class="notification-modal" style="display: none; z-index: 9999999;">
-    <div class="notification-content" style="max-width: 420px; padding: 32px 24px; text-align: center;">
-        <div style="position: relative; width: 60px; height: 60px; margin: 0 auto 16px;">
-            <div class="spinner" style="width: 60px; height: 60px; border-width: 4px;"></div>
-            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px;">⚡</div>
+<!-- Realtime Progress Loading Modal (live-progress-ux) -->
+<div id="progress-modal" class="notification-modal" style="display: none; z-index: 9999999; padding: 20px;">
+    <div class="notification-content" style="max-width: 440px; border-radius: 28px; padding: 36px 30px; text-align: center; box-shadow: 0 25px 50px -12px rgba(74, 63, 53, 0.22); border: 1px solid var(--border);">
+        <div style="width: 52px; height: 52px; margin: 0 auto 16px; border-radius: 18px; background: rgba(200, 150, 46, 0.12); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 24px;">
+            <span class="animate-pulse">📁</span>
         </div>
-        <h3 id="progress-modal-title" style="font-size: 19px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">Menyalin Foto...</h3>
-        <p id="progress-modal-subtitle" style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Proses pemindaian &amp; penyalinan sedang berjalan realtime.</p>
+        <h3 id="progress-modal-title" style="font-family: 'Lora', serif; font-size: 19px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Menyalin Foto...</h3>
+        <p id="progress-modal-subtitle" style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 20px;">Proses pemindaian &amp; penyalinan sedang berjalan realtime.</p>
 
-        <div style="background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 14px; text-align: left;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span id="progress-modal-status" style="font-size: 13px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;">Mempersiapkan...</span>
-                <span id="progress-modal-counter" style="font-size: 15px; font-weight: 800; color: var(--primary); font-family: monospace;">0 / 0</span>
-            </div>
-            <div style="width: 100%; height: 10px; background: #EFE6DE; border-radius: 20px; overflow: hidden; position: relative;">
-                <div id="progress-modal-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--gold)); border-radius: 20px; transition: width 0.12s ease-out;"></div>
-            </div>
+        <div style="width: 100%; height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 12px;">
+            <div id="progress-modal-bar" style="height: 100%; background: linear-gradient(90deg, var(--gold) 0%, var(--primary) 100%); width: 0%; border-radius: 999px; transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1);"></div>
         </div>
-        <div id="progress-modal-detail" style="font-size: 11px; color: var(--text-muted); word-break: break-all; min-height: 16px; font-weight: 500;">
-            Mohon jangan tutup browser selama proses ini.
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+            <span id="progress-modal-counter" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; background: #FDF8F4; border: 1px solid var(--border); font-size: 10px; font-weight: 800; color: var(--text-main); letter-spacing: 0.5px;">0 / 0 Foto</span>
+            <span id="progress-modal-percent" style="font-size: 12px; font-weight: 900; color: var(--gold);">0%</span>
         </div>
+
+        <p id="progress-modal-detail" style="font-size: 10.5px; color: var(--text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 16px 0 0; opacity: 0.85;">
+            Mohon jangan menutup browser selama proses ini...
+        </p>
     </div>
 </div>
 
@@ -1333,34 +1332,35 @@
     function showProgressModal(title, subtitle = 'Sedang memproses foto...') {
         const pTitle = document.getElementById('progress-modal-title');
         const pSub = document.getElementById('progress-modal-subtitle');
-        const pStatus = document.getElementById('progress-modal-status');
         const pCounter = document.getElementById('progress-modal-counter');
+        const pPercent = document.getElementById('progress-modal-percent');
         const pBar = document.getElementById('progress-modal-bar');
         const pDetail = document.getElementById('progress-modal-detail');
 
         if (pTitle) pTitle.innerText = title;
         if (pSub) pSub.innerText = subtitle;
-        if (pStatus) pStatus.innerText = 'Mempersiapkan...';
-        if (pCounter) pCounter.innerText = '0 / 0';
+        if (pCounter) pCounter.innerText = '0 / 0 Foto';
+        if (pPercent) pPercent.innerText = '0%';
         if (pBar) pBar.style.width = '0%';
-        if (pDetail) pDetail.innerText = 'Mohon jangan tutup browser selama proses ini.';
+        if (pDetail) pDetail.innerText = 'Mohon jangan menutup browser selama proses ini...';
 
         const modal = document.getElementById('progress-modal');
         if (modal) modal.style.display = 'flex';
     }
 
     function updateProgressModal(current, total, statusText = '', detailText = '') {
-        const pStatus = document.getElementById('progress-modal-status');
         const pCounter = document.getElementById('progress-modal-counter');
+        const pPercent = document.getElementById('progress-modal-percent');
         const pBar = document.getElementById('progress-modal-bar');
         const pDetail = document.getElementById('progress-modal-detail');
 
         const percent = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
 
-        if (pCounter) pCounter.innerText = `${current} / ${total}`;
+        if (pCounter) pCounter.innerText = `${current} / ${total} Foto`;
+        if (pPercent) pPercent.innerText = `${percent}%`;
         if (pBar) pBar.style.width = `${percent}%`;
-        if (statusText && pStatus) pStatus.innerText = statusText;
         if (detailText && pDetail) pDetail.innerText = detailText;
+        else if (statusText && pDetail) pDetail.innerText = statusText;
     }
 
     function closeProgressModal() {

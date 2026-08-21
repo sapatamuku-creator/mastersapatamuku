@@ -377,7 +377,10 @@
         };
     }
 
-    // Tampilkan Indikator Sinkronisasi Latar Belakang yang Elegan
+    let maxPendingPeak = 0;
+    let syncSuccessTimeout = null;
+
+    // Tampilkan Indikator Sinkronisasi Latar Belakang yang Elegan (live-progress-ux)
     function updateQueueIndicator(pendingCount) {
         let indicator = document.getElementById('sync-queue-badge');
         if (!indicator) {
@@ -389,49 +392,96 @@
                 styleEl.id = 'sync-queue-style';
                 styleEl.innerHTML = `
                     @keyframes syncPulse {
-                        0% { transform: scale(0.95); opacity: 0.5; }
-                        50% { transform: scale(1.1); opacity: 1; }
-                        100% { transform: scale(0.95); opacity: 0.5; }
+                        0% { transform: scale(0.92); opacity: 0.6; }
+                        50% { transform: scale(1.15); opacity: 1; }
+                        100% { transform: scale(0.92); opacity: 0.6; }
+                    }
+                    @keyframes syncSlideIn {
+                        from { transform: translateY(16px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                    #sync-queue-badge {
+                        position: fixed;
+                        bottom: 80px;
+                        right: 20px;
+                        background: rgba(74, 63, 53, 0.96);
+                        backdrop-filter: blur(12px);
+                        -webkit-backdrop-filter: blur(12px);
+                        border: 1px solid var(--border, #F0E6DE);
+                        color: #FFF9F5;
+                        padding: 9px 16px;
+                        border-radius: 30px;
+                        font-size: 9.5px;
+                        font-weight: 800;
+                        z-index: 99999;
+                        display: none;
+                        align-items: center;
+                        gap: 10px;
+                        box-shadow: 0 8px 24px rgba(74, 63, 53, 0.2);
+                        transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+                        font-family: 'Plus Jakarta Sans', sans-serif;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        animation: syncSlideIn 0.3s ease-out;
+                    }
+                    @media (max-width: 767.98px) {
+                        #sync-queue-badge {
+                            bottom: 74px;
+                            right: 12px;
+                            padding: 7px 12px;
+                            font-size: 8.5px;
+                            gap: 7px;
+                        }
                     }
                 `;
                 document.head.appendChild(styleEl);
             }
-
-            indicator.style = `
-                position: fixed;
-                bottom: 80px;
-                right: 20px;
-                background: rgba(74, 63, 53, 0.95);
-                backdrop-filter: blur(10px);
-                border: 1px solid var(--border, #F0E6DE);
-                color: #FFF9F5;
-                padding: 8px 14px;
-                border-radius: 30px;
-                font-size: 9px;
-                font-weight: 800;
-                z-index: 99999;
-                display: none;
-                align-items: center;
-                gap: 8px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-                transition: 0.3s;
-                font-family: 'Plus Jakarta Sans', sans-serif;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            `;
             document.body.appendChild(indicator);
         }
 
         if (pendingCount > 0) {
+            if (syncSuccessTimeout) {
+                clearTimeout(syncSuccessTimeout);
+                syncSuccessTimeout = null;
+            }
+            if (pendingCount > maxPendingPeak) {
+                maxPendingPeak = pendingCount;
+            }
+
+            const doneCount = Math.max(0, maxPendingPeak - pendingCount);
+            const percent = maxPendingPeak > 0 ? Math.round((doneCount / maxPendingPeak) * 100) : 0;
+
             indicator.style.display = 'flex';
             indicator.dataset.count = pendingCount; // Store count for fetch patch queue limit check
-            indicator.innerHTML = `
-                <span style="display:inline-block; width:6px; height:6px; background:#C8962E; border-radius:50%; animation:syncPulse 1.5s infinite;"></span>
-                Sync Data: ${pendingCount} Antrean
-            `;
+
+            if (isProcessing && maxPendingPeak > 1) {
+                indicator.innerHTML = `
+                    <span style="display:inline-block; width:7px; height:7px; background:#C8962E; border-radius:50%; animation:syncPulse 1.2s infinite; flex-shrink:0;"></span>
+                    <span>Sync: ${doneCount}/${maxPendingPeak} (${percent}%)</span>
+                    <span style="color:#C8962E; font-size:8.5px;">⏳ ${pendingCount} antrean</span>
+                `;
+            } else {
+                indicator.innerHTML = `
+                    <span style="display:inline-block; width:7px; height:7px; background:#C8962E; border-radius:50%; animation:syncPulse 1.5s infinite; flex-shrink:0;"></span>
+                    <span>Antrean Offline: ${pendingCount} Data</span>
+                `;
+            }
         } else {
-            indicator.style.display = 'none';
             indicator.dataset.count = 0;
+            if (maxPendingPeak > 0) {
+                // Show completion banner briefly
+                indicator.style.display = 'flex';
+                indicator.innerHTML = `
+                    <span style="color:#10B981; font-size:12px;">✓</span>
+                    <span style="color:#10B981;">Semua Data Tersinkron!</span>
+                `;
+                maxPendingPeak = 0;
+                syncSuccessTimeout = setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 2200);
+            } else {
+                indicator.style.display = 'none';
+            }
         }
     }
 
