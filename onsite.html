@@ -279,6 +279,14 @@
             border-color: var(--success);
             opacity: 0.7;
         }
+        /* [v3.0 T2.5] Details view — no route change */
+        .details-row { display:flex; align-items:center; gap:8px; padding:10px 12px; background:#fff; border:1px solid #f0f0f0; border-radius:12px; font-size:11px; cursor:pointer; transition: background 0.15s; }
+        .details-row:hover { background:#FFF9F5; border-color:var(--primary); }
+        .details-row.checked-in { background:#fdf8f4; border-color:var(--success); opacity:0.7; }
+        .details-row .d-name { flex:2; font-weight:800; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; }
+        .details-row .d-cat { flex:1; font-size:8px; font-weight:800; color:var(--gold); background:#fdf8f4; border:1px solid #f0e6de; padding:2px 6px; border-radius:6px; text-align:center; white-space:nowrap; }
+        .details-row .d-pihak { flex:1; font-size:9px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .details-row .d-status { width:70px; font-size:8px; font-weight:800; text-align:center; }
 
         .guest-header {
             display: flex;
@@ -1189,9 +1197,22 @@
                                 <span class="cam-toggle-slider"></span>
                             </label>
                         </div>
+                        <!-- [v3.0 T2.5] Dual View toggle Card↔Details — no route change -->
+                        <div id="view-toggle-onsite" style="display:flex; background:#FFF9F5; border:1px solid var(--border); border-radius:12px; padding:2px; flex-shrink:0;">
+                            <button onclick="setOnsiteView('card')" id="btn-view-card-onsite" style="padding:6px 10px; border-radius:8px; font-size:9px; font-weight:800; background:var(--primary); color:#fff; border:none; cursor:pointer;">KARTU</button>
+                            <button onclick="setOnsiteView('details')" id="btn-view-details-onsite" style="padding:6px 10px; border-radius:8px; font-size:9px; font-weight:800; background:transparent; color:var(--text-muted); border:none; cursor:pointer;">DETAILS</button>
+                        </div>
                         <button id="bulk-btn" style="display:none; background: var(--gold); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 800; font-size: 11px; margin-left: 10px; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 10px rgba(212,175,55,0.3);" onclick="openConfirmModal()">KONFIRMASI (<span id="selected-count">0</span>)</button>
                     </div>
                     <div id="guest-list" class="list-wrapper"></div>
+                    <!-- [v3.0 T2.5] Details view (hidden by default) — no route change -->
+                    <div id="details-list-onsite" style="display:none; flex:1; overflow-y:auto; flex-direction:column; gap:0; padding:0 12px; min-height:0;">
+                        <div id="details-header-onsite" style="display:flex; gap:8px; padding:8px 12px; background:#FFF9F5; border:1px solid var(--border); border-radius:12px; margin:8px 0; font-size:8px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
+                            <span style="flex:2;">Nama</span><span style="flex:1;">Kategori</span><span style="flex:1;">Pihak</span><span style="width:70px; text-align:center;">Status</span>
+                        </div>
+                        <div id="details-body-onsite" style="display:flex; flex-direction:column; gap:4px;"></div>
+                        <div id="details-sentinel-onsite" style="height:20px; display:flex; align-items:center; justify-content:center; padding:10px; font-size:9px; color:var(--text-muted);"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1409,6 +1430,8 @@
         let html5QrCode;
         let _coreScanner = null; // [v3.0 T2.4] core scanner
         let guestMap = new Map(); // [v3.0 T2.4] Map O(1)
+        let _fetchOffset = 0, _fetchLimit = 100, _hasMore = true, _isLoadingMore = false; // [v3.0 T2.5] chunked
+        let _onsiteView = localStorage.getItem('gb:view:onsite') || 'card'; // [v3.0 T2.5]
         let selectedIDs = new Set();
         let scannerEnabled = false; // default OFF - hemat baterai
 
@@ -1431,7 +1454,7 @@
             else selectedIDs.add(id);
             document.getElementById('selected-count').innerText = selectedIDs.size;
             document.getElementById('bulk-btn').style.display = selectedIDs.size > 0 ? 'block' : 'none';
-            renderUI();
+            if(typeof _onsiteView!=='undefined' && _onsiteView==='details' && typeof renderDetailsOnsite==='function') renderDetailsOnsite(); else renderUI();
         };
 
         window.openConfirmModal = function() {
@@ -1506,7 +1529,7 @@
                                         masterData.unshift(newItem);
                                         try{ guestMap.set(String(newItem.kode).trim().toUpperCase(), newItem); }catch(e){}
                                     }
-                                    renderUI();
+                                    if(typeof _onsiteView!=='undefined' && _onsiteView==='details' && typeof renderDetailsOnsite==='function') renderDetailsOnsite(); else renderUI();
                                 } else if (eventType === 'UPDATE') {
                                     const item = payload.new;
                                     const idx = masterData.findIndex(g => g.kode === item.kode || g.row === item.row);
@@ -1529,13 +1552,13 @@
                                             sesi: item.sesi
                                         };
                                         try{ guestMap.set(String(masterData[idx].kode).trim().toUpperCase(), masterData[idx]); }catch(e){}
-                                        renderUI();
+                                        if(typeof _onsiteView!=='undefined' && _onsiteView==='details' && typeof renderDetailsOnsite==='function') renderDetailsOnsite(); else renderUI();
                                     }
                                 } else if (eventType === 'DELETE') {
                                     const item = payload.old;
                                     try{ guestMap.delete(String(item.kode).trim().toUpperCase()); }catch(e){}
                                     masterData = masterData.filter(g => g.kode !== item.kode && g.row !== item.row);
-                                    renderUI();
+                                    if(typeof _onsiteView!=='undefined' && _onsiteView==='details' && typeof renderDetailsOnsite==='function') renderDetailsOnsite(); else renderUI();
                                 }
                             }
                         )
@@ -1783,8 +1806,9 @@
               try{
                 masterData = await window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit: 1000 });
                 try{ guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g])); }catch(e){}
+                _fetchOffset = masterData.length; _hasMore = masterData.length === _fetchLimit;
                 try{ window.__sapaPerf.measure('onsite:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
-                renderUI();
+                if(typeof _onsiteView!=='undefined' && _onsiteView==='details' && typeof renderDetailsOnsite==='function') renderDetailsOnsite(); else renderUI();
                 return;
               }catch(e){ console.warn('[onsite] core fetch fallback', e); }
             }
@@ -1823,8 +1847,9 @@
                     sesi: item.sesi
                 }));
                 try{ guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g])); }catch(e){}
+                _fetchOffset = masterData.length; _hasMore = (sbData||[]).length === _fetchLimit;
 
-                renderUI();
+                if(typeof _onsiteView!=='undefined' && _onsiteView==='details' && typeof renderDetailsOnsite==='function') renderDetailsOnsite(); else renderUI();
                 try{ window.__sapaPerf.measure('onsite:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
             } catch (e) { console.error(e); try{ window.__sapaPerf.measure('onsite:fetchData:error', _perfStart, String(e)); }catch(e2){} }
         }
@@ -1975,8 +2000,86 @@
             }).join('');
             try{ window.__sapaPerf.measure('onsite:renderUI', _perfR, filtered.length+'/'+masterData.length); }catch(e){}
         }
-        // [v3.0 T1.2] debounce input only — renderUI immediate, input debounced (no route change)
-        try{ var _origOnsiteRender=renderUI; var _debouncedOnsiteRender=window.__sapaDebounce(_origOnsiteRender, 250); var _oBox=document.getElementById('search-box'); if(_oBox){ _oBox.removeAttribute('oninput'); _oBox.addEventListener('input', _debouncedOnsiteRender); } }catch(e){}
+        // [v3.0 T1.2+T2.5] debounce input — view-aware (no route change)
+        try{ var _origOnsiteRender=renderUI; var _viewAwareOnsite=function(){ if(typeof _onsiteView!=='undefined' && _onsiteView==='details' && typeof renderDetailsOnsite==='function') renderDetailsOnsite(); else _origOnsiteRender(); }; var _debouncedOnsiteRender=window.__sapaDebounce(_viewAwareOnsite, 250); var _oBox=document.getElementById('search-box'); if(_oBox){ _oBox.removeAttribute('oninput'); _oBox.addEventListener('input', _debouncedOnsiteRender); } }catch(e){}
+        // [v3.0 T2.5] Dual View + chunked infinite — no route change
+        window.setOnsiteView = function(mode){
+            _onsiteView = mode;
+            try{ localStorage.setItem('gb:view:onsite', mode); }catch(e){}
+            document.getElementById('btn-view-card-onsite').style.background = mode==='card'?'var(--primary)':'transparent';
+            document.getElementById('btn-view-card-onsite').style.color = mode==='card'?'#fff':'var(--text-muted)';
+            document.getElementById('btn-view-details-onsite').style.background = mode==='details'?'var(--primary)':'transparent';
+            document.getElementById('btn-view-details-onsite').style.color = mode==='details'?'#fff':'var(--text-muted)';
+            document.getElementById('guest-list').style.display = mode==='card' ? 'grid' : 'none';
+            document.getElementById('details-list-onsite').style.display = mode==='details' ? 'flex' : 'none';
+            if(mode==='details') renderDetailsOnsite(); else renderUI();
+        };
+        window.renderDetailsOnsite = function(){
+            var _perfR='onsite:renderDetails:start'; try{ performance.mark(_perfR); }catch(e){}
+            const body=document.getElementById('details-body-onsite');
+            const sentinel=document.getElementById('details-sentinel-onsite');
+            if(!body) return;
+            const term=(document.getElementById('search-box').value||'').toLowerCase();
+            const terms=term.trim().split(/\s+/).filter(Boolean);
+            const filtered=masterData.filter(g=>{
+                const txt=[g.nama||'',g.kode||'',g.whatsapp||'',g.alamat||'',g.pihakPengundang||'',g.sesi||'',g.kategori||'',String(g.rencanaHadir||'')].join(' ').toLowerCase();
+                return terms.every(t=>txt.includes(t));
+            });
+            body.innerHTML = filtered.map(row=>{
+                const isDone=row.jamDatang && row.jamDatang!=='-';
+                const isChecked=selectedIDs.has(row.kode);
+                return `<div class="details-row ${isDone?'checked-in':''}" onclick="${isDone?'':'toggleSelect(\''+row.kode+'\')'}">
+                    <span style="width:18px; flex-shrink:0;">${isDone?'✅':'<input type="checkbox" '+(isChecked?'checked':'')+' style="accent-color:var(--gold); width:14px; height:14px;" onclick="event.stopPropagation(); toggleSelect(\''+row.kode+'\')"> '}</span>
+                    <span class="d-name">${row.nama||'-'}</span>
+                    <span class="d-cat">${row.kategori||'UMUM'}</span>
+                    <span class="d-pihak">${row.pihakPengundang||row.alamat||'-'}</span>
+                    <span class="d-status" style="color:${isDone?'var(--success)':'var(--text-muted)'}">${isDone?'✓ '+(row.realHadir||''):'● BELUM'}</span>
+                </div>`;
+            }).join('');
+            if(sentinel) sentinel.textContent = _hasMore ? 'Scroll untuk load lagi ('+filtered.length+'/'+masterData.length+(filtered.length!==masterData.length?' filtered':'')+')' : filtered.length+' tamu';
+            try{ window.__sapaPerf.measure('onsite:renderDetails', _perfR, filtered.length+'/'+masterData.length); }catch(e){}
+        };
+        window.loadMoreOnsite = async function(){
+            if(_isLoadingMore || !_hasMore) return;
+            _isLoadingMore=true;
+            const sentinel=document.getElementById('details-sentinel-onsite');
+            if(sentinel) sentinel.textContent='Memuat...';
+            try{
+                const more = await (window.__guestbookCore ? window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit:_fetchLimit, offset:_fetchOffset }) : (async()=>{
+                    const url="https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq."+CURRENT_SS_ID+"&order=row.desc&limit="+_fetchLimit+"&offset="+_fetchOffset;
+                    const r=await fetch(url,{headers:{apikey:SB_KEY, Authorization:'Bearer '+SB_KEY}});
+                    const d=await r.json();
+                    return (d||[]).map(item=>({ row:item.row, nama:item.nama, whatsapp:item.whatsapp, kategori:item.kategori, kode:item.kode, barcode:`https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`, rencanaHadir:item.rencana_hadir, statusHadir:String(item.status_hadir), jamDatang:item.jam_datang, souvenir:item.souvenir, pihakPengundang:item.pihak_pengundang, alamat:item.alamat, realHadir:item.real_hadir, statusWA:item.status_wa, statusHadiah:item.status_hadiah, tandaKasih:item.tanda_kasih, sesi:item.sesi }));
+                })());
+                if(more && more.length){
+                    more.forEach(g=>{ if(!guestMap.has(String(g.kode).trim().toUpperCase())){ masterData.push(g); guestMap.set(String(g.kode).trim().toUpperCase(), g); } });
+                    _fetchOffset = masterData.length;
+                    _hasMore = more.length === _fetchLimit;
+                    if(_onsiteView==='details') renderDetailsOnsite(); else renderUI();
+                } else { _hasMore=false; if(sentinel) sentinel.textContent='Semua tamu dimuat'; }
+            }catch(e){ console.warn('loadMore onsite error',e); }
+            _isLoadingMore=false;
+        };
+        (function(){
+            try{
+                const saved=localStorage.getItem('gb:view:onsite');
+                if(saved==='details' || saved==='card') _onsiteView=saved;
+            }catch(e){}
+            setTimeout(()=>{
+                const det=document.getElementById('details-list-onsite');
+                const sent=document.getElementById('details-sentinel-onsite');
+                if(det && sent && 'IntersectionObserver' in window){
+                    const io=new IntersectionObserver((entries)=>{
+                        if(entries[0].isIntersecting && _onsiteView==='details') loadMoreOnsite();
+                    }, { root: det, rootMargin: '100px' });
+                    io.observe(sent);
+                } else if(det){
+                    det.addEventListener('scroll', ()=>{ if(det.scrollTop + det.clientHeight > det.scrollHeight - 100 && _onsiteView==='details') loadMoreOnsite(); });
+                }
+                try{ setOnsiteView(_onsiteView); }catch(e){}
+            }, 500);
+        })();
+
 
         async function executeQuickCheckin(guest) {
             const loading = document.getElementById('loading');

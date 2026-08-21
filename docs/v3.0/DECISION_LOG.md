@@ -15,6 +15,7 @@
 | 2026-05-13 | T2.2 Checkin migrasi + Map | LANJUT | Checkin delegate ke core + Map O(1) untuk scan, realtime sync Map. Risiko rendah-sedang, core sudah teruji di kiosk. Tidak ubah route. User: lanjut |
 | 2026-05-13 | T2.4 Onsite migrasi + Map | LANJUT | Onsite tab SCAN delegate ke core + Map O(1), realtime sync Map, tab REG tetap. Risiko rendah, reuse core. Tidak ubah route. User: lanjut |
 | 2026-05-13 | T2.6 Realtime kiosk | LANJUT | Tambah createRealtimeTamu di core + kiosk guestMap + initKioskRealtime (onInsert/Update/Delete + refresh search). Risiko rendah, 1 channel WS ekstra. Tidak ubah route. User: ya terapkan |
+| 2026-05-13 | T2.5 Dual View Card↔Details + chunked | LANJUT | Checkin/onsite: toggle Card/Details windowed, chunked fetch 100/offset + infinite sentinel + view-aware render/toggle/realtime. Kiosk tetap Card. Risiko sedang-tinggi, fallback Card. Tidak ubah route. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.

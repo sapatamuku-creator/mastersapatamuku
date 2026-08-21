@@ -103,6 +103,14 @@
         .guest-item { padding: 16px; margin-bottom: 0px; border-radius: 18px; background: #fff; border: 1px solid #f0f0f0; display: flex; flex-direction: column; position: relative; transition: transform var(--duration-fast) var(--ease-out), border-color var(--duration-fast) ease, background-color var(--duration-fast) ease, opacity var(--duration-fast) ease; }
         .guest-item.checked-in { background: #fdf8f4; border-color: var(--success); opacity: 0.7; }
         .guest-item:hover { border-color: var(--primary); transform: translateY(-2px); }
+        /* [v3.0 T2.5] Details view — no route change */
+        .details-row { display:flex; align-items:center; gap:8px; padding:10px 12px; background:#fff; border:1px solid #f0f0f0; border-radius:12px; font-size:11px; cursor:pointer; transition: background 0.15s; }
+        .details-row:hover { background:#FFF9F5; border-color:var(--primary); }
+        .details-row.checked-in { background:#fdf8f4; border-color:var(--success); opacity:0.7; }
+        .details-row .d-name { flex:2; font-weight:800; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; }
+        .details-row .d-cat { flex:1; font-size:8px; font-weight:800; color:var(--gold); background:#fdf8f4; border:1px solid #f0e6de; padding:2px 6px; border-radius:6px; text-align:center; white-space:nowrap; }
+        .details-row .d-pihak { flex:1; font-size:9px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .details-row .d-status { width:70px; font-size:8px; font-weight:800; text-align:center; }
         
         .guest-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f0e6de; padding-bottom: 8px; }
         .guest-name { font-size: 13px; font-weight: 800; color: var(--text-main); line-height: 1.2; text-transform: uppercase; }
@@ -538,9 +546,22 @@
                         <span class="cam-toggle-slider"></span>
                     </label>
                 </div>
+                <!-- [v3.0 T2.5] Dual View toggle Card↔Details — no route change -->
+                <div id="view-toggle-checkin" style="display:flex; background:#FFF9F5; border:1px solid var(--border); border-radius:12px; padding:2px; flex-shrink:0;">
+                    <button onclick="setCheckinView('card')" id="btn-view-card" style="padding:6px 10px; border-radius:8px; font-size:9px; font-weight:800; background:var(--primary); color:#fff; border:none; cursor:pointer;">KARTU</button>
+                    <button onclick="setCheckinView('details')" id="btn-view-details" style="padding:6px 10px; border-radius:8px; font-size:9px; font-weight:800; background:transparent; color:var(--text-muted); border:none; cursor:pointer;">DETAILS</button>
+                </div>
                 <button id="bulk-btn" class="multi-action-btn" onclick="openConfirmModal()">KONFIRMASI (<span id="selected-count">0</span>)</button>
             </div>
             <div class="list-wrapper" id="guest-list"></div>
+            <!-- [v3.0 T2.5] Details view (hidden by default) — no route change -->
+            <div id="details-list" style="display:none; flex:1; overflow-y:auto; flex-direction:column; gap:0; padding:0 12px; min-height:0;">
+                <div id="details-header" style="display:flex; gap:8px; padding:8px 12px; background:#FFF9F5; border:1px solid var(--border); border-radius:12px; margin:8px 0; font-size:8px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
+                    <span style="flex:2;">Nama</span><span style="flex:1;">Kategori</span><span style="flex:1;">Pihak</span><span style="width:70px; text-align:center;">Status</span>
+                </div>
+                <div id="details-body" style="display:flex; flex-direction:column; gap:4px;"></div>
+                <div id="details-sentinel" style="height:20px; display:flex; align-items:center; justify-content:center; padding:10px; font-size:9px; color:var(--text-muted);"></div>
+            </div>
         </div>
     </div>
 
@@ -696,6 +717,8 @@
     let html5QrCode = null;
     let _coreScanner = null; // [v3.0 T2.2] core scanner
     let guestMap = new Map(); // [v3.0 T2.2] Map<codeUpper, guest> O(1)
+    let _fetchOffset = 0, _fetchLimit = 100, _hasMore = true, _isLoadingMore = false; // [v3.0 T2.5] chunked
+    let _checkinView = localStorage.getItem('gb:view:checkin') || 'card'; // [v3.0 T2.5]
     let currentStream = null;
     let capturedBase64 = null;
     let JALUR_ID = "ALL";
@@ -750,7 +773,7 @@
                                 if (!masterData.some(g => g.kode === newItem.kode)) {
                                     masterData.unshift(newItem);
                                     try{ guestMap.set(String(newItem.kode).trim().toUpperCase(), newItem); }catch(e){}
-                                    renderUI();
+                                    if(typeof _checkinView!=='undefined' && _checkinView==='details' && typeof renderDetails==='function') renderDetails(); else renderUI();
                                 }
                             } else if (eventType === 'UPDATE') {
                                 const item = payload.new;
@@ -774,13 +797,13 @@
                                         sesi: item.sesi
                                     };
                                     try{ guestMap.set(String(masterData[idx].kode).trim().toUpperCase(), masterData[idx]); }catch(e){}
-                                    renderUI();
+                                    if(typeof _checkinView!=='undefined' && _checkinView==='details' && typeof renderDetails==='function') renderDetails(); else renderUI();
                                 }
                             } else if (eventType === 'DELETE') {
                                 const item = payload.old;
                                 try{ guestMap.delete(String(item.kode).trim().toUpperCase()); }catch(e){}
                                 masterData = masterData.filter(g => g.kode !== item.kode && g.row !== item.row);
-                                renderUI();
+                                if(typeof _checkinView!=='undefined' && _checkinView==='details' && typeof renderDetails==='function') renderDetails(); else renderUI();
                             }
                         }
                     )
@@ -988,20 +1011,21 @@
 
     async function fetchData() {
         var _perfStart='checkin:fetch:start'; try{ performance.mark(_perfStart); }catch(e){}
-        // [v3.0 T2.2] core delegation — no route change, fallback to inline
+        // [v3.0 T2.5] chunked 100 + core delegation — no route change
         if(window.__guestbookCore && window.__guestbookCore.fetchTamu){
           try{
-            masterData = await window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit: 1000 });
+            masterData = await window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit: _fetchLimit, offset: 0 });
+            _fetchOffset = masterData.length; _hasMore = masterData.length === _fetchLimit;
             guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g]));
             try{ window.__sapaPerf.measure('checkin:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
-            renderUI();
+            if(_checkinView==='details') renderDetails(); else renderUI();
             toggleProcessing(false);
             return;
           }catch(e){ console.warn('[checkin] core fetch fallback', e); }
         }
         try {
             // Fetch guest list dari Supabase REST API (Super Fast)
-            const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
+            const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc&limit=" + _fetchLimit + "&offset=0";
             const res = await fetch(supabaseUrl, {
                 headers: {
                     "apikey": SB_KEY,
@@ -1031,8 +1055,9 @@
                 sesi: item.sesi
             }));
             try{ guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g])); }catch(e){}
+            _fetchOffset = masterData.length; _hasMore = (sbData||[]).length === _fetchLimit;
             
-            renderUI();
+            if(_checkinView==='details') renderDetails(); else renderUI();
             try{ window.__sapaPerf.measure('checkin:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
             toggleProcessing(false);
         } catch (e) { 
@@ -1041,6 +1066,87 @@
             toggleProcessing(false);
         }
     }
+
+    // [v3.0 T2.5] Dual View + chunked infinite — no route change
+    window.setCheckinView = function(mode){
+        _checkinView = mode;
+        try{ localStorage.setItem('gb:view:checkin', mode); }catch(e){}
+        document.getElementById('btn-view-card').style.background = mode==='card'?'var(--primary)':'transparent';
+        document.getElementById('btn-view-card').style.color = mode==='card'?'#fff':'var(--text-muted)';
+        document.getElementById('btn-view-details').style.background = mode==='details'?'var(--primary)':'transparent';
+        document.getElementById('btn-view-details').style.color = mode==='details'?'#fff':'var(--text-muted)';
+        document.getElementById('guest-list').style.display = mode==='card' ? 'grid' : 'none';
+        document.getElementById('details-list').style.display = mode==='details' ? 'flex' : 'none';
+        if(mode==='details') renderDetails(); else renderUI();
+    };
+    window.renderDetails = function(){
+        var _perfR='checkin:renderDetails:start'; try{ performance.mark(_perfR); }catch(e){}
+        const body=document.getElementById('details-body');
+        const sentinel=document.getElementById('details-sentinel');
+        if(!body) return;
+        const term=(document.getElementById('search-box').value||'').toLowerCase();
+        const terms=term.trim().split(/\s+/).filter(Boolean);
+        const filtered=masterData.filter(g=>{
+            const txt=[g.nama||'',g.kode||'',g.whatsapp||'',g.alamat||'',g.pihakPengundang||'',g.sesi||'',g.kategori||'',String(g.rencanaHadir||'')].join(' ').toLowerCase();
+            return terms.every(t=>txt.includes(t));
+        });
+        body.innerHTML = filtered.map(row=>{
+            const isDone=row.jamDatang && row.jamDatang!=='-';
+            const isChecked=selectedIDs.has(row.kode);
+            return `<div class="details-row ${isDone?'checked-in':''}" onclick="${isDone?'':'toggleSelect(\''+row.kode+'\')'}">
+                <span style="width:18px; flex-shrink:0;">${isDone?'✅':`<input type="checkbox" ${isChecked?'checked':''} style="accent-color:var(--gold); width:14px; height:14px;" onclick="event.stopPropagation(); toggleSelect('${row.kode}')">`}</span>
+                <span class="d-name">${row.nama||'-'}</span>
+                <span class="d-cat">${row.kategori||'UMUM'}</span>
+                <span class="d-pihak">${row.pihakPengundang||row.alamat||'-'}</span>
+                <span class="d-status" style="color:${isDone?'var(--success)':'var(--text-muted)'}">${isDone?'✓ '+(row.realHadir||''):'● BELUM'}</span>
+            </div>`;
+        }).join('');
+        if(sentinel) sentinel.textContent = _hasMore ? 'Scroll untuk load lagi ('+filtered.length+'/'+masterData.length+(filtered.length!==masterData.length?' filtered':'')+')' : filtered.length+' tamu';
+        try{ window.__sapaPerf.measure('checkin:renderDetails', _perfR, filtered.length+'/'+masterData.length); }catch(e){}
+    };
+    window.loadMoreCheckin = async function(){
+        if(_isLoadingMore || !_hasMore) return;
+        _isLoadingMore=true;
+        const sentinel=document.getElementById('details-sentinel');
+        if(sentinel) sentinel.textContent='Memuat...';
+        try{
+            const more = await (window.__guestbookCore ? window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit:_fetchLimit, offset:_fetchOffset }) : (async()=>{
+                const url="https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq."+CURRENT_SS_ID+"&order=row.desc&limit="+_fetchLimit+"&offset="+_fetchOffset;
+                const r=await fetch(url,{headers:{apikey:SB_KEY, Authorization:'Bearer '+SB_KEY}});
+                const d=await r.json();
+                return (d||[]).map(item=>({ row:item.row, nama:item.nama, whatsapp:item.whatsapp, kategori:item.kategori, kode:item.kode, barcode:`https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`, rencanaHadir:item.rencana_hadir, statusHadir:String(item.status_hadir), jamDatang:item.jam_datang, souvenir:item.souvenir, pihakPengundang:item.pihak_pengundang, alamat:item.alamat, realHadir:item.real_hadir, statusWA:item.status_wa, statusHadiah:item.status_hadiah, tandaKasih:item.tanda_kasih, sesi:item.sesi }));
+            })());
+            if(more && more.length){
+                more.forEach(g=>{ if(!guestMap.has(String(g.kode).trim().toUpperCase())){ masterData.push(g); guestMap.set(String(g.kode).trim().toUpperCase(), g); } });
+                _fetchOffset = masterData.length;
+                _hasMore = more.length === _fetchLimit;
+                if(_checkinView==='details') renderDetails(); else renderUI();
+            } else { _hasMore=false; if(sentinel) sentinel.textContent='Semua tamu dimuat'; }
+        }catch(e){ console.warn('loadMore error',e); }
+        _isLoadingMore=false;
+    };
+    // init view + infinite observer
+    (function(){
+        try{
+            const saved=localStorage.getItem('gb:view:checkin');
+            if(saved==='details' || saved==='card') _checkinView=saved;
+        }catch(e){}
+        // observer for sentinel
+        setTimeout(()=>{
+            const det=document.getElementById('details-list');
+            const sent=document.getElementById('details-sentinel');
+            if(det && sent && 'IntersectionObserver' in window){
+                const io=new IntersectionObserver((entries)=>{
+                    if(entries[0].isIntersecting && _checkinView==='details') loadMoreCheckin();
+                }, { root: det, rootMargin: '100px' });
+                io.observe(sent);
+            } else if(det){
+                det.addEventListener('scroll', ()=>{ if(det.scrollTop + det.clientHeight > det.scrollHeight - 100 && _checkinView==='details') loadMoreCheckin(); });
+            }
+            // apply initial view
+            try{ setCheckinView(_checkinView); }catch(e){}
+        }, 500);
+    })();
 
     window.renderUI = function() {
         var _perfR='checkin:render:start'; try{ performance.mark(_perfR); }catch(e){}
@@ -1101,8 +1207,8 @@
         updateStats();
         try{ var _cnt = listBody.children ? listBody.children.length : filtered.length; window.__sapaPerf.measure('checkin:renderUI', _perfR, _cnt+'/'+masterData.length); }catch(e){}
     };
-    // [v3.0 T1.2] debounce input only — window.renderUI immediate, input debounced (no route change)
-    try{ var _origRenderUI2=window.renderUI; var _debouncedRenderUI=window.__sapaDebounce(_origRenderUI2, 250); var _cBox=document.getElementById('search-box'); if(_cBox){ _cBox.removeAttribute('oninput'); _cBox.addEventListener('input', _debouncedRenderUI); } }catch(e){}
+    // [v3.0 T1.2+T2.5] debounce input — view-aware (no route change)
+    try{ var _origRenderUI2=window.renderUI; var _viewAwareRender=function(){ if(typeof _checkinView!=='undefined' && _checkinView==='details' && typeof renderDetails==='function') renderDetails(); else _origRenderUI2(); }; var _debouncedRenderUI=window.__sapaDebounce(_viewAwareRender, 250); var _cBox=document.getElementById('search-box'); if(_cBox){ _cBox.removeAttribute('oninput'); _cBox.addEventListener('input', _debouncedRenderUI); } }catch(e){}
 
     function onScanSuccess(decodedText) {
         if (isBusy || document.getElementById('modalConfirm').style.display === 'flex') return;
@@ -1128,7 +1234,7 @@
         else selectedIDs.add(id);
         document.getElementById('selected-count').innerText = selectedIDs.size;
         document.getElementById('bulk-btn').style.display = selectedIDs.size > 0 ? 'block' : 'none';
-        renderUI();
+        if(typeof _checkinView!=='undefined' && _checkinView==='details' && typeof renderDetails==='function') renderDetails(); else renderUI();
     };
 
     function updateStats() {
