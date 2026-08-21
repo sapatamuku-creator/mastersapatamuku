@@ -598,6 +598,7 @@
 
 <script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
     // [v3.0 T0.1] Perf observability — no route/backend change
+    window.__sapaDebounce = function(fn, wait){ var t; return function(){ var ctx=this, args=arguments; clearTimeout(t); t=setTimeout(function(){ fn.apply(ctx,args); }, wait); }; };
     window.__sapaPerf = window.__sapaPerf || { _buf: (function(){ try{ return JSON.parse(localStorage.getItem('sapatamu_perf')||'[]'); }catch(e){ return []; } })(),
       mark: function(n){ try{ performance.mark(n); }catch(e){} return (performance.now?performance.now():Date.now()); },
       measure: function(name, startMark, extra){ try{ var ms=0; try{ performance.measure(name, startMark); var e=performance.getEntriesByName(name).pop(); ms=e?e.duration:0; performance.clearMarks(startMark); performance.clearMeasures(name); }catch(e){} var buf=this._buf; buf.push({t:Date.now(), name:name, ms:Math.round(ms), extra:extra||''}); if(buf.length>20) buf.shift(); try{ localStorage.setItem('sapatamu_perf', JSON.stringify(buf)); }catch(e){} console.log('[perf v3.0] '+name+': '+Math.round(ms)+'ms', extra||''); }catch(e){} }
