@@ -23,3 +23,11 @@ Rules:
 - Wajib jelaskan 5 poin format (fungsi perubahan, dari kode sebelumnya, mengarah kemana, cabang routing terdampak, risiko & trade-off jujur).
 - Tunggu persetujuan eksplisit user sebelum mulai menulis kode.
 
+## Skill Installation Dual-Sync Policy
+
+- Setiap kali menginstal/menambah/memperbarui skill atau plugin baru:
+  1. Wajib pasang di **Workspace** (`.agents/skills/` & `.claude/skills/`).
+  2. Wajib auto-sync/pasang di **Global IDE** (`C:\Users\KNOWHERE STUDIO\.gemini\config\skills\`) agar langsung tersedia di semua workspace.
+  3. Catat di `skills-lock.json` dan `AGENT.md`.
+
+
