@@ -20,7 +20,9 @@ curl -s "https://<SB_URL>/rest/v1/tamu?ssid=eq.TEST123&select=row" -H "apikey: <
 
 **Rekomendasi jika longgar:** Buat RFC terpisah untuk tighten RLS `tamu` (`create policy select on tamu for anon using (ssid = current_setting('request.jwt.claims')::json->>'ssid' OR ...)`). **Tidak fix di v3.0 Phase 0** — hanya catat.
 
-**Ditemukan 2026-05-13:** _Belum running di staging — perlu isi setelah deploy T0.1 ke preview._
+**Ditemukan 2026-05-13 (staging `10EDJZTur2oyey...`, 233 rows real):**
+- `[perf v3.0] kiosk:fetchData: 176ms 233 rows, 92KB` (via `kiosk.html:551` `__sapaPerf`, Network Fast 4G? WiFi). Rata-rata ~395 byte/row. Ekstrapolasi: 500 rows ~193KB, 1000 ~386KB, 2000 ~772KB — validasi estimasi sebelumnya (~280 byte/row agak low, real 395).
+- RLS belum cek — perlu `curl` di atas.
 
 ## 2) Payload `tamu` — `fetchData` (T0.1 marks)
 
@@ -28,11 +30,12 @@ Diukur via `__sapaPerf` + DevTools Network (Fast 4G throttling). `select` saat i
 
 | Jumlah tamu | JSON size (KB) | `kiosk:fetchData` | `checkin:fetchData` | `onsite:fetchData` | `analytics:fetchData` |
 |-------------|----------------|-------------------|---------------------|--------------------|------------------------|
-| 500 | ~140KB* | _ms_ | _ms_ | _ms_ | _ms_ |
-| 1000 | ~280KB* | _ms_ | _ms_ | _ms_ | _ms_ |
-| 2000 | ~560KB* | _ms_ | _ms_ | _ms_ | _ms_ |
+| 233 (real) | 92KB | **176ms** (staging) | _ms_ | _ms_ | _ms_ |
+| 500 | ~193KB* | _ms_ | _ms_ | _ms_ | _ms_ |
+| 1000 | ~386KB* | _ms_ | _ms_ | _ms_ | _ms_ |
+| 2000 | ~772KB* | _ms_ | _ms_ | _ms_ | _ms_ |
 
-\* Estimasi: 1 row mapped `masterData` ~280 byte JSON (`row,nama,kode,whatsapp,kategori,sesi,alamat,pihakPengundang`); 1000 rows ~280KB + overhead `barcode` lazy (belum). Real ukur via `Math.round(JSON.stringify(masterData).length/1024)` yang sudah log di `kiosk:fetchData`/`checkin:fetchData`/`onsite:fetchData`.
+\* Direvisi 2026-05-13 dari real 233 rows: 92KB /233 = 395 byte/row. Estimasi sebelumnya 280 byte/row low. Real ukur via `Math.round(JSON.stringify(masterData).length/1024)` yang sudah log di `kiosk:fetchData`/`checkin:fetchData`/`onsite:fetchData`. Ekstrapolasi linear.
 
 **Cara isi:** Buka `kiosk.html` di staging, buka Console, filter `[perf v3.0]`, catat `kiosk:fetchData: 842ms 1243 rows, 312KB`. Atau `localStorage.sapatamu_perf`.
 
