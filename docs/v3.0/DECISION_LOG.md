@@ -10,6 +10,7 @@
 | 2026-05-13 | T1.1 Tailwind build statis | LANJUT | Ganti cdn.tailwindcss.com → assets/tailwind.css 19KB (fallback onerror ke CDN). Risiko purge miss: mitigasi staging visual check. Tidak ubah route. User: lanjut |
 | 2026-05-13 | T1.2 Debounce search 250ms | LANJUT | Debounce input only (rAF+250ms), global renderUI tetap immediate untuk programmatic. Risiko delay 250ms terasa nggantung tapi anti-freeze. Tidak ubah route. User: lanjut |
 | 2026-05-13 | T1.3 Cursor & reduced-motion | LANJUT | Cursor none hanya saat fullscreen (is-fullscreen), reduce-motion matikan hearts/char. Risiko sangat rendah, debug jadi mudah. Tidak ubah route. User: setuju |
+| 2026-05-13 | T1.4 Fix radio/checkbox 14px | LANJUT | Scoped 14px untuk guest-item/#guest-list/#kiosk-search-list, cegah melar 100%. Risiko sangat rendah, tidak ubah cam-toggle. Tidak ubah route. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
