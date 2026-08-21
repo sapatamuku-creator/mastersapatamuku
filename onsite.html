@@ -18,6 +18,13 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <script src="config.js"></script>
+    <script type="module">
+      // [v3.0 T2.4] import core — no route change, fallback to inline if fail
+      import { fetchTamu, createScanner } from './lib/guestbook-core.js';
+      window.__guestbookCore = window.__guestbookCore || {};
+      window.__guestbookCore.fetchTamu = fetchTamu;
+      window.__guestbookCore.createScanner = createScanner;
+    </script>
     <script src="subdomain_resolver.js?v=3.5"></script>
     <script src="scripts/printer_widget.js"></script>
     <script src="sync_queue.js"></script>
@@ -1400,6 +1407,8 @@
         let CURRENT_SS_ID = null;
         let masterData = [];
         let html5QrCode;
+        let _coreScanner = null; // [v3.0 T2.4] core scanner
+        let guestMap = new Map(); // [v3.0 T2.4] Map O(1)
         let selectedIDs = new Set();
         let scannerEnabled = false; // default OFF - hemat baterai
 
@@ -1409,6 +1418,7 @@
             if (enabled) {
                 initScanner();
             } else {
+                if(_coreScanner){ try{ _coreScanner.stop(); }catch(e){} }
                 if (html5QrCode) {
                     html5QrCode.stop().catch(() => {});
                     html5QrCode = null;
@@ -1490,9 +1500,11 @@
                                     if (existingIdx !== -1) {
                                         masterData[existingIdx].row = newItem.row;
                                         masterData[existingIdx].statusWA = newItem.statusWA;
+                                        try{ guestMap.set(String(newItem.kode).trim().toUpperCase(), masterData[existingIdx]); }catch(e){}
                                         console.log("Updated optimistic onsite guest row number:", newItem.row);
                                     } else {
                                         masterData.unshift(newItem);
+                                        try{ guestMap.set(String(newItem.kode).trim().toUpperCase(), newItem); }catch(e){}
                                     }
                                     renderUI();
                                 } else if (eventType === 'UPDATE') {
@@ -1516,10 +1528,12 @@
                                             tandaKasih: item.tanda_kasih,
                                             sesi: item.sesi
                                         };
+                                        try{ guestMap.set(String(masterData[idx].kode).trim().toUpperCase(), masterData[idx]); }catch(e){}
                                         renderUI();
                                     }
                                 } else if (eventType === 'DELETE') {
                                     const item = payload.old;
+                                    try{ guestMap.delete(String(item.kode).trim().toUpperCase()); }catch(e){}
                                     masterData = masterData.filter(g => g.kode !== item.kode && g.row !== item.row);
                                     renderUI();
                                 }
@@ -1764,6 +1778,16 @@
 
         async function fetchData() {
             var _perfStart='onsite:fetch:start'; try{ performance.mark(_perfStart); }catch(e){}
+            // [v3.0 T2.4] core delegation — no route change, fallback to inline
+            if(window.__guestbookCore && window.__guestbookCore.fetchTamu){
+              try{
+                masterData = await window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit: 1000 });
+                try{ guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g])); }catch(e){}
+                try{ window.__sapaPerf.measure('onsite:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
+                renderUI();
+                return;
+              }catch(e){ console.warn('[onsite] core fetch fallback', e); }
+            }
             try {
                 const supabaseUrl = SB_URL + "/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
                 const response = await fetch(supabaseUrl, {
@@ -1798,6 +1822,7 @@
                     tandaKasih: item.tanda_kasih,
                     sesi: item.sesi
                 }));
+                try{ guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g])); }catch(e){}
 
                 renderUI();
                 try{ window.__sapaPerf.measure('onsite:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
@@ -1805,6 +1830,10 @@
         }
 
         function toggleFrontcamMode(enabled) {
+            // [v3.0 T2.4] delegate to core if available
+            if(_coreScanner && _coreScanner.toggleFrontcam){
+              try{ _coreScanner.toggleFrontcam(enabled); return; }catch(e){ console.warn('core frontcam fallback',e); }
+            }
             localStorage.setItem('force_frontcam_on', enabled ? '1' : '0');
             document.getElementById('reader')?.classList.toggle('mirror-mode', enabled);
             if (scannerEnabled) {
@@ -1823,6 +1852,14 @@
         }
 
         function initScanner() {
+            // [v3.0 T2.4] delegate to core if available
+            if(window.__guestbookCore && window.__guestbookCore.createScanner){
+              try{
+                if(!_coreScanner) _coreScanner = window.__guestbookCore.createScanner({ readerId: "reader", onScan: onScanSuccess, fps: 25, qrbox: 220 });
+                _coreScanner.start();
+                return;
+              }catch(e){ console.warn('[onsite] core scanner fallback', e); }
+            }
             var _perfS='onsite:scanner:start'; try{ performance.mark(_perfS); }catch(e){}
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             const useFront = localStorage.getItem('force_frontcam_on') === '1';
@@ -1840,7 +1877,7 @@
             if (scCode.includes("id=")) scCode = scCode.split("id=")[1].split("&")[0];
 
             frame.classList.add('qr-detected');
-            const guest = masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase());
+            const guest = (typeof guestMap !== 'undefined' && guestMap.get) ? (guestMap.get(String(scCode).trim().toUpperCase()) || masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase())) : masterData.find(g => String(g.kode).trim().toUpperCase() === scCode.toUpperCase());
 
             if (guest) {
                 if (String(guest.statusHadir) === "1") {
