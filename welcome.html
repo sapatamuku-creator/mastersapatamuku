@@ -456,7 +456,13 @@
             return temp.innerHTML;
         }
     </script>
-    <script>function getSSID() {
+    <script>
+        // [v3.0 T0.1] Perf observability — no route/backend change
+        window.__sapaPerf = window.__sapaPerf || { _buf: (function(){ try{ return JSON.parse(localStorage.getItem('sapatamu_perf')||'[]'); }catch(e){ return []; } })(),
+          mark: function(n){ try{ performance.mark(n); }catch(e){} return (performance.now?performance.now():Date.now()); },
+          measure: function(name, startMark, extra){ try{ var ms=0; try{ performance.measure(name, startMark); var e=performance.getEntriesByName(name).pop(); ms=e?e.duration:0; performance.clearMarks(startMark); performance.clearMeasures(name); }catch(e){} var buf=this._buf; buf.push({t:Date.now(), name:name, ms:Math.round(ms), extra:extra||''}); if(buf.length>20) buf.shift(); try{ localStorage.setItem('sapatamu_perf', JSON.stringify(buf)); }catch(e){} console.log('[perf v3.0] '+name+': '+Math.round(ms)+'ms', extra||''); }catch(e){} }
+        };
+        function getSSID() {
             const session = JSON.parse(sessionStorage.getItem('sapatamu_session')) || JSON.parse(localStorage.getItem('sapatamu_db'));
             let id = window.CURRENT_SS_ID || (session ? session.ssId : null);
 
@@ -799,6 +805,7 @@
                     return;
                 }
 
+                try{ window.__sapaPerf.measure('welcome:syncGuest:empty', _perfWG, 'empty'); }catch(e){}
                 throw new Error("Data welcome_queue kosong, mencoba fallback GAS...");
             } catch (e) {
                 console.warn("welcome_queue sync info:", e.message);
@@ -1034,6 +1041,7 @@
         }
 
         function initSlideshow(rawUrls) {
+            var _perfSL='welcome:slideshow:start'; try{ performance.mark(_perfSL); }catch(e){}
             if (!rawUrls || !Array.isArray(rawUrls)) rawUrls = [];
 
             const urls = rawUrls.map(u => String(u).trim()).filter(u => u !== "");

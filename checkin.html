@@ -596,7 +596,11 @@
 </div>
 
 <script>const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
- 
+    // [v3.0 T0.1] Perf observability — no route/backend change
+    window.__sapaPerf = window.__sapaPerf || { _buf: (function(){ try{ return JSON.parse(localStorage.getItem('sapatamu_perf')||'[]'); }catch(e){ return []; } })(),
+      mark: function(n){ try{ performance.mark(n); }catch(e){} return (performance.now?performance.now():Date.now()); },
+      measure: function(name, startMark, extra){ try{ var ms=0; try{ performance.measure(name, startMark); var e=performance.getEntriesByName(name).pop(); ms=e?e.duration:0; performance.clearMarks(startMark); performance.clearMeasures(name); }catch(e){} var buf=this._buf; buf.push({t:Date.now(), name:name, ms:Math.round(ms), extra:extra||''}); if(buf.length>20) buf.shift(); try{ localStorage.setItem('sapatamu_perf', JSON.stringify(buf)); }catch(e){} console.log('[perf v3.0] '+name+': '+Math.round(ms)+'ms', extra||''); }catch(e){} }
+    };
     const WA_ENGINE_URL = SCRIPT_URL;
     const SELFIE_URL = SCRIPT_URL;
 
@@ -937,6 +941,7 @@
     }
 
     function initScanner() {
+        var _perfS='checkin:scanner:start'; try{ performance.mark(_perfS); }catch(e){}
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
         const useFront = localStorage.getItem('force_frontcam_on') === '1';
         const mode = useFront ? "user" : "environment";
@@ -946,10 +951,12 @@
             onScanSuccess
         ).then(() => {
             document.getElementById('reader')?.classList.toggle('mirror-mode', useFront);
+            try{ window.__sapaPerf.measure('checkin:initScanner', _perfS, mode); }catch(e){}
         }).catch(err => console.error("Scanner Error", err));
     }
 
     async function fetchData() {
+        var _perfStart='checkin:fetch:start'; try{ performance.mark(_perfStart); }catch(e){}
         try {
             // Fetch guest list dari Supabase REST API (Super Fast)
             const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
@@ -983,14 +990,17 @@
             }));
             
             renderUI();
+            try{ window.__sapaPerf.measure('checkin:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
             toggleProcessing(false);
         } catch (e) { 
             console.error("Sync error", e); 
+            try{ window.__sapaPerf.measure('checkin:fetchData:error', _perfStart, String(e)); }catch(e2){}
             toggleProcessing(false);
         }
     }
 
     window.renderUI = function() {
+        var _perfR='checkin:render:start'; try{ performance.mark(_perfR); }catch(e){}
         const listBody = document.getElementById('guest-list');
         const term = document.getElementById('search-box').value.toLowerCase();
         
@@ -1046,6 +1056,7 @@
             `;
         }).join('');
         updateStats();
+        try{ var _cnt = listBody.children ? listBody.children.length : filtered.length; window.__sapaPerf.measure('checkin:renderUI', _perfR, _cnt+'/'+masterData.length); }catch(e){}
     };
 
     function onScanSuccess(decodedText) {

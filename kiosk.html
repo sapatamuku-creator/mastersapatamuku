@@ -387,6 +387,11 @@
 
     <script src="config.js"></script>
     <script>
+        // [v3.0 T0.1] Perf observability — no route/backend change, only marks
+        window.__sapaPerf = window.__sapaPerf || { _buf: (function(){ try{ return JSON.parse(localStorage.getItem('sapatamu_perf')||'[]'); }catch(e){ return []; } })(),
+          mark: function(n){ try{ performance.mark(n); }catch(e){} return (performance.now?performance.now():Date.now()); },
+          measure: function(name, startMark, extra){ try{ var ms=0; try{ performance.measure(name, startMark); var e=performance.getEntriesByName(name).pop(); ms=e?e.duration:0; performance.clearMarks(startMark); performance.clearMeasures(name); }catch(e){} var buf=this._buf; buf.push({t:Date.now(), name:name, ms:Math.round(ms), extra:extra||''}); if(buf.length>20) buf.shift(); try{ localStorage.setItem('sapatamu_perf', JSON.stringify(buf)); }catch(e){} console.log('[perf v3.0] '+name+': '+Math.round(ms)+'ms', extra||''); }catch(e){} }
+        };
         function showToast(msg, isSuccess = false) {
             const toast = document.getElementById('toast');
             toast.innerText = msg;
@@ -543,6 +548,7 @@
         }
 
         async function fetchData() {
+            var _perfStart='kiosk:fetch:start'; try{ performance.mark(_perfStart); }catch(e){}
             try {
                 const supabaseUrl = SB_URL + "/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
                 const response = await fetch(supabaseUrl, {
@@ -573,7 +579,8 @@
                     tandaKasih: item.tanda_kasih,
                     sesi: item.sesi
                 }));
-            } catch (e) { console.error("Gagal load data tamu:", e); }
+                try{ window.__sapaPerf.measure('kiosk:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
+            } catch (e) { console.error("Gagal load data tamu:", e); try{ window.__sapaPerf.measure('kiosk:fetchData:error', _perfStart, String(e)); }catch(e2){} }
         }
 
         function toggleFrontcamMode(enabled) {
@@ -595,6 +602,7 @@
         }
 
         function initScanner() {
+            var _perfS='kiosk:scanner:start'; try{ performance.mark(_perfS); }catch(e){}
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             const useFront = localStorage.getItem('force_frontcam_on') === '1';
             const mode = useFront ? "user" : "environment";
@@ -602,6 +610,7 @@
             html5QrCode.start({ facingMode: mode }, { fps: 15 }, onScanSuccess)
             .then(() => {
                 document.getElementById('reader')?.classList.toggle('mirror-mode', useFront);
+                try{ window.__sapaPerf.measure('kiosk:initScanner', _perfS, mode); }catch(e){}
             })
             .catch(e => {
                 const fallbackMode = useFront ? "environment" : "user";
@@ -825,6 +834,7 @@
         }
 
         function renderKioskSearch() {
+            var _perfR='kiosk:renderSearch:start'; try{ performance.mark(_perfR); }catch(e){}
             const listBody = document.getElementById('kiosk-search-list');
             const term = document.getElementById('kiosk-search-box').value.toLowerCase();
             
@@ -868,6 +878,7 @@
                     </div>
                 `;
             }).join('');
+            try{ window.__sapaPerf.measure('kiosk:renderKioskSearch', _perfR, filtered.length+'/'+masterData.length); }catch(e){}
         }
 
         function handleSearchClick(encodedGuest, isDone) {

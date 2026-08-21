@@ -1,0 +1,20 @@
+# Decision Log — SapaTamu Guestbook v3.0
+
+> Catat setiap GATE `guestbook-v3-gate` di sini. Satu baris per task. Jujur, ringkas.
+
+| Tanggal | Task | Keputusan | Alasan / Risiko yang disetujui |
+|---------|------|-----------|--------------------------------|
+| 2026-05-13 | T0.1 Instrumentasi performa | LANJUT | Overhead <1ms, 20 entri terakhir di localStorage, jujur tanpa ubah route. User: lanjut |
+| 2026-05-13 | T2.5 Dual View vs Paginasi | LANJUT (ubah) | Ganti paginasi halaman → Card (default) + Details windowed infinite + chunked fetch 100/offset di checkin/onsite; kiosk tetap 1 mode. Alasan: UX lapangan butuh scan padat tanpa ingat halaman. Tidak ubah backend route. |
+| 2026-05-13 | T0.2 Audit RLS & payload | LANJUT | Hanya baca & catat baseline, tidak ubah RLS/endpoint. Jika longgar, RFC terpisah. User: lanjut Phase 0 |
+| | | | |
+
+## Cara pakai
+- Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
+- Jika `TOLAK`/`TUNDA`, tulis alasan (mis. "butuh RFC backend baru").
+- Jangan hapus baris lama — ini audit trail.
+
+## Guardrail v3.0 (diulang agar jelas)
+- Tidak ubah jalur route/backend yang sudah ada.
+- Selfie tetap ke Drive via GAS `action=confirm_checkin` — hanya kompresi client.
+- Optimasi hanya anti-bug & selaras antar halaman (kiosk, checkin, onsite, analytics, welcome).
