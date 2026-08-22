@@ -10,6 +10,7 @@
 | 2026-08-21 | T1.4 `sync_queue.js` Offline Telemetry Sync | LANJUT | Menambahkan pelacakan peak antrean offline, live percentage `Sync: X/Y (Z%)`, dan popup sukses transien saat semua data tersinkronisasi. User: lanjut |
 | 2026-08-21 | T1.5 `analytics.html` & `dashboard.html` Loaders | LANJUT | Menambahkan skeleton placeholder shimmer saat inisialisasi analitik dan transisi lembut saat sync data client di dashboard. User: lanjut |
 | 2026-08-21 | T1.6 `formulir_tamu.html` Dynamic Hero Ambient Photo Slideshow | LANJUT | Menambahkan random starting photo on refresh, smooth crossfade looping (8.5s), translucent crystal overlay (tanpa blur berlebih agar foto terlihat jelas & tajam), `.hero-info-card` semi-transparan, dan 3 responsive breakpoints menggunakan aset `config_welcome`. User: lanjut |
+| 2026-08-22 | T1.7 `checkin.html` & `onsite.html` Scanner Section Ambient Photo Slideshow | LANJUT | Menambahkan layer background dinamis di area section scanner dan header dengan foto `config_welcome`, random starting photo saat load, looping fade 8.5s, dan header semi-transparan (backdrop blur 8px). User: lanjut |
 
 ---
 

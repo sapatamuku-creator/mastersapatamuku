@@ -13,6 +13,8 @@
 | **T1.3** | `sortir.html` | Ekspor Instan Foto (`directBrowserExport`) & Penyalinan RAW/JPG Lokal | ✅ **Done** |
 | **T1.4** | `checkin.html` & `onsite.html` | Sinkronisasi Antrean Offline (`sync_queue.js`) & Pendaftaran Instan | ✅ **Done** |
 | **T1.5** | `analytics.html` & `dashboard.html` | Master Data Initial Load & Skeleton Feedback | ✅ **Done** |
+| **T1.6** | `formulir_tamu.html` | Dynamic Hero Ambient Photo Slideshow & Glass Info Cards | ✅ **Done** |
+| **T1.7** | `checkin.html` & `onsite.html` | Dynamic Ambient Photo Slideshow di Background Section Scanner | ✅ **Done** |
 
 ---
 
@@ -43,6 +45,12 @@
   - Tingkatkan transparansi status sinkronisasi background saat koneksi kembali online (`sync_queue.js`).
   - Menampilkan live telemetry counter `Sync: X/Y (Z%)`, sisa antrean, dan popup sukses transien saat semua data tersinkronisasi.
 
+- [x] **T1.7 S — `checkin.html` & `onsite.html` Dynamic Ambient Photo Slideshow Background**
+  - Layer ambient background dinamis di area section scanner dan header menggunakan foto dari `config_welcome`.
+  - Random starting photo saat load/refresh halaman dan transisi crossfade halus (8.5s).
+  - Translucent crystal overlay dengan header semi-transparan ber-blur halus (`backdrop-filter: blur(8px)`).
+  - Uji responsif di desktop, tablet, dan mobile.
+
 ---
 
 ## Phase 3 — Executive Dashboards & Analytics (P2)
@@ -51,3 +59,6 @@
   - Standardisasi feedback visual saat load data master event pertama kali agar konsisten dengan `live-progress-ux`.
   - Tambahkan skeleton placeholder shimmer pada distribusi kategori, host, wilayah, dan flow monitoring sebelum agregasi query selesai.
   - Transisi fade-in lembut pada nama pengantin & paket di `dashboard.html`.
+
+- [x] **T1.6 S — `formulir_tamu.html` Dynamic Hero Ambient Photo Slideshow**
+  - Random starting photo on refresh, smooth crossfade looping (8.5s), translucent crystal overlay, `.hero-info-card` semi-transparan, dan 3 responsive breakpoints.
