@@ -15,6 +15,7 @@
 | 2026-08-22 | T1.9 `checkin.html` & `onsite.html` Comprehensive Details Mode Metadata | LANJUT | Menampilkan metadata lengkap di mode Details (Nama, WA, Gift Icon 🧧/🎁, Kategori, Pihak, Alamat, Sesi, Pax Plan, Status Hadir) untuk Desktop & Tablet, dengan kolom sekunder tersembunyi di Mobile. User: lanjut |
 | 2026-08-22 | T1.10 `checkin.html` & `onsite.html` Dynamic Sort & Multi-Filter Dropdown | LANJUT | Menambahkan dropdown Sortir (Terbaru/Terlama/A-Z/Z-A/Kategori/Pihak) dan Multi-Filter (Status Hadir/Kategori/Pihak/Sesi) di samping Status Kehadiran pada checkin & onsite. User: lanjut |
 | 2026-08-22 | T1.11 `checkin.html` & `onsite.html` Mobile Mode Alamat Details View | LANJUT | Mengaktifkan kolom keterangan Alamat (.d-alamat & .d-col-alamat) pada layar ponsel/mobile (<768px) di checkin & onsite. User: lanjut |
+| 2026-08-22 | T1.12 `checkin.html` & `onsite.html` Fit-to-Screen Bottom Sheet & Modal Konfirmasi | LANJUT | Optimasi modal konfirmasi (#modalConfirm) dan bottom sheet daftar tamu (.bottom-section) di mobile mode (<768px) agar 100% pas satu viewport layar (zero page scroll). User: lanjut |
 
 ---
 

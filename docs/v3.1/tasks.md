@@ -19,6 +19,7 @@
 | **T1.9** | `checkin.html` & `onsite.html` | Comprehensive Metadata di Details Mode (Desktop, Tablet, Mobile) | ✅ **Done** |
 | **T1.10** | `checkin.html` & `onsite.html` | Dynamic Sort & Multi-Filter Dropdown Menu (Status Hadir, Kategori, Pihak, Sesi) | ✅ **Done** |
 | **T1.11** | `checkin.html` & `onsite.html` | Mobile Mode Alamat Visibility on Details View | ✅ **Done** |
+| **T1.12** | `checkin.html` & `onsite.html` | Mobile Mode Fit-to-Screen Bottom Sheet & Modal Konfirmasi (Zero Page Scroll) | ✅ **Done** |
 
 ---
 
@@ -72,6 +73,10 @@
 - [x] **T1.11 S — `checkin.html` & `onsite.html` Mobile Mode Alamat Visibility on Details View**
   - Mengaktifkan kolom keterangan Alamat (`.d-alamat` & `.d-col-alamat`) pada mode Details di layar ponsel (<768px).
   - Menggunakan proporsi flex fluid (`flex: 1.1`) dan text truncation aman agar muat dengan nyaman di semua resolusi smartphone.
+
+- [x] **T1.12 S — `checkin.html` & `onsite.html` Fit-to-Screen Bottom Sheet & Modal Konfirmasi**
+  - Optimasi modal konfirmasi kehadiran (`#modalConfirm`) agar 100% pas dalam satu viewport layar ponsel (*Zero Window Scroll*) dengan rasio kamera selfie kompak, spacing padat presisi, dan tombol konfirmasi yang langsung terlihat.
+  - Kunci ketinggian panel bottom sheet daftar tamu (`.bottom-section`) sehingga scrolling terjadi di dalam list container tanpa menggeser layout halaman.
 
 ---
 
