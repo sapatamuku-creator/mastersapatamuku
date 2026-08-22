@@ -23,6 +23,7 @@
 | **T1.13** | `checkin.html` & `onsite.html` | Mobile Mode True 1:1 Square Camera Aspect Ratio Calibration | ✅ **Done** |
 | **T1.14** | `checkin.html` & `onsite.html` | Mobile Mode Slide-Down Exit Animation for Modal Cards & Bottom Sheets | ✅ **Done** |
 | **T1.15** | `checkin.html` & `onsite.html` | Selected/Checked Guest Priority Pinning to Top of Guest List | ✅ **Done** |
+| **T1.16** | `checkin.html` & `onsite.html` | Dedicated Sticky / Locked Pinned Panel for Selected Guests | ✅ **Done** |
 
 ---
 
@@ -89,6 +90,12 @@
 
 - [x] **T1.15 S — `checkin.html` & `onsite.html` Selected/Checked Guest Priority Pinning**
   - Mengunci dan menempatkan setiap tamu yang dicentang / terpilih (`selectedIDs`) otomatis melayang di posisi paling atas daftar tamu pada mode Kartu dan mode Details, lengkap dengan styling highlight emas dan badge `📌 TERPILIH`.
+
+- [x] **T1.16 S — `checkin.html` & `onsite.html` Dedicated Sticky Pinned Guest Panel**
+  - Menghadirkan container sticky mandiri (`#pinned-guest-panel`) yang ditempatkan di luar container scrollable list (di antara search bar dan daftar tamu).
+  - Terkunci permanen di area atas layar sehingga ketika usher melakukan scroll up/down pada daftar tamu, tamu-tamu yang terchecklist tetap 100% terlihat di layar.
+  - Menampilkan chip tamu terpilih dengan nama, gift icon, kategori, pax plan, tombol deselect per individu (✕), dan tombol "Batal Semua".
+  - Sinkronisasi status dua arah dengan mode Kartu & mode Details serta pembersihan otomatis setelah check-in berhasil.
 
 ---
 
