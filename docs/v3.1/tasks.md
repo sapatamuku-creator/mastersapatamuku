@@ -16,6 +16,7 @@
 | **T1.6** | `formulir_tamu.html` | Dynamic Hero Ambient Photo Slideshow & Glass Info Cards | ✅ **Done** |
 | **T1.7** | `checkin.html` & `onsite.html` | Dynamic Ambient Photo Slideshow di Background Section Scanner | ✅ **Done** |
 | **T1.8** | `checkin.html` & `onsite.html` | Tablet Mode Dynamic Island Station Controls Capsule | ✅ **Done** |
+| **T1.9** | `checkin.html` & `onsite.html` | Comprehensive Metadata di Details Mode (Desktop, Tablet, Mobile) | ✅ **Done** |
 
 ---
 
@@ -56,6 +57,10 @@
   - Mengubah baris kontrol stasiun (Jalur, RT, CAM, FC, CD, QUICK) pada **Tablet Mode (768–1023px)** menjadi Dynamic Island Floating Capsule (`.station-di-trigger` & `.station-di-content`).
   - Efek glassmorphism pill collapsed default (`🟢 JALUR: ALL • RT OFF ▾`), tap/touch untuk expand popover card dengan smooth drop animation.
   - Mobile mode (<768px) dan Desktop mode (≥1024px) tetap utuh dan stabil.
+
+- [x] **T1.9 S — `checkin.html` & `onsite.html` Comprehensive Details Mode Metadata**
+  - Sinkronisasi kelengkapan metadata mode *Details* agar selengkap mode *Kartu* (Nama, WA, Gift Icon 🧧/🎁, Kategori, Pihak, Alamat, Sesi, Pax Plan, Status Hadir).
+  - Dukungan 3 responsif: Desktop lega penuh, Tablet seimbang (Alamat + Sesi + Pax aktif), Mobile kompak ringkas (kolom sekunder tersembunyi).
 
 ---
 

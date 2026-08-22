@@ -474,14 +474,178 @@
             border-color: var(--success);
             opacity: 0.7;
         }
-        /* [v3.0 T2.5] Details view — no route change */
-        .details-row { display:flex; align-items:center; gap:8px; padding:10px 12px; background:#fff; border:1px solid #f0f0f0; border-radius:12px; font-size:11px; cursor:pointer; transition: background 0.15s; }
-        .details-row:hover { background:#FFF9F5; border-color:var(--primary); }
-        .details-row.checked-in { background:#fdf8f4; border-color:var(--success); opacity:0.7; }
-        .details-row .d-name { flex:2; font-weight:800; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; }
-        .details-row .d-cat { flex:1; font-size:8px; font-weight:800; color:var(--gold); background:#fdf8f4; border:1px solid #f0e6de; padding:2px 6px; border-radius:6px; text-align:center; white-space:nowrap; }
-        .details-row .d-pihak { flex:1; font-size:9px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .details-row .d-status { width:70px; font-size:8px; font-weight:800; text-align:center; }
+        /* [v3.0 T2.5 & v3.1 T1.9] Comprehensive Details Mode */
+        .details-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: #fff;
+            border: 1px solid #f0f0f0;
+            border-radius: 12px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s, transform 0.15s;
+        }
+
+        .details-row:hover {
+            background: #FFF9F5;
+            border-color: var(--primary);
+            transform: translateX(2px);
+        }
+
+        .details-row.checked-in {
+            background: #fdf8f4;
+            border-color: var(--success);
+            opacity: 0.75;
+        }
+
+        .details-row .d-check {
+            width: 20px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .details-row .d-name-col {
+            flex: 2;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .details-row .d-name {
+            font-weight: 800;
+            font-size: 11.5px;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .details-row .d-wa {
+            font-size: 8.5px;
+            color: var(--text-muted);
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .details-row .d-cat {
+            width: 75px;
+            flex-shrink: 0;
+            font-size: 8px;
+            font-weight: 800;
+            color: var(--gold);
+            background: #fdf8f4;
+            border: 1px solid #f0e6de;
+            padding: 3px 6px;
+            border-radius: 6px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .details-row .d-pihak {
+            flex: 1;
+            min-width: 0;
+            font-size: 9px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .details-row .d-alamat {
+            flex: 1.2;
+            min-width: 0;
+            font-size: 9px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: none;
+        }
+
+        .details-row .d-sesi {
+            width: 65px;
+            flex-shrink: 0;
+            font-size: 8.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: none;
+        }
+
+        .details-row .d-pax {
+            width: 55px;
+            flex-shrink: 0;
+            font-size: 8.5px;
+            font-weight: 800;
+            color: var(--primary);
+            text-align: center;
+            white-space: nowrap;
+            display: none;
+        }
+
+        .details-row .d-status {
+            width: 90px;
+            flex-shrink: 0;
+            font-size: 8px;
+            font-weight: 900;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .d-col-alamat,
+        .d-col-sesi,
+        .d-col-pax {
+            display: none;
+        }
+
+        /* TABLET MODE (768px - 1023.98px): Tampilkan Alamat, Sesi, Pax */
+        @media (min-width: 768px) {
+            .details-row .d-alamat,
+            .details-row .d-sesi,
+            .details-row .d-pax,
+            .d-col-alamat,
+            .d-col-sesi,
+            .d-col-pax {
+                display: block;
+            }
+            .d-col-alamat { flex: 1.2; }
+            .d-col-sesi { width: 65px; text-align: center; }
+            .d-col-pax { width: 55px; text-align: center; }
+        }
+
+        /* DESKTOP MODE (≥1024px): Kolom Lebih Lega & Nyaman */
+        @media (min-width: 1024px) {
+            .details-row {
+                padding: 10px 16px;
+                gap: 14px;
+            }
+            .details-row .d-name-col {
+                flex: 2.2;
+            }
+            .details-row .d-cat {
+                width: 90px;
+                padding: 4px 8px;
+            }
+            .details-row .d-status {
+                width: 110px;
+            }
+        }
 
         .guest-header {
             display: flex;
@@ -1433,8 +1597,15 @@
                     <div id="guest-list" class="list-wrapper"></div>
                     <!-- [v3.0 T2.5] Details view (hidden by default) — no route change -->
                     <div id="details-list-onsite" style="display:none; flex:1; overflow-y:auto; flex-direction:column; gap:0; padding:0 12px; min-height:0;">
-                        <div id="details-header-onsite" style="display:flex; gap:8px; padding:8px 12px; background:#FFF9F5; border:1px solid var(--border); border-radius:12px; margin:8px 0; font-size:8px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
-                            <span style="flex:2;">Nama</span><span style="flex:1;">Kategori</span><span style="flex:1;">Pihak</span><span style="width:70px; text-align:center;">Status</span>
+                        <div id="details-header-onsite" style="display:flex; gap:10px; padding:8px 12px; background:#FFF9F5; border:1px solid var(--border); border-radius:12px; margin:8px 0; font-size:8px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; align-items:center;">
+                            <span style="width:20px; flex-shrink:0;"></span>
+                            <span style="flex:2;">Nama &amp; WA</span>
+                            <span style="width:75px; flex-shrink:0; text-align:center;">Kategori</span>
+                            <span style="flex:1;">Pihak</span>
+                            <span class="d-col-alamat">Alamat</span>
+                            <span class="d-col-sesi">Sesi</span>
+                            <span class="d-col-pax">Pax</span>
+                            <span style="width:90px; flex-shrink:0; text-align:right;">Status</span>
                         </div>
                         <div id="details-body-onsite" style="display:flex; flex-direction:column; gap:4px;"></div>
                         <div id="details-sentinel-onsite" style="height:20px; display:flex; align-items:center; justify-content:center; padding:10px; font-size:9px; color:var(--text-muted);"></div>
@@ -2381,12 +2552,26 @@
             body.innerHTML = filtered.map(row=>{
                 const isDone=row.jamDatang && row.jamDatang!=='-';
                 const isChecked=selectedIDs.has(row.kode);
+
+                let giftIcons = "";
+                if ((row.statusHadiah && row.statusHadiah.includes("ANGPAO")) || parseFloat(row.tandaKasih) > 0) giftIcons += "🧧";
+                if (row.statusHadiah && row.statusHadiah.includes("KADO")) giftIcons += "🎁";
+
+                const paxPlan = (row.rencanaHadir !== "" && row.rencanaHadir !== undefined) ? row.rencanaHadir : '1';
+                const sesiDisplay = row.sesi || row.rencanaJamHadir || row.jamHadir || '-';
+
                 return `<div class="details-row ${isDone?'checked-in':''}" onclick="${isDone?'':'toggleSelect(\''+row.kode+'\')'}">
-                    <span style="width:18px; flex-shrink:0;">${isDone?'✅':'<input type="checkbox" '+(isChecked?'checked':'')+' style="accent-color:var(--gold); width:14px; height:14px;" onclick="event.stopPropagation(); toggleSelect(\''+row.kode+'\')"> '}</span>
-                    <span class="d-name">${row.nama||'-'}</span>
-                    <span class="d-cat">${row.kategori||'UMUM'}</span>
-                    <span class="d-pihak" title="${row.pihakPengundang||row.alamat||'-'}"><span class="pihak-full">${row.pihakPengundang||row.alamat||'-'}</span><span class="pihak-short">${window._formatPihakShort(row.pihakPengundang||row.alamat||'-')}</span></span>
-                    <span class="d-status" style="color:${isDone?'var(--success)':'var(--text-muted)'}">${isDone?'✓ '+(row.realHadir||''):'● BELUM'}</span>
+                    <span class="d-check">${isDone?'✅':'<input type="checkbox" '+(isChecked?'checked':'')+' style="accent-color:var(--gold); width:14px; height:14px;" onclick="event.stopPropagation(); toggleSelect(\''+row.kode+'\')">'}</span>
+                    <div class="d-name-col">
+                        <div class="d-name">${row.nama||'-'} <span style="font-size:10px;">${giftIcons}</span></div>
+                        <div class="d-wa">${row.whatsapp||'-'}</div>
+                    </div>
+                    <span class="d-cat" title="${row.kategori||'UMUM'}">${row.kategori||'UMUM'}</span>
+                    <span class="d-pihak" title="${row.pihakPengundang||'-'}"><span class="pihak-full">${row.pihakPengundang||'-'}</span><span class="pihak-short">${window._formatPihakShort(row.pihakPengundang||'-')}</span></span>
+                    <span class="d-alamat" title="${row.alamat||'-'}">${row.alamat||'-'}</span>
+                    <span class="d-sesi" title="${sesiDisplay}">${sesiDisplay}</span>
+                    <span class="d-pax" title="Plan: ${paxPlan} Pax">${paxPlan} PAX</span>
+                    <span class="d-status" style="color:${isDone?'var(--success)':'var(--text-muted)'}">${isDone?'✓ '+(row.realHadir||row.jamDatang||'HADIR'):'● BELUM'}</span>
                 </div>`;
             }).join('');
             if(sentinel) sentinel.textContent = _hasMore ? 'Scroll untuk load lagi ('+filtered.length+'/'+masterData.length+(filtered.length!==masterData.length?' filtered':'')+')' : filtered.length+' tamu';
