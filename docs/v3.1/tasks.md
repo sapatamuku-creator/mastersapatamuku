@@ -22,9 +22,7 @@
 | **T1.12** | `checkin.html` & `onsite.html` | Mobile Mode Fit-to-Screen Bottom Sheet & Modal Konfirmasi (Zero Page Scroll) | ✅ **Done** |
 | **T1.13** | `checkin.html` & `onsite.html` | Mobile Mode True 1:1 Square Camera Aspect Ratio Calibration | ✅ **Done** |
 | **T1.14** | `checkin.html` & `onsite.html` | Mobile Mode Slide-Down Exit Animation for Modal Cards & Bottom Sheets | ✅ **Done** |
-| **T1.15** | `checkin.html` & `onsite.html` | Selected/Checked Guest Priority Pinning to Top of Guest List | ✅ **Done** |
-| **T1.16** | `checkin.html` & `onsite.html` | Dedicated Sticky / Locked Pinned Panel for Selected Guests | ✅ **Done** |
-| **T1.17** | `checkin.html` & `onsite.html` | Adaptive View & Full Metadata Rendering for Sticky Pinned Guests | ✅ **Done** |
+| **T1.15** | `checkin.html` & `onsite.html` | Sticky Pinned Guest Panel (Adaptive View & Full Metadata) | ✅ **Done** |
 
 ---
 
@@ -89,18 +87,11 @@
 - [x] **T1.14 S — `checkin.html` & `onsite.html` Mobile Slide-Down Exit Animation**
   - Menambahkan animasi slide meluncur ke bawah (`@keyframes sheetDown` + `.is-closing` 300ms) saat menutup modal konfirmasi kedatangan (`#modalConfirm`) dan modal alert (`#st-modal`) di mobile mode.
 
-- [x] **T1.15 S — `checkin.html` & `onsite.html` Selected/Checked Guest Priority Pinning**
-  - Mengunci dan menempatkan setiap tamu yang dicentang / terpilih (`selectedIDs`) otomatis melayang di posisi paling atas daftar tamu pada mode Kartu dan mode Details, lengkap dengan styling highlight emas dan badge `📌 TERPILIH`.
-
-- [x] **T1.16 S — `checkin.html` & `onsite.html` Dedicated Sticky Pinned Guest Panel**
+- [x] **T1.15 S — `checkin.html` & `onsite.html` Sticky Pinned Guest Panel (Adaptive Full Metadata)**
   - Menghadirkan container sticky mandiri (`#pinned-guest-panel`) yang ditempatkan di luar container scrollable list (di antara search bar dan daftar tamu).
   - Terkunci permanen di area atas layar sehingga ketika usher melakukan scroll up/down pada daftar tamu, tamu-tamu yang terchecklist tetap 100% terlihat di layar.
-  - Menampilkan chip tamu terpilih dengan nama, gift icon, kategori, pax plan, tombol deselect per individu (✕), dan tombol "Batal Semua".
-  - Sinkronisasi status dua arah dengan mode Kartu & mode Details serta pembersihan otomatis setelah check-in berhasil.
-
-- [x] **T1.17 S — `checkin.html` & `onsite.html` Adaptive View & Full Metadata Sticky Pinned Guests**
-  - Menyesuaikan tampilan `#pinned-guest-panel` secara dinamis mengikuti mode tampilan yang aktif (`_checkinView` / `_onsiteView`: **KARTU** vs **DETAILS**).
-  - Merender kartu penuh (`.guest-item`) atau baris tabel penuh (`.details-row`) dengan seluruh metadata lengkap (Nama, WhatsApp, Alamat 📍, Inv by 💌, Sesi ⏰, Kategori, Pax Plan, Status Hadir).
+  - Menyesuaikan tampilan secara dinamis mengikuti mode tampilan aktif (`_checkinView` / `_onsiteView`: **KARTU** vs **DETAILS**) dengan seluruh metadata lengkap (Nama, WhatsApp, Alamat 📍, Inv by 💌, Sesi ⏰, Kategori, Pax Plan, Status Hadir).
+  - Sinkronisasi status dua arah dengan mode Kartu & Details, deselect instan per kartu, tombol "Batal Semua", dan pembersihan otomatis setelah check-in berhasil.
   - Responsif penuh di 3 viewport: Desktop (tabel/grid lebar), Tablet (kolom seimbang / grid 2-kolom), dan Mobile (tabel fluid / single column card).
 
 ---
