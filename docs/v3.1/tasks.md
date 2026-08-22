@@ -20,6 +20,7 @@
 | **T1.10** | `checkin.html` & `onsite.html` | Dynamic Sort & Multi-Filter Dropdown Menu (Status Hadir, Kategori, Pihak, Sesi) | ✅ **Done** |
 | **T1.11** | `checkin.html` & `onsite.html` | Mobile Mode Alamat Visibility on Details View | ✅ **Done** |
 | **T1.12** | `checkin.html` & `onsite.html` | Mobile Mode Fit-to-Screen Bottom Sheet & Modal Konfirmasi (Zero Page Scroll) | ✅ **Done** |
+| **T1.13** | `checkin.html` & `onsite.html` | Mobile Mode True 1:1 Square Camera Aspect Ratio Calibration | ✅ **Done** |
 
 ---
 
@@ -77,6 +78,9 @@
 - [x] **T1.12 S — `checkin.html` & `onsite.html` Fit-to-Screen Bottom Sheet & Modal Konfirmasi**
   - Optimasi modal konfirmasi kehadiran (`#modalConfirm`) agar 100% pas dalam satu viewport layar ponsel (*Zero Window Scroll*) dengan rasio kamera selfie kompak, spacing padat presisi, dan tombol konfirmasi yang langsung terlihat.
   - Kunci ketinggian panel bottom sheet daftar tamu (`.bottom-section`) sehingga scrolling terjadi di dalam list container tanpa menggeser layout halaman.
+
+- [x] **T1.13 S — `checkin.html` & `onsite.html` Mobile 1:1 Square Camera Aspect Ratio**
+  - Memastikan kamera selfie tetap mempertahankan rasio murni 1:1 (*True Square Aspect Ratio*) tanpa distorsi menyempit, berpusat di tengah dengan batasan dimensi responsif (`max-height/width: min(170px, 24vh)`).
 
 ---
 
