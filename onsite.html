@@ -163,6 +163,142 @@
             text-transform: uppercase;
         }
 
+        /* ─── STATION SELECTOR & TABLET DYNAMIC ISLAND ─── */
+        .station-selector {
+            position: absolute;
+            top: 60px;
+            left: 15px;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .station-di-trigger {
+            display: none;
+        }
+
+        .station-di-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* TABLET MODE (768px - 1023.98px): Dynamic Island Floating Capsule */
+        @media (min-width: 768px) and (max-width: 1023.98px) {
+            .station-selector {
+                position: fixed !important;
+                top: 75px !important;
+                left: 20px !important;
+                background: transparent !important;
+                border: none !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                z-index: 10005 !important;
+            }
+
+            .station-di-trigger {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: rgba(255, 253, 251, 0.92);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid var(--border);
+                border-radius: 50px;
+                padding: 6px 14px;
+                box-shadow: 0 8px 25px rgba(74, 63, 53, 0.12);
+                cursor: pointer;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+                user-select: none;
+            }
+
+            .station-di-trigger:active {
+                transform: scale(0.96);
+            }
+
+            .station-di-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--primary);
+                animation: diPulse 2s infinite;
+                flex-shrink: 0;
+            }
+
+            .station-di-label {
+                font-size: 10px;
+                font-weight: 800;
+                color: var(--text-main);
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .station-di-badge {
+                font-size: 8px;
+                font-weight: 800;
+                padding: 2px 6px;
+                border-radius: 8px;
+                background: #fee2e2;
+                color: #ef4444;
+            }
+
+            .station-di-badge.badge-active {
+                background: #d1fae5;
+                color: #059669;
+            }
+
+            .station-di-chevron {
+                font-size: 10px;
+                color: var(--text-muted);
+                transition: transform 0.25s ease;
+            }
+
+            .station-selector.is-expanded .station-di-chevron {
+                transform: rotate(180deg);
+            }
+
+            .station-di-content {
+                display: none;
+                margin-top: 8px;
+                background: rgba(255, 253, 251, 0.96);
+                backdrop-filter: blur(24px);
+                -webkit-backdrop-filter: blur(24px);
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                padding: 12px 16px;
+                box-shadow: 0 14px 40px rgba(74, 63, 53, 0.18);
+                gap: 12px;
+                flex-wrap: wrap;
+                align-items: center;
+                animation: diDropIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            .station-selector.is-expanded .station-di-content {
+                display: flex;
+            }
+
+            @keyframes diDropIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-8px) scale(0.97);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+        }
+
         .main-content {
             position: relative;
             z-index: 10;
@@ -1038,6 +1174,13 @@
                 border: none !important; border-radius: 0 !important; padding: 0 !important;
                 box-shadow: none !important; z-index: auto !important;
             }
+            .mob-kartu-panel .station-di-trigger { display: none !important; }
+            .mob-kartu-panel .station-di-content {
+                display: flex !important; flex-direction: column !important; gap: 10px !important;
+                width: 100% !important; background: transparent !important;
+                border: none !important; padding: 0 !important;
+                box-shadow: none !important;
+            }
             .mob-kartu-panel .station-selector > * { margin: 0 !important; }
             .mob-kartu-panel .station-selector > span:not(#realtime-status) { display: none; }
             .mob-kartu-panel .station-selector select {
@@ -1181,53 +1324,62 @@
         <div class="hero-overlay-frost"></div>
 
         <div class="header" style="position: relative;">
-            <!-- JALUR SELECTOR -->
-            <div class="station-selector"
-                style="position: absolute; top: 60px; left: 15px; z-index: 200; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <span
-                    style="font-size: 8px; color: var(--text-muted); font-weight: 800; margin-right: 5px; text-transform: uppercase;">JALUR:</span>
-                <select id="jalur-selector"
-                    style="background: transparent; border: none; color: var(--text-main); font-size: 9px; font-weight: 800; text-transform: uppercase; outline: none; cursor: pointer;">
-                    <option value="ALL">ALL JALUR</option>
-                    <option value="1">JALUR 1</option>
-                    <option value="2">JALUR 2</option>
-                    <option value="3">JALUR 3</option>
-                    <option value="4">JALUR 4</option>
-                </select>
-                <span id="realtime-status" style="font-size: 8px; font-weight: 800; margin-left: 4px; padding: 2px 6px; border-radius: 10px; background: #fee2e2; color: #ef4444; transition: 0.3s;">Realtime Off</span>
-                <!-- Toggle Kamera -->
-                <div class="cam-toggle-wrap">
-                    <span class="cam-toggle-label">CAM</span>
-                    <label class="cam-toggle">
-                        <input type="checkbox" id="cam-toggle-onsite" onchange="toggleScanner(this.checked)">
-                        <span class="cam-toggle-slider"></span>
-                    </label>
+            <!-- STATION SELECTOR / DYNAMIC ISLAND TABLET WIDGET -->
+            <div class="station-selector" id="station-selector-widget">
+                <!-- Collapsed trigger pill for tablet -->
+                <div class="station-di-trigger" onclick="toggleStationIsland(event)">
+                    <span class="station-di-dot"></span>
+                    <span class="station-di-label" id="station-di-summary">JALUR: ALL</span>
+                    <span class="station-di-badge" id="station-di-rt-badge">RT OFF</span>
+                    <span class="station-di-chevron">▾</span>
                 </div>
-                <!-- Toggle Frontcam Mode -->
-                <div class="cam-toggle-wrap" style="margin-left: 5px;">
-                    <span class="cam-toggle-label">FC</span>
-                    <label class="cam-toggle">
-                        <input type="checkbox" id="frontcam-toggle" onchange="toggleFrontcamMode(this.checked)">
-                        <span class="cam-toggle-slider"></span>
-                    </label>
+
+                <div class="station-di-content">
+                    <span class="station-label-txt"
+                        style="font-size: 8px; color: var(--text-muted); font-weight: 800; margin-right: 5px; text-transform: uppercase;">JALUR:</span>
+                    <select id="jalur-selector" onchange="updateStationDiSummary()"
+                        style="background: transparent; border: none; color: var(--text-main); font-size: 9px; font-weight: 800; text-transform: uppercase; outline: none; cursor: pointer;">
+                        <option value="ALL">ALL JALUR</option>
+                        <option value="1">JALUR 1</option>
+                        <option value="2">JALUR 2</option>
+                        <option value="3">JALUR 3</option>
+                        <option value="4">JALUR 4</option>
+                    </select>
+                    <span id="realtime-status" style="font-size: 8px; font-weight: 800; margin-left: 4px; padding: 2px 6px; border-radius: 10px; background: #fee2e2; color: #ef4444; transition: 0.3s;">Realtime Off</span>
+                    <!-- Toggle Kamera -->
+                    <div class="cam-toggle-wrap">
+                        <span class="cam-toggle-label">CAM</span>
+                        <label class="cam-toggle">
+                            <input type="checkbox" id="cam-toggle-onsite" onchange="toggleScanner(this.checked)">
+                            <span class="cam-toggle-slider"></span>
+                        </label>
+                    </div>
+                    <!-- Toggle Frontcam Mode -->
+                    <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                        <span class="cam-toggle-label">FC</span>
+                        <label class="cam-toggle">
+                            <input type="checkbox" id="frontcam-toggle" onchange="toggleFrontcamMode(this.checked)">
+                            <span class="cam-toggle-slider"></span>
+                        </label>
+                    </div>
+                    <!-- Toggle Countdown -->
+                    <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                        <span class="cam-toggle-label">CD</span>
+                        <label class="cam-toggle">
+                            <input type="checkbox" id="countdown-toggle" checked>
+                            <span class="cam-toggle-slider"></span>
+                        </label>
+                    </div>
+                    <!-- Toggle Quick Check In -->
+                    <div class="cam-toggle-wrap" style="margin-left: 5px;">
+                        <span class="cam-toggle-label">QUICK</span>
+                        <label class="cam-toggle">
+                            <input type="checkbox" id="quick-checkin-toggle" onchange="localStorage.setItem('quick_checkin_on', this.checked ? '1' : '0')">
+                            <span class="cam-toggle-slider"></span>
+                        </label>
+                    </div>
+                    <!-- pw-btn injected by PrinterWidget.init() -->
                 </div>
-                <!-- Toggle Countdown -->
-                <div class="cam-toggle-wrap" style="margin-left: 5px;">
-                    <span class="cam-toggle-label">CD</span>
-                    <label class="cam-toggle">
-                        <input type="checkbox" id="countdown-toggle" checked>
-                        <span class="cam-toggle-slider"></span>
-                    </label>
-                </div>
-                <!-- Toggle Quick Check In -->
-                <div class="cam-toggle-wrap" style="margin-left: 5px;">
-                    <span class="cam-toggle-label">QUICK</span>
-                    <label class="cam-toggle">
-                        <input type="checkbox" id="quick-checkin-toggle" onchange="localStorage.setItem('quick_checkin_on', this.checked ? '1' : '0')">
-                        <span class="cam-toggle-slider"></span>
-                    </label>
-                </div>
-                <!-- pw-btn injected by PrinterWidget.init() -->
             </div>
 
             <h1>sapa<span>tamu</span>.ku</h1>
@@ -1560,6 +1712,42 @@
             }
         }
         window.initHeroSlideshow = initHeroSlideshow;
+
+        // --- TABLET DYNAMIC ISLAND STATION CONTROLLER ---
+        function toggleStationIsland(e) {
+            if (e) e.stopPropagation();
+            const widget = document.getElementById('station-selector-widget');
+            if (widget) {
+                widget.classList.toggle('is-expanded');
+            }
+        }
+        window.toggleStationIsland = toggleStationIsland;
+
+        document.addEventListener('click', function (e) {
+            const widget = document.getElementById('station-selector-widget');
+            if (widget && widget.classList.contains('is-expanded')) {
+                if (!widget.contains(e.target)) {
+                    widget.classList.remove('is-expanded');
+                }
+            }
+        });
+
+        function updateStationDiSummary() {
+            const jalurEl = document.getElementById('jalur-selector');
+            const summaryEl = document.getElementById('station-di-summary');
+            const rtBadge = document.getElementById('station-di-rt-badge');
+            const rtStatus = document.getElementById('realtime-status');
+
+            if (jalurEl && summaryEl) {
+                summaryEl.innerText = 'JALUR: ' + jalurEl.value;
+            }
+            if (rtBadge && rtStatus) {
+                const isOnline = rtStatus.innerText.toLowerCase().includes('live') || rtStatus.innerText.toLowerCase().includes('on');
+                rtBadge.innerText = isOnline ? 'RT ON' : 'RT OFF';
+                rtBadge.classList.toggle('badge-active', isOnline);
+            }
+        }
+        window.updateStationDiSummary = updateStationDiSummary;
 
         let CURRENT_SS_ID = null;
         let masterData = [];

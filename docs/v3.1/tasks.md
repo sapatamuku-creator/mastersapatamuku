@@ -15,6 +15,7 @@
 | **T1.5** | `analytics.html` & `dashboard.html` | Master Data Initial Load & Skeleton Feedback | ✅ **Done** |
 | **T1.6** | `formulir_tamu.html` | Dynamic Hero Ambient Photo Slideshow & Glass Info Cards | ✅ **Done** |
 | **T1.7** | `checkin.html` & `onsite.html` | Dynamic Ambient Photo Slideshow di Background Section Scanner | ✅ **Done** |
+| **T1.8** | `checkin.html` & `onsite.html` | Tablet Mode Dynamic Island Station Controls Capsule | ✅ **Done** |
 
 ---
 
@@ -50,6 +51,11 @@
   - Random starting photo saat load/refresh halaman dan transisi crossfade halus (8.5s).
   - Translucent crystal overlay dengan header semi-transparan ber-blur halus (`backdrop-filter: blur(8px)`).
   - Uji responsif di desktop, tablet, dan mobile.
+
+- [x] **T1.8 S — `checkin.html` & `onsite.html` Tablet Dynamic Island Station Controls**
+  - Mengubah baris kontrol stasiun (Jalur, RT, CAM, FC, CD, QUICK) pada **Tablet Mode (768–1023px)** menjadi Dynamic Island Floating Capsule (`.station-di-trigger` & `.station-di-content`).
+  - Efek glassmorphism pill collapsed default (`🟢 JALUR: ALL • RT OFF ▾`), tap/touch untuk expand popover card dengan smooth drop animation.
+  - Mobile mode (<768px) dan Desktop mode (≥1024px) tetap utuh dan stabil.
 
 ---
 
