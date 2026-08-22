@@ -17,6 +17,7 @@
 | **T1.7** | `checkin.html` & `onsite.html` | Dynamic Ambient Photo Slideshow di Background Section Scanner | ✅ **Done** |
 | **T1.8** | `checkin.html` & `onsite.html` | Tablet Mode Dynamic Island Station Controls Capsule | ✅ **Done** |
 | **T1.9** | `checkin.html` & `onsite.html` | Comprehensive Metadata di Details Mode (Desktop, Tablet, Mobile) | ✅ **Done** |
+| **T1.10** | `checkin.html` & `onsite.html` | Dynamic Sort & Multi-Filter Dropdown Menu (Status Hadir, Kategori, Pihak, Sesi) | ✅ **Done** |
 
 ---
 
@@ -61,6 +62,11 @@
 - [x] **T1.9 S — `checkin.html` & `onsite.html` Comprehensive Details Mode Metadata**
   - Sinkronisasi kelengkapan metadata mode *Details* agar selengkap mode *Kartu* (Nama, WA, Gift Icon 🧧/🎁, Kategori, Pihak, Alamat, Sesi, Pax Plan, Status Hadir).
   - Dukungan 3 responsif: Desktop lega penuh, Tablet seimbang (Alamat + Sesi + Pax aktif), Mobile kompak ringkas (kolom sekunder tersembunyi).
+
+- [x] **T1.10 S — `checkin.html` & `onsite.html` Sort & Multi-Filter Dropdown**
+  - Pasang tombol dropdown Sortir (`URUTKAN: TERBARU/TERLAMA/A-Z/Z-A/KATEGORI/PIHAK`) dan Multi-Filter (`FILTER TAMU`) di samping label Status Kehadiran.
+  - Dukungan filter Status Hadir (Sudah/Belum), Kategori, Pihak Pengundang, dan Sesi Undangan dengan badge counter aktif dan tombol reset.
+  - Berlaku sinkron di Card Mode & Details Mode pada 3 breakpoint (Desktop, Tablet, Mobile).
 
 ---
 

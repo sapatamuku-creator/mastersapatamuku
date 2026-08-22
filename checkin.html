@@ -526,6 +526,19 @@
             transform: translateY(-2px);
         }
 
+        /* Custom scrollbar for filter dropdown */
+        .filter-dropdown-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .filter-dropdown-scroll::-webkit-scrollbar-track {
+            background: #FFF9F5;
+            border-radius: 4px;
+        }
+        .filter-dropdown-scroll::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 4px;
+        }
+
         /* [v3.0 T2.5 & v3.1 T1.9] Comprehensive Details Mode */
         .details-row {
             display: flex;
@@ -1846,10 +1859,73 @@
                 <div class="guest-sheet-grip" id="guest-sheet-grip" onclick="toggleGuestSheet()">
                     <span class="grip-bar"></span>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px 0;">
-                    <span
-                        style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Status
-                        Kehadiran</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px 0; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Status Kehadiran</span>
+
+                        <!-- FILTER DROPDOWN TRIGGER & MENU -->
+                        <div style="position: relative; display: inline-block;">
+                            <button id="btn-filter-dropdown" onclick="toggleFilterDropdown(event)" title="Filter Tamu berdasarkan Kategori, Pihak, Sesi, Status Hadir" style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 50px; border: 1.5px solid rgba(79, 70, 229, 0.25); background: rgba(243, 244, 246, 0.85); color: #374151; font-size: 9.5px; font-weight: 800; cursor: pointer; transition: all 0.25s ease; letter-spacing: 0.3px; white-space: nowrap;">
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="flex-shrink:0"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                                FILTER <span id="active-filter-badge" style="display:none; background:#4f46e5; color:#FFF; border-radius:50%; width:13px; height:13px; align-items:center; justify-content:center; font-size:7.5px; font-weight:800; margin-left:2px;">0</span>
+                            </button>
+                            <!-- Dropdown Menu -->
+                            <div id="filter-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; background: #FFF; border: 1.5px solid var(--border); border-radius: 18px; box-shadow: 0 15px 35px rgba(140, 117, 96, 0.18); padding: 14px; width: 250px; z-index: 10050; box-sizing: border-box;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1.5px solid var(--border);">
+                                    <span style="font-size: 10px; font-weight: 800; color: var(--text-main); letter-spacing: 0.5px; text-transform: uppercase;">Filter Tamu</span>
+                                    <button onclick="clearAllFilters(event)" style="background: none; border: none; color: #EF4444; font-size: 9px; font-weight: 800; cursor: pointer; padding: 0;">RESET</button>
+                                </div>
+                                <div style="max-height: 260px; overflow-y: auto; padding-right: 4px;" class="filter-dropdown-scroll">
+                                    <!-- Status Kehadiran -->
+                                    <div style="margin-bottom: 10px;">
+                                        <div style="font-size: 8.5px; font-weight: 800; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase;">Status Hadir</div>
+                                        <div id="filter-options-hadir" style="display: flex; flex-direction: column; gap: 5px;">
+                                            <label style="display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 600; cursor: pointer; color: var(--text-main);">
+                                                <input type="checkbox" value="hadir" data-filter="statusHadir" onchange="applyFilter()" style="cursor: pointer; accent-color: #4f46e5;"> ✅ Sudah Hadir
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 600; cursor: pointer; color: var(--text-main);">
+                                                <input type="checkbox" value="belum" data-filter="statusHadir" onchange="applyFilter()" style="cursor: pointer; accent-color: #4f46e5;"> ⏳ Belum Hadir
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <!-- Kategori -->
+                                    <div style="margin-bottom: 10px;">
+                                        <div style="font-size: 8.5px; font-weight: 800; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase;">Kategori</div>
+                                        <div id="filter-options-kategori" style="display: flex; flex-direction: column; gap: 5px;"></div>
+                                    </div>
+                                    <!-- Pihak Pengundang -->
+                                    <div style="margin-bottom: 10px;">
+                                        <div style="font-size: 8.5px; font-weight: 800; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase;">Pihak Pengundang</div>
+                                        <div id="filter-options-pihak" style="display: flex; flex-direction: column; gap: 5px;"></div>
+                                    </div>
+                                    <!-- Sesi -->
+                                    <div style="margin-bottom: 6px;">
+                                        <div style="font-size: 8.5px; font-weight: 800; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase;">Sesi Undangan</div>
+                                        <div id="filter-options-sesi" style="display: flex; flex-direction: column; gap: 5px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SORT DROPDOWN TRIGGER & MENU -->
+                        <div style="position: relative; display: inline-block;">
+                            <button id="btn-sort-dropdown" onclick="toggleSortDropdown(event)" title="Urutkan Tamu" style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 50px; border: 1.5px solid rgba(224, 123, 123, 0.25); background: rgba(243, 244, 246, 0.85); color: #374151; font-size: 9.5px; font-weight: 800; cursor: pointer; transition: all 0.25s ease; letter-spacing: 0.3px; white-space: nowrap;">
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="flex-shrink:0"><path d="M15 4l6 6h-4v10h-4V10H9l6-6zM9 20l-6-6h4V4h4v10h4l-6 6z"/></svg>
+                                URUTKAN: <span id="current-sort-label" style="color:var(--primary);">TERBARU</span>
+                            </button>
+                            <!-- Sort Dropdown Menu -->
+                            <div id="sort-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; background: #FFF; border: 1.5px solid var(--border); border-radius: 18px; box-shadow: 0 15px 35px rgba(140, 117, 96, 0.18); padding: 8px; width: 180px; z-index: 10050; box-sizing: border-box;">
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    <button onclick="changeSortOrder('newest', event)" style="text-align: left; background: none; border: none; padding: 7px 10px; font-size: 10.5px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">🆕 Terbaru</button>
+                                    <button onclick="changeSortOrder('oldest', event)" style="text-align: left; background: none; border: none; padding: 7px 10px; font-size: 10.5px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">⏳ Terlama</button>
+                                    <button onclick="changeSortOrder('name-asc', event)" style="text-align: left; background: none; border: none; padding: 7px 10px; font-size: 10.5px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">🔤 Nama A - Z</button>
+                                    <button onclick="changeSortOrder('name-desc', event)" style="text-align: left; background: none; border: none; padding: 7px 10px; font-size: 10.5px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">🔤 Nama Z - A</button>
+                                    <button onclick="changeSortOrder('cat-asc', event)" style="text-align: left; background: none; border: none; padding: 7px 10px; font-size: 10.5px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">🏷️ Per Kategori</button>
+                                    <button onclick="changeSortOrder('pihak-asc', event)" style="text-align: left; background: none; border: none; padding: 7px 10px; font-size: 10.5px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">💌 Per Pihak Pengundang</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <span id="checkedin-guests"
                             style="background: var(--gold); color: #FFF; padding: 6px 14px; border-radius: 50px; font-size: 10px; font-weight: 800;">0
@@ -2568,17 +2644,233 @@
             return words.map(w => w[0].toUpperCase()).join('');
         };
 
+        // ===== FILTER & SORT ENGINE (ALA FORMULIR_TAMU) =====
+        let currentSortOrder = "newest";
+        let activeFilters = {
+            statusHadir: [],
+            kategori: [],
+            pihakPengundang: [],
+            sesi: []
+        };
+
+        window.toggleFilterDropdown = function(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('filter-dropdown-menu');
+            const sortMenu = document.getElementById('sort-dropdown-menu');
+            if (sortMenu) sortMenu.style.display = 'none';
+            if (!menu) return;
+            const isHidden = menu.style.display === 'none';
+            menu.style.display = isHidden ? 'block' : 'none';
+            if (isHidden) {
+                populateFilterOptions();
+                document.querySelectorAll('#filter-dropdown-menu input[type="checkbox"]').forEach(cb => {
+                    const filterType = cb.getAttribute('data-filter');
+                    const val = cb.value;
+                    if (activeFilters[filterType] && activeFilters[filterType].includes(val)) {
+                        cb.checked = true;
+                    } else {
+                        cb.checked = false;
+                    }
+                });
+            }
+        };
+
+        window.populateFilterOptions = function() {
+            const categories = new Set();
+            const pihaks = new Set();
+            const sesis = new Set();
+
+            masterData.forEach(g => {
+                if (g.kategori) categories.add(g.kategori);
+                if (g.pihakPengundang && g.pihakPengundang !== '-') pihaks.add(g.pihakPengundang);
+                if (g.sesi && g.sesi !== '-') sesis.add(g.sesi);
+            });
+
+            const containerKategori = document.getElementById('filter-options-kategori');
+            if (containerKategori) {
+                containerKategori.innerHTML = Array.from(categories).map(c => `
+                    <label style="display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 600; cursor: pointer; color: var(--text-main);">
+                        <input type="checkbox" value="${c}" data-filter="kategori" onchange="applyFilter()" style="cursor: pointer; accent-color: #4f46e5;"> ${c}
+                    </label>
+                `).join('');
+            }
+
+            const containerPihak = document.getElementById('filter-options-pihak');
+            if (containerPihak) {
+                containerPihak.innerHTML = Array.from(pihaks).map(p => `
+                    <label style="display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 600; cursor: pointer; color: var(--text-main);">
+                        <input type="checkbox" value="${p}" data-filter="pihakPengundang" onchange="applyFilter()" style="cursor: pointer; accent-color: #4f46e5;"> ${p}
+                    </label>
+                `).join('');
+            }
+
+            const containerSesi = document.getElementById('filter-options-sesi');
+            if (containerSesi) {
+                containerSesi.innerHTML = Array.from(sesis).map(s => `
+                    <label style="display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 600; cursor: pointer; color: var(--text-main);">
+                        <input type="checkbox" value="${s}" data-filter="sesi" onchange="applyFilter()" style="cursor: pointer; accent-color: #4f46e5;"> ${s}
+                    </label>
+                `).join('');
+            }
+        };
+
+        window.applyFilter = function() {
+            activeFilters.statusHadir = Array.from(document.querySelectorAll('input[data-filter="statusHadir"]:checked')).map(el => el.value);
+            activeFilters.kategori = Array.from(document.querySelectorAll('input[data-filter="kategori"]:checked')).map(el => el.value);
+            activeFilters.pihakPengundang = Array.from(document.querySelectorAll('input[data-filter="pihakPengundang"]:checked')).map(el => el.value);
+            activeFilters.sesi = Array.from(document.querySelectorAll('input[data-filter="sesi"]:checked')).map(el => el.value);
+
+            let activeCount = activeFilters.statusHadir.length +
+                               activeFilters.kategori.length + 
+                               activeFilters.pihakPengundang.length + 
+                               activeFilters.sesi.length;
+            
+            const badge = document.getElementById('active-filter-badge');
+            const btn = document.getElementById('btn-filter-dropdown');
+            if (activeCount > 0) {
+                if (badge) { badge.innerText = activeCount; badge.style.display = 'inline-flex'; }
+                if (btn) {
+                    btn.style.borderColor = '#4f46e5';
+                    btn.style.background = 'rgba(79, 70, 229, 0.12)';
+                    btn.style.color = '#4f46e5';
+                }
+            } else {
+                if (badge) badge.style.display = 'none';
+                if (btn) {
+                    btn.style.borderColor = 'rgba(79, 70, 229, 0.25)';
+                    btn.style.background = 'rgba(243, 244, 246, 0.85)';
+                    btn.style.color = '#374151';
+                }
+            }
+
+            if (_checkinView === 'details') renderDetails(); else renderUI();
+        };
+
+        window.clearAllFilters = function(event) {
+            if (event) event.stopPropagation();
+            document.querySelectorAll('#filter-dropdown-menu input[type="checkbox"]').forEach(cb => cb.checked = false);
+            applyFilter();
+        };
+
+        window.toggleSortDropdown = function(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('sort-dropdown-menu');
+            const filterMenu = document.getElementById('filter-dropdown-menu');
+            if (filterMenu) filterMenu.style.display = 'none';
+            if (!menu) return;
+            const isHidden = menu.style.display === 'none';
+            menu.style.display = isHidden ? 'block' : 'none';
+        };
+
+        window.changeSortOrder = function(order, event) {
+            if (event) event.stopPropagation();
+            currentSortOrder = order;
+            
+            const labels = {
+                'newest': 'TERBARU',
+                'oldest': 'TERLAMA',
+                'name-asc': 'NAMA A-Z',
+                'name-desc': 'NAMA Z-A',
+                'cat-asc': 'KATEGORI',
+                'pihak-asc': 'PIHAK'
+            };
+            const labelEl = document.getElementById('current-sort-label');
+            if (labelEl) labelEl.innerText = labels[order] || 'TERBARU';
+            
+            const menu = document.getElementById('sort-dropdown-menu');
+            if (menu) menu.style.display = 'none';
+            
+            if (_checkinView === 'details') renderDetails(); else renderUI();
+        };
+
+        // Close dropdowns on click outside
+        document.addEventListener('click', function(event) {
+            const filterMenu = document.getElementById('filter-dropdown-menu');
+            const filterBtn = document.getElementById('btn-filter-dropdown');
+            if (filterMenu && filterMenu.style.display === 'block') {
+                if (!filterMenu.contains(event.target) && !filterBtn.contains(event.target)) {
+                    filterMenu.style.display = 'none';
+                }
+            }
+            const sortMenu = document.getElementById('sort-dropdown-menu');
+            const sortBtn = document.getElementById('btn-sort-dropdown');
+            if (sortMenu && sortMenu.style.display === 'block') {
+                if (!sortMenu.contains(event.target) && !sortBtn.contains(event.target)) {
+                    sortMenu.style.display = 'none';
+                }
+            }
+        });
+
+        // Helper get filtered & sorted list
+        function getFilteredAndSortedGuests() {
+            const term = (document.getElementById('search-box').value || '').toLowerCase();
+            const terms = term.trim().split(/\s+/).filter(Boolean);
+
+            let list = masterData.filter(g => {
+                // Search term matching
+                const txt = [g.nama || '', g.kode || '', g.whatsapp || '', g.alamat || '', g.pihakPengundang || '', g.sesi || '', g.kategori || '', String(g.rencanaHadir || '')].join(' ').toLowerCase();
+                const matchesSearch = terms.every(t => txt.includes(t));
+                if (!matchesSearch) return false;
+
+                // Status hadir filter
+                const isDone = g.jamDatang && g.jamDatang !== '-';
+                if (activeFilters.statusHadir && activeFilters.statusHadir.length > 0) {
+                    const wantHadir = activeFilters.statusHadir.includes('hadir');
+                    const wantBelum = activeFilters.statusHadir.includes('belum');
+                    if (wantHadir && !wantBelum && !isDone) return false;
+                    if (wantBelum && !wantHadir && isDone) return false;
+                }
+
+                // Kategori filter
+                if (activeFilters.kategori && activeFilters.kategori.length > 0) {
+                    if (!activeFilters.kategori.includes(g.kategori)) return false;
+                }
+
+                // Pihak filter
+                if (activeFilters.pihakPengundang && activeFilters.pihakPengundang.length > 0) {
+                    if (!activeFilters.pihakPengundang.includes(g.pihakPengundang)) return false;
+                }
+
+                // Sesi filter
+                if (activeFilters.sesi && activeFilters.sesi.length > 0) {
+                    if (!activeFilters.sesi.includes(g.sesi)) return false;
+                }
+
+                return true;
+            });
+
+            // Sorting
+            if (currentSortOrder === "newest") {
+                list.sort((a, b) => {
+                    const rowA = a.row == null ? Infinity : Number(a.row);
+                    const rowB = b.row == null ? Infinity : Number(b.row);
+                    return rowB - rowA;
+                });
+            } else if (currentSortOrder === "oldest") {
+                list.sort((a, b) => {
+                    const rowA = a.row == null ? Infinity : Number(a.row);
+                    const rowB = b.row == null ? Infinity : Number(b.row);
+                    return rowA - rowB;
+                });
+            } else if (currentSortOrder === "name-asc") {
+                list.sort((a, b) => (a.nama || "").localeCompare(b.nama || ""));
+            } else if (currentSortOrder === "name-desc") {
+                list.sort((a, b) => (b.nama || "").localeCompare(a.nama || ""));
+            } else if (currentSortOrder === "cat-asc") {
+                list.sort((a, b) => (a.kategori || "").localeCompare(b.kategori || ""));
+            } else if (currentSortOrder === "pihak-asc") {
+                list.sort((a, b) => (a.pihakPengundang || "").localeCompare(b.pihakPengundang || ""));
+            }
+
+            return list;
+        }
+
         window.renderDetails = function () {
             var _perfR = 'checkin:renderDetails:start'; try { performance.mark(_perfR); } catch (e) { }
             const body = document.getElementById('details-body');
             const sentinel = document.getElementById('details-sentinel');
             if (!body) return;
-            const term = (document.getElementById('search-box').value || '').toLowerCase();
-            const terms = term.trim().split(/\s+/).filter(Boolean);
-            const filtered = masterData.filter(g => {
-                const txt = [g.nama || '', g.kode || '', g.whatsapp || '', g.alamat || '', g.pihakPengundang || '', g.sesi || '', g.kategori || '', String(g.rencanaHadir || '')].join(' ').toLowerCase();
-                return terms.every(t => txt.includes(t));
-            });
+            const filtered = getFilteredAndSortedGuests();
             body.innerHTML = filtered.map(row => {
                 const isDone = row.jamDatang && row.jamDatang !== '-';
                 const isChecked = selectedIDs.has(row.kode);
@@ -2654,17 +2946,7 @@
         window.renderUI = function () {
             var _perfR = 'checkin:render:start'; try { performance.mark(_perfR); } catch (e) { }
             const listBody = document.getElementById('guest-list');
-            const term = document.getElementById('search-box').value.toLowerCase();
-
-            const searchTerms = term.trim().split(/\s+/).filter(Boolean);
-            const filtered = masterData.filter(row => {
-                const rowText = [
-                    row.nama || "", row.kode || "", row.whatsapp || "",
-                    row.alamat || "", row.pihakPengundang || "",
-                    row.sesi || "", row.kategori || "", String(row.rencanaHadir || "")
-                ].join(" ").toLowerCase();
-                return searchTerms.every(t => rowText.includes(t));
-            });
+            const filtered = getFilteredAndSortedGuests();
 
             listBody.innerHTML = filtered.map(row => {
                 const isDone = row.jamDatang && row.jamDatang !== "-";
