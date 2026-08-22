@@ -1777,6 +1777,28 @@
                     transform: translateY(0);
                 }
             }
+
+            @keyframes sheetDown {
+                from {
+                    transform: translateY(0);
+                }
+
+                to {
+                    transform: translateY(100%);
+                }
+            }
+
+            .modal-card.is-closing,
+            .st-modal-content.is-closing {
+                animation: sheetDown .3s cubic-bezier(.32, .72, 0, 1) forwards !important;
+            }
+
+            .modal-overlay.is-closing,
+            .st-modal-overlay.is-closing {
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity .3s ease;
+            }
         }
 
         /* Responsive Pihak Tamu: Mode Kartu (.guest-item) selalu utuh; Mode Details (.details-row) di Mobile (<768px) pakai singkatan */
@@ -2200,7 +2222,22 @@
             document.body.style.cursor = isStart ? 'wait' : 'default';
         }
 
-        window.showAlert = function (title, msg, icon = "⚠️") {
+        async function closeStModal(result, resolve) {
+            const modal = document.getElementById('st-modal');
+            if (!modal) return;
+            const content = modal.querySelector('.st-modal-content');
+            if (window.innerWidth < 768 && content) {
+                modal.classList.add('is-closing');
+                content.classList.add('is-closing');
+                await new Promise(r => setTimeout(r, 280));
+                modal.classList.remove('is-closing');
+                content.classList.remove('is-closing');
+            }
+            modal.style.display = 'none';
+            resolve(result);
+        }
+
+        window.showAlert = function (title, msg, icon = "⚠️ ") {
             return new Promise(resolve => {
                 document.getElementById('st-modal-icon').innerText = icon;
                 document.getElementById('st-modal-title').innerText = title;
@@ -2208,10 +2245,7 @@
                 document.getElementById('modal-cancel-btn').style.display = 'none';
                 const okBtn = document.getElementById('modal-ok-btn');
                 okBtn.innerText = "TUTUP";
-                okBtn.onclick = () => {
-                    document.getElementById('st-modal').style.display = 'none';
-                    resolve(true);
-                };
+                okBtn.onclick = () => closeStModal(true, resolve);
                 document.getElementById('st-modal').style.display = 'flex';
             });
         };
@@ -2223,14 +2257,8 @@
                 document.getElementById('st-modal-msg').innerText = msg;
                 document.getElementById('modal-cancel-btn').style.display = 'block';
                 document.getElementById('modal-ok-btn').innerText = "LANJUTKAN";
-                document.getElementById('modal-ok-btn').onclick = () => {
-                    document.getElementById('st-modal').style.display = 'none';
-                    resolve(true);
-                };
-                document.getElementById('modal-cancel-btn').onclick = () => {
-                    document.getElementById('st-modal').style.display = 'none';
-                    resolve(false);
-                };
+                document.getElementById('modal-ok-btn').onclick = () => closeStModal(true, resolve);
+                document.getElementById('modal-cancel-btn').onclick = () => closeStModal(false, resolve);
                 document.getElementById('st-modal').style.display = 'flex';
             });
         };
@@ -3591,7 +3619,17 @@
         };
 
         window.closeModal = async function () {
-            document.getElementById('modalConfirm').style.display = 'none';
+            const modal = document.getElementById('modalConfirm');
+            if (!modal) return;
+            const card = modal.querySelector('.modal-card');
+            if (window.innerWidth < 768 && card) {
+                modal.classList.add('is-closing');
+                card.classList.add('is-closing');
+                await new Promise(r => setTimeout(r, 280));
+                modal.classList.remove('is-closing');
+                card.classList.remove('is-closing');
+            }
+            modal.style.display = 'none';
             if (currentStream) {
                 currentStream.getTracks().forEach(t => t.stop());
                 currentStream = null;

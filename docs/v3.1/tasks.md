@@ -21,6 +21,7 @@
 | **T1.11** | `checkin.html` & `onsite.html` | Mobile Mode Alamat Visibility on Details View | ✅ **Done** |
 | **T1.12** | `checkin.html` & `onsite.html` | Mobile Mode Fit-to-Screen Bottom Sheet & Modal Konfirmasi (Zero Page Scroll) | ✅ **Done** |
 | **T1.13** | `checkin.html` & `onsite.html` | Mobile Mode True 1:1 Square Camera Aspect Ratio Calibration | ✅ **Done** |
+| **T1.14** | `checkin.html` & `onsite.html` | Mobile Mode Slide-Down Exit Animation for Modal Cards & Bottom Sheets | ✅ **Done** |
 
 ---
 
@@ -81,6 +82,9 @@
 
 - [x] **T1.13 S — `checkin.html` & `onsite.html` Mobile 1:1 Square Camera Aspect Ratio**
   - Memastikan kamera selfie tetap mempertahankan rasio murni 1:1 (*True Square Aspect Ratio*) tanpa distorsi menyempit, berpusat di tengah dengan batasan dimensi responsif (`max-height/width: min(170px, 24vh)`).
+
+- [x] **T1.14 S — `checkin.html` & `onsite.html` Mobile Slide-Down Exit Animation**
+  - Menambahkan animasi slide meluncur ke bawah (`@keyframes sheetDown` + `.is-closing` 300ms) saat menutup modal konfirmasi kedatangan (`#modalConfirm`) dan modal alert (`#st-modal`) di mobile mode.
 
 ---
 

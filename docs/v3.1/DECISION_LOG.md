@@ -17,6 +17,7 @@
 | 2026-08-22 | T1.11 `checkin.html` & `onsite.html` Mobile Mode Alamat Details View | LANJUT | Mengaktifkan kolom keterangan Alamat (.d-alamat & .d-col-alamat) pada layar ponsel/mobile (<768px) di checkin & onsite. User: lanjut |
 | 2026-08-22 | T1.12 `checkin.html` & `onsite.html` Fit-to-Screen Bottom Sheet & Modal Konfirmasi | LANJUT | Optimasi modal konfirmasi (#modalConfirm) dan bottom sheet daftar tamu (.bottom-section) di mobile mode (<768px) agar 100% pas satu viewport layar (zero page scroll). User: lanjut |
 | 2026-08-22 | T1.13 `checkin.html` & `onsite.html` Mobile 1:1 Camera Aspect Ratio | LANJUT | Mengembalikan dan mempertahankan rasio murni 1:1 persegi pada box kamera selfie mobile modal konfirmasi dengan penyesuaian fleksibel sisa area vertikal. User: lanjut |
+| 2026-08-22 | T1.14 `checkin.html` & `onsite.html` Mobile Slide-Down Exit Animation | LANJUT | Menambahkan animasi slide-down meluncur ke bawah (@keyframes sheetDown + .is-closing) saat menutup modal konfirmasi kedatangan (#modalConfirm) dan modal alert (#st-modal) pada mode mobile. User: lanjut |
 
 ---
 
