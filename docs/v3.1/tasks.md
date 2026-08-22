@@ -18,6 +18,7 @@
 | **T1.8** | `checkin.html` & `onsite.html` | Tablet Mode Dynamic Island Station Controls Capsule | ✅ **Done** |
 | **T1.9** | `checkin.html` & `onsite.html` | Comprehensive Metadata di Details Mode (Desktop, Tablet, Mobile) | ✅ **Done** |
 | **T1.10** | `checkin.html` & `onsite.html` | Dynamic Sort & Multi-Filter Dropdown Menu (Status Hadir, Kategori, Pihak, Sesi) | ✅ **Done** |
+| **T1.11** | `checkin.html` & `onsite.html` | Mobile Mode Alamat Visibility on Details View | ✅ **Done** |
 
 ---
 
@@ -67,6 +68,10 @@
   - Pasang tombol dropdown Sortir (`URUTKAN: TERBARU/TERLAMA/A-Z/Z-A/KATEGORI/PIHAK`) dan Multi-Filter (`FILTER TAMU`) di samping label Status Kehadiran.
   - Dukungan filter Status Hadir (Sudah/Belum), Kategori, Pihak Pengundang, dan Sesi Undangan dengan badge counter aktif dan tombol reset.
   - Berlaku sinkron di Card Mode & Details Mode pada 3 breakpoint (Desktop, Tablet, Mobile).
+
+- [x] **T1.11 S — `checkin.html` & `onsite.html` Mobile Mode Alamat Visibility on Details View**
+  - Mengaktifkan kolom keterangan Alamat (`.d-alamat` & `.d-col-alamat`) pada mode Details di layar ponsel (<768px).
+  - Menggunakan proporsi flex fluid (`flex: 1.1`) dan text truncation aman agar muat dengan nyaman di semua resolusi smartphone.
 
 ---
 
