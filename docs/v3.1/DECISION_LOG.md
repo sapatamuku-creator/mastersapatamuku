@@ -20,6 +20,7 @@
 | 2026-08-22 | T1.14 `checkin.html` & `onsite.html` Mobile Slide-Down Exit Animation | LANJUT | Menambahkan animasi slide-down meluncur ke bawah (@keyframes sheetDown + .is-closing) saat menutup modal konfirmasi kedatangan (#modalConfirm) dan modal alert (#st-modal) pada mode mobile. User: lanjut |
 | 2026-08-22 | T1.15 `checkin.html` & `onsite.html` Selected/Checked Guest Priority Pinning | LANJUT | Mengunci dan menempatkan setiap tamu yang dicentang / terpilih (selectedIDs) otomatis melayang di posisi paling atas daftar tamu pada mode Kartu dan mode Details, lengkap dengan badge 📌 TERPILIH dan aksen emas. User: lanjut |
 | 2026-08-22 | T1.16 `checkin.html` & `onsite.html` Dedicated Sticky Pinned Guest Panel | LANJUT | Menghadirkan container sticky (#pinned-guest-panel) di luar scrollable list di antara search bar dan daftar tamu sehingga tamu terpilih tetap 100% terkunci di atas layar saat usher scroll up/down. User: lanjut |
+| 2026-08-22 | T1.17 `checkin.html` & `onsite.html` Adaptive View & Full Metadata Pinned Guests | LANJUT | Menyesuaikan tampilan panel terpin secara adaptif mengikuti mode KARTU vs DETAILS dengan metadata lengkap (Nama, WA, Alamat, Pihak, Sesi, Kategori, Pax, Status) dan 3 breakpoint responsif. User: lanjut |
 
 ---
 
