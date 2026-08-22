@@ -1462,6 +1462,34 @@
             .details-row .pihak-full { display: none !important; }
             .details-row .pihak-short { display: inline !important; font-weight: 700; }
         }
+
+        /* Selected / Pinned Guest Highlight */
+        .guest-item.selected-pinned {
+            background: #fffdf5 !important;
+            border: 1.5px solid var(--gold) !important;
+            border-top: 4px solid var(--gold) !important;
+            box-shadow: 0 4px 14px rgba(200, 150, 46, 0.16) !important;
+        }
+        .details-row.selected-pinned {
+            background: #fffdf5 !important;
+            border-left: 3.5px solid var(--gold) !important;
+            box-shadow: 0 2px 8px rgba(200, 150, 46, 0.12);
+        }
+        .badge-pinned {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 8.5px;
+            font-weight: 800;
+            color: #92400e;
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin-left: 6px;
+            letter-spacing: 0.3px;
+            vertical-align: middle;
+        }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -2795,6 +2823,16 @@
                 list.sort((a, b) => (a.pihakPengundang || "").localeCompare(b.pihakPengundang || ""));
             }
 
+            // Priority: Selected guests float to the top
+            if (typeof selectedIDs !== 'undefined' && selectedIDs.size > 0) {
+                list.sort((a, b) => {
+                    const aSel = selectedIDs.has(a.kode) ? 1 : 0;
+                    const bSel = selectedIDs.has(b.kode) ? 1 : 0;
+                    if (aSel !== bSel) return bSel - aSel;
+                    return 0;
+                });
+            }
+
             return list;
         }
 
@@ -2819,14 +2857,14 @@
                 if (row.statusHadiah && row.statusHadiah.includes("KADO")) giftIcons += "🎁";
 
                 return `
-                <div class="guest-item ${isDone ? 'checked-in' : ''}" style="border-top: 4px solid ${isDone?'var(--success)':'var(--border)'}">
+                <div class="guest-item ${isDone ? 'checked-in' : ''} ${isChecked ? 'selected-pinned' : ''}" style="border-top: 4px solid ${isDone ? 'var(--success)' : (isChecked ? 'var(--gold)' : 'var(--border)')}">
                     <div class="guest-header">
                         <div style="display:flex; align-items:center; gap:10px;">
                             <div onclick="${isDone ? '' : `toggleSelect('${row.kode}')`}" style="cursor: pointer; padding: 5px;">
                                 ${!isDone ? `<input type="checkbox" ${isChecked ? 'checked' : ''} style="accent-color:var(--gold); transform:scale(1.3); pointer-events:none;">` : '✅'}
                             </div>
                             <div>
-                                <div class="guest-name">${row.nama} <span style="margin-left:5px;">${giftIcons}</span></div>
+                                <div class="guest-name">${row.nama} <span style="margin-left:5px;">${giftIcons}</span> ${isChecked ? '<span class="badge-pinned">📌 TERPILIH</span>' : ''}</div>
                             </div>
                         </div>
                         <div class="guest-wa">${row.whatsapp || '-'}</div>
@@ -2843,8 +2881,8 @@
                             <div class="guest-cat" style="display:inline-block">${row.kategori || 'UMUM'}</div>
                             <div style="font-size:8px; font-weight:800; color:var(--primary); margin-left:2px;">PAX PLAN: ${(row.rencanaHadir !== "" && row.rencanaHadir !== undefined) ? row.rencanaHadir : '1'}</div>
                         </div>
-                        <div class="guest-status" style="color:${isDone ? 'var(--success)':'var(--text-muted)'}; text-align:right">
-                            ${isDone ? `✓ HADIR (${row.realHadir})` : '● BELUM SCAN'}
+                        <div class="guest-status" style="color:${isDone ? 'var(--success)' : (isChecked ? 'var(--gold)' : 'var(--text-muted)')}; text-align:right">
+                            ${isDone ? `✓ HADIR (${row.realHadir})` : (isChecked ? '● SIAP CHECK-IN' : '● BELUM SCAN')}
                         </div>
                     </div>
                     <div style="font-size:7px; color:#ccc; margin-top:8px; text-align:right">ID: ${row.kode}</div>
@@ -2883,10 +2921,10 @@
                 const paxPlan = (row.rencanaHadir !== "" && row.rencanaHadir !== undefined) ? row.rencanaHadir : '1';
                 const sesiDisplay = row.sesi || row.rencanaJamHadir || row.jamHadir || '-';
 
-                return `<div class="details-row ${isDone?'checked-in':''}" onclick="${isDone?'':'toggleSelect(\''+row.kode+'\')'}">
-                    <span class="d-check">${isDone?'✅':'<input type="checkbox" '+(isChecked?'checked':'')+' style="accent-color:var(--gold); width:14px; height:14px;" onclick="event.stopPropagation(); toggleSelect(\''+row.kode+'\')">'}</span>
+                return `<div class="details-row ${isDone ? 'checked-in' : ''} ${isChecked ? 'selected-pinned' : ''}" onclick="${isDone ? '' : 'toggleSelect(\''+row.kode+'\')'}">
+                    <span class="d-check">${isDone ? '✅' : '<input type="checkbox" '+(isChecked?'checked':'')+' style="accent-color:var(--gold); width:14px; height:14px;" onclick="event.stopPropagation(); toggleSelect(\''+row.kode+'\')">'}</span>
                     <div class="d-name-col">
-                        <div class="d-name">${row.nama||'-'} <span style="font-size:10px;">${giftIcons}</span></div>
+                        <div class="d-name">${row.nama||'-'} <span style="font-size:10px;">${giftIcons}</span> ${isChecked ? '<span class="badge-pinned">📌 TERPILIH</span>' : ''}</div>
                         <div class="d-wa">${row.whatsapp||'-'}</div>
                     </div>
                     <span class="d-cat" title="${row.kategori||'UMUM'}">${row.kategori||'UMUM'}</span>
@@ -2894,7 +2932,7 @@
                     <span class="d-alamat" title="${row.alamat||'-'}">${row.alamat||'-'}</span>
                     <span class="d-sesi" title="${sesiDisplay}">${sesiDisplay}</span>
                     <span class="d-pax" title="Plan: ${paxPlan} Pax">${paxPlan} PAX</span>
-                    <span class="d-status" style="color:${isDone?'var(--success)':'var(--text-muted)'}">${isDone?'✓ '+(row.realHadir||row.jamDatang||'HADIR'):'● BELUM'}</span>
+                    <span class="d-status" style="color:${isDone ? 'var(--success)' : (isChecked ? 'var(--gold)' : 'var(--text-muted)')}">${isDone ? '✓ '+(row.realHadir||row.jamDatang||'HADIR') : (isChecked ? '● SIAP CHECK-IN' : '● BELUM')}</span>
                 </div>`;
             }).join('');
             if(sentinel) sentinel.textContent = _hasMore ? 'Scroll untuk load lagi ('+filtered.length+'/'+masterData.length+(filtered.length!==masterData.length?' filtered':'')+')' : filtered.length+' tamu';

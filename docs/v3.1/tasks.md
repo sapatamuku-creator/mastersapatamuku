@@ -22,6 +22,7 @@
 | **T1.12** | `checkin.html` & `onsite.html` | Mobile Mode Fit-to-Screen Bottom Sheet & Modal Konfirmasi (Zero Page Scroll) | ✅ **Done** |
 | **T1.13** | `checkin.html` & `onsite.html` | Mobile Mode True 1:1 Square Camera Aspect Ratio Calibration | ✅ **Done** |
 | **T1.14** | `checkin.html` & `onsite.html` | Mobile Mode Slide-Down Exit Animation for Modal Cards & Bottom Sheets | ✅ **Done** |
+| **T1.15** | `checkin.html` & `onsite.html` | Selected/Checked Guest Priority Pinning to Top of Guest List | ✅ **Done** |
 
 ---
 
@@ -85,6 +86,9 @@
 
 - [x] **T1.14 S — `checkin.html` & `onsite.html` Mobile Slide-Down Exit Animation**
   - Menambahkan animasi slide meluncur ke bawah (`@keyframes sheetDown` + `.is-closing` 300ms) saat menutup modal konfirmasi kedatangan (`#modalConfirm`) dan modal alert (`#st-modal`) di mobile mode.
+
+- [x] **T1.15 S — `checkin.html` & `onsite.html` Selected/Checked Guest Priority Pinning**
+  - Mengunci dan menempatkan setiap tamu yang dicentang / terpilih (`selectedIDs`) otomatis melayang di posisi paling atas daftar tamu pada mode Kartu dan mode Details, lengkap dengan styling highlight emas dan badge `📌 TERPILIH`.
 
 ---
 
