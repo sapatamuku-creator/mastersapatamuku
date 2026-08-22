@@ -1547,6 +1547,47 @@
         .pinned-cards-wrapper .guest-item {
             margin-bottom: 0;
         }
+
+        /* ═══ LOW-MID END HARDWARE ACCELERATION & 60 FPS PERFORMANCE ═══ */
+        .guest-item {
+            content-visibility: auto;
+            contain-intrinsic-size: auto 115px;
+            contain: layout style paint;
+            touch-action: manipulation;
+        }
+
+        .details-row {
+            content-visibility: auto;
+            contain-intrinsic-size: auto 44px;
+            contain: layout style paint;
+            touch-action: manipulation;
+        }
+
+        .list-wrapper,
+        #details-list,
+        #details-list-onsite,
+        #details-body {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            contain: layout style;
+        }
+
+        .bottom-section,
+        .modal-card,
+        .st-modal-content,
+        .pinned-guest-panel {
+            transform: translateZ(0);
+            will-change: transform;
+            -webkit-transform: translateZ(0);
+        }
+
+        button,
+        .nav-link,
+        .btn-action,
+        .guest-item,
+        .details-row {
+            touch-action: manipulation;
+        }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -3378,7 +3419,14 @@
             
             if (!regStream && !capturedBase64) {
                 try {
-                    regStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                    regStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'user',
+                            width: { ideal: 480, max: 720 },
+                            height: { ideal: 480, max: 720 },
+                            frameRate: { ideal: 24, max: 30 }
+                        }
+                    });
                     v.srcObject = regStream;
                     container.style.display = 'block';
                     v.style.display = 'block';
@@ -3503,7 +3551,14 @@
                     if (html5QrCode) {
                         try { await html5QrCode.stop(); } catch(e) {}
                     }
-                    currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                    currentStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: "user",
+                            width: { ideal: 480, max: 720 },
+                            height: { ideal: 480, max: 720 },
+                            frameRate: { ideal: 24, max: 30 }
+                        }
+                    });
                     v.srcObject = currentStream;
                     v.style.display = 'block';
                     if (photoPreview) {
@@ -3527,7 +3582,12 @@
                 const nw = Math.round(w * scale), nh = Math.round(h * scale);
                 const out = document.createElement('canvas');
                 out.width = nw; out.height = nh;
-                out.getContext('2d').drawImage(srcCanvas, 0, 0, nw, nh);
+                const outCtx = out.getContext('2d', { alpha: false });
+                if (outCtx) {
+                    outCtx.imageSmoothingEnabled = true;
+                    outCtx.imageSmoothingQuality = 'medium';
+                    outCtx.drawImage(srcCanvas, 0, 0, nw, nh);
+                }
                 out.toBlob(blob => {
                     if (!blob) { resolve(srcCanvas.toDataURL('image/jpeg', quality)); return; }
                     const reader = new FileReader();
@@ -3541,21 +3601,23 @@
         async function executePhotoCaptureOnsite() {
             const v = document.getElementById('camera-preview');
             const c = document.getElementById('capture-canvas');
-            const ctx = c.getContext('2d');
+            const ctx = c.getContext('2d', { alpha: false, desynchronized: true });
             const photoPreview = document.getElementById('camera-photo-preview');
             const btnSnap = document.getElementById('btn-snap');
 
             c.width = v.videoWidth || 640;
             c.height = v.videoHeight || 480;
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'medium';
             ctx.translate(c.width, 0);
             ctx.scale(-1, 1);
             ctx.drawImage(v, 0, 0, c.width, c.height);
             
-            // [v3.0 T3.3] kompresi max 480px + jpeg 0.7
+            // [v3.0 T3.3] kompresi max 480px + jpeg 0.75
             try {
-                capturedBase64 = await resizeAndCompress(c, 480, 0.7);
+                capturedBase64 = await resizeAndCompress(c, 480, 0.75);
             } catch(e) {
-                capturedBase64 = c.toDataURL('image/jpeg', 0.8);
+                capturedBase64 = c.toDataURL('image/jpeg', 0.75);
             }
 
             // Stop stream

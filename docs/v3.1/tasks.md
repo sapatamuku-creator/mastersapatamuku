@@ -23,6 +23,7 @@
 | **T1.13** | `checkin.html` & `onsite.html` | Mobile Mode True 1:1 Square Camera Aspect Ratio Calibration | ✅ **Done** |
 | **T1.14** | `checkin.html` & `onsite.html` | Mobile Mode Slide-Down Exit Animation for Modal Cards & Bottom Sheets | ✅ **Done** |
 | **T1.15** | `checkin.html` & `onsite.html` | Sticky Pinned Guest Panel (Adaptive View & Full Metadata) | ✅ **Done** |
+| **T1.16** | `checkin.html` & `onsite.html` | Low-Mid End Mobile & Tablet Hardware Performance & 60 FPS Optimization | ✅ **Done** |
 
 ---
 
@@ -93,6 +94,13 @@
   - Menyesuaikan tampilan secara dinamis mengikuti mode tampilan aktif (`_checkinView` / `_onsiteView`: **KARTU** vs **DETAILS**) dengan seluruh metadata lengkap (Nama, WhatsApp, Alamat 📍, Inv by 💌, Sesi ⏰, Kategori, Pax Plan, Status Hadir).
   - Sinkronisasi status dua arah dengan mode Kartu & Details, deselect instan per kartu, tombol "Batal Semua", dan pembersihan otomatis setelah check-in berhasil.
   - Responsif penuh di 3 viewport: Desktop (tabel/grid lebar), Tablet (kolom seimbang / grid 2-kolom), dan Mobile (tabel fluid / single column card).
+
+- [x] **T1.16 S — `checkin.html` & `onsite.html` Low-Mid End Mobile & Tablet Hardware Performance & 60 FPS Optimization**
+  - Penerapan CSS Containment (`content-visibility: auto; contain-intrinsic-size: auto 115px / 44px; contain: layout style paint;`) pada `.guest-item` dan `.details-row` untuk melompati painting & layout kartu di luar viewport.
+  - Hardware GPU Layer Promotion (`transform: translateZ(0); will-change: transform; -webkit-overflow-scrolling: touch;`) pada bottom sheet, modal cards, dan sticky pinned panel.
+  - Eliminasi tap delay 300ms dengan `touch-action: manipulation;` pada seluruh tombol, nav-links, kartu, dan baris tabel.
+  - Tuning stream kamera selfie (`width/height: { ideal: 480, max: 720 }, frameRate: { ideal: 24, max: 30 }`) dan fast canvas capture (`imageSmoothingQuality = 'medium'`, jpeg 0.75, desynchronized context) agar device low-RAM tidak lag/freeze saat capture foto.
+  - Standardisasi event listener scroll & resize dengan `{ passive: true }`.
 
 ---
 

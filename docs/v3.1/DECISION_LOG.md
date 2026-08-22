@@ -19,6 +19,7 @@
 | 2026-08-22 | T1.13 `checkin.html` & `onsite.html` Mobile 1:1 Camera Aspect Ratio | LANJUT | Mengembalikan dan mempertahankan rasio murni 1:1 persegi pada box kamera selfie mobile modal konfirmasi dengan penyesuaian fleksibel sisa area vertikal. User: lanjut |
 | 2026-08-22 | T1.14 `checkin.html` & `onsite.html` Mobile Slide-Down Exit Animation | LANJUT | Menambahkan animasi slide-down meluncur ke bawah (@keyframes sheetDown + .is-closing) saat menutup modal konfirmasi kedatangan (#modalConfirm) dan modal alert (#st-modal) pada mode mobile. User: lanjut |
 | 2026-08-22 | T1.15 `checkin.html` & `onsite.html` Sticky Pinned Guest Panel (Adaptive Full Metadata) | LANJUT | Menghadirkan container sticky (#pinned-guest-panel) di luar scrollable list di antara search bar dan daftar tamu sehingga tamu terpilih tetap 100% terkunci di atas layar saat usher scroll up/down, dengan rendering adaptif penuh (KARTU vs DETAILS) dan metadata lengkap (Nama, WA, Alamat, Pihak, Sesi, Kategori, Pax, Status). User: lanjut |
+| 2026-08-22 | T1.16 `checkin.html` & `onsite.html` Low-Mid End Mobile & Tablet Hardware 60 FPS Optimization | LANJUT | Penerapan CSS Containment (`content-visibility: auto`), GPU Hardware Layer Promotion (`transform: translateZ(0)`), touch-action manipulation, stream camera budget, dan fast canvas capture agar mulus 60 FPS di device low-mid end. User: lanjut dengan perlahan dan detail |
 
 ---
 

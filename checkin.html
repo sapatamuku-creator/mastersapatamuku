@@ -1895,6 +1895,46 @@
         .pinned-cards-wrapper .guest-item {
             margin-bottom: 0;
         }
+
+        /* ═══ LOW-MID END HARDWARE ACCELERATION & 60 FPS PERFORMANCE ═══ */
+        .guest-item {
+            content-visibility: auto;
+            contain-intrinsic-size: auto 115px;
+            contain: layout style paint;
+            touch-action: manipulation;
+        }
+
+        .details-row {
+            content-visibility: auto;
+            contain-intrinsic-size: auto 44px;
+            contain: layout style paint;
+            touch-action: manipulation;
+        }
+
+        .list-wrapper,
+        #details-list,
+        #details-body {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            contain: layout style;
+        }
+
+        .bottom-section,
+        .modal-card,
+        .st-modal-content,
+        .pinned-guest-panel {
+            transform: translateZ(0);
+            will-change: transform;
+            -webkit-transform: translateZ(0);
+        }
+
+        button,
+        .nav-link,
+        .btn-action,
+        .guest-item,
+        .details-row {
+            touch-action: manipulation;
+        }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -2695,8 +2735,8 @@
                 fRight.classList.toggle('visible', scrollLeft < maxScroll - 10);
             };
 
-            container.addEventListener('scroll', updateFades);
-            window.addEventListener('resize', updateFades);
+            container.addEventListener('scroll', updateFades, { passive: true });
+            window.addEventListener('resize', updateFades, { passive: true });
             setTimeout(updateFades, 500);
 
             // Auto-scroll to active link
@@ -3387,7 +3427,12 @@
                 }
 
                 currentStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "user", width: { ideal: 600 }, height: { ideal: 600 } },
+                    video: {
+                        facingMode: "user",
+                        width: { ideal: 480, max: 720 },
+                        height: { ideal: 480, max: 720 },
+                        frameRate: { ideal: 24, max: 30 }
+                    },
                     audio: false
                 });
                 const video = document.getElementById('camera-preview');
@@ -3445,13 +3490,15 @@
         window.executePhotoCapture = function (targetIndex) {
             const video = document.getElementById('camera-preview');
             const canvas = document.getElementById('capture-canvas');
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 
             if (!video || !video.videoWidth || video.videoWidth === 0) {
                 if (multiConfig[targetIndex]) multiConfig[targetIndex].base64 = null;
             } else {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'medium';
 
                 ctx.save();
                 ctx.translate(canvas.width, 0);
@@ -3459,7 +3506,7 @@
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 ctx.restore();
 
-                const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                const base64 = canvas.toDataURL('image/jpeg', 0.75);
                 if (multiConfig[targetIndex]) {
                     multiConfig[targetIndex].base64 = base64;
                 }
