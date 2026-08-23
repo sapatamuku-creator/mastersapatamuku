@@ -1,8 +1,8 @@
 # PHASE3-DESIGN — Sapatamu Gateway
 ## Desain Gabungan Booking + Pembayaran Flow-Through
 
-**Versi:** 0.2.0-draft
-**Tanggal:** 2026-08-15
+**Versi:** 0.3.0-draft
+**Tanggal:** 2026-08-23
 **Status:** Draft — Pending Review (diskusi lanjutan terbuka)
 **Referensi:** PRD.md, SPEC.md, PLAN.md, TODO.md
 
@@ -36,7 +36,29 @@ Client ──request booking──► Sistem cek slot ──► Vendor setujui/t
                               │                ▼
                               │        H+1 auto-release → rekening vendor
                               ▼
-                     completed + 2 invoice (client & vendor)
+                      completed + 2 invoice (client & vendor)
+```
+
+Sequence ringkas alur kritis (webhook & escrow):
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant V as Vercel API
+    participant G as Gateway (Midtrans/Xendit)
+    participant S as Supabase
+    participant J as pg_cron → Edge Function
+    C->>V: POST /booking/request
+    V->>S: lock slot (unique idx / FOR UPDATE) + insert order `requested`
+    V-->>C: requested — slot HOLD
+    V->>V: POST /checkout → link bayar DP
+    C->>G: bayar DP 30%
+    G->>V: webhook dp_paid (signature)
+    V->>S: INSERT mp_webhook_events (UNIQUE event_id) → transition `booked` → ledger inflow_dp / outflow_dp_vendor
+    Note over J: H+1 pagi
+    J->>G: payout pelunasan ke rekening vendor
+    G-->>J: ack payout
+    J->>S: held_pelunasan → completed + invoice final
 ```
 
 ---
@@ -144,6 +166,15 @@ status_slot(tanggal) =
 - Komisi dipotong dari **setiap nominal yang diproses gateway** (DP + pelunasan via gateway).
 - Bagian yang dibayar langsung ke vendor (Opsi-2) **tanpa komisi** — uang tidak lewat Sapatamu.
 - Default `commission_rate` = 5% (kolom sudah ada di `mp_vendors`).
+- Pembulatan rupiah per invoice ke satuan penuh; sisa pembulatan masuk `platform_fee` (final menunggu konfirmasi keputusan §8.3).
+
+### 3.4 Alur Refund (Kerangka — Final Menunggu ADR-002 / ADR-004)
+Status `refunded` ada di state machine, namun alurnya belum final. Kerangka minimal yang wajib dipenuhi saat eksekusi:
+- Pemicu: dispute disetujui admin, atau vendor batal setelah DP dibayar.
+- Otorisasi: hanya server (service role) via panel admin + approval; frontend read-only.
+- Scope: full atau partial (proporsi DP/pelunasan) — ditentukan ADR-002.
+- Ledger: `outflow_refund_client` + reversal entry komisi/fee proporsional.
+- SLA proses + notifikasi WA ke client & vendor.
 
 ---
 
@@ -168,6 +199,25 @@ status_slot(tanggal) =
 ### 4.2 `mp_orders.payment_status`
 ```
 none ──► dp_paid ──► held_pelunasan ──► paid / paid_outside / refunded
+```
+
+### 4.3 Enforce Transisi (Wajib Sebelum Eksekusi)
+CHECK constraint hanya memvalidasi **nilai** status, bukan **perpindahan**. Semua perubahan status wajib lewat satu fungsi:
+- `mp_transition_order(order_id, from_status, to_status, actor)` — validasi pasangan transisi legal (tabel transisi eksplisit), tolak transisi ilegal, append audit row.
+- Optimistic locking (`updated_at` + kolom `version`) untuk mencegah overwrite konkuren antara webhook vs dashboard vs cron.
+
+Tabel audit pendukung:
+
+```sql
+CREATE TABLE mp_order_transitions (
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  order_id    UUID NOT NULL REFERENCES mp_orders(id),
+  from_status TEXT NOT NULL,
+  to_status   TEXT NOT NULL,
+  actor       TEXT NOT NULL,              -- 'webhook' | 'vendor_dashboard' | 'cron' | 'admin'
+  reason      TEXT,
+  created_at  TIMESTAMPTZ DEFAULT now()
+);
 ```
 
 ---
@@ -225,6 +275,35 @@ CREATE TABLE mp_invoices (
 ### 5.5 `mp_escrow_ledger` — tipe transaksi ditambah
 `inflow_dp`, `outflow_dp_vendor`, `platform_fee`, `inflow_pelunasan`, `outflow_pelunasan_vendor`, `outflow_refund_client`.
 
+### 5.6 Tabel Baru `mp_webhook_events` — Idempotency (Wajib)
+Gateway dapat mengirim callback ulang (retry/duplicate). Tanpa proteksi, ledger berisiko **double-credit**. Semua callback wajib dicatat lalu diproses exactly-once:
+
+```sql
+CREATE TABLE mp_webhook_events (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider          TEXT NOT NULL CHECK (provider IN ('midtrans','xendit')),
+  provider_event_id TEXT NOT NULL UNIQUE,     -- kunci idempotensi
+  order_id          UUID,
+  payload           JSONB NOT NULL,
+  signature_valid   BOOLEAN NOT NULL DEFAULT false,
+  processed_at      TIMESTAMPTZ,
+  process_error     TEXT,
+  created_at        TIMESTAMPTZ DEFAULT now()
+);
+```
+
+Urutan proses: INSERT dulu (`UNIQUE` menolak duplikat) → validasi signature → proses → tandai `processed_at`. Callback yang gagal INSERT = duplikat = skip.
+
+### 5.7 Lock Slot Level Database (Anti TOCTOU)
+Logika COUNT di §2.3 rentan: dua request simultan bisa lolos cek bersamaan sebelum keduanya INSERT. Wajib dijamin di level DB:
+- Kuota = 1 (mayoritas vendor): partial unique index —
+  ```sql
+  CREATE UNIQUE INDEX uq_mp_orders_active_slot
+    ON mp_orders (vendor_id, event_date)
+    WHERE order_status NOT IN ('rejected','expired','cancelled','refunded');
+  ```
+- Kuota > 1: `SELECT ... FOR UPDATE` pada baris kuota (tabel counter `mp_vendor_slots(vendor_id, event_date, used)`) dalam satu transaksi dengan INSERT order.
+
 ---
 
 ## 6. Endpoint API
@@ -257,11 +336,20 @@ CREATE TABLE mp_invoices (
 | Kontinu | Rekonsiliasi harian: transaksi gateway vs `mp_escrow_ledger` |
 | Aus timeout | Dispute tanpa respon → escalate admin |
 
+### 7.1 Rantai Eksekusi Job
+`pg_cron` tidak memanggil API eksternal langsung. Rantai wajib:
+
+```
+pg_cron ──► Edge Function / Endpoint terlindungi (service role) ──► API gateway payout / FONNTE WA
+```
+
+Setiap job wajib: idempotent, retry maks N dengan backoff, dead-letter record untuk kegagalan final, alert admin. Auto-release H+1 adalah **panggilan disbursement API dari server**, bukan operasi SQL. Rekonsiliasi harian = bandingkan settlement report gateway vs `mp_escrow_ledger`, mismatch → alert.
+
 ---
 
 ## 8. Keputusan Diskusi yang Masih Terbuka {#keputusan}
 
-> Semua di bawah default di-set sementara; finalisasi saat lanjut diskusi.
+> Semua di bawah default di-set sementara; finalisasi saat lanjut diskusi. Keputusan **blocking schema** dilacak sebagai ADR di `mp/docs/adr/` (ADR-001…ADR-004); sisanya boleh menyusul.
 
 1. **Kapasitas default per kategori** (`max_events_per_day`):
    - Gedung/Venue = 1 · Fotografer & Video = 1 · MUA = 2 · Katering = 3 · Dekorasi = 1 · dst.? *(propose per kategori)*
@@ -290,4 +378,7 @@ CREATE TABLE mp_invoices (
 ## 10. Referensi & Pertautan
 
 - PRD.md §3 (eskrow ganda), SPEC.md §2 (arsitektur gateway), PLAN.md Phase 3, TODO.md Phase 3.
+- ADR: `mp/docs/adr/` (keputusan blocking — status & riwayat).
 - Tabel existing yang dipakai: `mp_vendors` (commission_rate, sudah ada), `mp_products`, `mp_inquiries` (tetap untuk komunikasi informal).
+
+> **Catatan proses (2026-08-23):** Phase 3 menambah route/backend baru — sesuai guardrail project, eksekusi tiap sub-fase wajib lewat GATE/RFC terpisah; dokumen ini adalah RFC induknya, bukan izin implementasi otomatis.

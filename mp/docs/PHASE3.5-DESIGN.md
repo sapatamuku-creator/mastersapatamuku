@@ -1,8 +1,8 @@
 # PHASE3.5-DESIGN — OAuth2 Client & Dashboard Pengantin
 ## Desain Integrasi Identitas + Dashboard Client + Integrasi Guestbook
 
-**Versi:** 0.1.0-draft
-**Tanggal:** 2026-08-15
+**Versi:** 0.2.0-draft
+**Tanggal:** 2026-08-23
 **Status:** Draft — Pending Review (diskusi lanjutan terbuka)
 **Referensi:** PHASE3-DESIGN.md, PRD.md, SPEC.md, PLAN.md, TODO.md
 
@@ -16,6 +16,15 @@ Prinsip desain:
 
 > **Satu akun, satu login, semua data terkumpul otomatis.**
 > Direct ke vendor = data hilang di chat. Lewat Sapatamu = data hidup di dashboard.
+
+## 1.1 Pemecahan Eksekusi: 3.5a / 3.5b
+
+Agar progress tidak terblokir Phase 3 (escrow), eksekusi dipecah dua:
+
+| Sub | Isi | Dependensi |
+|---|---|---|
+| **3.5a — Identitas + Dashboard Dasar** | Google OAuth (PKCE), `mp_clients` (+ consent), simulasi biaya (`mp_client_plans`/`mp_plan_items`), timeline + reminder FONNTE | Mandiri — tidak menunggu Phase 3 |
+| **3.5b — Integrasi Eksekusi** | `payments-summary` (agregasi ledger), plan→order convert, guestbook linking + delegasi token (§3.3) | Phase 3 (`mp_orders`, `mp_invoices`, `mp_escrow_ledger`) |
 
 Dua pilar:
 
@@ -66,6 +75,19 @@ Naskah halaman pembanding (Sapatamu vs direct ke vendor):
 ```
 
 **Keputusan penting**: guestbook **tetap** pada sistem auth lamanya (GAS + username/password). Tidak perlu migrasi penuh ke Supabase Auth karena guestbook punya offline PWA + subdomain SaaS yang berisiko tinggi diubah. Yang dibangun hanyalah **jembatan linking**.
+
+**Aturan tegas linking**: hanya `mp_guestbook_links.status='linked'` yang memberi akses. `email_match=true` hanyalah *hint* untuk mempercepat pengajuan link — **tidak pernah otomatis memberikan hak akses**.
+
+### 3.3 Pola Delegasi Marketplace → Guestbook (Syarat SSO Nyata)
+
+Klaim "client tidak pernah login dua kali" hanya aman jika marketplace dapat memanggil GAS guestbook secara **server-to-server**, bukan membawa kredensial client:
+
+1. Client login Google OAuth di marketplace (Supabase Auth, PKCE).
+2. Dashboard client minta data guestbook → Edge Function (service role) verifikasi `mp_guestbook_links.status='linked'`.
+3. Edge Function menerbitkan **signed short-lived token**: JWT dengan secret bersama, TTL ≤ 60 detik, scope aksi terbatas, nonce one-time.
+4. GAS guestbook memverifikasi signature + TTL + nonce sebelum mengeksekusi.
+
+Tanpa pola ini, linking hanya tampilan data — bukan SSO.
 
 ---
 
@@ -122,6 +144,8 @@ CREATE TABLE mp_clients (
   email         TEXT UNIQUE NOT NULL,
   avatar_url    TEXT,
   whatsapp      TEXT,
+  consent_at    TIMESTAMPTZ,                -- UU PDP: waktu setuju berbagi data
+  consent_version TEXT DEFAULT 'v1',
   plan_id       UUID REFERENCES mp_client_plans(id),  -- rencana aktif (opsional)
   created_at    TIMESTAMPTZ DEFAULT now()
 );
@@ -187,6 +211,7 @@ CREATE TABLE mp_guestbook_links (
 ```
 
 > Rename/perluasan rincian bisa menyesuaikan struktur tabel guestbook yang ada.
+> RLS wajib disertakan sejak migration pertama (konsisten `sql/marketplace/07_rls_policies.sql`): client hanya SELECT/UPDATE barisnya sendiri; agregat via service role.
 
 ---
 
@@ -231,6 +256,7 @@ CREATE TABLE mp_guestbook_links (
 ## 10. Referensi & Pertautan
 
 - PHASE3-DESIGN.md (escrow flow-through, state machine, endpoint, cron).
+- ADR: `mp/docs/adr/` (keputusan blocking lintas fase).
 - Tabel existing: `mp_vendors`, `mp_products`, `mp_categories`, `mp_inquiries`.
 - Infrastruktur guestbook: `temp_dev/` (subdomain SaaS, GAS auth, offline PWA).
 - Notifikasi: FONNTE (dipakai ulang untuk reminder).
@@ -264,3 +290,7 @@ Gaya Bridestory `/id/wedding-checklist/about` untuk memasarkan fitur checklist �
 - **CTA landing** → `phase35-sandbox.html` → login OAuth2 (Google / email) → dashboard client penuh.
 
 Terverifikasi Playwright: link muncul di index & marketplace, semua section landing render, FAQ toggle jalan, dan alur landing → OAuth → dashboard (sideName "Opick") tanpa error JS.
+
+### 11.3 Prasyarat Eksekusi 3.5a: Mapping Sandbox → DB
+
+Field array `TIMELINE_TEMPLATE` di sandbox (tipe `date/time/text/number/select/textarea`) sudah tervalidasi UX. Sebelum implementasi 3.5a, wajib tuliskan pemetaan 1:1 field sandbox → kolom `mp_client_timeline_items` (mis. kolom JSONB `field_values`) di file migration — **jangan menebak ulang mapping saat coding**. Key penyimpanan `localStorage["spt35_taskdata"]` berpola `"FASE:index" → {fieldKey: value}` dan menjadi acuan struktur JSONB tersebut.

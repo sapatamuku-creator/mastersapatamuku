@@ -28,14 +28,14 @@ Semua agent eksekusi di proyek ini HARUS merujuk pada hierarki berikut:
 
 ```
 AGENT.md                              ← DOKUMEN UTAMA (Anda sedang membaca)
-├── skills-lock.json                  ← Index skill yang terinstal (38 skill)
+├── skills-lock.json                  ← Index skill yang terinstal (39 skill)
 ├── .agents/                          ← SEMUA komponen agent (sumber utama)
 │   ├── AGENTS.md                     ← Agent rules dari addyosmani
 │   ├── CLAUDE.md                     ← Claude Code instructions
-│   ├── skills/                       ← 38 Skill definition files
+│   ├── skills/                       ← 39 Skill definition files
 │   │   ├── (5) animation-vocabulary, apple-design, emil-design-eng, improve-animations, review-animations
 │   │   ├── (2) supabase, supabase-postgres-best-practices
-│   │   ├── (7) deploy-to-vercel, frontend-design, ui-ux-pro-max, clone-website, skill-decision-gate, guestbook-v3-gate, live-progress-ux
+│   │   ├── (8) deploy-to-vercel, frontend-design, ui-ux-pro-max, clone-website, skill-decision-gate, guestbook-v3-gate, live-progress-ux, instant-skeleton-loading
 │   │   └── (24) addyosmani skills (spec-driven, code-review, security, dll)
 │   ├── agents/                       ← 4 Persona definitions
 │   │   ├── code-reviewer.md
