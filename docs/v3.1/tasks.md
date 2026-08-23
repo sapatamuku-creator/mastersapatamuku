@@ -26,6 +26,7 @@
 | **T1.16** | `checkin.html` & `onsite.html` | Low-Mid End Mobile & Tablet Hardware Performance & 60 FPS Optimization | ✅ **Done** |
 | **T1.17** | `formulir_tamu.html` | Dual View Switcher (Kartu ↔ Details View Mode) | ✅ **Done** |
 | **T1.18** | `formulir_tamu.html`, `checkin.html`, `onsite.html` | Hierarchical Multi-Sort Engine & Builder UI (Ala Supabase Table Studio) | ✅ **Done** |
+| **T1.19** | Seluruh Halaman (Guestbook & Marketplace) | Global Adaptive Floating Scrollbar (Hover & Active Expand Micro-Interaction) | ✅ **Done** |
 
 ---
 
@@ -132,4 +133,14 @@
   - Persistensi preferensi multi-sort lokal via `localStorage` (`gb:multisort:formulir`, `gb:multisort:checkin`, `gb:multisort:onsite`).
   - Badge counter dinamis pada trigger button (`URUTKAN: KATEGORI +2`) saat lebih dari 1 level urutan aktif.
   - Dukungan responsif penuh di 3 viewport: Desktop (popover 330px), Tablet, Mobile (fluid fit-to-screen max `calc(100vw - 32px)`).
+
+- [x] **T1.19 S — Seluruh Halaman (Guestbook & Marketplace) Global Adaptive Floating Scrollbar**
+  - Implementasi standar *Adaptive Floating Scrollbar* global dengan teknik *Transparent Border + Background Clip* (`background-clip: padding-box`) untuk zero-reflow layout stability.
+  - Interaksi adaptif 3 state:
+    - *Idle*: Ramping & minimalis (4px visual).
+    - *Hover*: Mengembang halus (6px–7px) dengan peningkatan kontras warna saat cursor mendekat.
+    - *Active / Drag*: Mengembang penuh (8px–10px) dengan highlight warna emas (*Warm Gold* `#C8962E`) saat ditahan/digeser.
+  - Kompatibel penuh dengan standar W3C (`scrollbar-width: thin; scrollbar-color;`) untuk Firefox dan `-webkit-scrollbar` untuk Chromium, Edge, Safari, dan Mobile WebKit.
+  - Diterapkan terpusat di `animations.css` dan `assets/guestbook-shared.css`, otomatis aktif di seluruh halaman Guestbook & Marketplace tanpa beban JavaScript runtime.
+
 

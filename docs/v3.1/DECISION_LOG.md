@@ -22,6 +22,7 @@
 | 2026-08-22 | T1.16 `checkin.html` & `onsite.html` Low-Mid End Mobile & Tablet Hardware 60 FPS Optimization | LANJUT | Penerapan CSS Containment (`content-visibility: auto`), GPU Hardware Layer Promotion (`transform: translateZ(0)`), touch-action manipulation, stream camera budget, dan fast canvas capture agar mulus 60 FPS di device low-mid end. User: lanjut dengan perlahan dan detail |
 | 2026-08-23 | T1.17 `formulir_tamu.html` Details View Mode & View Switcher | LANJUT | Menambahkan mode Details & Switcher Kartu ↔ Details di `formulir_tamu.html` dengan rincian metadata lengkap, tombol aksi cepat Edit ✏️ & Hapus ✕, dan 3 breakpoint responsif (Desktop, Tablet, Mobile). User: lanjut |
 | 2026-08-23 | T1.18 `formulir_tamu.html`, `checkin.html`, `onsite.html` Hierarchical Multi-Sort Engine & Builder | LANJUT | Mengganti sort tunggal dengan Hierarchical Multi-Sort Engine (multi-column ORDER BY ala Supabase Table) beserta builder UI popover dinamis, quick presets, rule addition/deletion, badge counter, dan persistensi localStorage di ketiga halaman. User: lanjut untuk ketiga halaman |
+| 2026-08-24 | T1.19 Seluruh Halaman (Guestbook & Marketplace) Global Adaptive Floating Scrollbar | LANJUT | Menetapkan standar Adaptive Floating Scrollbar global (hover & active expanding micro-interaction via transparent border trick) di `animations.css` dan `assets/guestbook-shared.css` untuk seluruh halaman Guestbook & Marketplace. User: lanjut |
 
 ---
 
