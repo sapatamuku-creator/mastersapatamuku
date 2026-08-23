@@ -102,6 +102,15 @@
   - Tuning stream kamera selfie (`width/height: { ideal: 480, max: 720 }, frameRate: { ideal: 24, max: 30 }`) dan fast canvas capture (`imageSmoothingQuality = 'medium'`, jpeg 0.75, desynchronized context) agar device low-RAM tidak lag/freeze saat capture foto.
   - Standardisasi event listener scroll & resize dengan `{ passive: true }`.
 
+- [x] **T1.17 S — `formulir_tamu.html` Dual View Switcher (Kartu ↔ Details View Mode)**
+  - Menghadirkan View Switcher toggle pill (`KARTU` vs `DETAILS`) di `#dup-filter-bar` dengan persistensi state via `localStorage('gb:view:formulir')`.
+  - Mode Details menyajikan data tamu dalam format tabel/baris compact rincian: Indeks/Sync Status (`🔄`/`✅`/`⚠️`), Nama & WA/IG DM (dengan badge duplikat/pending), Kategori, Pihak Pengundang (dengan helper `_formatPihakShort()`), Alamat, Sesi, Pax Plan, Souvenir 🎁, Status WA/Interactive Blast button, serta Quick Action (Edit ✏️ & Hapus ✕).
+  - Tiga level responsivitas adaptif penuh:
+    - **Desktop (≥1024px)**: 10 kolom penuh (Index, Nama+WA, Kategori, Pihak lengkap, Alamat, Sesi, Pax, Souvenir, Status, Aksi).
+    - **Tablet (768–1023px)**: Pihak disingkat (`.pihak-short`), Alamat, Sesi, Pax, dan Status tetap aktif.
+    - **Mobile (<768px)**: Kolom sekunder disembunyikan rapi, fokus pada Nama+WA, Kategori, Pax, Status Blast, dan tombol aksi Edit & Hapus.
+  - Dukungan CSS Containment (`content-visibility: auto`), GPU Hardware Acceleration, dan integrasi penuh dengan live search & multi-filter dropdown.
+
 ---
 
 ## Phase 3 — Executive Dashboards & Analytics (P2)
