@@ -21,6 +21,7 @@
 | 2026-08-22 | T1.15 `checkin.html` & `onsite.html` Sticky Pinned Guest Panel (Adaptive Full Metadata) | LANJUT | Menghadirkan container sticky (#pinned-guest-panel) di luar scrollable list di antara search bar dan daftar tamu sehingga tamu terpilih tetap 100% terkunci di atas layar saat usher scroll up/down, dengan rendering adaptif penuh (KARTU vs DETAILS) dan metadata lengkap (Nama, WA, Alamat, Pihak, Sesi, Kategori, Pax, Status). User: lanjut |
 | 2026-08-22 | T1.16 `checkin.html` & `onsite.html` Low-Mid End Mobile & Tablet Hardware 60 FPS Optimization | LANJUT | Penerapan CSS Containment (`content-visibility: auto`), GPU Hardware Layer Promotion (`transform: translateZ(0)`), touch-action manipulation, stream camera budget, dan fast canvas capture agar mulus 60 FPS di device low-mid end. User: lanjut dengan perlahan dan detail |
 | 2026-08-23 | T1.17 `formulir_tamu.html` Details View Mode & View Switcher | LANJUT | Menambahkan mode Details & Switcher Kartu ↔ Details di `formulir_tamu.html` dengan rincian metadata lengkap, tombol aksi cepat Edit ✏️ & Hapus ✕, dan 3 breakpoint responsif (Desktop, Tablet, Mobile). User: lanjut |
+| 2026-08-23 | T1.18 `formulir_tamu.html`, `checkin.html`, `onsite.html` Hierarchical Multi-Sort Engine & Builder | LANJUT | Mengganti sort tunggal dengan Hierarchical Multi-Sort Engine (multi-column ORDER BY ala Supabase Table) beserta builder UI popover dinamis, quick presets, rule addition/deletion, badge counter, dan persistensi localStorage di ketiga halaman. User: lanjut untuk ketiga halaman |
 
 ---
 

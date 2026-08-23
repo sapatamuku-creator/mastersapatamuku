@@ -24,6 +24,8 @@
 | **T1.14** | `checkin.html` & `onsite.html` | Mobile Mode Slide-Down Exit Animation for Modal Cards & Bottom Sheets | ✅ **Done** |
 | **T1.15** | `checkin.html` & `onsite.html` | Sticky Pinned Guest Panel (Adaptive View & Full Metadata) | ✅ **Done** |
 | **T1.16** | `checkin.html` & `onsite.html` | Low-Mid End Mobile & Tablet Hardware Performance & 60 FPS Optimization | ✅ **Done** |
+| **T1.17** | `formulir_tamu.html` | Dual View Switcher (Kartu ↔ Details View Mode) | ✅ **Done** |
+| **T1.18** | `formulir_tamu.html`, `checkin.html`, `onsite.html` | Hierarchical Multi-Sort Engine & Builder UI (Ala Supabase Table Studio) | ✅ **Done** |
 
 ---
 
@@ -120,5 +122,14 @@
   - Tambahkan skeleton placeholder shimmer pada distribusi kategori, host, wilayah, dan flow monitoring sebelum agregasi query selesai.
   - Transisi fade-in lembut pada nama pengantin & paket di `dashboard.html`.
 
-- [x] **T1.6 S — `formulir_tamu.html` Dynamic Hero Ambient Photo Slideshow**
-  - Random starting photo on refresh, smooth crossfade looping (8.5s), translucent crystal overlay, `.hero-info-card` semi-transparan, dan 3 responsive breakpoints.
+- [x] **T1.18 S — `formulir_tamu.html`, `checkin.html`, `onsite.html` Hierarchical Multi-Sort Engine & Builder UI (Ala Supabase Table Studio)**
+  - Menggantikan sistem sort tunggal dengan Hierarchical Multi-Sort Engine bertingkat (multi-column `ORDER BY col1 dir1, col2 dir2...`).
+  - Interactive Multi-Sort Popover Builder UI di ketiga halaman:
+    - Rule builder baris bertingkat: Level 1 "1. URUTKAN", Level 2+ "2. LALU" dengan selector kolom dan selector arah urutan kontekstual tipe data (Time, Text, Number, Status Hadir, Souvenir, Status WA).
+    - Tombol tambah tingkat urutan (`+ Tambah Tingkat Urutan`) dan tombol hapus per baris (`✕`).
+    - Baris Quick Presets: `🆕 Terbaru`, `⏳ Terlama`, `🔤 Nama A-Z`, `🏷️ Kategori → Pihak → Nama`, `⏰ Sesi → Pihak → Nama`, `✅ Hadir → Nama`, `⏳ Belum Hadir → Nama`.
+    - Tombol Reset dan Terapkan Urutan.
+  - Persistensi preferensi multi-sort lokal via `localStorage` (`gb:multisort:formulir`, `gb:multisort:checkin`, `gb:multisort:onsite`).
+  - Badge counter dinamis pada trigger button (`URUTKAN: KATEGORI +2`) saat lebih dari 1 level urutan aktif.
+  - Dukungan responsif penuh di 3 viewport: Desktop (popover 330px), Tablet, Mobile (fluid fit-to-screen max `calc(100vw - 32px)`).
+

@@ -1377,6 +1377,142 @@
             .d-col-pihak { min-width: 50px; }
             .d-col-alamat { min-width: 60px; }
         }
+
+        /* [v3.1 T1.18] Multi-Sort Hierarchical Builder Styles */
+        .multisort-container {
+            font-family: inherit;
+            color: var(--text-main);
+        }
+        .multisort-presets-scroll {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+            scrollbar-width: thin;
+        }
+        .multisort-presets-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+        .multisort-presets-scroll::-webkit-scrollbar-thumb {
+            background: rgba(140, 117, 96, 0.2);
+            border-radius: 4px;
+        }
+        .multisort-preset-pill {
+            flex-shrink: 0;
+            background: rgba(243, 244, 246, 0.9);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            font-size: 9.5px;
+            font-weight: 700;
+            padding: 4px 9px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .multisort-preset-pill:hover {
+            background: var(--gold);
+            color: #fff;
+            border-color: var(--gold);
+        }
+        .multisort-rule-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #FAFAF9;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            transition: all 0.2s ease;
+        }
+        .multisort-rule-item:hover {
+            border-color: rgba(200, 150, 46, 0.4);
+            background: #FFF;
+        }
+        .multisort-tag {
+            font-size: 8.5px;
+            font-weight: 900;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: 52px;
+            flex-shrink: 0;
+        }
+        .multisort-select {
+            flex: 1;
+            padding: 5px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #FFF;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--text-main);
+            outline: none;
+            cursor: pointer;
+        }
+        .multisort-select:focus {
+            border-color: var(--primary);
+        }
+        .multisort-del-btn {
+            background: #FEE2E2;
+            color: #991B1B;
+            border: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: 0.2s;
+        }
+        .multisort-del-btn:hover {
+            background: #EF4444;
+            color: #FFF;
+        }
+        .multisort-del-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .multisort-add-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            width: 100%;
+            padding: 7px 12px;
+            background: rgba(200, 150, 46, 0.08);
+            border: 1.5px dashed var(--gold);
+            color: var(--gold);
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 4px;
+        }
+        .multisort-add-btn:hover {
+            background: rgba(200, 150, 46, 0.18);
+        }
+        .multisort-apply-btn {
+            background: linear-gradient(135deg, var(--gold) 0%, var(--primary) 100%);
+            color: #FFF;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 10.5px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 12px rgba(224, 123, 123, 0.25);
+        }
+        .multisort-apply-btn:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -1671,13 +1807,41 @@
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="flex-shrink:0"><path d="M15 4l6 6h-4v10h-4V10H9l6-6zM9 20l-6-6h4V4h4v10h4l-6 6z"/></svg>
                                 URUTKAN: <span id="current-sort-label" style="color:var(--primary);">TERBARU</span>
                             </button>
-                            <!-- Sort Dropdown Menu -->
-                            <div id="sort-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 8px); left: 0; background: #FFF; border: 1.5px solid var(--border); border-radius: 18px; box-shadow: 0 15px 35px rgba(140, 117, 96, 0.15); padding: 10px; width: 190px; z-index: 1000; box-sizing: border-box;">
-                                <div style="display: flex; flex-direction: column; gap: 4px;">
-                                    <button onclick="changeSortOrder('newest', event)" style="text-align: left; background: none; border: none; padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">🆕 Terbaru (Baru ke Lama)</button>
-                                    <button onclick="changeSortOrder('oldest', event)" style="text-align: left; background: none; border: none; padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">⏳ Terlama (Lama ke Baru)</button>
-                                    <button onclick="changeSortOrder('name-asc', event)" style="text-align: left; background: none; border: none; padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">🔤 Nama A - Z</button>
-                                    <button onclick="changeSortOrder('name-desc', event)" style="text-align: left; background: none; border: none; padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='transparent'">🔤 Nama Z - A</button>
+                            <!-- [v3.1 T1.18] Multi-Sort Hierarchical Dropdown Menu (Ala Supabase Table) -->
+                            <div id="sort-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 8px); left: 0; background: #FFF; border: 1.5px solid var(--border); border-radius: 20px; box-shadow: 0 20px 45px rgba(140, 117, 96, 0.2); padding: 16px; width: 330px; max-width: calc(100vw - 32px); z-index: 1000; box-sizing: border-box;">
+                                <div class="multisort-container">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1.5px solid var(--border);">
+                                        <span style="font-size: 11px; font-weight: 800; color: var(--text-main); letter-spacing: 0.5px; text-transform: uppercase;">🔀 Multi-Sort Hirarki</span>
+                                        <button type="button" onclick="resetMultiSort(event)" style="background: none; border: none; color: #EF4444; font-size: 9.5px; font-weight: 800; cursor: pointer; padding: 0;">RESET</button>
+                                    </div>
+                                    
+                                    <!-- Presets -->
+                                    <div style="margin-bottom: 12px;">
+                                        <div style="font-size: 9px; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Preset Cepat</div>
+                                        <div class="multisort-presets-scroll">
+                                            <button type="button" class="multisort-preset-pill" onclick="applyMultiSortPreset('newest', event)">🆕 Terbaru</button>
+                                            <button type="button" class="multisort-preset-pill" onclick="applyMultiSortPreset('oldest', event)">⏳ Terlama</button>
+                                            <button type="button" class="multisort-preset-pill" onclick="applyMultiSortPreset('name-asc', event)">🔤 Nama A-Z</button>
+                                            <button type="button" class="multisort-preset-pill" onclick="applyMultiSortPreset('cat-pihak-nama', event)">🏷️ Kategori → Pihak → Nama</button>
+                                            <button type="button" class="multisort-preset-pill" onclick="applyMultiSortPreset('sesi-pihak-nama', event)">⏰ Sesi → Pihak → Nama</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Rules List -->
+                                    <div style="margin-bottom: 10px;">
+                                        <div style="font-size: 9px; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Aturan Urutan (Hirarki)</div>
+                                        <div id="multisort-rules-list" style="max-height: 220px; overflow-y: auto; padding-right: 2px;"></div>
+                                        <button type="button" id="btn-add-sort-rule" class="multisort-add-btn" onclick="addMultiSortRule(event)">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                            Tambah Tingkat Urutan
+                                        </button>
+                                    </div>
+
+                                    <!-- Footer Actions -->
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 10px; border-top: 1.5px solid var(--border);">
+                                        <span id="multisort-summary-text" style="font-size: 9.5px; font-weight: 700; color: var(--text-muted);">1 level urutan</span>
+                                        <button type="button" class="multisort-apply-btn" onclick="commitMultiSort(event)">TERAPKAN URUTAN</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2572,6 +2736,7 @@
         syncNavbar();
         initNavScroll();
         setFormulirView(_formulirView);
+        if (typeof updateMultiSortTriggerLabel === 'function') updateMultiSortTriggerLabel();
         await refreshApp();
 
         // Check for edit_metadata action
@@ -3548,57 +3713,263 @@
         }
     });
 
-    let currentSortOrder = "newest";
+    // ===== [v3.1 T1.18] MULTI-SORT HIERARCHICAL ENGINE (ALA SUPABASE TABLE) =====
+    const MULTISORT_AVAILABLE_COLS_FORMULIR = [
+        { id: 'row', label: 'Waktu Input (Row)', type: 'time' },
+        { id: 'nama', label: 'Nama Tamu', type: 'text' },
+        { id: 'kategori', label: 'Kategori', type: 'text' },
+        { id: 'pihakPengundang', label: 'Pihak Pengundang', type: 'text' },
+        { id: 'alamat', label: 'Alamat Domisili', type: 'text' },
+        { id: 'sesi', label: 'Sesi Undangan', type: 'text' },
+        { id: 'pax', label: 'Pax Plan', type: 'number' },
+        { id: 'souvenir', label: 'Souvenir', type: 'souvenir' },
+        { id: 'statusWA', label: 'Status WA / Blast', type: 'statusWA' }
+    ];
+
+    let currentSortRules = [
+        { field: 'row', dir: 'desc' }
+    ];
+
+    try {
+        const savedRules = localStorage.getItem('gb:multisort:formulir');
+        if (savedRules) {
+            const parsed = JSON.parse(savedRules);
+            if (Array.isArray(parsed) && parsed.length > 0) currentSortRules = parsed;
+        }
+    } catch(e) {}
+
+    window.getDirectionOptionsForField = function(fieldId) {
+        const col = MULTISORT_AVAILABLE_COLS_FORMULIR.find(c => c.id === fieldId);
+        const type = col ? col.type : 'text';
+        if (type === 'number') {
+            return [
+                { val: 'asc', label: '1 → 9 (Sedikit ke Banyak)' },
+                { val: 'desc', label: '9 → 1 (Banyak ke Sedikit)' }
+            ];
+        }
+        if (type === 'time') {
+            return [
+                { val: 'desc', label: 'Terbaru ke Terlama' },
+                { val: 'asc', label: 'Terlama ke Terbaru' }
+            ];
+        }
+        if (type === 'souvenir') {
+            return [
+                { val: 'desc', label: 'Ada Souvenir Dulu (🎁)' },
+                { val: 'asc', label: 'Tanpa Souvenir Dulu (⚪)' }
+            ];
+        }
+        if (type === 'statusWA') {
+            return [
+                { val: 'asc', label: 'Sent → Pending → Blast' },
+                { val: 'desc', label: 'Blast → Pending → Sent' }
+            ];
+        }
+        return [
+            { val: 'asc', label: 'A → Z (Menaik)' },
+            { val: 'desc', label: 'Z → A (Menurun)' }
+        ];
+    };
+
+    window.renderMultiSortRules = function() {
+        const container = document.getElementById('multisort-rules-list');
+        if (!container) return;
+
+        container.innerHTML = currentSortRules.map((rule, idx) => {
+            const tagLabel = idx === 0 ? 'Urutkan' : 'Lalu';
+            const colOptions = MULTISORT_AVAILABLE_COLS_FORMULIR.map(c => `
+                <option value="${c.id}" ${c.id === rule.field ? 'selected' : ''}>${c.label}</option>
+            `).join('');
+
+            const dirOptions = window.getDirectionOptionsForField(rule.field).map(d => `
+                <option value="${d.val}" ${d.val === rule.dir ? 'selected' : ''}>${d.label}</option>
+            `).join('');
+
+            const deleteBtnDisabled = currentSortRules.length <= 1 ? 'disabled' : '';
+
+            return `
+            <div class="multisort-rule-item" data-rule-index="${idx}">
+                <span class="multisort-tag">${idx + 1}. ${tagLabel}</span>
+                <select class="multisort-select" onchange="updateMultiSortField(${idx}, this.value, event)">
+                    ${colOptions}
+                </select>
+                <select class="multisort-select" onchange="updateMultiSortDir(${idx}, this.value, event)">
+                    ${dirOptions}
+                </select>
+                <button type="button" class="multisort-del-btn" ${deleteBtnDisabled} onclick="removeMultiSortRule(${idx}, event)" title="Hapus tingkat urutan ini">✕</button>
+            </div>`;
+        }).join('');
+
+        const summaryEl = document.getElementById('multisort-summary-text');
+        if (summaryEl) {
+            summaryEl.innerText = `${currentSortRules.length} level urutan aktif`;
+        }
+
+        const addBtn = document.getElementById('btn-add-sort-rule');
+        if (addBtn) {
+            addBtn.style.display = currentSortRules.length >= MULTISORT_AVAILABLE_COLS_FORMULIR.length ? 'none' : 'inline-flex';
+        }
+    };
+
+    window.updateMultiSortField = function(idx, field, event) {
+        if (event) event.stopPropagation();
+        if (!currentSortRules[idx]) return;
+        currentSortRules[idx].field = field;
+        const defaultDirOpts = window.getDirectionOptionsForField(field);
+        currentSortRules[idx].dir = defaultDirOpts[0].val;
+        window.renderMultiSortRules();
+    };
+
+    window.updateMultiSortDir = function(idx, dir, event) {
+        if (event) event.stopPropagation();
+        if (!currentSortRules[idx]) return;
+        currentSortRules[idx].dir = dir;
+    };
+
+    window.addMultiSortRule = function(event) {
+        if (event) event.stopPropagation();
+        const usedFields = new Set(currentSortRules.map(r => r.field));
+        const nextCol = MULTISORT_AVAILABLE_COLS_FORMULIR.find(c => !usedFields.has(c.id)) || MULTISORT_AVAILABLE_COLS_FORMULIR[0];
+        const dirOpts = window.getDirectionOptionsForField(nextCol.id);
+        currentSortRules.push({ field: nextCol.id, dir: dirOpts[0].val });
+        window.renderMultiSortRules();
+    };
+
+    window.removeMultiSortRule = function(idx, event) {
+        if (event) event.stopPropagation();
+        if (currentSortRules.length <= 1) return;
+        currentSortRules.splice(idx, 1);
+        window.renderMultiSortRules();
+    };
+
+    window.applyMultiSortPreset = function(presetName, event) {
+        if (event) event.stopPropagation();
+        if (presetName === 'newest') {
+            currentSortRules = [{ field: 'row', dir: 'desc' }];
+        } else if (presetName === 'oldest') {
+            currentSortRules = [{ field: 'row', dir: 'asc' }];
+        } else if (presetName === 'name-asc') {
+            currentSortRules = [{ field: 'nama', dir: 'asc' }];
+        } else if (presetName === 'cat-pihak-nama') {
+            currentSortRules = [
+                { field: 'kategori', dir: 'asc' },
+                { field: 'pihakPengundang', dir: 'asc' },
+                { field: 'nama', dir: 'asc' }
+            ];
+        } else if (presetName === 'sesi-pihak-nama') {
+            currentSortRules = [
+                { field: 'sesi', dir: 'asc' },
+                { field: 'pihakPengundang', dir: 'asc' },
+                { field: 'nama', dir: 'asc' }
+            ];
+        }
+        window.commitMultiSort(event);
+    };
+
+    window.resetMultiSort = function(event) {
+        if (event) event.stopPropagation();
+        currentSortRules = [{ field: 'row', dir: 'desc' }];
+        window.commitMultiSort(event);
+    };
+
+    window.commitMultiSort = function(event) {
+        if (event) event.stopPropagation();
+        try {
+            localStorage.setItem('gb:multisort:formulir', JSON.stringify(currentSortRules));
+        } catch(e) {}
+
+        const menu = document.getElementById('sort-dropdown-menu');
+        if (menu) menu.style.display = 'none';
+
+        window.updateMultiSortTriggerLabel();
+        if (typeof filterGuestList === 'function') {
+            filterGuestList();
+        } else if (typeof render === 'function') {
+            render(MASTER_LIST);
+        }
+    };
+
+    window.updateMultiSortTriggerLabel = function() {
+        const labelEl = document.getElementById('current-sort-label');
+        if (!labelEl) return;
+        
+        if (currentSortRules.length === 1) {
+            const rule = currentSortRules[0];
+            if (rule.field === 'row' && rule.dir === 'desc') labelEl.innerText = 'TERBARU';
+            else if (rule.field === 'row' && rule.dir === 'asc') labelEl.innerText = 'TERLAMA';
+            else if (rule.field === 'nama' && rule.dir === 'asc') labelEl.innerText = 'NAMA A-Z';
+            else if (rule.field === 'nama' && rule.dir === 'desc') labelEl.innerText = 'NAMA Z-A';
+            else {
+                const col = MULTISORT_AVAILABLE_COLS_FORMULIR.find(c => c.id === rule.field);
+                const colLabel = col ? col.label.split(' ')[0].toUpperCase() : rule.field.toUpperCase();
+                labelEl.innerText = `${colLabel} (${rule.dir.toUpperCase()})`;
+            }
+        } else {
+            const firstCol = MULTISORT_AVAILABLE_COLS_FORMULIR.find(c => c.id === currentSortRules[0].field);
+            const firstLabel = firstCol ? firstCol.label.split(' ')[0].toUpperCase() : 'HIRARKI';
+            labelEl.innerHTML = `${firstLabel} <span style="background:var(--primary); color:#FFF; border-radius:50px; padding:1px 6px; font-size:8px; margin-left:3px;">+${currentSortRules.length - 1}</span>`;
+        }
+    };
 
     window.toggleSortDropdown = function(event) {
         if (event) event.stopPropagation();
         const menu = document.getElementById('sort-dropdown-menu');
-        const isHidden = menu.style.display === 'none';
-        
-        // Close filter menu if open
         const filterMenu = document.getElementById('filter-dropdown-menu');
         if (filterMenu) filterMenu.style.display = 'none';
-        
+        if (!menu) return;
+        const isHidden = menu.style.display === 'none';
         menu.style.display = isHidden ? 'block' : 'none';
-    };
-
-    window.changeSortOrder = function(order, event) {
-        if (event) event.stopPropagation();
-        currentSortOrder = order;
-        
-        const labels = {
-            'newest': 'TERBARU',
-            'oldest': 'TERLAMA',
-            'name-asc': 'NAMA A-Z',
-            'name-desc': 'NAMA Z-A'
-        };
-        const labelEl = document.getElementById('current-sort-label');
-        if (labelEl) labelEl.innerText = labels[order] || 'TERBARU';
-        
-        const menu = document.getElementById('sort-dropdown-menu');
-        if (menu) menu.style.display = 'none';
-        
-        filterGuestList();
+        if (isHidden) {
+            window.renderMultiSortRules();
+        }
     };
 
     function sortList(list) {
-        if (currentSortOrder === "newest") {
-            list.sort((a, b) => {
-                const rowA = a.row === null ? Infinity : Number(a.row);
-                const rowB = b.row === null ? Infinity : Number(b.row);
-                return rowB - rowA;
-            });
-        } else if (currentSortOrder === "oldest") {
-            list.sort((a, b) => {
-                const rowA = a.row === null ? Infinity : Number(a.row);
-                const rowB = b.row === null ? Infinity : Number(b.row);
-                return rowA - rowB;
-            });
-        } else if (currentSortOrder === "name-asc") {
-            list.sort((a, b) => (a.nama || "").localeCompare(b.nama || ""));
-        } else if (currentSortOrder === "name-desc") {
-            list.sort((a, b) => (b.nama || "").localeCompare(a.nama || ""));
-        }
+        if (!list || !Array.isArray(list)) return;
+        const rules = currentSortRules.length > 0 ? currentSortRules : [{ field: 'row', dir: 'desc' }];
+        
+        list.sort((a, b) => {
+            for (const rule of rules) {
+                const field = rule.field;
+                const dir = rule.dir === 'desc' ? -1 : 1;
+                let diff = 0;
+
+                if (field === 'row') {
+                    const rowA = a.row == null ? -Infinity : Number(a.row);
+                    const rowB = b.row == null ? -Infinity : Number(b.row);
+                    diff = (rowA - rowB) * dir;
+                } else if (field === 'nama') {
+                    diff = (a.nama || '').localeCompare(b.nama || '', undefined, { numeric: true, sensitivity: 'base' }) * dir;
+                } else if (field === 'kategori') {
+                    diff = (a.kategori || '').localeCompare(b.kategori || '', undefined, { numeric: true, sensitivity: 'base' }) * dir;
+                } else if (field === 'pihakPengundang') {
+                    diff = (a.pihakPengundang || '').localeCompare(b.pihakPengundang || '', undefined, { numeric: true, sensitivity: 'base' }) * dir;
+                } else if (field === 'alamat') {
+                    diff = (a.alamat || '').localeCompare(b.alamat || '', undefined, { numeric: true, sensitivity: 'base' }) * dir;
+                } else if (field === 'sesi') {
+                    diff = (a.sesi || '').localeCompare(b.sesi || '', undefined, { numeric: true, sensitivity: 'base' }) * dir;
+                } else if (field === 'pax') {
+                    const paxA = parseInt(a.rencanaHadir || 1, 10) || 1;
+                    const paxB = parseInt(b.rencanaHadir || 1, 10) || 1;
+                    diff = (paxA - paxB) * dir;
+                } else if (field === 'souvenir') {
+                    const souvA = (a.souvenir || '').toLowerCase() === 'ya' ? 1 : 0;
+                    const souvB = (b.souvenir || '').toLowerCase() === 'ya' ? 1 : 0;
+                    diff = (souvA - souvB) * dir;
+                } else if (field === 'statusWA') {
+                    const getRank = (g) => {
+                        const s = (g.statusWA || '').toUpperCase();
+                        if (s.includes('SENT') || s.includes('\u2705')) return 1;
+                        if (s.includes('PENDING') || s.includes('\u26a0')) return 2;
+                        return 3;
+                    };
+                    diff = (getRank(a) - getRank(b)) * dir;
+                }
+
+                if (diff !== 0) return diff;
+            }
+            return 0;
+        });
     }
 
     let filterTimeout;
