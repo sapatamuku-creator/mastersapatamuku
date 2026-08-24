@@ -28,14 +28,19 @@ Semua agent eksekusi di proyek ini HARUS merujuk pada hierarki berikut:
 
 ```
 AGENT.md                              ← DOKUMEN UTAMA (Anda sedang membaca)
-├── skills-lock.json                  ← Index skill yang terinstal (39 skill)
+├── skills-lock.json                  ← Index skill yang terinstal (56 skill)
 ├── .agents/                          ← SEMUA komponen agent (sumber utama)
 │   ├── AGENTS.md                     ← Agent rules dari addyosmani
 │   ├── CLAUDE.md                     ← Claude Code instructions
-│   ├── skills/                       ← 39 Skill definition files
+│   ├── skills/                       ← 56 Skill definition files
 │   │   ├── (5) animation-vocabulary, apple-design, emil-design-eng, improve-animations, review-animations
 │   │   ├── (2) supabase, supabase-postgres-best-practices
 │   │   ├── (8) deploy-to-vercel, frontend-design, ui-ux-pro-max, clone-website, skill-decision-gate, guestbook-v3-gate, live-progress-ux, instant-skeleton-loading
+│   │   ├── (1+7 refs) design-taste-guide ⭐ anti-AI-generic (01 anti-pattern · 02 aesthetic · 03 type · 04 60:30:10 · 05 vertikal · 06 responsive · 07 preflight)
+│   │   ├── (1+8 refs+8 templates) sapatamu-projects ⭐⭐ CANON SapaTamu (00 tokens · 01 layout · 02 navbar-island · 03 modal · 04 skeleton/perf · 05 offline · 06 auth-guard · 07 preflight + templates/tokens.css etc)
+│   │   ├── (1) avoid-ai-design (audit P0/P1/P2 + rewrite)
+│   │   ├── (13) taste-skill family: taste-skill + v1 + gpt + redesign + soft + minimalist + brutalist + image-to-code + output + stitch + brandkit + imagegen-web/mobile
+│   │   ├── (1) hallmark (21 macros + 21 themes + 57 gates)
 │   │   └── (24) addyosmani skills (spec-driven, code-review, security, dll)
 │   ├── agents/                       ← 4 Persona definitions
 │   │   ├── code-reviewer.md
@@ -80,7 +85,11 @@ AGENT.md                              ← DOKUMEN UTAMA (Anda sedang membaca)
 | Code review | `code-review-and-quality` | 1 |
 | Refactoring / simplifikasi | `code-simplification` | 1 |
 | API / interface design | `api-and-interface-design` | 1 |
-| UI / frontend work | `frontend-ui-engineering` | 1 |
+| UI / frontend work | `sapatamu-projects` → `design-taste-guide` → `frontend-ui-engineering` | 1→2→3 |
+| Audit UI generik AI | `avoid-ai-design` (detect) atau `hallmark audit` | 1 |
+| Rewrite UI generik → fresh | `avoid-ai-design` (rewrite) / `taste-skill` / `hallmark redesign` — commit 1 arah dulu | 1 |
+| Build halaman baru (anti-slop) | `sapatamu-projects` (canon tokens/layout/nav/modal/perf) → `design-taste-guide` (anti-slop taste) → `hallmark`/`taste-skill` macro+theme | 1→2→3 |
+| Project turunan SapaTamu | `sapatamu-projects` (SSOT — copy templates/tokens.css) | 1 |
 | Database / query optimization | `supabase-postgres-best-practices` | 1 |
 | Animasi / motion design | `emil-design-eng` → `review-animations` | 1→2 |
 | Security audit | `security-and-hardening` | 1 |
@@ -183,6 +192,11 @@ Persona adalah role dengan perspektif dan format output tertentu. Persona **tida
 | `skill-decision-gate` | local/mastersapatamuku | 5-point decision gate validation sebelum implementasi kode | ✅ Terinstal |
 | `guestbook-v3-gate` | local/mastersapatamuku | Gate validasi khusus task/todo docs/v3.0/ | ✅ Terinstal |
 | `live-progress-ux` | local/mastersapatamuku | Determinate progress & live telemetry (X dari Y) bertema SapaTamu | ✅ Terinstal |
+| `design-taste-guide` | local/mastersapatamuku | ⭐ ANTI-AI-GENERIC — 7 references: anti-pattern P0/P1/P2, 10 arah estetika, typography, 60:30:10, layout per vertikal (SaaS/POS/CRM/eComm/ERP/HR), responsive 3 bucket + motion, preflight gate. WAJIB sebelum buat HTML baru | ✅ Terinstal |
+| `sapatamu-projects` | local/mastersapatamuku | ⭐⭐ CANON SapaTamu — 8 refs + 8 templates: tokens warm, layout 3 bucket, navbar Dynamic Island 180→960, modal 5-varian, skeleton shimmer 1.4s, offline 7 stores + SyncEngine 30s, auth guard + subdomain 4-step. SSOT arsitektur project | ✅ Terinstal |
+| `avoid-ai-design` | funboy322/avoid-ai-design | Audit & rewrite frontend agar tidak terlihat AI (purple gradient, Inter solo, 3 cards) — P0/P1/P2 + before/after | ✅ Terinstal |
+| `taste-skill` (+variants) | Leonxlnx/taste-skill | Anti-slop dials VARIANCE/MOTION/DENSITY + brief inference + 21 themes — variants: gpt-tasteskill, redesign-skill, soft/minimalist/brutalist, image-to-code, brandkit, imagegen-* | ✅ Terinstal |
+| `hallmark` | nutlope/hallmark | 21 macrostructures + 21 themes + 57 slop-test gates + diversification rule — structural variety, not just color swap | ✅ Terinstal |
 
 ---
 

@@ -504,6 +504,13 @@
             overflow: hidden;
             background-color: #F0E6DE;
             border-radius: 6px;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            transition: transform 0.15s ease, filter 0.2s ease;
+        }
+        .pin-card:active {
+            transform: scale(0.98);
         }
         .pin-card img {
             width: 100%;
@@ -512,6 +519,10 @@
             object-fit: cover;
             image-rendering: -webkit-optimize-contrast;
             transition: filter 0.2s ease;
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
         .pin-card.selected img {
             filter: brightness(0.72);
@@ -548,6 +559,248 @@
             inset: 0;
             border: 3px solid var(--primary);
             pointer-events: none;
+        }
+
+        /* Persistent Fullscreen Lightbox Modal */
+        .photo-lightbox-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 9999999;
+            background: rgba(10, 8, 7, 0.94);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+            -webkit-user-select: none;
+            overscroll-behavior: none;
+            touch-action: none;
+        }
+        .photo-lightbox-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .photo-lightbox-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .photo-lightbox-title {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 6px 16px;
+            border-radius: 20px;
+            max-width: 50vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .photo-lightbox-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        .photo-lightbox-check-btn {
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 7px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+        }
+        .photo-lightbox-check-btn:hover {
+            transform: scale(1.04);
+            background: rgba(255, 255, 255, 0.24);
+        }
+        .photo-lightbox-check-btn.selected {
+            background: var(--primary);
+            color: #1a120b;
+            border-color: var(--primary);
+            box-shadow: 0 4px 16px rgba(212, 163, 115, 0.4);
+        }
+        .photo-lightbox-close {
+            pointer-events: auto;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .photo-lightbox-close:hover {
+            background: var(--primary);
+            transform: scale(1.08);
+        }
+        .photo-lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 100;
+            user-select: none;
+        }
+        .photo-lightbox-nav:hover {
+            background: var(--primary);
+            color: #1a120b;
+            transform: translateY(-50%) scale(1.1);
+        }
+        .photo-lightbox-nav.prev {
+            left: 20px;
+        }
+        .photo-lightbox-nav.next {
+            right: 20px;
+        }
+        .photo-lightbox-container {
+            position: relative;
+            max-width: 92vw;
+            max-height: 80vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+            touch-action: none;
+        }
+        .photo-lightbox-img {
+            max-width: 92vw;
+            max-height: 80vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.12);
+            display: block;
+            cursor: zoom-in;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transform-origin: center center;
+            will-change: transform;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
+            touch-action: none;
+        }
+        .photo-lightbox-img.zoomed {
+            cursor: grab;
+            transition: none;
+        }
+        .photo-lightbox-img.zoomed.grabbing {
+            cursor: grabbing;
+            transition: none !important;
+        }
+        .photo-lightbox-img.zoomed.gliding {
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .photo-lightbox-badge {
+            position: absolute;
+            bottom: 20px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 16px;
+            border-radius: 20px;
+            letter-spacing: 0.3px;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        @media (max-width: 767px) {
+            .photo-lightbox-container {
+                max-width: 96vw;
+                max-height: 74vh;
+            }
+            .photo-lightbox-img {
+                max-width: 96vw;
+                max-height: 74vh;
+                border-radius: 10px;
+            }
+            .photo-lightbox-img.zoomed {
+                transform: scale(2.2);
+            }
+            .photo-lightbox-title {
+                font-size: 11px;
+                padding: 4px 10px;
+                max-width: 40vw;
+            }
+            .photo-lightbox-check-btn {
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+            .photo-lightbox-close {
+                width: 34px;
+                height: 34px;
+                font-size: 15px;
+            }
+            .photo-lightbox-nav {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+            .photo-lightbox-nav.prev {
+                left: 8px;
+            }
+            .photo-lightbox-nav.next {
+                right: 8px;
+            }
+            .photo-lightbox-badge {
+                bottom: 12px;
+                font-size: 9.5px;
+                padding: 4px 10px;
+            }
         }
 
 
@@ -1257,6 +1510,30 @@
     </div>
 </div>
 
+<!-- Fullscreen Lightbox Viewer (Persistent with Backdrop Close, Zoom, Nav & In-Modal Checklist) -->
+<div id="photo-lightbox-modal" class="photo-lightbox-modal" onclick="handleLightboxBackdropClick(event)">
+    <div class="photo-lightbox-header">
+        <div id="photo-lightbox-title" class="photo-lightbox-title">Nama Foto</div>
+        <div class="photo-lightbox-actions">
+            <button id="photo-lightbox-check-btn" class="photo-lightbox-check-btn" onclick="toggleLightboxSelection(event)" title="Pilih / Batalkan Foto (Spasi)">
+                <span id="photo-lightbox-check-icon">✓</span> <span id="photo-lightbox-check-text">Pilih Foto</span>
+            </button>
+            <button class="photo-lightbox-close" onclick="closePhotoLightbox()" title="Tutup (Esc)">✕</button>
+        </div>
+    </div>
+    
+    <!-- Prev & Next Navigation Buttons -->
+    <button class="photo-lightbox-nav prev" onclick="navigateLightboxPhoto(-1, event)" title="Foto Sebelumnya (←)">‹</button>
+    <button class="photo-lightbox-nav next" onclick="navigateLightboxPhoto(1, event)" title="Foto Berikutnya (→)">›</button>
+
+    <div class="photo-lightbox-container" onclick="event.stopPropagation()">
+        <img id="photo-lightbox-img" class="photo-lightbox-img" src="" alt="Preview Foto" onclick="toggleLightboxZoom(event)">
+    </div>
+    <div class="photo-lightbox-badge">
+        <span>🔍 Zoom/Pinch 2 Jari • ↔ Swipe/Panah untuk ganti foto • Klik luar untuk tutup</span>
+    </div>
+</div>
+
 <script src="config.js"></script>
 <script type="module">
     const supabase = window.supabase.createClient(SB_URL, SB_KEY);
@@ -1950,6 +2227,605 @@
     // View mode — always pinterest
     store.viewMode = 'pinterest';
 
+    // ============================================================
+    // PHOTO LIGHTBOX (HOLD TO OPEN FULLSCREEN + SMOOTH PAN / ZOOM & MOMENTUM GLIDE)
+    // ============================================================
+    const photoLightbox = {
+        timer: null,
+        isOpen: false,
+        isZoomed: false,
+        preventNextClick: false,
+        touchStartX: 0,
+        touchStartY: 0,
+        HOLD_THRESHOLD_MS: 260,
+
+        // Gallery List & Index
+        fileList: [],
+        currentIndex: 0,
+        isLocal: false,
+
+        // Pan, Drag & Glide Momentum state
+        scale: 2.2,
+        panX: 0,
+        panY: 0,
+        isDragging: false,
+        dragStartX: 0,
+        dragStartY: 0,
+        lastDragX: 0,
+        lastDragY: 0,
+        lastDragTime: 0,
+        velocityX: 0,
+        velocityY: 0,
+        totalDragDist: 0,
+        preventZoomClick: false,
+
+        // Multi-touch Pinch & Swipe state
+        isPinching: false,
+        pinchStartDist: 0,
+        pinchStartScale: 1,
+        swipeStartX: 0,
+        swipeStartY: 0,
+
+        getBounds() {
+            const img = document.getElementById('photo-lightbox-img');
+            if (!img) return { maxPanX: 0, maxPanY: 0 };
+            const imgW = img.offsetWidth || (window.innerWidth * 0.85);
+            const imgH = img.offsetHeight || (window.innerHeight * 0.75);
+            const maxPanX = Math.max(0, (imgW * (this.scale - 1)) / 2 + 100);
+            const maxPanY = Math.max(0, (imgH * (this.scale - 1)) / 2 + 100);
+            return { maxPanX, maxPanY };
+        },
+
+        applyTransform() {
+            const img = document.getElementById('photo-lightbox-img');
+            if (!img) return;
+            if (!this.isZoomed) {
+                img.style.transform = 'translate(0px, 0px) scale(1)';
+            } else {
+                img.style.transform = `translate(${this.panX.toFixed(1)}px, ${this.panY.toFixed(1)}px) scale(${this.scale.toFixed(2)})`;
+            }
+        },
+
+        getImgUrlForFile(file) {
+            if (this.isLocal) {
+                return file.url;
+            }
+            return `https://drive.google.com/thumbnail?id=${file.id}&sz=w1600`;
+        },
+
+        isCurrentFileSelected() {
+            if (!this.fileList || !this.fileList[this.currentIndex]) return false;
+            const file = this.fileList[this.currentIndex];
+            if (this.isLocal) {
+                return localStore.selections && localStore.selections.has(file.id);
+            }
+            return store.cullingSelections && store.cullingSelections.has(file.id);
+        },
+
+        updateHeaderUI() {
+            if (!this.fileList || !this.fileList[this.currentIndex]) return;
+            const file = this.fileList[this.currentIndex];
+            const title = document.getElementById('photo-lightbox-title');
+            const checkBtn = document.getElementById('photo-lightbox-check-btn');
+            const checkIcon = document.getElementById('photo-lightbox-check-icon');
+            const checkText = document.getElementById('photo-lightbox-check-text');
+
+            if (title) {
+                const total = this.fileList.length;
+                title.innerText = `${this.currentIndex + 1} / ${total} • ${file.name || 'Foto'}`;
+            }
+
+            const isSelected = this.isCurrentFileSelected();
+            if (checkBtn) {
+                if (isSelected) {
+                    checkBtn.classList.add('selected');
+                    if (checkIcon) checkIcon.innerText = '✓';
+                    if (checkText) checkText.innerText = 'Terpilih';
+                } else {
+                    checkBtn.classList.remove('selected');
+                    if (checkIcon) checkIcon.innerText = '+';
+                    if (checkText) checkText.innerText = 'Pilih Foto';
+                }
+            }
+        },
+
+        open(file, imgSrc, fileList = null, index = -1, isLocal = false) {
+            const modal = document.getElementById('photo-lightbox-modal');
+            const img = document.getElementById('photo-lightbox-img');
+            if (!modal || !img) return;
+
+            this.fileList = fileList && fileList.length ? fileList : [file];
+            this.currentIndex = index >= 0 ? index : this.fileList.findIndex(f => f.id === file.id);
+            if (this.currentIndex < 0) this.currentIndex = 0;
+            this.isLocal = isLocal;
+
+            this.isZoomed = false;
+            this.scale = 2.2;
+            this.panX = 0;
+            this.panY = 0;
+            this.isDragging = false;
+            this.isPinching = false;
+            this.preventZoomClick = false;
+            img.classList.remove('zoomed', 'grabbing', 'gliding');
+            this.applyTransform();
+
+            img.src = imgSrc || this.getImgUrlForFile(file);
+            this.updateHeaderUI();
+
+            modal.classList.add('active');
+            this.isOpen = true;
+            this.preventNextClick = true;
+
+            // Lock body scroll and isolate gestures
+            document.body.style.overflow = 'hidden';
+            document.body.style.touchAction = 'none';
+
+            if (navigator.vibrate) {
+                try { navigator.vibrate(20); } catch(e) {}
+            }
+        },
+
+        loadFileAtIndex(idx) {
+            if (!this.fileList || !this.fileList[idx]) return;
+            this.currentIndex = idx;
+            const file = this.fileList[idx];
+            const img = document.getElementById('photo-lightbox-img');
+
+            this.isZoomed = false;
+            this.scale = 2.2;
+            this.panX = 0;
+            this.panY = 0;
+            this.isDragging = false;
+            this.isPinching = false;
+            this.preventZoomClick = false;
+            if (img) {
+                img.classList.remove('zoomed', 'grabbing', 'gliding');
+                this.applyTransform();
+                img.style.opacity = '0.4';
+                const newSrc = this.getImgUrlForFile(file);
+                const tempImg = new Image();
+                tempImg.src = newSrc;
+                tempImg.onload = () => {
+                    img.src = newSrc;
+                    img.style.opacity = '1';
+                };
+                tempImg.onerror = () => {
+                    img.src = newSrc;
+                    img.style.opacity = '1';
+                };
+            }
+            this.updateHeaderUI();
+        },
+
+        navigatePhoto(dir) {
+            if (!this.fileList || this.fileList.length <= 1) return;
+            const newIndex = (this.currentIndex + dir + this.fileList.length) % this.fileList.length;
+            this.loadFileAtIndex(newIndex);
+            if (navigator.vibrate) {
+                try { navigator.vibrate(10); } catch(e) {}
+            }
+        },
+
+        toggleCurrentSelection() {
+            if (!this.fileList || !this.fileList[this.currentIndex]) return;
+            const file = this.fileList[this.currentIndex];
+
+            if (this.isLocal) {
+                toggleLocalSelection(file.id, file.name);
+            } else {
+                toggleClientSelection(file.id, file.name);
+            }
+            this.updateHeaderUI();
+            if (navigator.vibrate) {
+                try { navigator.vibrate(25); } catch(e) {}
+            }
+        },
+
+        close() {
+            this.cancelTimer();
+            const modal = document.getElementById('photo-lightbox-modal');
+            const img = document.getElementById('photo-lightbox-img');
+            if (modal) modal.classList.remove('active');
+            if (img) {
+                img.classList.remove('zoomed', 'grabbing', 'gliding');
+                this.isZoomed = false;
+                this.panX = 0;
+                this.panY = 0;
+                this.applyTransform();
+            }
+            this.isOpen = false;
+
+            // Restore body scroll and touch action
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+
+            setTimeout(() => {
+                this.preventNextClick = false;
+            }, 250);
+        },
+
+        toggleZoom(e) {
+            const img = document.getElementById('photo-lightbox-img');
+            if (!img) return;
+            this.isZoomed = !this.isZoomed;
+            if (this.isZoomed) {
+                this.scale = 2.2;
+                this.panX = 0;
+                this.panY = 0;
+                if (e && e.clientX !== undefined && e.clientY !== undefined) {
+                    const rect = img.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    const dx = (centerX - e.clientX) * 0.85;
+                    const dy = (centerY - e.clientY) * 0.85;
+                    const { maxPanX, maxPanY } = this.getBounds();
+                    this.panX = Math.max(-maxPanX, Math.min(maxPanX, dx));
+                    this.panY = Math.max(-maxPanY, Math.min(maxPanY, dy));
+                }
+                img.classList.add('zoomed', 'gliding');
+                this.applyTransform();
+            } else {
+                this.panX = 0;
+                this.panY = 0;
+                this.scale = 2.2;
+                img.classList.remove('zoomed', 'grabbing', 'gliding');
+                this.applyTransform();
+            }
+        },
+
+        startPan(clientX, clientY) {
+            if (!this.isZoomed) return;
+            this.isDragging = true;
+            this.dragStartX = clientX;
+            this.dragStartY = clientY;
+            this.lastDragX = clientX;
+            this.lastDragY = clientY;
+            this.lastDragTime = performance.now();
+            this.velocityX = 0;
+            this.velocityY = 0;
+            this.totalDragDist = 0;
+        },
+
+        movePan(clientX, clientY) {
+            if (!this.isDragging || !this.isZoomed) return;
+            const now = performance.now();
+            const dt = Math.max(1, now - this.lastDragTime);
+            const dx = clientX - this.lastDragX;
+            const dy = clientY - this.lastDragY;
+            this.totalDragDist += Math.hypot(dx, dy);
+
+            // Add grabbing class once motion exceeds 5px
+            if (this.totalDragDist > 5) {
+                const img = document.getElementById('photo-lightbox-img');
+                if (img && !img.classList.contains('grabbing')) {
+                    img.classList.remove('gliding');
+                    img.classList.add('grabbing');
+                }
+            }
+
+            // Compute smoothing velocity filter
+            const vx = dx / dt;
+            const vy = dy / dt;
+            this.velocityX = this.velocityX * 0.35 + vx * 0.65;
+            this.velocityY = this.velocityY * 0.35 + vy * 0.65;
+
+            this.panX += dx;
+            this.panY += dy;
+
+            const { maxPanX, maxPanY } = this.getBounds();
+            this.panX = Math.max(-maxPanX, Math.min(maxPanX, this.panX));
+            this.panY = Math.max(-maxPanY, Math.min(maxPanY, this.panY));
+
+            this.lastDragX = clientX;
+            this.lastDragY = clientY;
+            this.lastDragTime = now;
+
+            this.applyTransform();
+        },
+
+        endPan() {
+            if (!this.isDragging) return;
+            this.isDragging = false;
+            const img = document.getElementById('photo-lightbox-img');
+            if (img) img.classList.remove('grabbing');
+
+            // If user simply clicked/tapped without significant panning (< 8px)
+            if (this.totalDragDist < 8) {
+                this.preventZoomClick = false;
+                return;
+            }
+
+            // It was an intentional drag/pan -> prevent zoom toggle click from triggering
+            this.preventZoomClick = true;
+            setTimeout(() => {
+                this.preventZoomClick = false;
+            }, 250);
+
+            // Apply smooth momentum glide stop (~300ms deceleration)
+            const glideDurationFactor = 220; // ms momentum projection
+            this.panX += this.velocityX * glideDurationFactor;
+            this.panY += this.velocityY * glideDurationFactor;
+
+            const { maxPanX, maxPanY } = this.getBounds();
+            this.panX = Math.max(-maxPanX, Math.min(maxPanX, this.panX));
+            this.panY = Math.max(-maxPanY, Math.min(maxPanY, this.panY));
+
+            if (img) img.classList.add('gliding');
+            this.applyTransform();
+        },
+
+        handleWheel(e) {
+            if (!this.isZoomed) return;
+            e.preventDefault();
+            const factor = 0.9;
+            this.panX -= (e.deltaX || 0) * factor;
+            this.panY -= (e.deltaY || 0) * factor;
+
+            const { maxPanX, maxPanY } = this.getBounds();
+            this.panX = Math.max(-maxPanX, Math.min(maxPanX, this.panX));
+            this.panY = Math.max(-maxPanY, Math.min(maxPanY, this.panY));
+
+            const img = document.getElementById('photo-lightbox-img');
+            if (img) img.classList.add('gliding');
+            this.applyTransform();
+        },
+
+        cancelTimer() {
+            if (this.timer) {
+                clearTimeout(this.timer);
+                this.timer = null;
+            }
+        },
+
+        bindEvents(cardEl, file, onToggle = null, fileList = null, index = -1, isLocal = false) {
+            const toggleFn = onToggle || (() => toggleClientSelection(file.id, file.name));
+            const getImgSrc = () => {
+                const img = cardEl.querySelector('img');
+                return img ? (img.currentSrc || img.src) : (file.url || `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`);
+            };
+
+            cardEl.setAttribute('draggable', 'false');
+            cardEl.addEventListener('dragstart', (e) => e.preventDefault());
+            cardEl.addEventListener('selectstart', (e) => e.preventDefault());
+
+            // 1. Mouse Events (Desktop)
+            cardEl.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                photoLightbox.cancelTimer();
+                photoLightbox.timer = setTimeout(() => {
+                    photoLightbox.open(file, getImgSrc(), fileList, index, isLocal);
+                }, photoLightbox.HOLD_THRESHOLD_MS);
+            });
+
+            cardEl.addEventListener('mouseup', () => {
+                photoLightbox.cancelTimer();
+            });
+
+            cardEl.addEventListener('mouseleave', () => {
+                photoLightbox.cancelTimer();
+            });
+
+            // 2. Touch Events (Mobile & Tablet)
+            cardEl.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 1) {
+                    photoLightbox.cancelTimer();
+                    return;
+                }
+                const touch = e.touches[0];
+                photoLightbox.touchStartX = touch.clientX;
+                photoLightbox.touchStartY = touch.clientY;
+                photoLightbox.cancelTimer();
+
+                photoLightbox.timer = setTimeout(() => {
+                    photoLightbox.open(file, getImgSrc(), fileList, index, isLocal);
+                }, photoLightbox.HOLD_THRESHOLD_MS);
+            }, { passive: true });
+
+            cardEl.addEventListener('touchmove', (e) => {
+                if (!photoLightbox.timer) return;
+                const touch = e.touches[0];
+                const dx = Math.abs(touch.clientX - photoLightbox.touchStartX);
+                const dy = Math.abs(touch.clientY - photoLightbox.touchStartY);
+
+                if (dx > 10 || dy > 10) {
+                    photoLightbox.cancelTimer();
+                }
+            }, { passive: true });
+
+            cardEl.addEventListener('touchend', () => {
+                photoLightbox.cancelTimer();
+            });
+
+            cardEl.addEventListener('touchcancel', () => {
+                photoLightbox.cancelTimer();
+            });
+
+            // 3. Click handler (Toggle selection only if not long-pressed)
+            cardEl.addEventListener('click', (e) => {
+                if (photoLightbox.preventNextClick || photoLightbox.isOpen) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+                toggleFn();
+            });
+
+            cardEl.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+        }
+    };
+
+    // Global handlers for lightbox
+    window.closePhotoLightbox = function() {
+        photoLightbox.close();
+    };
+
+    window.toggleLightboxZoom = function(e) {
+        if (e) e.stopPropagation();
+        if (photoLightbox.preventZoomClick) {
+            photoLightbox.preventZoomClick = false;
+            return;
+        }
+        photoLightbox.toggleZoom(e);
+    };
+
+    window.handleLightboxBackdropClick = function(e) {
+        if (photoLightbox.isDragging || photoLightbox.isPinching || photoLightbox.preventZoomClick) return;
+        photoLightbox.close();
+    };
+
+    window.navigateLightboxPhoto = function(dir, e) {
+        if (e) e.stopPropagation();
+        photoLightbox.navigatePhoto(dir);
+    };
+
+    window.toggleLightboxSelection = function(e) {
+        if (e) e.stopPropagation();
+        photoLightbox.toggleCurrentSelection();
+    };
+
+    window.addEventListener('keydown', (e) => {
+        if (!photoLightbox.isOpen) return;
+        if (e.key === 'Escape') {
+            photoLightbox.close();
+        } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+            photoLightbox.navigatePhoto(-1);
+        } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+            photoLightbox.navigatePhoto(1);
+        } else if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            photoLightbox.toggleCurrentSelection();
+        }
+    });
+
+    // Image Pan Mouse & Touch Listeners for Zoom mode
+    const lightboxImgEl = document.getElementById('photo-lightbox-img');
+    if (lightboxImgEl) {
+        // Desktop mouse drag
+        lightboxImgEl.addEventListener('mousedown', (e) => {
+            if (e.button === 0 && photoLightbox.isZoomed) {
+                photoLightbox.startPan(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (photoLightbox.isDragging && photoLightbox.isZoomed) {
+                e.preventDefault();
+                photoLightbox.movePan(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (photoLightbox.isDragging) {
+                photoLightbox.endPan();
+            }
+        });
+
+        // Mobile & Tablet Touch Events (Pan, Pinch-to-zoom & Swipe Navigation)
+        lightboxImgEl.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                // Pinch start
+                photoLightbox.isPinching = true;
+                photoLightbox.pinchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                photoLightbox.pinchStartScale = photoLightbox.isZoomed ? photoLightbox.scale : 1.0;
+                e.preventDefault();
+                e.stopPropagation();
+            } else if (e.touches.length === 1) {
+                if (photoLightbox.isZoomed) {
+                    // Pan start
+                    const t = e.touches[0];
+                    photoLightbox.startPan(t.clientX, t.clientY);
+                } else {
+                    // Swipe start
+                    photoLightbox.swipeStartX = e.touches[0].clientX;
+                    photoLightbox.swipeStartY = e.touches[0].clientY;
+                }
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (photoLightbox.isPinching && e.touches.length === 2) {
+                e.preventDefault();
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                const factor = dist / Math.max(1, photoLightbox.pinchStartDist);
+                let newScale = Math.max(1.0, Math.min(3.8, photoLightbox.pinchStartScale * factor));
+                photoLightbox.scale = newScale;
+                photoLightbox.isZoomed = newScale > 1.15;
+                if (photoLightbox.isZoomed) {
+                    lightboxImgEl.classList.add('zoomed');
+                } else {
+                    lightboxImgEl.classList.remove('zoomed');
+                }
+                photoLightbox.applyTransform();
+            } else if (photoLightbox.isDragging && photoLightbox.isZoomed && e.touches.length === 1) {
+                if (photoLightbox.totalDragDist > 5) {
+                    e.preventDefault();
+                }
+                const t = e.touches[0];
+                photoLightbox.movePan(t.clientX, t.clientY);
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', (e) => {
+            if (photoLightbox.isPinching) {
+                photoLightbox.isPinching = false;
+                photoLightbox.preventZoomClick = true;
+                setTimeout(() => { photoLightbox.preventZoomClick = false; }, 250);
+                if (photoLightbox.scale <= 1.15) {
+                    photoLightbox.isZoomed = false;
+                    photoLightbox.scale = 2.2;
+                    photoLightbox.panX = 0;
+                    photoLightbox.panY = 0;
+                    lightboxImgEl.classList.remove('zoomed', 'grabbing');
+                    photoLightbox.applyTransform();
+                } else {
+                    photoLightbox.isZoomed = true;
+                    lightboxImgEl.classList.add('zoomed');
+                }
+            } else if (photoLightbox.isDragging) {
+                photoLightbox.endPan();
+            } else if (!photoLightbox.isZoomed && photoLightbox.isOpen && e.changedTouches && e.changedTouches.length === 1) {
+                const t = e.changedTouches[0];
+                const dx = t.clientX - photoLightbox.swipeStartX;
+                const dy = t.clientY - photoLightbox.swipeStartY;
+                if (Math.abs(dx) > 48 && Math.abs(dy) < 55) {
+                    if (dx < 0) {
+                        photoLightbox.navigatePhoto(1); // Swipe left -> Next
+                    } else {
+                        photoLightbox.navigatePhoto(-1); // Swipe right -> Prev
+                    }
+                }
+            }
+        });
+
+        lightboxImgEl.addEventListener('wheel', (e) => {
+            if (photoLightbox.isZoomed) {
+                photoLightbox.handleWheel(e);
+            }
+        }, { passive: false });
+    }
+
+    const modalEl = document.getElementById('photo-lightbox-modal');
+    if (modalEl) {
+        modalEl.addEventListener('touchmove', (e) => {
+            if (!photoLightbox.isZoomed) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        modalEl.addEventListener('wheel', (e) => {
+            if (!photoLightbox.isZoomed) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    }
+
     function renderClientPhotosGrid() {
         const grid = document.getElementById('culling-photos-grid');
         grid.innerHTML = '';
@@ -1968,12 +2844,11 @@
             return;
         }
 
-        filtered.forEach(file => {
+        filtered.forEach((file, idx) => {
             const isSelected = store.cullingSelections.has(file.id);
             const pin = document.createElement('div');
             pin.className = `pin-card ${isSelected ? 'selected' : ''}`;
             pin.id = `card-${file.id}`;
-            pin.onclick = () => toggleClientSelection(file.id, file.name);
 
             // Endpoint resmi drive.google.com/thumbnail yang menyajikan binary JPEG langsung (bebas 302 redirect & net::ERR_FAILED CORB Chromium)
             const primaryUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
@@ -1988,6 +2863,10 @@
                      onerror="if(this.src!=='${altUrl}'){this.src='${altUrl}';}else if(this.src!=='${altUrl2}'){this.src='${altUrl2}';}else{this.onerror=null;}">
                 <div class="pin-check-badge">✓</div>
             `;
+
+            // Bind hold-to-preview and tap-to-select handlers
+            photoLightbox.bindEvents(pin, file, () => toggleClientSelection(file.id, file.name), filtered, idx, false);
+
             grid.appendChild(pin);
         });
     }
@@ -2008,6 +2887,9 @@
         }
 
         updateClientQuotaUI();
+        if (photoLightbox.isOpen) {
+            photoLightbox.updateHeaderUI();
+        }
 
         // Instant UI update
         const card = document.getElementById(`card-${id}`);
@@ -2537,11 +3419,11 @@
             const pin = document.createElement('div');
             pin.className = `pin-card ${isSelected ? 'selected' : ''}`;
             pin.id = `local-card-${f.id}`;
-            pin.onclick = () => toggleLocalSelection(f.id, f.name);
             pin.innerHTML = `
-                <img src="${f.url}" loading="lazy" alt="${f.name}">
+                <img src="${f.url}" loading="lazy" alt="${f.name}" draggable="false">
                 <div class="pin-check-badge">✓</div>
             `;
+            photoLightbox.bindEvents(pin, f, () => toggleLocalSelection(f.id, f.name), localStore.files, i, true);
             fragment.appendChild(pin);
         }
         grid.appendChild(fragment);
@@ -2609,6 +3491,9 @@
         const card = document.getElementById(`local-card-${id}`);
         if (card) card.classList.toggle('selected', localStore.selections.has(id));
         updateLocalSelectionUI();
+        if (photoLightbox.isOpen) {
+            photoLightbox.updateHeaderUI();
+        }
     };
 
     function updateLocalSelectionUI() {
