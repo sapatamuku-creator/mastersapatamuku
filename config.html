@@ -393,12 +393,13 @@
             const match = rawUrl.match(driveRegex);
             let finalUrl = rawUrl;
 
-            if (match && match[1] && (rawUrl.includes("drive.google.com") || rawUrl.includes("google.com/file"))) {
+            if (match && match[1] && (rawUrl.includes("drive.google.com") || rawUrl.includes("google.com/file") || rawUrl.includes("lh3.googleusercontent.com"))) {
                 const fileId = match[1];
                 if (type === 'video') {
                     finalUrl = `https://drive.google.com/file/d/${fileId}/preview#video`;
                 } else {
-                    finalUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
+                    // Simpan sebagai lh3 langsung — lebih stabil, tidak ada 302 redirect
+                    finalUrl = `https://lh3.googleusercontent.com/d/${fileId}=w1920`;
                 }
             } else if (type === 'video' && !isVideoUrl(finalUrl) && !isYouTubeUrl(finalUrl)) {
                 finalUrl = finalUrl + '#video';
@@ -431,13 +432,14 @@
 
                 if (isYT) {
                     previewUrl = getYouTubeEmbedUrl(url);
-                } else if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file"))) {
+                } else if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file") || url.includes("lh3.googleusercontent.com"))) {
                     const fileId = match[1];
                     if (isVideo) {
                         isDriveVideo = true;
                         previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
                     } else {
-                        previewUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
+                        // Langsung ke lh3 — tidak ada 302, preview langsung tampil
+                        previewUrl = `https://lh3.googleusercontent.com/d/${fileId}=w1920`;
                     }
                 }
 

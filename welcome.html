@@ -1075,16 +1075,17 @@
 
                 if (isYT) {
                     finalUrl = getYouTubeEmbedUrl(rawUrl);
-                } else if (match && match[1] && (rawUrl.includes("drive.google.com") || rawUrl.includes("google.com/file"))) {
+                } else if (match && match[1] && (rawUrl.includes("drive.google.com") || rawUrl.includes("google.com/file") || rawUrl.includes("lh3.googleusercontent.com"))) {
                     const driveFileId = match[1];
                     if (isVideo) {
                         isDriveVideo = true;
                         finalUrl = `https://drive.google.com/file/d/${driveFileId}/preview`;
                     } else {
-                        // [v3.0 T4.3] Drive sz=w800 (kiosk/portrait) / w1280 (TV landscape) — hemat bandwidth & cepat masuk cache
+                        // Gunakan lh3.googleusercontent.com langsung (tidak ada 302 redirect)
+                        // Ini lebih stabil untuk CSS background-image & img tag
                         const isKioskMode = new URLSearchParams(window.location.search).get('mode') === 'kiosk';
                         const thumbWidth = isKioskMode ? 800 : 1280;
-                        finalUrl = `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w${thumbWidth}`;
+                        finalUrl = `https://lh3.googleusercontent.com/d/${driveFileId}=w${thumbWidth}`;
                     }
                 }
                 return { rawUrl, finalUrl, isVideo, isDriveVideo, isYT };
@@ -1117,12 +1118,23 @@
                     }
                 } else {
                     slideDiv.classList.add('photo-slide');
-                    // [v3.0 T4.3] Load first slide immediately; others will be preloaded on demand
+                    // Gunakan <img> bukan CSS background-image agar redirect 302 (lh3) ditangani browser dgn benar
+                    const imgEl = document.createElement('img');
+                    imgEl.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+                    imgEl.alt = '';
+                    imgEl.decoding = 'async';
                     if (i === 0) {
-                        slideDiv.style.backgroundImage = `url('${item.finalUrl}')`;
+                        // Slide pertama: load langsung
+                        imgEl.src = item.finalUrl;
                     } else {
-                        slideDiv.dataset.src = item.finalUrl;
+                        // Slide lain: lazy load via dataset
+                        imgEl.dataset.src = item.finalUrl;
                     }
+                    imgEl.onerror = function() {
+                        // Fallback ke background gelap jika gambar gagal load
+                        this.parentElement.style.background = 'linear-gradient(135deg, #1A1A24 0%, #0F0F14 100%)';
+                    };
+                    slideDiv.appendChild(imgEl);
                 }
 
                 container.appendChild(slideDiv);
@@ -1137,16 +1149,12 @@
             const slides = document.querySelectorAll('#slideshow-container .slide');
             if (!slides || !slides[nextIdx]) return;
             const nextSlide = slides[nextIdx];
-            if (nextSlide.classList.contains('photo-slide') && nextSlide.dataset.src) {
-                const img = new Image();
-                img.onload = () => {
-                    nextSlide.style.backgroundImage = `url('${nextSlide.dataset.src}')`;
-                    delete nextSlide.dataset.src;
-                };
-                img.onerror = () => {
-                    nextSlide.style.background = `linear-gradient(135deg, #1A1A24 0%, #0F0F14 100%)`;
-                };
-                img.src = nextSlide.dataset.src;
+            if (nextSlide.classList.contains('photo-slide')) {
+                const imgEl = nextSlide.querySelector('img');
+                if (imgEl && imgEl.dataset.src) {
+                    imgEl.src = imgEl.dataset.src;
+                    delete imgEl.dataset.src;
+                }
             }
         }
 
