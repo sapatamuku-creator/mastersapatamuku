@@ -71,14 +71,19 @@
             background: #FFF9F5 !important;
         }
 
-        #reader,
-        .scanner-container,
-        #app-root {
+        #reader {
             will-change: transform;
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
+        }
+
+        #app-root,
+        .bottom-section,
+        .list-wrapper,
+        #details-list {
+            background-color: #FFF9F5;
         }
 
         /* ─── DYNAMIC HERO AMBIENT SLIDESHOW (Scanner & Header Area) ─── */
@@ -3634,7 +3639,18 @@
                 const sent = document.getElementById('details-sentinel');
                 const listWrap = document.querySelector('.list-wrapper');
 
+                let _isKeyboardActive = false;
+                window.addEventListener('focusin', (e) => {
+                    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                        _isKeyboardActive = true;
+                    }
+                }, { passive: true });
+                window.addEventListener('focusout', () => {
+                    setTimeout(() => { _isKeyboardActive = false; }, 350);
+                }, { passive: true });
+
                 function onListScroll(e) {
+                    if (_isKeyboardActive) return; // Prevent heavy DOM recalculation during keyboard animation
                     const el = e.target;
                     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
                         const filtered = getFilteredAndSortedGuests();
