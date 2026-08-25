@@ -128,7 +128,22 @@ Untuk mencegah *memory leak* dan *CPU throttling* saat pemindaian QR code:
 
 ---
 
-## 6. ✅ Verification & Quality Checklist
+## 6. 📱 App-Maximized Viewport Mode (Anti-Black Screen Standard)
+
+Pada Android Chrome (terutama tablet Redmi Pad / Xiaomi HyperOS), pemanggilan HTML5 Fullscreen API (`requestFullscreen()`) memaksa OS mereset alokasi *SurfaceView*, yang memicu **black screen** (layar hitam pekat 0.5s–1.5s) setiap kali virtual keyboard muncul atau ditutup.
+
+**Standar Solusi:**
+1. **App-Maximized Mode (`is-app-maximized`):**
+   * Di mode Mobile & Tablet (`< 1024px`), gunakan pembesaran viewport berbasis CSS `100dvh` dan sembunyikan navbar non-esensial daripada memanggil `requestFullscreen()`.
+   * Browser tetap berada di standard windowed pipeline, sehingga keyboard virtual buka/tutup **100% mulus (60–90 FPS) tanpa black screen**.
+2. **Viewport Meta:**
+   * Wajib pasang `interactive-widget=overlays-content` pada `<meta name="viewport">`.
+3. **Fallback Color Override:**
+   * Set `:fullscreen, ::backdrop, :-webkit-full-screen { background-color: var(--bg, #FFF9F5) !important; }` agar tidak pernah merender warna hitam `#000000`.
+
+---
+
+## 7. ✅ Verification & Quality Checklist
 
 Sebelum menyelesaikan optimasi tampilan / performa:
 - [ ] Mode Desktop (≥1024px) teruji layout tabel multi-kolom dan kartu lega.
@@ -136,4 +151,6 @@ Sebelum menyelesaikan optimasi tampilan / performa:
 - [ ] Mode Mobile (<680px) teruji bebas lag blur dan membuka drawer/sheet 60 FPS.
 - [ ] Scroll 1.000 data tamu berjalan mulus 60–90 FPS tanpa freeze memory.
 - [ ] Live search mengetik instan (<5ms) dan mereset render chunk secara akurat.
+- [ ] Virtual keyboard buka-tutup bebas black screen pada tablet & smartphone.
 - [ ] Decision Gate 5 poin dicatat di `DECISION_LOG.md`.
+

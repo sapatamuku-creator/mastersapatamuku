@@ -165,6 +165,11 @@
   - **Eliminasi Backdrop Blur Mobile**: Menghapus beban `backdrop-filter: blur(8px)` pada overlay mobile drawer di `formulir_tamu.html` dan `analytics.html`.
   - **Camera Stream Budgeting Kiosk**: Menambahkan video stream constraint `{ ideal: 480, max: 720 }` pada pemindai kamera `kiosk.html` agar tablet kiosk tidak mengalami overheating dan memory throttling.
 
+- [x] **T1.26 S — `checkin.html` App-Maximized Viewport Mode (Anti-Black Screen Tablet/Mobile)**
+  - Menerapkan mode Layar Maksimal berbasis CSS `100dvh` untuk Mobile & Tablet (`< 1024px`) menggantikan native `requestFullscreen()` yang memicu bug SurfaceView Android.
+  - Menambahkan toggle button di drawer mobile & station island tablet capsule (`.station-max-btn`), serta mencatat standar ke skill `perf-ui-ux-3mode`.
+
+
 
 
 

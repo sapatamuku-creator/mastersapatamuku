@@ -1482,6 +1482,33 @@
                 overflow-y: auto;
             }
 
+            /* ═══ SAPATAMU APP-MAXIMIZED MODE (ANTI-BLACK-SCREEN VIEWPORT FULLSCREEN) ═══ */
+            body.is-app-maximized .sapatamu-navbar {
+                display: none !important;
+            }
+            body.is-app-maximized #app-root {
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+            }
+            body.is-app-maximized .header {
+                padding-top: 6px !important;
+                padding-bottom: 2px !important;
+            }
+            body.is-app-maximized .station-selector {
+                top: 15px !important;
+            }
+            body.is-app-maximized .bottom-section {
+                max-height: calc(100dvh - 70px) !important;
+            }
+            body.is-app-maximized #btn-fs-drawer {
+                background: rgba(200, 150, 46, 0.12) !important;
+                border-color: var(--gold) !important;
+                color: var(--gold) !important;
+            }
+            body.is-app-maximized .station-max-btn {
+                color: var(--gold) !important;
+            }
+
             .mob-kartu-panel.is-open {
                 transform: translateX(0);
             }
@@ -2139,11 +2166,11 @@
             <div class="kartu-title">Pengaturan</div>
             <div class="kartu-sub">Kamera, countdown, quick check-in, dan jalur.</div>
             <div class="kartu-demarc"></div>
-            <button type="button" class="kartu-fs-btn" id="btn-fs-drawer" aria-label="Layar penuh">
-                <span>Layar Penuh</span>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+            <button type="button" class="kartu-fs-btn" id="btn-fs-drawer" onclick="toggleAppMaximized()" aria-label="Mode Layar Maksimal">
+                <span id="txt-fs-drawer">Mode Layar Maksimal</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                     stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                 </svg>
             </button>
         </aside>
@@ -2274,6 +2301,12 @@
                             <span class="cam-toggle-slider"></span>
                         </label>
                     </div>
+                    <!-- App-Maximized Toggle for Tablet -->
+                    <button type="button" class="station-max-btn" onclick="toggleAppMaximized()" title="Mode Layar Maksimal (Bebas Blackscreen)" style="background:transparent; border:1px solid var(--border); border-radius:10px; cursor:pointer; padding:4px 8px; display:inline-flex; align-items:center; color:var(--text-muted); font-size:10px; margin-left:5px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                        </svg>
+                    </button>
                     <!-- pw-btn injected by PrinterWidget.init() -->
                 </div>
             </div>
@@ -2956,30 +2989,53 @@
             }
         }
 
+        window.toggleAppMaximized = function() {
+            const isMax = document.body.classList.toggle('is-app-maximized');
+            try { localStorage.setItem('sapatamu_app_maximized', isMax ? '1' : '0'); } catch(e) {}
+            
+            const txt = document.getElementById('txt-fs-drawer');
+            if (txt) txt.innerText = isMax ? 'Keluar Layar Maksimal' : 'Mode Layar Maksimal';
+            
+            if (typeof closeMobKartu === 'function') closeMobKartu();
+            try { window.scrollTo(0, 1); } catch(e) {}
+        };
+
         function setupFullscreen() {
-            const btns = [document.getElementById('btn-fs'), document.getElementById('btn-fs-drawer')].filter(Boolean);
-            function toggleFs() {
-                const doc = document.documentElement;
-                if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
-                    if (doc.requestFullscreen) doc.requestFullscreen();
-                    else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-                } else {
-                    if (document.exitFullscreen) document.exitFullscreen();
-                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                }
-            }
-            btns.forEach(b => b.addEventListener('click', toggleFs));
-
-            const handleFsChange = () => {
-                const isFs = document.fullscreenElement || document.webkitFullscreenElement;
-                btns.forEach(b => {
-                    b.style.opacity = isFs ? '0' : '1';
-                    b.style.pointerEvents = isFs ? 'none' : 'auto';
+            const btnFs = document.getElementById('btn-fs');
+            if (btnFs) {
+                btnFs.addEventListener('click', () => {
+                    if (window.innerWidth < 1024) {
+                        toggleAppMaximized();
+                    } else {
+                        const doc = document.documentElement;
+                        if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
+                            if (doc.requestFullscreen) doc.requestFullscreen();
+                            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+                        } else {
+                            if (document.exitFullscreen) document.exitFullscreen();
+                            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                        }
+                    }
                 });
-            };
+            }
 
-            document.addEventListener('fullscreenchange', handleFsChange);
-            document.addEventListener('webkitfullscreenchange', handleFsChange);
+            const btnDrawer = document.getElementById('btn-fs-drawer');
+            if (btnDrawer) {
+                btnDrawer.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleAppMaximized();
+                });
+            }
+
+            // Restore App-Maximized State
+            try {
+                if (localStorage.getItem('sapatamu_app_maximized') === '1' && window.innerWidth < 1024) {
+                    document.body.classList.add('is-app-maximized');
+                    const txt = document.getElementById('txt-fs-drawer');
+                    if (txt) txt.innerText = 'Keluar Layar Maksimal';
+                }
+            } catch(e) {}
         }
 
 

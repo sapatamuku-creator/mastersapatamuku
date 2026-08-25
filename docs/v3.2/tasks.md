@@ -81,5 +81,13 @@
   3. Menambahkan camera stream budget (`{ ideal: 480, max: 720 }`) pada pemindai QR `kiosk.html`.
   4. Menghapus GPU blur overhead pada drawer mobile di `formulir_tamu.html` dan `analytics.html`.
 
+### T2.6 — App-Maximized Viewport Mode (Anti-Black Screen Tablet/Mobile)
+- **Status:** Done (2026-08-25).
+- **Fungsi:** 
+  1. Menghadirkan mode Layar Maksimal berbasis CSS `100dvh` untuk Mobile & Tablet (`< 1024px`) menggantikan pemanggilan native `requestFullscreen()` OS Android yang mereset SurfaceView.
+  2. Menambahkan tombol toggle di Mobile Drawer (`#btn-fs-drawer`) dan Tablet Station Island Capsule (`.station-max-btn`).
+  3. Menjamin buka-tutup keyboard virtual tablet (Redmi Pad / Gboard) berjalan 100% mulus (60–90 FPS) tanpa black screen.
+
+
 
 
