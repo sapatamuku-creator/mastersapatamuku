@@ -1050,8 +1050,9 @@
                     let previewUrl = photos[0].trim();
                     const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
                     const match = previewUrl.match(driveRegex);
-                    if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file"))) {
-                        previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
+                    if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file") || previewUrl.includes("lh3.googleusercontent.com"))) {
+                        // Gunakan lh3 langsung — tidak ada 302 redirect, img src langsung load
+                        previewUrl = `https://lh3.googleusercontent.com/d/${match[1]}=w200`;
                     }
                     localStorage.setItem('sapatamu_avatar', previewUrl);
                     
@@ -1137,7 +1138,12 @@
             const avatarLetter = document.getElementById('header-avatar-letter');
             const avatarImg = document.getElementById('header-avatar-img');
             
-            const savedAvatar = localStorage.getItem('sapatamu_avatar');
+            let savedAvatar = localStorage.getItem('sapatamu_avatar');
+            // Invalidate cache jika masih pakai URL lama (drive.google.com/thumbnail = 302 redirect)
+            if (savedAvatar && savedAvatar.includes('drive.google.com/thumbnail')) {
+                localStorage.removeItem('sapatamu_avatar');
+                savedAvatar = null;
+            }
             if (savedAvatar) {
                 if (avatarLetter) avatarLetter.style.display = 'none';
                 if (avatarImg) {
@@ -1150,10 +1156,10 @@
                     avatarLetter.style.display = 'block';
                 }
                 if (avatarImg) avatarImg.style.display = 'none';
-                
-                // Fetch default avatar from Welcome Sign silently
-                setTimeout(fetchAvatarSilently, 1000);
             }
+            // Selalu refresh avatar dari server (cache-first sudah diganti lh3)
+            setTimeout(fetchAvatarSilently, 800);
+
 
             document.getElementById('display_active_package').innerText = parsed.package || "PAKET BELUM DIPILIH";
             const labels = {
