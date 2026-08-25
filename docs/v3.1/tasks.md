@@ -159,11 +159,12 @@
   - **Optimasi Scanner Stream**: Menyesuaikan frame rate scanning `Html5Qrcode` dari `25 FPS` menjadi `15 FPS` untuk menghemat 40% CPU/baterai tanpa mengurangi akurasi scan QR code.
   - **Jeda Background Slideshow**: Memastikan animasi looping zoom & crossfade background foto HD di-pause saat scanner kamera aktif agar browser tidak melakukan repainting layar penuh berulang kali.
 
-- [x] **T1.24 M — Mobile Mode Low-End Anti-Lag & Camera Constraint (`assets/guestbook-shared.css`, `checkin.html`, `onsite.html`)**
-  - **Eliminasi Backdrop-Filter Mobile**: Menghapus beban `backdrop-filter: blur(8px)` pada overlay mobile (`.mob-kartu-overlay`) dan menggantinya dengan warna solid semi-transparan `rgba(15, 23, 42, 0.65)` agar GPU smartphone budget (Mali-G52/G57, Adreno 610) bebas dari throttling render pass.
-  - **Camera Stream Budget**: Mengunci batasan resolusi stream scanner kamera `{ width: { ideal: 480, max: 720 }, height: { ideal: 480, max: 720 } }` pada `Html5Qrcode` di smartphone agar tidak membuka stream resolusi tinggi mentah yang menguras RAM 2GB–4GB.
-  - **Mobile Chunk Culling (30 Kartu/Batch)**: Menyesuaikan ukuran render awal di smartphone (`window.innerWidth < 680 ? 30 : 40`) untuk memangkas konsumsi memori DOM hingga <300 node di layar smartphone handheld.
-  - **Skill Baru `perf-ui-ux-3mode`**: Didaftarkan sebagai standar SSOT resmi di `.agents/skills/`, `.claude/skills/`, global IDE `~/.gemini/config/skills/`, `skills-lock.json`, dan `AGENT.md`.
+- [x] **T1.25 M — Global `perf-ui-ux-3mode` Rollout (`formulir_tamu.html`, `kiosk.html`, `analytics.html`, `sortir.html`, `logout.html`, `vendor-register.html`, `sync_queue.js`)**
+  - **DOM Render Culling Buku Tamu**: Menerapkan progressive rendering 30/40 kartu per batch pada `formulir_tamu.html` dengan scroll listener pasif dan in-memory instant search across 1.000+ data tamu.
+  - **Standardisasi Breakpoint 3-Mode Global**: Mengubah seluruh media query `< 768px` menjadi `< 679.98px` (Mobile) dan `680px – 1023.98px` (Tablet) di seluruh file halaman untuk mencegah tablet portrait (Redmi Pad/iPad) tertekan ke layout HP.
+  - **Eliminasi Backdrop Blur Mobile**: Menghapus beban `backdrop-filter: blur(8px)` pada overlay mobile drawer di `formulir_tamu.html` dan `analytics.html`.
+  - **Camera Stream Budgeting Kiosk**: Menambahkan video stream constraint `{ ideal: 480, max: 720 }` pada pemindai kamera `kiosk.html` agar tablet kiosk tidak mengalami overheating dan memory throttling.
+
 
 
 

@@ -424,7 +424,7 @@
                         letter-spacing: 0.5px;
                         animation: syncSlideIn 0.3s ease-out;
                     }
-                    @media (max-width: 767.98px) {
+                    @media (max-width: 679.98px) {
                         #sync-queue-badge {
                             bottom: 74px;
                             right: 12px;

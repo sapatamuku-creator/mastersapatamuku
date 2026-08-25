@@ -675,14 +675,30 @@
             const useFront = localStorage.getItem('force_frontcam_on') === '1';
             const mode = useFront ? "user" : "environment";
             
-            html5QrCode.start({ facingMode: mode }, { fps: 15 }, onScanSuccess)
+            html5QrCode.start(
+                { 
+                    facingMode: mode,
+                    width: { min: 360, ideal: 480, max: 720 },
+                    height: { min: 360, ideal: 480, max: 720 }
+                }, 
+                { fps: 15, qrbox: 240, aspectRatio: 1.0 }, 
+                onScanSuccess
+            )
             .then(() => {
                 document.getElementById('reader')?.classList.toggle('mirror-mode', useFront);
                 try{ window.__sapaPerf.measure('kiosk:initScanner', _perfS, mode); }catch(e){}
             })
             .catch(e => {
                 const fallbackMode = useFront ? "environment" : "user";
-                html5QrCode.start({ facingMode: fallbackMode }, { fps: 15 }, onScanSuccess)
+                html5QrCode.start(
+                    { 
+                        facingMode: fallbackMode,
+                        width: { min: 360, ideal: 480, max: 720 },
+                        height: { min: 360, ideal: 480, max: 720 }
+                    }, 
+                    { fps: 15, qrbox: 240, aspectRatio: 1.0 }, 
+                    onScanSuccess
+                )
                 .then(() => {
                     const finalUseFront = fallbackMode === "user";
                     document.getElementById('reader')?.classList.toggle('mirror-mode', finalUseFront);

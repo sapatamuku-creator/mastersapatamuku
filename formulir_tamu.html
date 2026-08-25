@@ -958,7 +958,7 @@
         .mob-kartu-panel {
             display: none;
         }
-        @media (max-width: 767.98px) {
+        @media (max-width: 679.98px) {
             #tour-trigger-btn,
             .form-sheet-toggle,
             #fs-toggle {
@@ -1006,18 +1006,16 @@
                 .mob-kartu-tab:hover { padding-left: 18px; }
             }
 
-            /* Backdrop gelap + blur */
+            /* Backdrop gelap solid berkinerja tinggi (bebas GPU blur di HP low-end) */
             .mob-kartu-overlay {
                 display: block;
                 position: fixed;
                 inset: 0;
-                background: rgba(15, 23, 42, 0.5);
-                backdrop-filter: blur(8px);
-                -webkit-backdrop-filter: blur(8px);
+                background: rgba(15, 23, 42, 0.65);
                 z-index: 100011;
                 opacity: 0;
                 pointer-events: none;
-                transition: opacity .3s ease;
+                transition: opacity .25s ease;
             }
             .mob-kartu-overlay.is-open {
                 opacity: 1;
@@ -1367,8 +1365,8 @@
             }
         }
 
-        /* MOBILE (<768px) Singkatan Pihak & Safe Layout */
-        @media (max-width: 767.98px) {
+        /* MOBILE (<680px) Singkatan Pihak & Safe Layout */
+        @media (max-width: 679.98px) {
             .details-row .pihak-full { display: none !important; }
             .details-row .pihak-short { display: inline !important; font-weight: 700; }
             .details-row .d-name-col { min-width: 90px; }
@@ -3986,13 +3984,37 @@
         });
     }
 
+    // ===== [perf-ui-ux-3mode] DOM Render Culling (Progressive Chunk Rendering) =====
+    var _formulirRenderChunkSize = window.innerWidth < 680 ? 30 : 40;
+    var _formulirCurrentRenderLimit = _formulirRenderChunkSize;
+    var _lastFormulirRenderedList = [];
+
+    function resetFormulirRenderLimit() {
+        _formulirCurrentRenderLimit = window.innerWidth < 680 ? 30 : 40;
+    }
+
+    window.addEventListener('scroll', function() {
+        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 450)) {
+            if (_lastFormulirRenderedList && _formulirCurrentRenderLimit < _lastFormulirRenderedList.length) {
+                _formulirCurrentRenderLimit += _formulirRenderChunkSize;
+                if (_formulirView === 'details') {
+                    renderDetails(_lastFormulirRenderedList);
+                } else {
+                    renderCards(_lastFormulirRenderedList);
+                }
+            }
+        }
+    }, { passive: true });
+
     let filterTimeout;
     window.debouncedFilterGuestList = function() {
         clearTimeout(filterTimeout);
+        resetFormulirRenderLimit();
         filterTimeout = setTimeout(window.filterGuestList, 200);
     };
 
     window.filterGuestList = function() {
+        resetFormulirRenderLimit();
         const query = document.getElementById('guest-search').value.trim().toLowerCase();
 
         // Start from full list
@@ -4080,6 +4102,7 @@
             if (statusLive) statusLive.innerText = 'Belum ada tamu terdaftar.';
             return;
         }
+        _lastFormulirRenderedList = list;
         if (emptyState) emptyState.style.display = 'none';
 
         if (_formulirView === 'details') {
@@ -4108,7 +4131,8 @@
             }
         });
 
-        listContainer.innerHTML = list.map(g => {
+        const visibleList = list.slice(0, _formulirCurrentRenderLimit);
+        listContainer.innerHTML = visibleList.map(g => {
             const statusWA = g.statusWA || '';
             const isSent    = statusWA.includes('\u2705') || statusWA.toUpperCase().includes('SENT');
             const isPending = !isSent && (statusWA.includes('\u26a0') || statusWA.toLowerCase().includes('duplikasi'));
@@ -4239,7 +4263,8 @@
             }
         });
 
-        body.innerHTML = list.map((g, idx) => {
+        const visibleList = list.slice(0, _formulirCurrentRenderLimit);
+        body.innerHTML = visibleList.map((g, idx) => {
             const statusWA = g.statusWA || '';
             const isSent    = statusWA.includes('\u2705') || statusWA.toUpperCase().includes('SENT');
             const isPending = !isSent && (statusWA.includes('\u26a0') || statusWA.toLowerCase().includes('duplikasi'));
@@ -6637,7 +6662,7 @@
             }
 
             /* RESPONSIVE */
-            @media (max-width: 767.98px) {
+            @media (max-width: 679.98px) {
                 /* Tooltip mobile = bottom-bar penuh, fokus spotlight tetap di tengah */
                 #tour-tooltip.tour-mobile-mode {
                     position: fixed;

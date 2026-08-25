@@ -73,4 +73,13 @@
   3. Sizing render chunk adaptif di smartphone (`30 kartu/batch`) untuk menekan jumlah node DOM < 300 elemen.
   4. Menetapkan skill baru `perf-ui-ux-3mode` di `.agents/skills/`, `.claude/skills/`, global IDE `~/.gemini/config/skills/`, `skills-lock.json`, dan `AGENT.md`.
 
+### T2.5 — Global `perf-ui-ux-3mode` Rollout
+- **Status:** Done (2026-08-25).
+- **Fungsi:** 
+  1. Menerapkan DOM Render Culling (30/40 chunk progressive windowing) di `formulir_tamu.html`.
+  2. Menstandarisasi breakpoint 3-mode (`< 680px` Mobile, `680px – 1023.98px` Tablet) di seluruh `formulir_tamu.html`, `analytics.html`, `sortir.html`, `logout.html`, `vendor-register.html`, dan `sync_queue.js`.
+  3. Menambahkan camera stream budget (`{ ideal: 480, max: 720 }`) pada pemindai QR `kiosk.html`.
+  4. Menghapus GPU blur overhead pada drawer mobile di `formulir_tamu.html` dan `analytics.html`.
+
+
 
