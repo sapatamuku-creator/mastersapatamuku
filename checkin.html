@@ -171,8 +171,8 @@
             gap: 8px;
         }
 
-        /* TABLET MODE (768px - 1023.98px): Dynamic Island Floating Capsule */
-        @media (min-width: 768px) and (max-width: 1023.98px) {
+        /* TABLET MODE (680px - 1023.98px): Dynamic Island Floating Capsule */
+        @media (min-width: 680px) and (max-width: 1023.98px) {
             .station-selector {
                 position: fixed !important;
                 top: 75px !important;
@@ -190,9 +190,9 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                background: rgba(255, 253, 251, 0.92);
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
+                background: rgba(255, 253, 251, 0.95);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
                 border: 1px solid var(--border);
                 border-radius: 50px;
                 padding: 6px 14px;
@@ -250,9 +250,9 @@
             .station-di-content {
                 display: none;
                 margin-top: 8px;
-                background: rgba(255, 253, 251, 0.96);
-                backdrop-filter: blur(24px);
-                -webkit-backdrop-filter: blur(24px);
+                background: rgba(255, 253, 251, 0.97);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
                 border: 1px solid var(--border);
                 border-radius: 20px;
                 padding: 12px 16px;
@@ -684,8 +684,8 @@
             display: none;
         }
 
-        /* TABLET MODE (768px - 1023.98px): Tampilkan Sesi, Pax */
-        @media (min-width: 768px) {
+        /* TABLET MODE (680px - 1023.98px): Tampilkan Sesi, Pax */
+        @media (min-width: 680px) {
             .details-row .d-alamat,
             .d-col-alamat {
                 flex: 1.2;
@@ -1373,7 +1373,7 @@
             background: #fafafa;
         }
 
-        @media (max-width: 767.98px) {
+        @media (max-width: 679.98px) {
 
             /* ── Laci kiri (drawer) ala formulir_tamu & analytics ── */
             .mob-kartu-tab {
@@ -1813,7 +1813,7 @@
         .pihak-short { display: none; font-weight: 700; }
         .guest-item .pihak-full { display: inline !important; }
         .guest-item .pihak-short { display: none !important; }
-        @media (max-width: 767.98px) {
+        @media (max-width: 679.98px) {
             .details-row .pihak-full { display: none !important; }
             .details-row .pihak-short { display: inline !important; font-weight: 700; }
         }
@@ -2983,7 +2983,7 @@
             // [v3.0 T2.2] core delegation — no route change, fallback to inline
             if (window.__guestbookCore && window.__guestbookCore.createScanner) {
                 try {
-                    if (!_coreScanner) _coreScanner = window.__guestbookCore.createScanner({ readerId: "reader", onScan: onScanSuccess, fps: 25, qrbox: 220 });
+                    if (!_coreScanner) _coreScanner = window.__guestbookCore.createScanner({ readerId: "reader", onScan: onScanSuccess, fps: 15, qrbox: 220 });
                     _coreScanner.start();
                     return;
                 } catch (e) { console.warn('[checkin] core scanner fallback', e); }
@@ -2994,7 +2994,7 @@
             const mode = useFront ? "user" : "environment";
             html5QrCode.start(
                 { facingMode: mode },
-                { fps: 25, qrbox: 220, aspectRatio: 1.0 },
+                { fps: 15, qrbox: 220, aspectRatio: 1.0 },
                 onScanSuccess
             ).then(() => {
                 document.getElementById('reader')?.classList.toggle('mirror-mode', useFront);
@@ -3534,13 +3534,21 @@
         return list;
     }
 
+        // DOM Render Culling (Progressive Chunk Rendering) for 60-90 FPS
+        var _renderChunkSize = 40;
+        var _currentRenderLimit = 40;
+        window.resetRenderLimit = function() {
+            _currentRenderLimit = 40;
+        };
+
         window.renderDetails = function () {
             var _perfR = 'checkin:renderDetails:start'; try { performance.mark(_perfR); } catch (e) { }
             const body = document.getElementById('details-body');
             const sentinel = document.getElementById('details-sentinel');
             if (!body) return;
             const filtered = getFilteredAndSortedGuests();
-            body.innerHTML = filtered.map(row => {
+            const visibleSlice = filtered.slice(0, _currentRenderLimit);
+            body.innerHTML = visibleSlice.map(row => {
                 const isDone = row.jamDatang && row.jamDatang !== '-';
                 const isChecked = selectedIDs.has(row.kode);
 
@@ -3565,9 +3573,9 @@
                 <span class="d-status" style="color:${isDone ? 'var(--success)' : (isChecked ? 'var(--gold)' : 'var(--text-muted)')}">${isDone ? '✓ ' + (row.realHadir || row.jamDatang || 'HADIR') : (isChecked ? '● SIAP CHECK-IN' : '● BELUM')}</span>
             </div>`;
             }).join('');
-            if (sentinel) sentinel.textContent = _hasMore ? 'Scroll untuk load lagi (' + filtered.length + '/' + masterData.length + (filtered.length !== masterData.length ? ' filtered' : '') + ')' : filtered.length + ' tamu';
+            if (sentinel) sentinel.textContent = visibleSlice.length < filtered.length ? 'Scroll untuk load lagi (' + visibleSlice.length + '/' + filtered.length + (filtered.length !== masterData.length ? ' filtered' : '') + ')' : filtered.length + ' tamu';
             renderPinnedPanel();
-            try { window.__sapaPerf.measure('checkin:renderDetails', _perfR, filtered.length + '/' + masterData.length); } catch (e) { }
+            try { window.__sapaPerf.measure('checkin:renderDetails', _perfR, visibleSlice.length + '/' + masterData.length); } catch (e) { }
         };
         window.loadMoreCheckin = async function () {
             if (_isLoadingMore || !_hasMore) return;
@@ -3590,23 +3598,48 @@
             } catch (e) { console.warn('loadMore error', e); }
             _isLoadingMore = false;
         };
-        // init view + infinite observer
+        // init view + infinite observer + DOM Culling scroll handler
         (function () {
             try {
                 const saved = localStorage.getItem('gb:view:checkin');
                 if (saved === 'details' || saved === 'card') _checkinView = saved;
             } catch (e) { }
-            // observer for sentinel
             setTimeout(() => {
                 const det = document.getElementById('details-list');
                 const sent = document.getElementById('details-sentinel');
+                const listWrap = document.querySelector('.list-wrapper');
+
+                function onListScroll(e) {
+                    const el = e.target;
+                    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
+                        const filtered = getFilteredAndSortedGuests();
+                        if (_currentRenderLimit < filtered.length) {
+                            _currentRenderLimit += _renderChunkSize;
+                            if (_checkinView === 'details' && typeof renderDetails === 'function') {
+                                renderDetails();
+                            } else if (typeof renderUI === 'function') {
+                                renderUI();
+                            }
+                        }
+                    }
+                }
+
+                if (listWrap) listWrap.addEventListener('scroll', onListScroll, { passive: true });
+                if (det) det.addEventListener('scroll', onListScroll, { passive: true });
+
                 if (det && sent && 'IntersectionObserver' in window) {
                     const io = new IntersectionObserver((entries) => {
-                        if (entries[0].isIntersecting && _checkinView === 'details') loadMoreCheckin();
+                        if (entries[0].isIntersecting) {
+                            const filtered = getFilteredAndSortedGuests();
+                            if (_currentRenderLimit < filtered.length) {
+                                _currentRenderLimit += _renderChunkSize;
+                                if (_checkinView === 'details') renderDetails(); else renderUI();
+                            } else if (_hasMore) {
+                                loadMoreCheckin();
+                            }
+                        }
                     }, { root: det, rootMargin: '100px' });
                     io.observe(sent);
-                } else if (det) {
-                    det.addEventListener('scroll', () => { if (det.scrollTop + det.clientHeight > det.scrollHeight - 100 && _checkinView === 'details') loadMoreCheckin(); });
                 }
                 // apply initial view
                 try { setCheckinView(_checkinView); } catch (e) { }
@@ -3616,9 +3649,11 @@
         window.renderUI = function () {
             var _perfR = 'checkin:render:start'; try { performance.mark(_perfR); } catch (e) { }
             const listBody = document.getElementById('guest-list');
+            if (!listBody) return;
             const filtered = getFilteredAndSortedGuests();
+            const visibleSlice = filtered.slice(0, _currentRenderLimit);
 
-            listBody.innerHTML = filtered.map(row => {
+            listBody.innerHTML = visibleSlice.map(row => {
                 const isDone = row.jamDatang && row.jamDatang !== "-";
                 const isChecked = selectedIDs.has(row.kode);
 
@@ -3661,10 +3696,23 @@
             }).join('');
             updateStats();
             renderPinnedPanel();
-            try { var _cnt = listBody.children ? listBody.children.length : filtered.length; window.__sapaPerf.measure('checkin:renderUI', _perfR, _cnt + '/' + masterData.length); } catch (e) { }
+            try { var _cnt = listBody.children ? listBody.children.length : visibleSlice.length; window.__sapaPerf.measure('checkin:renderUI', _perfR, _cnt + '/' + masterData.length); } catch (e) { }
         };
         // [v3.0 T1.2+T2.5] debounce input — view-aware (no route change)
-        try { var _origRenderUI2 = window.renderUI; var _viewAwareRender = function () { if (typeof _checkinView !== 'undefined' && _checkinView === 'details' && typeof renderDetails === 'function') renderDetails(); else _origRenderUI2(); }; var _debouncedRenderUI = window.__sapaDebounce(_viewAwareRender, 250); var _cBox = document.getElementById('search-box'); if (_cBox) { _cBox.removeAttribute('oninput'); _cBox.addEventListener('input', _debouncedRenderUI); } } catch (e) { }
+        try {
+            var _origRenderUI2 = window.renderUI;
+            var _viewAwareRender = function () {
+                if (typeof resetRenderLimit === 'function') resetRenderLimit();
+                if (typeof _checkinView !== 'undefined' && _checkinView === 'details' && typeof renderDetails === 'function') renderDetails();
+                else _origRenderUI2();
+            };
+            var _debouncedRenderUI = window.__sapaDebounce(_viewAwareRender, 250);
+            var _cBox = document.getElementById('search-box');
+            if (_cBox) {
+                _cBox.removeAttribute('oninput');
+                _cBox.addEventListener('input', _debouncedRenderUI);
+            }
+        } catch (e) { }
 
         function onScanSuccess(decodedText) {
             if (isBusy || document.getElementById('modalConfirm').style.display === 'flex') return;
@@ -4738,7 +4786,7 @@
     <script>
         /* ── Mobile: laci kiri (drawer pengaturan) + bottomsheet daftar tamu ── */
         (function () {
-            var mobileQuery = window.matchMedia('(max-width: 767.98px)');
+            var mobileQuery = window.matchMedia('(max-width: 679.98px)');
             var moved = false;
 
             function ensureDrawerPlacement(mobile) {

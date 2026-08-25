@@ -191,8 +191,8 @@
             gap: 8px;
         }
 
-        /* TABLET MODE (768px - 1023.98px): Dynamic Island Floating Capsule */
-        @media (min-width: 768px) and (max-width: 1023.98px) {
+        /* TABLET MODE (680px - 1023.98px): Dynamic Island Floating Capsule */
+        @media (min-width: 680px) and (max-width: 1023.98px) {
             .station-selector {
                 position: fixed !important;
                 top: 75px !important;
@@ -210,9 +210,9 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                background: rgba(255, 253, 251, 0.92);
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
+                background: rgba(255, 253, 251, 0.95);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
                 border: 1px solid var(--border);
                 border-radius: 50px;
                 padding: 6px 14px;
@@ -270,9 +270,9 @@
             .station-di-content {
                 display: none;
                 margin-top: 8px;
-                background: rgba(255, 253, 251, 0.96);
-                backdrop-filter: blur(24px);
-                -webkit-backdrop-filter: blur(24px);
+                background: rgba(255, 253, 251, 0.97);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
                 border: 1px solid var(--border);
                 border-radius: 20px;
                 padding: 12px 16px;
@@ -632,8 +632,8 @@
             display: none;
         }
 
-        /* TABLET MODE (768px - 1023.98px): Tampilkan Sesi, Pax */
-        @media (min-width: 768px) {
+        /* TABLET MODE (680px - 1023.98px): Tampilkan Sesi, Pax */
+        @media (min-width: 680px) {
             .details-row .d-alamat,
             .d-col-alamat {
                 flex: 1.2;
@@ -1315,7 +1315,7 @@
         .kartu-fs-btn svg { color: var(--gold); }
         .kartu-fs-btn:active { background: #fafafa; }
 
-        @media (max-width: 767.98px) {
+        @media (max-width: 679.98px) {
             /* ── Laci kiri (drawer) ala formulir_tamu & analytics ── */
             .mob-kartu-tab {
                 position: fixed; left: -2px; top: 50%; transform: translateY(-50%);
@@ -1467,7 +1467,7 @@
         .pihak-short { display: none; font-weight: 700; }
         .guest-item .pihak-full { display: inline !important; }
         .guest-item .pihak-short { display: none !important; }
-        @media (max-width: 767.98px) {
+        @media (max-width: 679.98px) {
             .details-row .pihak-full { display: none !important; }
             .details-row .pihak-short { display: inline !important; font-weight: 700; }
         }
@@ -3447,8 +3447,7 @@
         return list;
     }
 
-        function renderUI() {
-            var _perfR='onsite:render:start'; try{ performance.mark(_perfR); }catch(e){}
+        function updateStatsOnsite() {
             const checkedInGuests = masterData.filter(r => r.jamDatang && r.jamDatang !== "-");
             const totalGuests = checkedInGuests.length;
             const totalPax = checkedInGuests.reduce((acc, r) => acc + (parseInt(r.realHadir) || 0), 0);
@@ -3457,12 +3456,26 @@
             if (guestEl) guestEl.innerText = `${totalGuests} GUESTS`;
             const paxEl = document.getElementById('checkedin-pax');
             if (paxEl) paxEl.innerText = `${totalPax} PAX`;
+        }
 
+        // DOM Render Culling (Progressive Chunk Rendering) for 60-90 FPS
+        var _renderChunkSize = 40;
+        var _currentRenderLimit = 40;
+        window.resetRenderLimitOnsite = function() {
+            _currentRenderLimit = 40;
+        };
+
+        window.renderUI = function () {
+            var _perfR = 'onsite:renderUI:start'; try { performance.mark(_perfR); } catch (e) { }
+            const listBody = document.getElementById('guest-list');
+            if (!listBody) return;
             const filtered = getFilteredAndSortedGuestsOnsite();
-            document.getElementById('guest-list').innerHTML = filtered.map(row => {
+            const visibleSlice = filtered.slice(0, _currentRenderLimit);
+
+            listBody.innerHTML = visibleSlice.map(row => {
                 const isDone = row.jamDatang && row.jamDatang !== "-";
                 const isChecked = selectedIDs.has(row.kode);
-                
+
                 let giftIcons = "";
                 if ((row.statusHadiah && row.statusHadiah.includes("ANGPAO")) || parseFloat(row.tandaKasih) > 0) giftIcons += "🧧";
                 if (row.statusHadiah && row.statusHadiah.includes("KADO")) giftIcons += "🎁";
@@ -3499,32 +3512,47 @@
                     <div style="font-size:7px; color:#ccc; margin-top:8px; text-align:right">ID: ${row.kode}</div>
                 </div>`;
             }).join('');
+            updateStatsOnsite();
             renderPinnedPanelOnsite();
-            try{ window.__sapaPerf.measure('onsite:renderUI', _perfR, filtered.length+'/'+masterData.length); }catch(e){}
-        }
-        // [v3.0 T1.2+T2.5] debounce input — view-aware (no route change)
-        try{ var _origOnsiteRender=renderUI; var _viewAwareOnsite=function(){ if(typeof _onsiteView!=='undefined' && _onsiteView==='details' && typeof renderDetailsOnsite==='function') renderDetailsOnsite(); else _origOnsiteRender(); }; var _debouncedOnsiteRender=window.__sapaDebounce(_viewAwareOnsite, 250); var _oBox=document.getElementById('search-box'); if(_oBox){ _oBox.removeAttribute('oninput'); _oBox.addEventListener('input', _debouncedOnsiteRender); } }catch(e){}
-        // [v3.0 T2.5] Dual View + chunked infinite — no route change
-        window.setOnsiteView = function(mode){
-            _onsiteView = mode;
-            try{ localStorage.setItem('gb:view:onsite', mode); }catch(e){}
-            document.getElementById('btn-view-card-onsite').style.background = mode==='card'?'var(--primary)':'transparent';
-            document.getElementById('btn-view-card-onsite').style.color = mode==='card'?'#fff':'var(--text-muted)';
-            document.getElementById('btn-view-details-onsite').style.background = mode==='details'?'var(--primary)':'transparent';
-            document.getElementById('btn-view-details-onsite').style.color = mode==='details'?'#fff':'var(--text-muted)';
-            document.getElementById('guest-list').style.display = mode==='card' ? 'grid' : 'none';
-            document.getElementById('details-list-onsite').style.display = mode==='details' ? 'flex' : 'none';
-            if(mode==='details') renderDetailsOnsite(); else renderUI();
+            try { window.__sapaPerf.measure('onsite:renderUI', _perfR, visibleSlice.length + '/' + masterData.length); } catch (e) { }
         };
-        window.renderDetailsOnsite = function(){
-            var _perfR='onsite:renderDetails:start'; try{ performance.mark(_perfR); }catch(e){}
-            const body=document.getElementById('details-body-onsite');
-            const sentinel=document.getElementById('details-sentinel-onsite');
-            if(!body) return;
+        // [v3.0 T1.2+T2.5] debounce input — view-aware (no route change)
+        try {
+            var _origOnsiteRender = renderUI;
+            var _viewAwareOnsite = function () {
+                if (typeof resetRenderLimitOnsite === 'function') resetRenderLimitOnsite();
+                if (typeof _onsiteView !== 'undefined' && _onsiteView === 'details' && typeof renderDetailsOnsite === 'function') renderDetailsOnsite();
+                else _origOnsiteRender();
+            };
+            var _debouncedOnsiteRender = window.__sapaDebounce(_viewAwareOnsite, 250);
+            var _oBox = document.getElementById('search-box');
+            if (_oBox) {
+                _oBox.removeAttribute('oninput');
+                _oBox.addEventListener('input', _debouncedOnsiteRender);
+            }
+        } catch (e) { }
+        // [v3.0 T2.5] Dual View + chunked infinite — no route change
+        window.setOnsiteView = function (mode) {
+            _onsiteView = mode;
+            try { localStorage.setItem('gb:view:onsite', mode); } catch (e) { }
+            document.getElementById('btn-view-card-onsite').style.background = mode === 'card' ? 'var(--primary)' : 'transparent';
+            document.getElementById('btn-view-card-onsite').style.color = mode === 'card' ? '#fff' : 'var(--text-muted)';
+            document.getElementById('btn-view-details-onsite').style.background = mode === 'details' ? 'var(--primary)' : 'transparent';
+            document.getElementById('btn-view-details-onsite').style.color = mode === 'details' ? '#fff' : 'var(--text-muted)';
+            document.getElementById('guest-list').style.display = mode === 'card' ? 'grid' : 'none';
+            document.getElementById('details-list-onsite').style.display = mode === 'details' ? 'flex' : 'none';
+            if (mode === 'details') renderDetailsOnsite(); else renderUI();
+        };
+        window.renderDetailsOnsite = function () {
+            var _perfR = 'onsite:renderDetails:start'; try { performance.mark(_perfR); } catch (e) { }
+            const body = document.getElementById('details-body-onsite');
+            const sentinel = document.getElementById('details-sentinel-onsite');
+            if (!body) return;
             const filtered = getFilteredAndSortedGuestsOnsite();
-            body.innerHTML = filtered.map(row=>{
-                const isDone=row.jamDatang && row.jamDatang!=='-';
-                const isChecked=selectedIDs.has(row.kode);
+            const visibleSlice = filtered.slice(0, _currentRenderLimit);
+            body.innerHTML = visibleSlice.map(row => {
+                const isDone = row.jamDatang && row.jamDatang !== '-';
+                const isChecked = selectedIDs.has(row.kode);
 
                 let giftIcons = "";
                 if ((row.statusHadiah && row.statusHadiah.includes("ANGPAO")) || parseFloat(row.tandaKasih) > 0) giftIcons += "🧧";
@@ -3533,62 +3561,88 @@
                 const paxPlan = (row.rencanaHadir !== "" && row.rencanaHadir !== undefined) ? row.rencanaHadir : '1';
                 const sesiDisplay = row.sesi || row.rencanaJamHadir || row.jamHadir || '-';
 
-                return `<div class="details-row ${isDone ? 'checked-in' : ''} ${isChecked ? 'selected-pinned' : ''}" onclick="${isDone ? '' : 'toggleSelect(\''+row.kode+'\')'}">
-                    <span class="d-check">${isDone ? '✅' : '<input type="checkbox" '+(isChecked?'checked':'')+' style="accent-color:var(--gold); width:14px; height:14px;" onclick="event.stopPropagation(); toggleSelect(\''+row.kode+'\')">'}</span>
+                return `<div class="details-row ${isDone ? 'checked-in' : ''} ${isChecked ? 'selected-pinned' : ''}" onclick="${isDone ? '' : 'toggleSelect(\'' + row.kode + '\')'}">
+                    <span class="d-check">${isDone ? '✅' : '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' style="accent-color:var(--gold); width:14px; height:14px;" onclick="event.stopPropagation(); toggleSelect(\'' + row.kode + '\')">'}</span>
                     <div class="d-name-col">
-                        <div class="d-name">${row.nama||'-'} <span style="font-size:10px;">${giftIcons}</span> ${isChecked ? '<span class="badge-pinned">📌 TERPILIH</span>' : ''}</div>
-                        <div class="d-wa">${row.whatsapp||'-'}</div>
+                        <div class="d-name">${row.nama || '-'} <span style="font-size:10px;">${giftIcons}</span> ${isChecked ? '<span class="badge-pinned">📌 TERPILIH</span>' : ''}</div>
+                        <div class="d-wa">${row.whatsapp || '-'}</div>
                     </div>
-                    <span class="d-cat" title="${row.kategori||'UMUM'}">${row.kategori||'UMUM'}</span>
-                    <span class="d-pihak" title="${row.pihakPengundang||'-'}"><span class="pihak-full">${row.pihakPengundang||'-'}</span><span class="pihak-short">${window._formatPihakShort(row.pihakPengundang||'-')}</span></span>
-                    <span class="d-alamat" title="${row.alamat||'-'}">${row.alamat||'-'}</span>
+                    <span class="d-cat" title="${row.kategori || 'UMUM'}">${row.kategori || 'UMUM'}</span>
+                    <span class="d-pihak" title="${row.pihakPengundang || '-'}"><span class="pihak-full">${row.pihakPengundang || '-'}</span><span class="pihak-short">${window._formatPihakShort(row.pihakPengundang || '-')}</span></span>
+                    <span class="d-alamat" title="${row.alamat || '-'}">${row.alamat || '-'}</span>
                     <span class="d-sesi" title="${sesiDisplay}">${sesiDisplay}</span>
                     <span class="d-pax" title="Plan: ${paxPlan} Pax">${paxPlan} PAX</span>
-                    <span class="d-status" style="color:${isDone ? 'var(--success)' : (isChecked ? 'var(--gold)' : 'var(--text-muted)')}">${isDone ? '✓ '+(row.realHadir||row.jamDatang||'HADIR') : (isChecked ? '● SIAP CHECK-IN' : '● BELUM')}</span>
+                    <span class="d-status" style="color:${isDone ? 'var(--success)' : (isChecked ? 'var(--gold)' : 'var(--text-muted)')}">${isDone ? '✓ ' + (row.realHadir || row.jamDatang || 'HADIR') : (isChecked ? '● SIAP CHECK-IN' : '● BELUM')}</span>
                 </div>`;
             }).join('');
-            if(sentinel) sentinel.textContent = _hasMore ? 'Scroll untuk load lagi ('+filtered.length+'/'+masterData.length+(filtered.length!==masterData.length?' filtered':'')+')' : filtered.length+' tamu';
+            if (sentinel) sentinel.textContent = visibleSlice.length < filtered.length ? 'Scroll untuk load lagi (' + visibleSlice.length + '/' + filtered.length + (filtered.length !== masterData.length ? ' filtered' : '') + ')' : filtered.length + ' tamu';
             renderPinnedPanelOnsite();
-            try{ window.__sapaPerf.measure('onsite:renderDetails', _perfR, filtered.length+'/'+masterData.length); }catch(e){}
+            try { window.__sapaPerf.measure('onsite:renderDetails', _perfR, visibleSlice.length + '/' + masterData.length); } catch (e) { }
         };
-        window.loadMoreOnsite = async function(){
-            if(_isLoadingMore || !_hasMore) return;
-            _isLoadingMore=true;
-            const sentinel=document.getElementById('details-sentinel-onsite');
-            if(sentinel) sentinel.textContent='Memuat...';
-            try{
-                const more = await (window.__guestbookCore ? window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit:_fetchLimit, offset:_fetchOffset }) : (async()=>{
-                    const url="https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq."+CURRENT_SS_ID+"&order=row.desc&limit="+_fetchLimit+"&offset="+_fetchOffset;
-                    const r=await fetch(url,{headers:{apikey:SB_KEY, Authorization:'Bearer '+SB_KEY}});
-                    const d=await r.json();
-                    return (d||[]).map(item=>({ row:item.row, nama:item.nama, whatsapp:item.whatsapp, kategori:item.kategori, kode:item.kode, barcode:`https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`, rencanaHadir:item.rencana_hadir, statusHadir:String(item.status_hadir), jamDatang:item.jam_datang, souvenir:item.souvenir, pihakPengundang:item.pihak_pengundang, alamat:item.alamat, realHadir:item.real_hadir, statusWA:item.status_wa, statusHadiah:item.status_hadiah, tandaKasih:item.tanda_kasih, sesi:item.sesi }));
+        window.loadMoreOnsite = async function () {
+            if (_isLoadingMore || !_hasMore) return;
+            _isLoadingMore = true;
+            const sentinel = document.getElementById('details-sentinel-onsite');
+            if (sentinel) sentinel.textContent = 'Memuat...';
+            try {
+                const more = await (window.__guestbookCore ? window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit: _fetchLimit, offset: _fetchOffset }) : (async () => {
+                    const url = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc&limit=" + _fetchLimit + "&offset=" + _fetchOffset;
+                    const r = await fetch(url, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+                    const d = await r.json();
+                    return (d || []).map(item => ({ row: item.row, nama: item.nama, whatsapp: item.whatsapp, kategori: item.kategori, kode: item.kode, barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`, rencanaHadir: item.rencana_hadir, statusHadir: String(item.status_hadir), jamDatang: item.jam_datang, souvenir: item.souvenir, pihakPengundang: item.pihak_pengundang, alamat: item.alamat, realHadir: item.real_hadir, statusWA: item.status_hadir, statusHadiah: item.status_hadiah, tandaKasih: item.tanda_kasih, sesi: item.sesi }));
                 })());
-                if(more && more.length){
-                    more.forEach(g=>{ if(!guestMap.has(String(g.kode).trim().toUpperCase())){ masterData.push(g); guestMap.set(String(g.kode).trim().toUpperCase(), g); } });
+                if (more && more.length) {
+                    more.forEach(g => { if (!guestMap.has(String(g.kode).trim().toUpperCase())) { masterData.push(g); guestMap.set(String(g.kode).trim().toUpperCase(), g); } });
                     _fetchOffset = masterData.length;
                     _hasMore = more.length === _fetchLimit;
-                    if(_onsiteView==='details') renderDetailsOnsite(); else renderUI();
-                } else { _hasMore=false; if(sentinel) sentinel.textContent='Semua tamu dimuat'; }
-            }catch(e){ console.warn('loadMore onsite error',e); }
-            _isLoadingMore=false;
+                    if (_onsiteView === 'details') renderDetailsOnsite(); else renderUI();
+                } else { _hasMore = false; if (sentinel) sentinel.textContent = 'Semua tamu dimuat'; }
+            } catch (e) { console.warn('loadMore onsite error', e); }
+            _isLoadingMore = false;
         };
-        (function(){
-            try{
-                const saved=localStorage.getItem('gb:view:onsite');
-                if(saved==='details' || saved==='card') _onsiteView=saved;
-            }catch(e){}
-            setTimeout(()=>{
-                const det=document.getElementById('details-list-onsite');
-                const sent=document.getElementById('details-sentinel-onsite');
-                if(det && sent && 'IntersectionObserver' in window){
-                    const io=new IntersectionObserver((entries)=>{
-                        if(entries[0].isIntersecting && _onsiteView==='details') loadMoreOnsite();
+        (function () {
+            try {
+                const saved = localStorage.getItem('gb:view:onsite');
+                if (saved === 'details' || saved === 'card') _onsiteView = saved;
+            } catch (e) { }
+            setTimeout(() => {
+                const det = document.getElementById('details-list-onsite');
+                const sent = document.getElementById('details-sentinel-onsite');
+                const listWrap = document.querySelector('.list-wrapper');
+
+                function onListScroll(e) {
+                    const el = e.target;
+                    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
+                        const filtered = getFilteredAndSortedGuestsOnsite();
+                        if (_currentRenderLimit < filtered.length) {
+                            _currentRenderLimit += _renderChunkSize;
+                            if (_onsiteView === 'details' && typeof renderDetailsOnsite === 'function') {
+                                renderDetailsOnsite();
+                            } else if (typeof renderUI === 'function') {
+                                renderUI();
+                            }
+                        }
+                    }
+                }
+
+                if (listWrap) listWrap.addEventListener('scroll', onListScroll, { passive: true });
+                if (det) det.addEventListener('scroll', onListScroll, { passive: true });
+
+                if (det && sent && 'IntersectionObserver' in window) {
+                    const io = new IntersectionObserver((entries) => {
+                        if (entries[0].isIntersecting) {
+                            const filtered = getFilteredAndSortedGuestsOnsite();
+                            if (_currentRenderLimit < filtered.length) {
+                                _currentRenderLimit += _renderChunkSize;
+                                if (_onsiteView === 'details') renderDetailsOnsite(); else renderUI();
+                            } else if (_hasMore) {
+                                loadMoreOnsite();
+                            }
+                        }
                     }, { root: det, rootMargin: '100px' });
                     io.observe(sent);
-                } else if(det){
-                    det.addEventListener('scroll', ()=>{ if(det.scrollTop + det.clientHeight > det.scrollHeight - 100 && _onsiteView==='details') loadMoreOnsite(); });
                 }
-                try{ setOnsiteView(_onsiteView); }catch(e){}
+                try { setOnsiteView(_onsiteView); } catch (e) { }
             }, 500);
         })();
 
@@ -4692,7 +4746,7 @@
 <script>
 /* ── Mobile: laci kiri (drawer pengaturan) + bottomsheet daftar tamu ── */
 (function () {
-    var mobileQuery = window.matchMedia('(max-width: 767.98px)');
+    var mobileQuery = window.matchMedia('(max-width: 679.98px)');
     var moved = false;
 
     function ensureDrawerPlacement(mobile) {

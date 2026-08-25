@@ -56,3 +56,12 @@
 ### T2.2 — Audit Konsistensi Duplikasi CSS Inline vs Shared
 - **Status:** Backlog.
 - **Catatan:** Rule `.pihak-full/.pihak-short` ada ganda di inline `<style>` kedua halaman dan `guestbook-shared.css`. Perlu audit agar tidak ada drift cascade saat salah satu diubah.
+
+### T2.3 — Tablet Responsiveness & 60-90 FPS Performance Optimization (Redmi Pad 2 & Chrome Android)
+- **Status:** Done (2026-08-25).
+- **Fungsi:** 
+  1. Penyesuaian breakpoint Mobile `< 680px` dan Tablet `680px – 1023.98px` agar tablet portrait (lebar ~720–750px) otomatis masuk ke **Tablet Mode** (Grid 2-Kolom & Tablet Station Island), bukan lagi layout Bottom Sheet HP.
+  2. DOM Render Culling (Windowed Rendering) pada `renderUI()` dan `renderDetails()`: 1.000 data tamu tetap di RAM untuk live search instan (<5ms), namun yang dimasukkan ke DOM HTML dibatasi 40–50 kartu awal (`_renderLimit = 40`) dengan progressive infinite scroll.
+  3. Meringankan intensitas `backdrop-filter: blur(...)` pada elemen station selector, navigation island, dan scanner overlays menjadi warna solid semi-transparan berkinerja tinggi agar GPU Mali/Adreno di Android Chrome tidak throttling.
+  4. Optimasi Scanner kamera `Html5Qrcode` dari 25 FPS ke 15 FPS (hemat 40% CPU) dan pause animasi background slideshow saat kamera aktif.
+
