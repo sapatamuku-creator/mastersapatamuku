@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
     <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
     <title>sapatamu.ku | ONSITE SCAN & REG</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
@@ -75,7 +75,35 @@
             margin: 0;
             padding: 0;
             background: var(--bg);
+            background-color: #FFF9F5;
             font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* ═══ FULLSCREEN & BACKDROP ANTI-BLACK-SCREEN (REDMI PAD / CHROME ANDROID) ═══ */
+        :fullscreen,
+        ::backdrop,
+        :-webkit-full-screen,
+        html:fullscreen,
+        body:fullscreen,
+        html:-webkit-full-screen,
+        body:-webkit-full-screen {
+            background-color: #FFF9F5 !important;
+            background: #FFF9F5 !important;
+        }
+
+        #reader {
+            will-change: transform;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        #app-root,
+        .bottom-section,
+        .list-wrapper,
+        #details-list-onsite {
+            background-color: #FFF9F5;
         }
 
         /* ─── DYNAMIC HERO AMBIENT SLIDESHOW (Scanner & Header Area) ─── */
@@ -1471,6 +1499,47 @@
             .details-row .pihak-short { display: inline !important; font-weight: 700; }
         }
 
+        /* ═══ SAPATAMU APP-MAXIMIZED MODE (ANTI-BLACK-SCREEN TABLET & MOBILE VIEWPORT FULLSCREEN) ═══ */
+        @media (max-width: 1023.98px) {
+            body.is-app-maximized .sapatamu-navbar {
+                display: none !important;
+            }
+            body.is-app-maximized #app-root {
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                padding-top: 0 !important;
+            }
+            body.is-app-maximized .header {
+                padding-top: 8px !important;
+                padding-bottom: 2px !important;
+            }
+            body.is-app-maximized .station-selector {
+                top: 10px !important;
+            }
+            body.is-app-maximized .station-di-trigger {
+                background: rgba(255, 253, 251, 0.98) !important;
+                border-color: var(--gold) !important;
+                box-shadow: 0 4px 15px rgba(200, 150, 46, 0.25) !important;
+            }
+            body.is-app-maximized .scanner-container {
+                max-height: calc(100dvh - 280px) !important;
+            }
+            body.is-app-maximized .bottom-section {
+                flex: 1 !important;
+                max-height: none !important;
+            }
+            body.is-app-maximized #btn-fs-drawer {
+                background: rgba(200, 150, 46, 0.15) !important;
+                border-color: var(--gold) !important;
+                color: var(--gold) !important;
+            }
+            body.is-app-maximized .station-max-btn {
+                background: rgba(200, 150, 46, 0.25) !important;
+                border-color: var(--gold) !important;
+                color: var(--gold) !important;
+            }
+        }
+
         /* Selected / Pinned Guest Highlight */
         .guest-item.selected-pinned {
             background: #fffdf5 !important;
@@ -1764,9 +1833,9 @@
             <div class="kartu-title">Pengaturan</div>
             <div class="kartu-sub">Kamera, countdown, quick check-in, dan jalur.</div>
             <div class="kartu-demarc"></div>
-            <button type="button" class="kartu-fs-btn" id="btn-fs-drawer" aria-label="Layar penuh">
-                <span>Layar Penuh</span>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            <button type="button" class="kartu-fs-btn" id="btn-fs-drawer" onclick="toggleAppMaximized(event)" aria-label="Mode Layar Maksimal">
+                <span id="txt-fs-drawer">Mode Layar Maksimal</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
             </button>
         </aside>
 
@@ -1869,6 +1938,12 @@
                             <span class="cam-toggle-slider"></span>
                         </label>
                     </div>
+                    <!-- App-Maximized Toggle for Tablet -->
+                    <button type="button" class="station-max-btn" onclick="toggleAppMaximized(event)" title="Mode Layar Maksimal (Bebas Blackscreen)" style="background:transparent; border:1px solid var(--border); border-radius:10px; cursor:pointer; padding:4px 8px; display:inline-flex; align-items:center; color:var(--text-muted); font-size:10px; margin-left:5px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                        </svg>
+                    </button>
                     <!-- pw-btn injected by PrinterWidget.init() -->
                 </div>
             </div>
@@ -2821,30 +2896,72 @@
             }
         }
 
-        function setupFullscreen() {
-            const btns = [document.getElementById('btn-fs'), document.getElementById('btn-fs-drawer')].filter(Boolean);
-            function toggleFs() {
-                const doc = document.documentElement;
-                if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
-                    if (doc.requestFullscreen) doc.requestFullscreen();
-                    else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-                } else {
-                    if (document.exitFullscreen) document.exitFullscreen();
-                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                }
+        window.toggleAppMaximized = function(e) {
+            if (e) {
+                try { e.preventDefault(); e.stopPropagation(); } catch(err) {}
             }
-            btns.forEach(b => b.addEventListener('click', toggleFs));
+            const isMax = document.body.classList.toggle('is-app-maximized');
+            try { localStorage.setItem('sapatamu_app_maximized', isMax ? '1' : '0'); } catch(e) {}
+            
+            const txt = document.getElementById('txt-fs-drawer');
+            if (txt) txt.innerText = isMax ? 'Keluar Layar Maksimal' : 'Mode Layar Maksimal';
+            
+            const maxBtns = document.querySelectorAll('.station-max-btn');
+            maxBtns.forEach(btn => {
+                btn.style.borderColor = isMax ? 'var(--gold)' : 'var(--border)';
+                btn.style.background = isMax ? 'rgba(200, 150, 46, 0.25)' : 'transparent';
+                btn.style.color = isMax ? 'var(--gold)' : 'var(--text-muted)';
+            });
+            
+            if (typeof closeMobKartu === 'function') closeMobKartu();
+            const widget = document.getElementById('station-selector-widget');
+            if (widget) widget.classList.remove('is-expanded');
+            
+            try { window.scrollTo(0, 1); } catch(e) {}
+        };
 
-            const handleFsChange = () => {
-                const isFs = document.fullscreenElement || document.webkitFullscreenElement;
-                btns.forEach(b => {
-                    b.style.opacity = isFs ? '0' : '1';
-                    b.style.pointerEvents = isFs ? 'none' : 'auto';
+        function setupFullscreen() {
+            const btnFs = document.getElementById('btn-fs');
+            if (btnFs) {
+                btnFs.addEventListener('click', (e) => {
+                    if (window.innerWidth < 1024) {
+                        toggleAppMaximized(e);
+                    } else {
+                        const doc = document.documentElement;
+                        if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
+                            if (doc.requestFullscreen) doc.requestFullscreen();
+                            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+                        } else {
+                            if (document.exitFullscreen) document.exitFullscreen();
+                            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                        }
+                    }
                 });
-            };
+            }
 
-            document.addEventListener('fullscreenchange', handleFsChange);
-            document.addEventListener('webkitfullscreenchange', handleFsChange);
+            const btnDrawer = document.getElementById('btn-fs-drawer');
+            if (btnDrawer) {
+                btnDrawer.addEventListener('click', (e) => {
+                    toggleAppMaximized(e);
+                });
+            }
+
+            // Restore App-Maximized State on load
+            try {
+                if (localStorage.getItem('sapatamu_app_maximized') === '1' && window.innerWidth < 1024) {
+                    document.body.classList.add('is-app-maximized');
+                    setTimeout(() => {
+                        const txt = document.getElementById('txt-fs-drawer');
+                        if (txt) txt.innerText = 'Keluar Layar Maksimal';
+                        const maxBtns = document.querySelectorAll('.station-max-btn');
+                        maxBtns.forEach(btn => {
+                            btn.style.borderColor = 'var(--gold)';
+                            btn.style.background = 'rgba(200, 150, 46, 0.25)';
+                            btn.style.color = 'var(--gold)';
+                        });
+                    }, 300);
+                }
+            } catch(e) {}
         }
 
         async function fetchData() {
@@ -3609,7 +3726,18 @@
                 const sent = document.getElementById('details-sentinel-onsite');
                 const listWrap = document.querySelector('.list-wrapper');
 
+                let _isKeyboardActive = false;
+                window.addEventListener('focusin', (e) => {
+                    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                        _isKeyboardActive = true;
+                    }
+                }, { passive: true });
+                window.addEventListener('focusout', () => {
+                    setTimeout(() => { _isKeyboardActive = false; }, 350);
+                }, { passive: true });
+
                 function onListScroll(e) {
+                    if (_isKeyboardActive) return; // Prevent heavy DOM recalculation during keyboard animation
                     const el = e.target;
                     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
                         const filtered = getFilteredAndSortedGuestsOnsite();
