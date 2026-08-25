@@ -65,3 +65,12 @@
   3. Meringankan intensitas `backdrop-filter: blur(...)` pada elemen station selector, navigation island, dan scanner overlays menjadi warna solid semi-transparan berkinerja tinggi agar GPU Mali/Adreno di Android Chrome tidak throttling.
   4. Optimasi Scanner kamera `Html5Qrcode` dari 25 FPS ke 15 FPS (hemat 40% CPU) dan pause animasi background slideshow saat kamera aktif.
 
+### T2.4 — Mobile Mode Low-End Anti-Lag & Camera Constraint
+- **Status:** Done (2026-08-25).
+- **Fungsi:** 
+  1. Eliminasi `backdrop-filter: blur(8px)` pada overlay mobile (`.mob-kartu-overlay`) dan menggantinya dengan `background: rgba(15, 23, 42, 0.65)` agar GPU smartphone budget (RAM 2GB–4GB) bebas lag.
+  2. Memasang budget resolusi stream kamera `{ ideal: 480, max: 720 }` pada `Html5Qrcode` di mobile.
+  3. Sizing render chunk adaptif di smartphone (`30 kartu/batch`) untuk menekan jumlah node DOM < 300 elemen.
+  4. Menetapkan skill baru `perf-ui-ux-3mode` di `.agents/skills/`, `.claude/skills/`, global IDE `~/.gemini/config/skills/`, `skills-lock.json`, dan `AGENT.md`.
+
+

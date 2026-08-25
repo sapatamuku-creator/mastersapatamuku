@@ -1422,13 +1422,11 @@
                 display: block;
                 position: fixed;
                 inset: 0;
-                background: rgba(15, 23, 42, 0.5);
-                backdrop-filter: blur(8px);
-                -webkit-backdrop-filter: blur(8px);
+                background: rgba(15, 23, 42, 0.65);
                 z-index: 100011;
                 opacity: 0;
                 pointer-events: none;
-                transition: opacity .3s ease;
+                transition: opacity .25s ease;
             }
 
             .mob-kartu-overlay.is-open {
@@ -2993,7 +2991,11 @@
             const useFront = localStorage.getItem('force_frontcam_on') === '1';
             const mode = useFront ? "user" : "environment";
             html5QrCode.start(
-                { facingMode: mode },
+                { 
+                    facingMode: mode,
+                    width: { min: 360, ideal: 480, max: 720 },
+                    height: { min: 360, ideal: 480, max: 720 }
+                },
                 { fps: 15, qrbox: 220, aspectRatio: 1.0 },
                 onScanSuccess
             ).then(() => {
@@ -3535,10 +3537,10 @@
     }
 
         // DOM Render Culling (Progressive Chunk Rendering) for 60-90 FPS
-        var _renderChunkSize = 40;
-        var _currentRenderLimit = 40;
+        var _renderChunkSize = window.innerWidth < 680 ? 30 : 40;
+        var _currentRenderLimit = _renderChunkSize;
         window.resetRenderLimit = function() {
-            _currentRenderLimit = 40;
+            _currentRenderLimit = window.innerWidth < 680 ? 30 : 40;
         };
 
         window.renderDetails = function () {

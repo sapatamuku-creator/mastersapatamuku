@@ -159,5 +159,12 @@
   - **Optimasi Scanner Stream**: Menyesuaikan frame rate scanning `Html5Qrcode` dari `25 FPS` menjadi `15 FPS` untuk menghemat 40% CPU/baterai tanpa mengurangi akurasi scan QR code.
   - **Jeda Background Slideshow**: Memastikan animasi looping zoom & crossfade background foto HD di-pause saat scanner kamera aktif agar browser tidak melakukan repainting layar penuh berulang kali.
 
+- [x] **T1.24 M — Mobile Mode Low-End Anti-Lag & Camera Constraint (`assets/guestbook-shared.css`, `checkin.html`, `onsite.html`)**
+  - **Eliminasi Backdrop-Filter Mobile**: Menghapus beban `backdrop-filter: blur(8px)` pada overlay mobile (`.mob-kartu-overlay`) dan menggantinya dengan warna solid semi-transparan `rgba(15, 23, 42, 0.65)` agar GPU smartphone budget (Mali-G52/G57, Adreno 610) bebas dari throttling render pass.
+  - **Camera Stream Budget**: Mengunci batasan resolusi stream scanner kamera `{ width: { ideal: 480, max: 720 }, height: { ideal: 480, max: 720 } }` pada `Html5Qrcode` di smartphone agar tidak membuka stream resolusi tinggi mentah yang menguras RAM 2GB–4GB.
+  - **Mobile Chunk Culling (30 Kartu/Batch)**: Menyesuaikan ukuran render awal di smartphone (`window.innerWidth < 680 ? 30 : 40`) untuk memangkas konsumsi memori DOM hingga <300 node di layar smartphone handheld.
+  - **Skill Baru `perf-ui-ux-3mode`**: Didaftarkan sebagai standar SSOT resmi di `.agents/skills/`, `.claude/skills/`, global IDE `~/.gemini/config/skills/`, `skills-lock.json`, dan `AGENT.md`.
+
+
 
 

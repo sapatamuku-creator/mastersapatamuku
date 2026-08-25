@@ -32,10 +32,10 @@ AGENT.md                              ← DOKUMEN UTAMA (Anda sedang membaca)
 ├── .agents/                          ← SEMUA komponen agent (sumber utama)
 │   ├── AGENTS.md                     ← Agent rules dari addyosmani
 │   ├── CLAUDE.md                     ← Claude Code instructions
-│   ├── skills/                       ← 56 Skill definition files
+│   ├── skills/                       ← 57 Skill definition files
 │   │   ├── (5) animation-vocabulary, apple-design, emil-design-eng, improve-animations, review-animations
 │   │   ├── (2) supabase, supabase-postgres-best-practices
-│   │   ├── (8) deploy-to-vercel, frontend-design, ui-ux-pro-max, clone-website, skill-decision-gate, guestbook-v3-gate, live-progress-ux, instant-skeleton-loading
+│   │   ├── (9) deploy-to-vercel, frontend-design, ui-ux-pro-max, clone-website, skill-decision-gate, guestbook-v3-gate, live-progress-ux, instant-skeleton-loading, perf-ui-ux-3mode ⭐
 │   │   ├── (1+7 refs) design-taste-guide ⭐ anti-AI-generic (01 anti-pattern · 02 aesthetic · 03 type · 04 60:30:10 · 05 vertikal · 06 responsive · 07 preflight)
 │   │   ├── (1+8 refs+8 templates) sapatamu-projects ⭐⭐ CANON SapaTamu (00 tokens · 01 layout · 02 navbar-island · 03 modal · 04 skeleton/perf · 05 offline · 06 auth-guard · 07 preflight + templates/tokens.css etc)
 │   │   ├── (1) avoid-ai-design (audit P0/P1/P2 + rewrite)
