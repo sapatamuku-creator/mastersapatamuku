@@ -1482,33 +1482,6 @@
                 overflow-y: auto;
             }
 
-            /* ═══ SAPATAMU APP-MAXIMIZED MODE (ANTI-BLACK-SCREEN VIEWPORT FULLSCREEN) ═══ */
-            body.is-app-maximized .sapatamu-navbar {
-                display: none !important;
-            }
-            body.is-app-maximized #app-root {
-                height: 100dvh !important;
-                max-height: 100dvh !important;
-            }
-            body.is-app-maximized .header {
-                padding-top: 6px !important;
-                padding-bottom: 2px !important;
-            }
-            body.is-app-maximized .station-selector {
-                top: 15px !important;
-            }
-            body.is-app-maximized .bottom-section {
-                max-height: calc(100dvh - 70px) !important;
-            }
-            body.is-app-maximized #btn-fs-drawer {
-                background: rgba(200, 150, 46, 0.12) !important;
-                border-color: var(--gold) !important;
-                color: var(--gold) !important;
-            }
-            body.is-app-maximized .station-max-btn {
-                color: var(--gold) !important;
-            }
-
             .mob-kartu-panel.is-open {
                 transform: translateX(0);
             }
@@ -1869,6 +1842,47 @@
         @media (max-width: 679.98px) {
             .details-row .pihak-full { display: none !important; }
             .details-row .pihak-short { display: inline !important; font-weight: 700; }
+        }
+
+        /* ═══ SAPATAMU APP-MAXIMIZED MODE (ANTI-BLACK-SCREEN TABLET & MOBILE VIEWPORT FULLSCREEN) ═══ */
+        @media (max-width: 1023.98px) {
+            body.is-app-maximized .sapatamu-navbar {
+                display: none !important;
+            }
+            body.is-app-maximized #app-root {
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                padding-top: 0 !important;
+            }
+            body.is-app-maximized .header {
+                padding-top: 8px !important;
+                padding-bottom: 2px !important;
+            }
+            body.is-app-maximized .station-selector {
+                top: 10px !important;
+            }
+            body.is-app-maximized .station-di-trigger {
+                background: rgba(255, 253, 251, 0.98) !important;
+                border-color: var(--gold) !important;
+                box-shadow: 0 4px 15px rgba(200, 150, 46, 0.25) !important;
+            }
+            body.is-app-maximized .scanner-container {
+                max-height: calc(100dvh - 280px) !important;
+            }
+            body.is-app-maximized .bottom-section {
+                flex: 1 !important;
+                max-height: none !important;
+            }
+            body.is-app-maximized #btn-fs-drawer {
+                background: rgba(200, 150, 46, 0.15) !important;
+                border-color: var(--gold) !important;
+                color: var(--gold) !important;
+            }
+            body.is-app-maximized .station-max-btn {
+                background: rgba(200, 150, 46, 0.25) !important;
+                border-color: var(--gold) !important;
+                color: var(--gold) !important;
+            }
         }
 
         /* Selected / Pinned Guest Highlight */
@@ -2989,23 +3003,36 @@
             }
         }
 
-        window.toggleAppMaximized = function() {
+        window.toggleAppMaximized = function(e) {
+            if (e) {
+                try { e.preventDefault(); e.stopPropagation(); } catch(err) {}
+            }
             const isMax = document.body.classList.toggle('is-app-maximized');
             try { localStorage.setItem('sapatamu_app_maximized', isMax ? '1' : '0'); } catch(e) {}
             
             const txt = document.getElementById('txt-fs-drawer');
             if (txt) txt.innerText = isMax ? 'Keluar Layar Maksimal' : 'Mode Layar Maksimal';
             
+            const maxBtns = document.querySelectorAll('.station-max-btn');
+            maxBtns.forEach(btn => {
+                btn.style.borderColor = isMax ? 'var(--gold)' : 'var(--border)';
+                btn.style.background = isMax ? 'rgba(200, 150, 46, 0.25)' : 'transparent';
+                btn.style.color = isMax ? 'var(--gold)' : 'var(--text-muted)';
+            });
+            
             if (typeof closeMobKartu === 'function') closeMobKartu();
+            const widget = document.getElementById('station-selector-widget');
+            if (widget) widget.classList.remove('is-expanded');
+            
             try { window.scrollTo(0, 1); } catch(e) {}
         };
 
         function setupFullscreen() {
             const btnFs = document.getElementById('btn-fs');
             if (btnFs) {
-                btnFs.addEventListener('click', () => {
+                btnFs.addEventListener('click', (e) => {
                     if (window.innerWidth < 1024) {
-                        toggleAppMaximized();
+                        toggleAppMaximized(e);
                     } else {
                         const doc = document.documentElement;
                         if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
@@ -3022,18 +3049,24 @@
             const btnDrawer = document.getElementById('btn-fs-drawer');
             if (btnDrawer) {
                 btnDrawer.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleAppMaximized();
+                    toggleAppMaximized(e);
                 });
             }
 
-            // Restore App-Maximized State
+            // Restore App-Maximized State on load
             try {
                 if (localStorage.getItem('sapatamu_app_maximized') === '1' && window.innerWidth < 1024) {
                     document.body.classList.add('is-app-maximized');
-                    const txt = document.getElementById('txt-fs-drawer');
-                    if (txt) txt.innerText = 'Keluar Layar Maksimal';
+                    setTimeout(() => {
+                        const txt = document.getElementById('txt-fs-drawer');
+                        if (txt) txt.innerText = 'Keluar Layar Maksimal';
+                        const maxBtns = document.querySelectorAll('.station-max-btn');
+                        maxBtns.forEach(btn => {
+                            btn.style.borderColor = 'var(--gold)';
+                            btn.style.background = 'rgba(200, 150, 46, 0.25)';
+                            btn.style.color = 'var(--gold)';
+                        });
+                    }, 300);
                 }
             } catch(e) {}
         }
