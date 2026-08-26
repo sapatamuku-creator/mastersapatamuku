@@ -5214,13 +5214,20 @@
     }
 
     async function commitExcelGuests(addedGuests, report) {
+        const total = addedGuests.length;
         showLiveProgress("Mengimpor Tamu", "Menyimpan tamu ke database...", "📊");
+        updateLiveProgress(0, total, `Menyiapkan ${total} data tamu...`);
+
         try {
             // Simpan ke Supabase secara batch (100 per request) dengan live progress feedback
             const chunkSize = 100;
-            const total = addedGuests.length;
             for (let i = 0; i < total; i += chunkSize) {
                 const chunk = addedGuests.slice(i, i + chunkSize);
+                const currentBatchNum = Math.floor(i / chunkSize) + 1;
+                const totalBatches = Math.ceil(total / chunkSize);
+                
+                updateLiveProgress(i, total, `Menyimpan batch ${currentBatchNum}/${totalBatches} (${chunk.length} tamu)...`);
+                
                 const payloads = chunk.map(g => ({
                     ssid: CURRENT_SS_ID,
                     kode: g.kode,
@@ -5256,7 +5263,14 @@
                     const errText = await sbRes.text();
                     throw new Error("Supabase batch insert failed: " + errText);
                 }
+
+                const processed = Math.min(i + chunkSize, total);
+                updateLiveProgress(processed, total, `Tersimpan ${processed} dari ${total} tamu...`);
+                await new Promise(r => setTimeout(r, 20)); // micro-yield untuk kelancaran rendering progress
             }
+
+            updateLiveProgress(total, total, "Selesai mengimpor!");
+            closeLiveProgress();
 
             // Tambahkan tamu ke local list dan render (Optimistic & responsif)
             addedGuests.forEach(g => MASTER_LIST.unshift(g));
@@ -5290,6 +5304,7 @@
             openImportReportModal(report || [], addedGuests.length);
 
         } catch (err) {
+            closeLiveProgress();
             toggleProcessing(false);
             console.error("Bulk Supabase Insert Error:", err);
             showSapaModal("Gagal Import", "Gagal menyimpan tamu ke Supabase: " + err.message, "❌");
