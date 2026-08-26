@@ -2784,6 +2784,23 @@
         }
     }
 
+    async function fetchAllTamuFromSupabase(ssId, selectFields = "*", orderBy = "row.desc") {
+        let allGuests = [];
+        let offset = 0;
+        const limit = 1000;
+        while (true) {
+            const url = `${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&select=${selectFields}&order=${orderBy}&limit=${limit}&offset=${offset}`;
+            const res = await fetch(url, { headers: SB_HEADERS });
+            if (!res.ok) throw new Error(`Supabase tamu fetch failed (HTTP ${res.status})`);
+            const chunk = await res.json();
+            if (!Array.isArray(chunk) || chunk.length === 0) break;
+            allGuests.push(...chunk);
+            if (chunk.length < limit) break; // Reached end of records
+            offset += limit;
+        }
+        return allGuests;
+    }
+
     async function refreshApp() {
         const ssId = window.CURRENT_SS_ID || (new URLSearchParams(window.location.search)).get('ssId');
         if (!ssId) {
@@ -2794,10 +2811,8 @@
 
         toggleProcessing(true, "MEMUAT DATA...");
         try {
-            // ===== STEP 1: Fetch TAMU dulu (data utama) — adopsi pola wa_blast.html =====
-            const tamuRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&order=row.desc`, { headers: SB_HEADERS });
-            if (!tamuRes.ok) throw new Error("Supabase tamu fetch failed");
-            const tamuData = await tamuRes.json();
+            // ===== STEP 1: Fetch TAMU dulu (data utama) — auto-paginated all records (>1000 guests support) =====
+            const tamuData = await fetchAllTamuFromSupabase(ssId, "*", "row.desc");
 
             if (tamuData && tamuData.length > 0 && tamuData[0].event_date) {
                 window.EVENT_DATE = tamuData[0].event_date;
@@ -5657,14 +5672,8 @@
                 throw new Error(gasResult && gasResult.message ? gasResult.message : "Data tamu Google Sheets tidak ditemukan atau format respons tidak sesuai.");
             }
             
-            // 2. Fetch latest data from Supabase
-            const sbResponse = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&select=*`, {
-                headers: SB_HEADERS
-            });
-            if (!sbResponse.ok) {
-                throw new Error(`Koneksi ke Supabase gagal (HTTP ${sbResponse.status}).`);
-            }
-            const sbGuests = await sbResponse.json();
+            // 2. Fetch latest data from Supabase (auto-paginated >1000 guests support)
+            const sbGuests = await fetchAllTamuFromSupabase(CURRENT_SS_ID, "*", "row.desc");
             if (!Array.isArray(sbGuests)) {
                 throw new Error("Gagal mengambil data dari Supabase.");
             }
