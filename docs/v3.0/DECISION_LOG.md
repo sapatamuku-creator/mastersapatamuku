@@ -37,6 +37,7 @@
 | 2026-08-26 | UPGRADE-SOUVENIR-MOBILE-GLASSMORPHISM | LANJUT | Rombak UI mobile mode souvenir.html: Frosted Glassmorphism blur(20px), iOS-style segmented pill control, penataan micro-typography kartu KPI anti-overflow, flex scanner input anti-truncate tombol PROSES, dan Dynamic Island compact. User: lanjut |
 | 2026-08-26 | FEAT-PROFILE-SOUVENIR-LOGISTICS-PANEL | LANJUT | Tambahkan tab Logistik & Souvenir di profile.html: input Total Stok Souvenir & Kapasitas Ballroom dengan auto-load/save ke config_welcome Supabase & GAS, serta link pintasan langsung ke souvenir.html & analytics.html. User: lanjut dan push |
 | 2026-08-26 | FIX-PROFILE-LOGISTICS-PERSISTENCE-AND-RESOLVER | LANJUT | Fix race condition subdomain_resolver di profile.html (tunggu SAPATAMU_RESOLVED sebelum fetch), perbaiki session ID resolution, tambahkan instant hydration local cache (sapatamu_logistics_ssId), dan update GAS action ke saveWelcomePhotos. User: lanjut dan push |
+| 2026-08-26 | FEAT-ANGPAO-MOBILE-BOTTOM-SHEET | LANJUT | Terapkan sistem Mobile Bottom Sheet (<680px) pada dialog input angpao & kado fisik di angpao.html: grip handle bar, slide-up 60 FPS, touch-friendly numpad/shortcuts, safe area padding, dan swipe down dismiss. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.

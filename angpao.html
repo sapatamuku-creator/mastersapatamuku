@@ -334,9 +334,62 @@
         .shortcut-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
         .btn-shortcut { padding: 14px 0; background: #FDF8F4; border: 1px solid #F0E6DE; border-radius: 8px; font-size: 12px; font-weight: 800; color: var(--text-main); cursor: pointer; }
         .btn-shortcut.clear { color: #EF4444; border-color: #FEE2E2; background: #FEF2F2; }
+
+        .grip-bar { display: none; width: 42px; height: 4.5px; background: #d8d8d8; border-radius: 999px; margin: 0 auto 14px; cursor: grab; flex-shrink: 0; }
+
+        /* MOBILE BOTTOM SHEET (< 680px) */
+        @media (max-width: 679.98px) {
+            .modal-overlay {
+                align-items: flex-end !important;
+                padding: 0 !important;
+                background: rgba(15, 23, 42, 0.65) !important;
+                backdrop-filter: blur(8px) !important;
+                -webkit-backdrop-filter: blur(8px) !important;
+            }
+            .modal-card {
+                width: 100% !important;
+                max-width: 100% !important;
+                border-radius: 28px 28px 0 0 !important;
+                max-height: 88vh !important;
+                overflow-y: auto !important;
+                padding: 16px 20px max(24px, env(safe-area-inset-bottom)) !important;
+                box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.25) !important;
+                animation: sheetUp 0.35s cubic-bezier(0.32, 0.72, 0, 1) !important;
+                text-align: left !important;
+            }
+            .grip-bar {
+                display: block !important;
+            }
+            .display-area {
+                padding: 14px 16px !important;
+                margin-bottom: 12px !important;
+            }
+            .nominal-input {
+                font-size: 34px !important;
+            }
+            .btn-shortcut {
+                padding: 12px 0 !important;
+                font-size: 11px !important;
+                border-radius: 10px !important;
+            }
+            .btn-group {
+                margin-top: 18px !important;
+            }
+            .btn-cancel, .btn-confirm {
+                padding: 14px 18px !important;
+                font-size: 12px !important;
+                border-radius: 16px !important;
+            }
+        }
+
+        @keyframes sheetUp {
+            from { transform: translateY(100%); opacity: 0.7; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
-    <div id="modalConfirm" class="modal-overlay">
-        <div class="modal-card">
+    <div id="modalConfirm" class="modal-overlay" onclick="handleOverlayClick(event)">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="grip-bar" onclick="closeModal()" title="Tarik ke bawah atau klik untuk menutup"></div>
             
             <!-- Normal Guest Header -->
             <div id="m-normal-header">
@@ -1083,10 +1136,34 @@
         }
     };
 
+    window.handleOverlayClick = function(e) {
+        if (e && e.target && e.target.id === 'modalConfirm') {
+            closeModal();
+        }
+    };
+
     window.closeModal = async function() { 
         document.getElementById('modalConfirm').style.display = 'none'; 
         activeGuest = null;
     };
+
+    // Mobile swipe-down to dismiss gesture
+    let _touchStartY = 0;
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('modalConfirm');
+        if (!modal) return;
+        modal.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches[0]) _touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        modal.addEventListener('touchend', (e) => {
+            if (e.changedTouches && e.changedTouches[0]) {
+                const diff = e.changedTouches[0].clientY - _touchStartY;
+                if (diff > 80 && _touchStartY < window.innerHeight * 0.4) {
+                    closeModal();
+                }
+            }
+        }, { passive: true });
+    });
 
     const SB_HEADERS = {
         "apikey": SB_KEY,
