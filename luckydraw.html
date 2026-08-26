@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="animations.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script src="subdomain_resolver.js?v=3.5"></script>
     <script src="auth_guard.js?v=1.0"></script>
@@ -186,14 +187,13 @@
                 <div class="nav-group">
                     <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
                     <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                    <a href="souvenir.html" class="nav-link" id="nav-souvenir">Souvenir</a>
                     <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
                     <a href="luckydraw.html" class="nav-link active" id="nav-lucky">Lucky Draw</a>
                     <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
                     <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
                     <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
                     <div class="nav-divider"></div>
-                    
-                    
                 </div>
                 <div class="nav-divider"></div>
                 <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
@@ -242,14 +242,22 @@
     </div>
 
     <div class="section-panel" style="background: var(--soft-gold); border: 1px solid var(--gold);">
-        <div class="monitor-bar">
+        <div class="monitor-bar" style="display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; gap: 8px;">
             <div class="stat-item">
-                <span class="stat-label">Tamu Hadir</span>
+                <span class="stat-label">Total Hadir</span>
                 <span class="stat-value" id="stat-total-hadir">0</span>
             </div>
             <div class="stat-item">
-                <span class="stat-label">Pool Undian</span>
+                <span class="stat-label">Di Ballroom (Pool)</span>
                 <span class="stat-value" id="stat-valid" style="color:var(--success)">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Sudah Pulang</span>
+                <span class="stat-value" id="stat-checkout" style="color:#8C7560">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Pemenang</span>
+                <span class="stat-value" id="stat-winners" style="color:var(--gold)">0</span>
             </div>
         </div>
     </div>
@@ -388,6 +396,121 @@
         }
     };
 
+    let sbClient = null;
+    let realtimeChannel = null;
+
+    function isGuestHadir(g) {
+        if (!g) return false;
+        const sh = String(g.statusHadir || '').trim().toLowerCase();
+        const jd = String(g.jamDatang || '').trim();
+        return sh === "1" || sh === "true" || (jd !== "" && jd !== "-");
+    }
+
+    function isGuestCheckedOut(g) {
+        if (!g) return false;
+        const jp = String(g.jamPulang || '').trim();
+        const souv = String(g.souvenir || '').trim().toUpperCase();
+        return (jp !== "" && jp !== "-") || souv === "YA";
+    }
+
+    function isGuestWinner(g) {
+        if (!g) return false;
+        const undian = String(g.statusUndian || "").toUpperCase();
+        return undian.includes("WINNER");
+    }
+
+    function getEligibleCandidates() {
+        return masterData.filter(g => isGuestHadir(g) && !isGuestCheckedOut(g) && !isGuestWinner(g));
+    }
+
+    async function fetchAllTamuRows(ssId) {
+        const PAGE_SIZE = 1000;
+        let allRows = [];
+        let from = 0;
+        let hasMore = true;
+        
+        while (hasMore) {
+            const url = `${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&order=row.desc&limit=${PAGE_SIZE}&offset=${from}`;
+            const res = await fetch(url, {
+                headers: {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY
+                }
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const chunk = await res.json();
+            if (chunk && chunk.length > 0) {
+                allRows = allRows.concat(chunk);
+                if (chunk.length < PAGE_SIZE) {
+                    hasMore = false;
+                } else {
+                    from += PAGE_SIZE;
+                }
+            } else {
+                hasMore = false;
+            }
+        }
+        return allRows;
+    }
+
+    function setupRealtimeListener(ssId) {
+        if (!window.supabase || realtimeChannel) return;
+        try {
+            if (!sbClient) sbClient = window.supabase.createClient(SB_URL, SB_KEY);
+            realtimeChannel = sbClient
+                .channel(`luckydraw-tamu-${ssId}`)
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'tamu', filter: `ssid=eq.${ssId}` },
+                    (payload) => {
+                        const eventType = payload.eventType;
+                        const item = payload.new;
+                        if (eventType === 'INSERT' && item) {
+                            if (!masterData.some(g => g.kode === item.kode)) {
+                                masterData.unshift(mapTamuItem(item));
+                            }
+                        } else if (eventType === 'UPDATE' && item) {
+                            const idx = masterData.findIndex(g => g.kode === item.kode || g.row === item.row);
+                            if (idx !== -1) {
+                                masterData[idx] = mapTamuItem(item);
+                            }
+                        } else if (eventType === 'DELETE' && payload.old) {
+                            masterData = masterData.filter(g => g.kode !== payload.old.kode && g.row !== payload.old.row);
+                        }
+                        updatePoolStats();
+                        renderWinnerHistory();
+                    }
+                )
+                .subscribe();
+        } catch (e) {
+            console.warn("Realtime lucky draw error:", e);
+        }
+    }
+
+    function mapTamuItem(item) {
+        return {
+            row: item.row,
+            nama: item.nama,
+            whatsapp: item.whatsapp,
+            kategori: item.kategori,
+            kode: item.kode,
+            barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
+            rencanaHadir: item.rencana_hadir,
+            statusHadir: String(item.status_hadir),
+            jamDatang: item.jam_datang,
+            jamPulang: item.jam_pulang,
+            souvenir: item.souvenir,
+            pihakPengundang: item.pihak_pengundang,
+            alamat: item.alamat,
+            realHadir: item.real_hadir,
+            statusWA: item.status_wa,
+            statusHadiah: item.status_hadiah,
+            statusUndian: item.status_undian || "-",
+            tandaKasih: item.tanda_kasih,
+            sesi: item.sesi
+        };
+    }
+
     async function refreshData(showLoader = false) {
         const session = getActiveSession();
         if(!session || !session.ssId) {
@@ -399,39 +522,12 @@
 
         if(showLoader) document.getElementById('loading').style.display = 'flex';
         try {
-            const supabaseUrl = SB_URL + "/rest/v1/tamu?ssid=eq." + session.ssId + "&order=row.desc";
-            const response = await fetch(supabaseUrl, {
-                headers: {
-                    "apikey": SB_KEY,
-                    "Authorization": "Bearer " + SB_KEY
-                }
-            });
-            const sbData = await response.json();
-            
-            // Map data snake_case Supabase ke format camelCase frontend
-            masterData = (sbData || []).map(item => ({
-                row: item.row,
-                nama: item.nama,
-                whatsapp: item.whatsapp,
-                kategori: item.kategori,
-                kode: item.kode,
-                barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
-                rencanaHadir: item.rencana_hadir,
-                statusHadir: String(item.status_hadir),
-                jamDatang: item.jam_datang,
-                souvenir: item.souvenir,
-                pihakPengundang: item.pihak_pengundang,
-                alamat: item.alamat,
-                realHadir: item.real_hadir,
-                statusWA: item.status_wa,
-                statusHadiah: item.status_hadiah,
-                statusUndian: item.status_undian || "-",
-                tandaKasih: item.tanda_kasih,
-                sesi: item.sesi
-            }));
+            const rawRows = await fetchAllTamuRows(session.ssId);
+            masterData = (rawRows || []).map(mapTamuItem);
             
             updatePoolStats();
             renderWinnerHistory(); 
+            setupRealtimeListener(session.ssId);
         } catch (e) { 
             console.error("Sinkron gagal:", e); 
         } finally { 
@@ -440,25 +536,23 @@
     }
 
     function updatePoolStats() {
-        // Hanya tamu yang SUDAH HADIR (status_hadir = "1") yang masuk pool
-        const hadir = masterData.filter(g => String(g.statusHadir).trim() === "1");
-        
-        const valid = hadir.filter(g => {
-            const undian = String(g.statusUndian || "").toUpperCase();
-            return !undian.includes("WINNER");
-        }); 
+        const hadir = masterData.filter(isGuestHadir);
+        const checkedOut = masterData.filter(g => isGuestHadir(g) && isGuestCheckedOut(g));
+        const winners = masterData.filter(isGuestWinner);
+        const validCandidates = getEligibleCandidates();
         
         document.getElementById('stat-total-hadir').innerText = hadir.length;
-        document.getElementById('stat-valid').innerText = valid.length;
+        document.getElementById('stat-valid').innerText = validCandidates.length;
+        const checkoutEl = document.getElementById('stat-checkout');
+        if (checkoutEl) checkoutEl.innerText = checkedOut.length;
+        const winEl = document.getElementById('stat-winners');
+        if (winEl) winEl.innerText = winners.length;
     }
 
     function renderWinnerHistory() {
         const container = document.getElementById('winner-history-list');
         container.innerHTML = "";
-        const winners = masterData.filter(g => {
-            const undian = String(g.statusUndian || "").toUpperCase();
-            return undian.includes("WINNER");
-        });
+        const winners = masterData.filter(isGuestWinner);
         
         winners.forEach(g => {
             const html = `<div class="winner-item">
@@ -476,15 +570,11 @@
     window.runLuckyDraw = function() {
         if(isSpinning) return;
         
-        // Filter HANYA tamu yang status_hadir === "1" (konfirmasi hadir) dan belum menang
-        const validCandidates = masterData.filter(g => {
-            const isHadir = String(g.statusHadir).trim() === "1";
-            const isNoGift = !String(g.statusUndian || "").toUpperCase().includes("WINNER");
-            return isHadir && isNoGift;
-        });
+        // Filter HANYA tamu yang HADIR, BELUM CHECKOUT (masih di ballroom), dan BELUM PERNAH MENANG
+        const validCandidates = getEligibleCandidates();
         
         if(validCandidates.length === 0) {
-            showSapaModal("Perhatian", "Tidak ada kandidat valid! Pastikan tamu sudah check-in (Status Hadir = 1) dan belum menang.", "⚠️");
+            showSapaModal("Perhatian", "Tidak ada kandidat valid! Pastikan ada tamu yang sudah check-in, belum check-out (masih di ballroom), dan belum memenangkan undian.", "⚠️");
             return;
         }
         
@@ -522,17 +612,20 @@
     };
 
     window.manualCheck = function() {
-        const val = document.getElementById('manual-code').value.trim().toUpperCase();
+        let val = document.getElementById('manual-code').value.trim().toUpperCase();
         if(!val) return;
+        if(val.length > 9) val = val.slice(-9);
         
-        const guest = masterData.find(g => String(g.kode).toUpperCase() === val);
+        const guest = masterData.find(g => String(g.kode).trim().toUpperCase() === val);
         if(guest) {
             lastScannedGuest = guest;
             document.getElementById('res-name').innerText = guest.nama;
             document.getElementById('res-code').innerText = guest.kode;
             
-            const isWinner = String(guest.statusUndian || "").toUpperCase().includes("WINNER");
-            document.getElementById('res-status-label').innerText = "Status: " + (isWinner ? "SUDAH TERKLAIM (" + guest.statusUndian + ")" : "Belum Konfirmasi");
+            const isWinner = isGuestWinner(guest);
+            const isOut = isGuestCheckedOut(guest);
+            let statusText = isWinner ? "SUDAH TERKLAIM (" + guest.statusUndian + ")" : (isOut ? "Sudah Checkout / Pulang" : "Kandidat Hadir Aktif");
+            document.getElementById('res-status-label').innerText = "Status: " + statusText;
             
             const btn = document.getElementById('confirm-btn');
             btn.disabled = isWinner;
@@ -553,7 +646,28 @@
         if(!confirm("Konfirmasi " + lastScannedGuest.nama + " sebagai pemenang?")) return;
 
         document.getElementById('loading').style.display = 'flex';
+        
+        // Optimistic local update
+        lastScannedGuest.statusUndian = "WINNER - SUDAH KLAIM";
+        updatePoolStats();
+        renderWinnerHistory();
+
         try {
+            // 1. Direct Supabase Patch for instantaneous database sync
+            if (window.SB_URL && window.SB_KEY) {
+                fetch(`${window.SB_URL}/rest/v1/tamu?ssid=eq.${session.ssId}&kode=eq.${encodeURIComponent(lastScannedGuest.kode)}`, {
+                    method: 'PATCH',
+                    headers: {
+                        "apikey": window.SB_KEY,
+                        "Authorization": "Bearer " + window.SB_KEY,
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal"
+                    },
+                    body: JSON.stringify({ status_undian: "WINNER - SUDAH KLAIM" })
+                }).catch(err => console.warn("Supabase patch non-fatal:", err));
+            }
+
+            // 2. Google Apps Script for Spreadsheet persistence & Printer label trigger
             const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ 
@@ -565,16 +679,19 @@
             const result = await response.json();
             
             if(result.status === "success") {
-                showSapaModal("Selamat!", "Pemenang resmi dicatat di Spreadsheet. Semoga beruntung!", "🎉");
+                showSapaModal("Selamat!", "Pemenang resmi dicatat di Spreadsheet & Database. Hadiah berhasil diklaim!", "🎉");
                 document.getElementById('scan-result-card').style.display = 'none';
                 document.getElementById('manual-code').value = "";
-                await refreshData(true);
+                await refreshData(false);
             } else {
                 showSapaModal("Gagal", result.message || "Gagal mencatat pemenang.", "❌");
-                document.getElementById('loading').style.display = 'none';
             }
         } catch (e) {
-            showSapaModal("Kesalahan", "Terjadi gangguan koneksi ke server SapaTamu.", "⚠️");
+            console.warn("GAS sync error:", e);
+            showSapaModal("Info", "Pemenang telah dicatat secara lokal/database.", "✅");
+            document.getElementById('scan-result-card').style.display = 'none';
+            document.getElementById('manual-code').value = "";
+        } finally {
             document.getElementById('loading').style.display = 'none';
         }
     };

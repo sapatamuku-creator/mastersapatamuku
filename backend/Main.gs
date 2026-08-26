@@ -10,6 +10,7 @@ const START_ROW = 8;
 // Indeks Kolom (1-based untuk Spreadsheet App)
 const COL_CHECKIN_STATUS = 9;   // Kolom I
 const COL_JAM_DATANG = 10;      // Kolom J
+const COL_SOUVENIR = 11;        // Kolom K
 const COL_KODE_UNIK = 6;        // Kolom F
 const COL_REAL_HADIR = 14;      // Kolom N
 const COL_CATATAN = 15;         // Kolom O
@@ -17,6 +18,7 @@ const COL_STATUS_WA = 16;       // Kolom P
 const COL_STATUS_HADIAH = 17;   // Kolom Q
 const COLUMN_TANDA_KASIH = 18;  // Kolom R
 const COLUMN_SESI = 19;         // Kolom S
+const COLUMN_JAM_PULANG = 20;   // Kolom T
 
 // --- HELPER: GET DYNAMIC SPREADSHEET ---
 function getSS(id) {
@@ -175,6 +177,10 @@ function handleMainPost(payload) {
 
       case "claim_lucky_draw": 
         result = claimLuckyDraw(ssId, payload.kode); 
+        break;
+
+      case "claim_souvenir_checkout": 
+        result = claimSouvenirCheckout(ssId, payload.kode || payload.kodeUnik, payload.jamPulang); 
         break;
 
       case "update_tanda_kasih": 
@@ -2562,4 +2568,38 @@ function overwriteSheetWithGuests(ssId, guests) {
     return { status: "error", message: "Failed to overwrite sheet: " + err.toString() };
   }
 }
+
+/**
+ * Catat penyerahan souvenir dan jam checkout tamu ke spreadsheet
+ */
+function claimSouvenirCheckout(ssId, kodeUnik, jamPulang) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    if (!sheet) return { status: "error", message: "Sheet data tidak ditemukan" };
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < START_ROW) return { status: "error", message: "Tidak ada data tamu" };
+
+    const codes = sheet.getRange(START_ROW, COL_KODE_UNIK, lastRow - START_ROW + 1, 1).getValues();
+    let targetRow = -1;
+    for (let i = 0; i < codes.length; i++) {
+      if (String(codes[i][0]).trim().toUpperCase() === String(kodeUnik).trim().toUpperCase()) {
+        targetRow = START_ROW + i;
+        break;
+      }
+    }
+
+    if (targetRow === -1) return { status: "error", message: "Kode tamu tidak ditemukan: " + kodeUnik };
+
+    const timeStr = jamPulang || Utilities.formatDate(new Date(), "Asia/Jakarta", "HH:mm:ss");
+    sheet.getRange(targetRow, COL_SOUVENIR).setValue("YA");
+    sheet.getRange(targetRow, COLUMN_JAM_PULANG).setValue(timeStr);
+
+    return { status: "success", message: "Souvenir dan checkout berhasil dicatat", jamPulang: timeStr };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
 

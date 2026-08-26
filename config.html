@@ -247,6 +247,41 @@
                             onchange="markUnsaved()">
                     </div>
                 </div>
+
+                <!-- SECTION LOGISTIK & KAPASITAS ACARA -->
+                <div class="mt-8 pt-8 border-t border-[#F0E6DE]">
+                    <div class="mb-4">
+                        <span class="text-xs font-black tracking-[3px] uppercase text-[#C8962E]/70 block mb-1">Event Logistics &amp; Capacity</span>
+                        <h2 class="text-xl font-bold text-[#4A3F35]">Kapasitas Ballroom &amp; Stok Souvenir</h2>
+                        <p class="text-xs text-[#8C7560] mt-1">Konfigurasi ini ditampilkan pada live monitor di halaman Analytics &amp; Pos Souvenir.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="text-[10px] font-bold text-[#8C7560] uppercase tracking-widest block mb-2">🏢 Kapasitas Maksimal Ballroom (Pax)</label>
+                            <input type="number" id="kapasitas_ballroom" class="sapatamu-input py-3 font-bold"
+                                placeholder="Contoh: 1000" min="0" onchange="markUnsaved()">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-[#8C7560] uppercase tracking-widest block mb-2">🎁 Total Stok Persediaan Souvenir (Pcs)</label>
+                            <input type="number" id="stok_souvenir" class="sapatamu-input py-3 font-bold"
+                                placeholder="Contoh: 500" min="0" onchange="markUnsaved()">
+                        </div>
+                    </div>
+
+                    <!-- Custom KPI Table -->
+                    <div class="bg-white/80 rounded-2xl p-5 border border-[#F0E6DE]">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-extrabold text-[#4A3F35] uppercase tracking-wider">🎯 Custom Metrik / Target Acara (Opsional)</span>
+                            <button type="button" onclick="addCustomMetricRow()" class="text-[10px] font-extrabold bg-[#4A3F35] text-white px-3 py-1.5 rounded-xl hover:bg-[#352c25] transition-all">
+                                + Tambah Target
+                            </button>
+                        </div>
+                        <div id="custom-metrics-container" class="space-y-2">
+                            <!-- Custom metric rows rendered here -->
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <div id="photo_gallery" class="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[200px]">
@@ -292,6 +327,44 @@
             document.getElementById('nav-welcome').href = `welcome.html?ssId=${ssId}`;
         }
 
+        let customMetrics = [];
+
+        function renderCustomMetrics() {
+            const container = document.getElementById('custom-metrics-container');
+            if (!container) return;
+            if (!customMetrics || customMetrics.length === 0) {
+                container.innerHTML = '<p class="text-[11px] text-[#8C7560] italic py-2">Belum ada metrik target kustom. Klik "+ Tambah Target" untuk menambahkan.</p>';
+                return;
+            }
+            container.innerHTML = customMetrics.map((m, idx) => `
+                <div class="flex items-center gap-2 p-2 bg-[#FFFDFB] rounded-xl border border-[#F0E6DE]">
+                    <input type="text" class="sapatamu-input py-1.5 px-3 text-xs flex-grow" placeholder="Nama Target (mis: Target VIP)" value="${m.label || ''}" oninput="updateCustomMetric(${idx}, 'label', this.value)">
+                    <input type="number" class="sapatamu-input py-1.5 px-3 text-xs w-28 font-bold" placeholder="Target Angka" value="${m.target || ''}" min="0" oninput="updateCustomMetric(${idx}, 'target', this.value)">
+                    <input type="text" class="sapatamu-input py-1.5 px-3 text-xs w-24" placeholder="Satuan (Pcs/Org)" value="${m.unit || ''}" oninput="updateCustomMetric(${idx}, 'unit', this.value)">
+                    <button type="button" onclick="removeCustomMetricRow(${idx})" class="text-red-500 hover:text-red-700 p-1.5 font-bold text-sm" title="Hapus target ini">✕</button>
+                </div>
+            `).join('');
+        }
+
+        window.addCustomMetricRow = function() {
+            customMetrics.push({ label: '', target: '', unit: 'Pax' });
+            renderCustomMetrics();
+            markUnsaved();
+        };
+
+        window.removeCustomMetricRow = function(idx) {
+            customMetrics.splice(idx, 1);
+            renderCustomMetrics();
+            markUnsaved();
+        };
+
+        window.updateCustomMetric = function(idx, key, val) {
+            if (customMetrics[idx]) {
+                customMetrics[idx][key] = val;
+                markUnsaved();
+            }
+        };
+
         async function loadGallery() {
             if (!window.SAPATAMU_RESOLVED) { setTimeout(loadGallery, 100); return; }
             syncNavbar();
@@ -321,6 +394,12 @@
                             }
                             if (data.teksSambutan1) document.getElementById('teks_sambutan_1').value = data.teksSambutan1;
                             if (data.teksSambutan2) document.getElementById('teks_sambutan_2').value = data.teksSambutan2;
+                            if (data.kapasitasBallroom !== undefined) document.getElementById('kapasitas_ballroom').value = data.kapasitasBallroom;
+                            if (data.stokSouvenir !== undefined) document.getElementById('stok_souvenir').value = data.stokSouvenir;
+                            if (Array.isArray(data.customMetrics)) {
+                                customMetrics = data.customMetrics;
+                            }
+                            renderCustomMetrics();
                             loaded = true;
                         }
                     }
@@ -342,11 +421,14 @@
                         }
                         if (res.data.teksSambutan1) document.getElementById('teks_sambutan_1').value = res.data.teksSambutan1;
                         if (res.data.teksSambutan2) document.getElementById('teks_sambutan_2').value = res.data.teksSambutan2;
+                        if (res.data.kapasitasBallroom !== undefined) document.getElementById('kapasitas_ballroom').value = res.data.kapasitasBallroom;
+                        if (res.data.stokSouvenir !== undefined) document.getElementById('stok_souvenir').value = res.data.stokSouvenir;
                     }
                 } catch (e) {
                     console.error("Load Gagal:", e);
                     gallery.innerHTML = '<div class="col-span-full py-12 text-center text-red-400 font-bold">Gagal memuat data dari server.</div>';
                 }
+                renderCustomMetrics();
             }
         }
 
@@ -493,6 +575,8 @@
             const urlFoto = currentPhotos.join(",");
             const teks1 = document.getElementById('teks_sambutan_1').value.trim();
             const teks2 = document.getElementById('teks_sambutan_2').value.trim();
+            const kapasitas = parseInt(document.getElementById('kapasitas_ballroom')?.value) || 0;
+            const stokSouv = parseInt(document.getElementById('stok_souvenir')?.value) || 0;
 
             let sbSuccess = false;
 
@@ -528,6 +612,9 @@
                     existingData.urlFoto = urlFoto;
                     existingData.teksSambutan1 = teks1;
                     existingData.teksSambutan2 = teks2;
+                    existingData.kapasitasBallroom = kapasitas;
+                    existingData.stokSouvenir = stokSouv;
+                    existingData.customMetrics = customMetrics.filter(m => (m.label && m.label.trim() !== '') || m.target);
 
                     const upsertRes = await fetch(`${SB_URL}/rest/v1/config_welcome`, {
                         method: "POST",

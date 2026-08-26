@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>SapaTamu - Pos Souvenir &amp; Check-Out</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    
+    <!-- Preconnect to Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Lora:ital,wght@0,600;0,700;1,400&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <!-- CSS & Libraries -->
+    <link rel="stylesheet" href="assets/tailwind.css" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.tailwindcss.com';document.head.appendChild(s)">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="config.js"></script>
+    <script type="module">
+        import { fetchAllTamu, createRealtimeTamu } from './lib/guestbook-core.js';
+        window.__guestbookCore = window.__guestbookCore || {};
+        window.__guestbookCore.fetchAllTamu = fetchAllTamu;
+        window.__guestbookCore.createRealtimeTamu = createRealtimeTamu;
+    </script>
+    <script src="subdomain_resolver.js?v=3.5"></script>
+    <script src="auth_guard.js?v=1.0"></script>
+
+    <style>
+        /* Sapatamu-Projects · canon v1 · tokens: warm · nav: island · perf: skeleton+cache */
+        :root {
+            /* Warm Core Palette */
+            --primary: #E07B7B;          /* Rose */
+            --primary-light: #FDF2F2;    /* Rose wash */
+            --primary-dark: #C45A5A;
+            --primary-soft: rgba(224,123,123,0.12);
+            --gold: #C8962E;             /* Accent */
+            --gold-light: #FFF5EE;       /* Gold wash */
+            --gold-bg: rgba(212,175,55,0.05);
+            --bg: #FFF9F5;               /* Page bg */
+            --card: #FFFFFF;
+            --surface: #FFFFFF;
+            --surface-border: #F0E6DE;
+            --border: #F0E6DE;           /* Soft Sand */
+            --border-strong: rgba(200,150,46,0.15);
+            --text-main: #4A3F35;        /* Warm Dark Brown */
+            --text-muted: #8C7560;       /* Warm Brown */
+            --text-light: #B5ADA5;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+
+            /* Radius */
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --radius-xl: 28px;
+            --radius-2xl: 35px;
+            --radius-pill: 9999px;
+
+            /* Shadow */
+            --shadow-sm: 0 2px 8px rgba(74,63,53,0.04), 0 1px 3px rgba(74,63,53,0.06);
+            --shadow-md: 0 8px 24px rgba(74,63,53,0.08), 0 4px 16px rgba(74,63,53,0.06);
+            --shadow-lg: 0 16px 40px rgba(74,63,53,0.12), 0 8px 24px rgba(74,63,53,0.08);
+
+            /* Typography */
+            --font-body: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+            --font-display: "Lora", Georgia, serif;
+            --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+            /* Motion */
+            --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+            --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+            --ease-modal: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);
+            --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 2px 2px, rgba(200, 150, 46, 0.07) 1px, transparent 0);
+            background-size: 32px 32px;
+            color: var(--text-main);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom, 24px);
+        }
+
+        /* ── DYNAMIC ISLAND SAPATAMU NAVBAR ── */
+        .sapatamu-navbar-wrap {
+            position: fixed;
+            top: 14px;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+            padding: 0 12px;
+        }
+
+        .sapatamu-navbar {
+            pointer-events: auto;
+            width: 100%;
+            max-width: 980px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-pill);
+            padding: 6px 12px;
+            box-shadow: 0 10px 32px rgba(74, 63, 53, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .nav-links-scroll {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 2px 0;
+        }
+        .nav-links-scroll::-webkit-scrollbar { display: none; }
+
+        .nav-pill {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: var(--radius-pill);
+            text-decoration: none;
+            white-space: nowrap;
+            transition: var(--transition);
+        }
+
+        .nav-pill:hover {
+            color: var(--text-main);
+            background: rgba(74, 63, 53, 0.06);
+        }
+
+        .nav-pill.active {
+            color: #fff;
+            background: var(--text-main);
+            box-shadow: 0 2px 8px rgba(74, 63, 53, 0.2);
+        }
+
+        .nav-pill.active-gold {
+            color: #fff;
+            background: var(--gold);
+            box-shadow: 0 2px 8px rgba(200, 150, 46, 0.3);
+        }
+
+        .sapatamu-card {
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .sapatamu-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ── SKELETON SHIMMER (Detik 0) ── */
+        @keyframes shimmerPulse { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .skeleton-shimmer {
+            background: linear-gradient(90deg, #F5EFE9 0%, #FFFFFF 50%, #F5EFE9 100%);
+            background-size: 200% 100%;
+            animation: shimmerPulse 1.4s ease-in-out infinite;
+            border-radius: var(--radius-sm);
+        }
+
+        /* ── ANIMASI PULSE & FEEDBACK ── */
+        @keyframes pulseSuccess {
+            0% { transform: scale(0.96); opacity: 0.9; }
+            50% { transform: scale(1.015); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes shakeError {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        .anim-success {
+            animation: pulseSuccess 0.4s var(--ease-modal);
+        }
+
+        .anim-error {
+            animation: shakeError 0.45s ease-in-out;
+        }
+
+        .hid-active-glow {
+            box-shadow: 0 0 0 3px rgba(200, 150, 46, 0.2), 0 10px 30px rgba(200, 150, 46, 0.12);
+        }
+
+        /* ── TOGGLE SWITCH ── */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #e5e7eb;
+            transition: .25s var(--ease-out);
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .25s var(--ease-out);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        input:checked + .slider { background-color: var(--gold); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        #reader {
+            width: 100% !important;
+            border: none !important;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        #reader video {
+            border-radius: var(--radius-lg);
+            object-fit: cover;
+            width: 100% !important;
+        }
+
+        /* ── REDUCED MOTION (Canon) ── */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-delay: -1ms !important;
+                animation-duration: 1ms !important;
+                animation-iteration-count: 1 !important;
+                background-attachment: initial !important;
+                scroll-behavior: auto !important;
+                transition-duration: 0s !important;
+                transition-delay: 0s !important;
+            }
+        }
+
+        /* ── FLOATING SCROLLBAR (Canon) ── */
+        * { scrollbar-width: thin; scrollbar-color: rgba(140,117,96,0.3) transparent; }
+        ::-webkit-scrollbar { width: 7px; height: 7px; }
+        ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(140,117,96,0.25);
+            border-radius: 50px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            transition: background-color 0.22s var(--ease-out);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: var(--gold);
+        }
+
+        /* ── 3-MODE RESPONSIVE BREAKPOINTS (Desktop ≥1024px, Tablet 680-1023px, Mobile <680px) ── */
+        @media (min-width: 1024px) {
+            .view-desktop-grid {
+                display: grid;
+                grid-template-columns: repeat(12, minmax(0, 1fr));
+                gap: 1.75rem;
+            }
+            .col-scanner-panel { grid-column: span 7 / span 7; }
+            .col-stream-panel { grid-column: span 5 / span 5; }
+            .mobile-segmented-tab { display: none !important; }
+        }
+
+        @media (min-width: 680px) and (max-width: 1023.98px) {
+            .view-desktop-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            .mobile-segmented-tab { display: none !important; }
+            .telemetry-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            }
+            .recent-claims-box {
+                max-height: 380px !important;
+            }
+        }
+
+        @media (max-width: 679.98px) {
+            .sapatamu-navbar {
+                padding: 5px 8px;
+            }
+            .nav-brand-sub { display: none; }
+            .view-desktop-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .mobile-segmented-tab {
+                display: flex !important;
+            }
+            .tab-panel-inactive {
+                display: none !important;
+            }
+            .telemetry-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                gap: 0.5rem !important;
+            }
+            .telemetry-card {
+                padding: 0.65rem 0.5rem !important;
+            }
+            .telemetry-val {
+                font-size: 1.35rem !important;
+            }
+            .scanner-input-field {
+                padding-top: 0.85rem !important;
+                padding-bottom: 0.85rem !important;
+                font-size: 0.9rem !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="pt-24 px-3 sm:px-6 md:px-8">
+
+    <!-- ── 1. DYNAMIC ISLAND SAPATAMU NAVBAR ── -->
+    <div class="sapatamu-navbar-wrap">
+        <nav class="sapatamu-navbar">
+            <div class="flex items-center gap-2 pl-1">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#C8962E] to-[#A6781D] flex items-center justify-center text-white text-sm shadow-sm shrink-0">
+                    🎁
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-xs sm:text-sm font-black tracking-tight text-[#4A3F35] leading-none">sapa<span class="text-[#E07B7B]">tamu</span>.ku</span>
+                    <span class="nav-brand-sub text-[8.5px] font-bold text-[#8C7560] tracking-widest uppercase mt-0.5">Pos Souvenir &amp; Check-Out</span>
+                </div>
+            </div>
+
+            <!-- Nav Links Capsule Bar -->
+            <div class="nav-links-scroll">
+                <a href="dashboard.html" id="nav-dashboard" class="nav-pill">Dashboard</a>
+                <a href="checkin.html" id="nav-checkin" class="nav-pill">Check-in</a>
+                <a href="onsite.html" id="nav-onsite" class="nav-pill">On-Site</a>
+                <a href="souvenir.html" class="nav-pill active-gold">Souvenir</a>
+                <a href="analytics.html" id="nav-analytics" class="nav-pill">Analytics</a>
+                <a href="welcome.html" id="nav-welcome" target="_blank" class="nav-pill hidden sm:inline-block">Display TV</a>
+            </div>
+
+            <!-- Right Quick Controls -->
+            <div class="flex items-center gap-2 pr-1">
+                <div class="flex items-center gap-1.5 bg-[#FFFDFB] px-2 py-1 rounded-full border border-[#F0E6DE]">
+                    <span class="text-[9px] font-extrabold text-[#4A3F35] uppercase tracking-wider hidden sm:inline">Auto</span>
+                    <label class="switch" title="Toggle Auto-Claim Instan">
+                        <input type="checkbox" id="toggle-quick-claim" checked onchange="toggleQuickMode(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <button type="button" id="btn-sound-toggle" onclick="toggleAudio()" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#FFFDFB] border border-[#F0E6DE] flex items-center justify-center text-xs shadow-sm hover:border-[#C8962E] transition-all" title="Toggle Suara Beep">
+                    🔊
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- ── 2. MOBILE SEGMENTED TAB SWITCHER (<680px) ── -->
+    <div class="mobile-segmented-tab max-w-xl mx-auto w-full mb-3 bg-white p-1 rounded-2xl border border-[#F0E6DE] shadow-sm flex">
+        <button type="button" id="mob-tab-scan" onclick="switchMobileTab('SCAN')" class="flex-1 py-2.5 rounded-xl font-extrabold text-xs text-white bg-[#4A3F35] transition-all flex items-center justify-center gap-1.5 shadow-sm">
+            ⚡ Pos Scanner
+        </button>
+        <button type="button" id="mob-tab-recent" onclick="switchMobileTab('RECENT')" class="flex-1 py-2.5 rounded-xl font-extrabold text-xs text-[#8C7560] transition-all flex items-center justify-center gap-1.5">
+            📜 Riwayat (<span id="mob-recent-badge">0</span>)
+        </button>
+    </div>
+
+    <!-- ── 3. MAIN CONTENT CONTAINER (3-Mode Grid) ── -->
+    <main class="max-w-6xl mx-auto w-full flex-grow mb-8">
+
+        <!-- TELEMETRY COUNTER CARDS (Instant Shimmer at Detik 0) -->
+        <div class="telemetry-grid grid grid-cols-3 gap-3 mb-5">
+            <div class="sapatamu-card telemetry-card p-3 sm:p-4 text-center border-b-4 border-b-[#10B981]">
+                <span class="text-[8px] sm:text-[9.5px] font-bold text-[#8C7560] uppercase tracking-wider block mb-0.5">Souvenir Keluar</span>
+                <div id="stat-souvenir-out" class="telemetry-val text-xl sm:text-3xl font-black text-[#10B981] leading-tight">
+                    <div class="skeleton-shimmer h-8 w-16 mx-auto my-0.5"></div>
+                </div>
+                <span class="text-[7.5px] sm:text-[8.5px] font-extrabold text-gray-400 uppercase tracking-tight">Telah Diambil</span>
+            </div>
+
+            <div class="sapatamu-card telemetry-card p-3 sm:p-4 text-center border-b-4 border-b-[#C8962E]">
+                <span class="text-[8px] sm:text-[9.5px] font-bold text-[#8C7560] uppercase tracking-wider block mb-0.5">Sisa Persediaan</span>
+                <div id="stat-souvenir-left" class="telemetry-val text-xl sm:text-3xl font-black text-[#C8962E] leading-tight">
+                    <div class="skeleton-shimmer h-8 w-16 mx-auto my-0.5"></div>
+                </div>
+                <span id="stat-souvenir-total" class="text-[7.5px] sm:text-[8.5px] font-extrabold text-gray-400 uppercase tracking-tight truncate block">Memuat stok...</span>
+            </div>
+
+            <div class="sapatamu-card telemetry-card p-3 sm:p-4 text-center border-b-4 border-b-[#E07B7B]">
+                <span class="text-[8px] sm:text-[9.5px] font-bold text-[#8C7560] uppercase tracking-wider block mb-0.5">Tamu di Gedung</span>
+                <div id="stat-active-in-ballroom" class="telemetry-val text-xl sm:text-3xl font-black text-[#E07B7B] leading-tight">
+                    <div class="skeleton-shimmer h-8 w-16 mx-auto my-0.5"></div>
+                </div>
+                <span class="text-[7.5px] sm:text-[8.5px] font-extrabold text-gray-400 uppercase tracking-tight">Aktif di Dalam</span>
+            </div>
+        </div>
+
+        <div class="view-desktop-grid">
+
+            <!-- ── LEFT PANEL: SCANNER CONSOLE & RESULT ── -->
+            <section id="panel-scanner" class="col-scanner-panel flex flex-col gap-4">
+
+                <!-- SCANNER CONSOLE CARD -->
+                <div class="sapatamu-card p-4 sm:p-6 md:p-7 relative overflow-hidden flex flex-col gap-4 hid-active-glow">
+                    
+                    <!-- Scanner Header -->
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="relative flex h-2.5 w-2.5">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C8962E] opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#C8962E]"></span>
+                            </span>
+                            <span class="text-[11px] sm:text-xs font-black text-[#4A3F35] uppercase tracking-wider">HID Barcode Scanner Siap</span>
+                        </div>
+
+                        <button type="button" onclick="toggleCameraScanner()" id="btn-cam-toggle" class="text-[10px] font-extrabold bg-[#FFF9F5] hover:bg-[#F2E5D9] text-[#4A3F35] px-3 py-1.5 rounded-xl border border-[#F0E6DE] transition-all flex items-center gap-1">
+                            📷 <span id="cam-toggle-text">Buka Kamera</span>
+                        </button>
+                    </div>
+
+                    <!-- Camera Viewport Box -->
+                    <div id="camera-viewport-wrap" style="display: none;" class="relative bg-black rounded-2xl overflow-hidden shadow-inner">
+                        <div id="reader"></div>
+                        <button type="button" onclick="toggleCameraScanner()" class="absolute top-3 right-3 bg-black/70 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-20">✕</button>
+                    </div>
+
+                    <!-- Barcode Input Box (Auto-Focus & Capture Stream) -->
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 sm:pl-4 flex items-center pointer-events-none text-[#C8962E]">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                        </div>
+                        <input type="text" id="barcode-input" autofocus autocomplete="off" spellcheck="false"
+                            placeholder="Tembak barcode sticker / ketik nama tamu..."
+                            class="scanner-input-field w-full pl-11 sm:pl-12 pr-24 py-3.5 sm:py-4 bg-[#FFFDFB] border-2 border-[#E8D8CC] focus:border-[#C8962E] rounded-2xl text-xs sm:text-sm md:text-base font-bold text-[#4A3F35] outline-none transition-all shadow-sm">
+                        
+                        <button type="button" onclick="manualTriggerScan()" class="absolute inset-y-1.5 right-1.5 px-3 sm:px-4 bg-[#4A3F35] hover:bg-[#352c25] text-white text-[10px] sm:text-xs font-extrabold rounded-xl transition-all shadow">
+                            PROSES
+                        </button>
+                    </div>
+
+                    <p class="text-[9.5px] text-[#8C7560] m-0 italic flex items-center gap-1.5">
+                        <span>🛡️</span> <strong>Anti-Burst Protection:</strong> Potong 9 karakter terakhir (<code class="bg-[#FFF0E6] text-[#C8962E] px-1 py-0.5 rounded font-mono font-bold">XXX-XXXXX</code>) + jeda settle 120ms.
+                    </p>
+
+                    <!-- Scan Result Card Banner -->
+                    <div id="scan-result-card" class="hidden p-4 sm:p-5 rounded-2xl border transition-all">
+                        <!-- Dynamic Result Rendered Here -->
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ── RIGHT PANEL: STREAM OF RECENT CLAIMS & GUEST LOGS ── -->
+            <section id="panel-recent" class="col-stream-panel flex flex-col gap-4">
+
+                <div class="sapatamu-card p-4 sm:p-5 flex flex-col flex-grow min-h-[380px]">
+                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#F0E6DE]">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm sm:text-base">📜</span>
+                            <h2 class="text-[11px] sm:text-xs font-black text-[#4A3F35] uppercase tracking-wider m-0">Riwayat Pengambilan</h2>
+                        </div>
+                        <span id="recent-count-badge" class="text-[9px] font-black bg-[#FFF0E6] text-[#C8962E] px-2 py-0.5 rounded-full">0 Tamu</span>
+                    </div>
+
+                    <!-- Stream List -->
+                    <div id="recent-claims-list" class="recent-claims-box flex flex-col gap-2.5 overflow-y-auto max-h-[500px] pr-1">
+                        <!-- Initial Skeletons at Detik 0 -->
+                        <div class="p-3 rounded-2xl bg-[#FFFDFB] border border-[#F0E6DE] flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <div class="skeleton-shimmer w-7 h-7 rounded-xl"></div>
+                                <div class="space-y-1.5">
+                                    <div class="skeleton-shimmer h-3.5 w-28"></div>
+                                    <div class="skeleton-shimmer h-2.5 w-20"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-shimmer h-4 w-12 rounded"></div>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-[#FFFDFB] border border-[#F0E6DE] flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <div class="skeleton-shimmer w-7 h-7 rounded-xl"></div>
+                                <div class="space-y-1.5">
+                                    <div class="skeleton-shimmer h-3.5 w-32"></div>
+                                    <div class="skeleton-shimmer h-2.5 w-16"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-shimmer h-4 w-12 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="souvenir-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#4A3F35] text-white px-5 py-3 rounded-2xl text-xs font-bold shadow-2xl opacity-0 pointer-events-none transition-all z-50 flex items-center gap-2">
+        <span id="toast-icon">✨</span>
+        <span id="toast-msg">Pesan Notifikasi</span>
+    </div>
+
+    <!-- JAVASCRIPT CORE LOGIC -->
+    <script>
+        let CURRENT_SS_ID = "";
+        let masterData = [];
+        let guestMap = new Map();
+        let totalSouvenirStock = 0;
+        let isQuickClaim = true;
+        let isAudioEnabled = true;
+        let html5QrCode = null;
+        let isCameraActive = false;
+
+        // ── MOBILE TAB SWITCHER (<680px) ──
+        function switchMobileTab(mode) {
+            const tabScan = document.getElementById('mob-tab-scan');
+            const tabRecent = document.getElementById('mob-tab-recent');
+            const panelScan = document.getElementById('panel-scanner');
+            const panelRecent = document.getElementById('panel-recent');
+
+            if (mode === 'SCAN') {
+                tabScan.className = "flex-1 py-2.5 rounded-xl font-extrabold text-xs text-white bg-[#4A3F35] transition-all flex items-center justify-center gap-1.5 shadow-sm";
+                tabRecent.className = "flex-1 py-2.5 rounded-xl font-extrabold text-xs text-[#8C7560] transition-all flex items-center justify-center gap-1.5";
+                panelScan.classList.remove('tab-panel-inactive');
+                panelRecent.classList.add('tab-panel-inactive');
+                const input = document.getElementById('barcode-input');
+                if (input) input.focus();
+            } else {
+                tabRecent.className = "flex-1 py-2.5 rounded-xl font-extrabold text-xs text-white bg-[#4A3F35] transition-all flex items-center justify-center gap-1.5 shadow-sm";
+                tabScan.className = "flex-1 py-2.5 rounded-xl font-extrabold text-xs text-[#8C7560] transition-all flex items-center justify-center gap-1.5";
+                panelScan.classList.add('tab-panel-inactive');
+                panelRecent.classList.remove('tab-panel-inactive');
+            }
+        }
+
+        // ── AUDIO SYNTHESIZER ──
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playSuccessBeep() {
+            if (!isAudioEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.exponentialRampToValueAtTime(1760, now + 0.12);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } catch (e) {}
+        }
+
+        function playWarningBuzzer() {
+            if (!isAudioEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } catch (e) {}
+        }
+
+        function toggleAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            document.getElementById('btn-sound-toggle').innerText = isAudioEnabled ? '🔊' : '🔇';
+            showToast(isAudioEnabled ? "Audio Suara Diaktifkan" : "Audio Suara Dimatikan", isAudioEnabled ? "🔊" : "🔇");
+        }
+
+        function toggleQuickMode(enabled) {
+            isQuickClaim = enabled;
+            showToast(enabled ? "Mode Auto-Claim Aktif (Instan)" : "Mode Konfirmasi Manual Aktif", "⚡");
+        }
+
+        function showToast(msg, icon = "✨") {
+            const toast = document.getElementById('souvenir-toast');
+            document.getElementById('toast-msg').innerText = msg;
+            document.getElementById('toast-icon').innerText = icon;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        function syncNavbar() {
+            const ssId = CURRENT_SS_ID || "";
+            const links = {
+                'nav-dashboard': `dashboard.html?ssId=${ssId}`,
+                'nav-checkin': `checkin.html?ssId=${ssId}`,
+                'nav-onsite': `onsite.html?ssId=${ssId}`,
+                'nav-analytics': `analytics.html?ssId=${ssId}`,
+                'nav-welcome': `welcome.html?ssId=${ssId}`
+            };
+            for (const [id, url] of Object.entries(links)) {
+                const el = document.getElementById(id);
+                if (el) el.href = url;
+            }
+        }
+
+        // ── LOAD INITIAL DATA & SOUVENIR CONFIG ──
+        async function loadConfigAndData() {
+            if (!window.SAPATAMU_RESOLVED) { setTimeout(loadConfigAndData, 100); return; }
+            
+            const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+            CURRENT_SS_ID = window.CURRENT_SS_ID || sessionObj.ssId;
+            if (!CURRENT_SS_ID) {
+                window.location.href = "login.html";
+                return;
+            }
+            syncNavbar();
+
+            // 1. Load config_welcome for total souvenir stock
+            try {
+                if (window.SB_URL && window.SB_KEY) {
+                    const sbRes = await fetch(
+                        `${SB_URL}/rest/v1/config_welcome?ssid=eq.${CURRENT_SS_ID}&select=data&limit=1`,
+                        { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                    );
+                    if (sbRes.ok) {
+                        const rows = await sbRes.json();
+                        if (rows && rows.length > 0 && rows[0].data) {
+                            totalSouvenirStock = parseInt(rows[0].data.stokSouvenir) || 0;
+                        }
+                    }
+                }
+            } catch (e) { console.warn("Load config souvenir stock notice:", e); }
+
+            // 2. Fetch all guests using core fetchAllTamu loop
+            await refreshGuestData();
+
+            // 3. Init Realtime on tamu table
+            initSouvenirRealtime();
+
+            // 4. Focus input box
+            const input = document.getElementById('barcode-input');
+            if (input) input.focus();
+        }
+
+        async function refreshGuestData() {
+            try {
+                let list = [];
+                if (window.__guestbookCore && window.__guestbookCore.fetchAllTamu) {
+                    list = await window.__guestbookCore.fetchAllTamu(CURRENT_SS_ID);
+                } else {
+                    const CHUNK = 1000;
+                    let all = []; let offset = 0;
+                    while (true) {
+                        const url = `${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&order=row.desc&limit=${CHUNK}&offset=${offset}`;
+                        const r = await fetch(url, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+                        const d = await r.json();
+                        all = all.concat(d || []);
+                        if (!d || d.length < CHUNK) break;
+                        offset += CHUNK;
+                    }
+                    list = all.map(g => ({
+                        row: g.row, nama: g.nama, whatsapp: g.whatsapp, kategori: g.kategori, kode: g.kode,
+                        rencanaHadir: g.rencana_hadir, statusHadir: String(g.status_hadir), jamDatang: g.jam_datang,
+                        souvenir: g.souvenir, pihakPengundang: g.pihak_pengundang, alamat: g.alamat, realHadir: g.real_hadir,
+                        jamPulang: g.jam_pulang
+                    }));
+                }
+
+                masterData = list;
+                guestMap.clear();
+                masterData.forEach(g => {
+                    if (g.kode) guestMap.set(String(g.kode).trim().toUpperCase(), g);
+                });
+
+                updateTelemetryDisplay();
+                renderRecentClaims();
+            } catch (e) {
+                console.error("Refresh guest data error:", e);
+            }
+        }
+
+        function updateTelemetryDisplay() {
+            let countClaimed = 0;
+            let countCheckedIn = 0;
+            let countCheckedOut = 0;
+
+            masterData.forEach(g => {
+                const isCheckedIn = String(g.statusHadir) === "1" || (g.jamDatang && g.jamDatang !== "-");
+                const isClaimed = (g.souvenir && g.souvenir.toUpperCase() === "YA") || (g.jamPulang && g.jamPulang !== "-");
+                
+                if (isCheckedIn) countCheckedIn++;
+                if (isClaimed) {
+                    countClaimed++;
+                    countCheckedOut++;
+                }
+            });
+
+            const activeInBallroom = Math.max(0, countCheckedIn - countCheckedOut);
+
+            document.getElementById('stat-souvenir-out').innerText = countClaimed;
+            
+            if (totalSouvenirStock > 0) {
+                const left = Math.max(0, totalSouvenirStock - countClaimed);
+                document.getElementById('stat-souvenir-left').innerText = left;
+                document.getElementById('stat-souvenir-total').innerText = `Dari ${totalSouvenirStock} Pcs`;
+            } else {
+                document.getElementById('stat-souvenir-left').innerText = "∞";
+                document.getElementById('stat-souvenir-total').innerText = `Stok Belum Diatur`;
+            }
+
+            document.getElementById('stat-active-in-ballroom').innerText = activeInBallroom;
+        }
+
+        function renderRecentClaims() {
+            const listEl = document.getElementById('recent-claims-list');
+            const badgeEl = document.getElementById('recent-count-badge');
+            const mobBadge = document.getElementById('mob-recent-badge');
+            if (!listEl) return;
+
+            const claimedGuests = masterData.filter(g => (g.souvenir && g.souvenir.toUpperCase() === "YA") || (g.jamPulang && g.jamPulang !== "-"));
+            
+            if (badgeEl) badgeEl.innerText = `${claimedGuests.length} Tamu`;
+            if (mobBadge) mobBadge.innerText = claimedGuests.length;
+
+            if (claimedGuests.length === 0) {
+                listEl.innerHTML = '<div class="py-16 text-center text-[#8C7560] text-xs italic">Belum ada tamu yang mengambil souvenir...</div>';
+                return;
+            }
+
+            // Show last 15 claimed guests
+            const recentSlice = claimedGuests.slice(-15).reverse();
+
+            listEl.innerHTML = recentSlice.map(g => {
+                const timeStr = g.jamPulang || g.jamDatang || '-';
+                return `
+                <div class="flex items-center justify-between p-3 rounded-2xl bg-[#FFFDFB] border border-[#F0E6DE] hover:border-[#C8962E] transition-all">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-xl bg-[#E8F8F0] text-[#10B981] flex items-center justify-center font-black text-xs">
+                            ✓
+                        </div>
+                        <div>
+                            <div class="text-xs font-black text-[#4A3F35] leading-tight">${g.nama}</div>
+                            <div class="text-[9px] font-bold text-[#8C7560]">${g.kategori || 'UMUM'} &bull; ${g.pihakPengundang || '-'}</div>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="text-[8.5px] font-mono font-extrabold bg-[#FFF9F0] text-[#C8962E] px-2 py-0.5 rounded-md border border-[#F0E6DE]">${timeStr}</span>
+                        <div class="text-[7.5px] font-bold text-gray-400 mt-0.5">ID: ${g.kode}</div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // ── REALTIME LISTENER ──
+        function initSouvenirRealtime() {
+            if (!CURRENT_SS_ID) return;
+            if (window.__guestbookCore && window.__guestbookCore.createRealtimeTamu) {
+                window.__guestbookCore.createRealtimeTamu(CURRENT_SS_ID, {
+                    onInsert: () => { refreshGuestData(); },
+                    onUpdate: () => { refreshGuestData(); },
+                    onDelete: () => { refreshGuestData(); }
+                });
+            } else if (window.supabase) {
+                const client = window.supabase.createClient(SB_URL, SB_KEY);
+                client.channel('souvenir_tamu_' + CURRENT_SS_ID.slice(0,6))
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'tamu', filter: `ssid=eq.${CURRENT_SS_ID}` }, () => {
+                        refreshGuestData();
+                    })
+                    .subscribe();
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // 🛡️ HID BARCODE SCANNER ANTI-BURST ENGINE (120ms Settle + 9-Char Slice)
+        // ══════════════════════════════════════════════════════════════════════
+        let settleTimer = null;
+        let lastScannedCode = "";
+        let lastScanTimestamp = 0;
+        const SETTLE_DEBOUNCE_MS = 120;
+        const DEDUPLICATE_COOLDOWN_MS = 1500;
+
+        function extractClean9CharCode(rawInput) {
+            if (!rawInput) return "";
+            let s = String(rawInput).trim();
+            if (s.includes("id=")) {
+                s = s.split("id=")[1].split("&")[0];
+            }
+            if (s.length >= 9) {
+                s = s.slice(-9);
+            }
+            return s.toUpperCase();
+        }
+
+        function handleBarcodeBurstInput() {
+            clearTimeout(settleTimer);
+            settleTimer = setTimeout(() => {
+                const inputEl = document.getElementById('barcode-input');
+                if (!inputEl) return;
+                const raw = inputEl.value;
+                if (!raw || raw.trim().length === 0) return;
+
+                const cleanCode = extractClean9CharCode(raw);
+                if (cleanCode.length === 9 && cleanCode.charAt(3) === '-') {
+                    processScannedCode(cleanCode);
+                } else if (cleanCode.length > 0) {
+                    processScannedCode(cleanCode);
+                }
+            }, SETTLE_DEBOUNCE_MS);
+        }
+
+        const barcodeBox = document.getElementById('barcode-input');
+        if (barcodeBox) {
+            barcodeBox.addEventListener('input', handleBarcodeBurstInput);
+            barcodeBox.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    clearTimeout(settleTimer);
+                    const raw = barcodeBox.value;
+                    const cleanCode = extractClean9CharCode(raw);
+                    if (cleanCode) processScannedCode(cleanCode);
+                }
+            });
+        }
+
+        function manualTriggerScan() {
+            clearTimeout(settleTimer);
+            const inputEl = document.getElementById('barcode-input');
+            if (inputEl) {
+                const cleanCode = extractClean9CharCode(inputEl.value);
+                if (cleanCode) processScannedCode(cleanCode);
+            }
+        }
+
+        // Global keydown fallback
+        let globalBurstBuffer = "";
+        let globalSettleTimer = null;
+        document.addEventListener('keydown', (e) => {
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                return;
+            }
+            if (e.key.length === 1 || e.key === 'Enter') {
+                if (e.key === 'Enter') e.preventDefault();
+                else globalBurstBuffer += e.key;
+
+                clearTimeout(globalSettleTimer);
+                globalSettleTimer = setTimeout(() => {
+                    if (globalBurstBuffer.length >= 9) {
+                        const cleanCode = extractClean9CharCode(globalBurstBuffer);
+                        processScannedCode(cleanCode);
+                    }
+                    globalBurstBuffer = "";
+                }, SETTLE_DEBOUNCE_MS);
+            }
+        });
+
+        // ══════════════════════════════════════════════════════════════════════
+        // 🎯 PROCESS SCANNED GUEST CODE & EXECUTE CHECKOUT / CLAIM
+        // ══════════════════════════════════════════════════════════════════════
+        async function processScannedCode(code) {
+            const now = Date.now();
+            const upperCode = String(code).trim().toUpperCase();
+
+            // Anti-Double Burst / Cooldown Guard
+            if (upperCode === lastScannedCode && (now - lastScanTimestamp < DEDUPLICATE_COOLDOWN_MS)) {
+                clearScannerInput();
+                return;
+            }
+
+            lastScannedCode = upperCode;
+            lastScanTimestamp = now;
+
+            // Search guest in guestMap or masterData
+            let guest = guestMap.get(upperCode);
+            if (!guest) {
+                guest = masterData.find(g => String(g.kode).trim().toUpperCase() === upperCode || (g.nama && g.nama.toUpperCase().includes(upperCode)));
+            }
+
+            const resultCard = document.getElementById('scan-result-card');
+            resultCard.classList.remove('hidden', 'anim-success', 'anim-error');
+
+            if (!guest) {
+                playWarningBuzzer();
+                resultCard.className = "p-4 sm:p-5 rounded-2xl border-2 border-red-300 bg-red-50/80 anim-error text-center";
+                resultCard.innerHTML = `
+                    <div class="text-2xl sm:text-3xl mb-1">❌</div>
+                    <h3 class="text-xs sm:text-sm font-black text-red-700 uppercase tracking-tight">KODE TIDAK DITEMUKAN</h3>
+                    <p class="text-[11px] text-red-600 font-semibold mt-0.5">Kode <code>"${upperCode}"</code> tidak terdaftar di daftar tamu.</p>
+                `;
+                clearScannerInput();
+                return;
+            }
+
+            const isCheckedIn = String(guest.statusHadir) === "1" || (guest.jamDatang && guest.jamDatang !== "-");
+            const isAlreadyClaimed = (guest.souvenir && guest.souvenir.toUpperCase() === "YA") || (guest.jamPulang && guest.jamPulang !== "-");
+
+            // SCENARIO 1: ALREADY CLAIMED (WARNING / BUZZER)
+            if (isAlreadyClaimed) {
+                playWarningBuzzer();
+                resultCard.className = "p-4 sm:p-5 rounded-2xl border-2 border-amber-400 bg-amber-50/90 anim-error";
+                resultCard.innerHTML = `
+                    <div class="flex items-start gap-3 sm:gap-4">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl sm:text-2xl shrink-0 shadow-md">⚠️</div>
+                        <div class="flex-grow">
+                            <span class="text-[8.5px] font-black uppercase tracking-wider bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md">SUDAH KLAIM SOUVENIR</span>
+                            <h3 class="text-base sm:text-lg font-extrabold text-[#4A3F35] mt-0.5">${guest.nama}</h3>
+                            <p class="text-[11px] text-[#8C7560] mt-0.5">Kategori: <strong>${guest.kategori || 'UMUM'}</strong> &bull; Pihak: <strong>${guest.pihakPengundang || '-'}</strong></p>
+                            <div class="mt-2 text-[11px] font-bold text-amber-800 bg-amber-100/80 p-2 sm:p-2.5 rounded-xl border border-amber-200">
+                                ⏱️ Souvenir sudah diambil pada: <strong>${guest.jamPulang || guest.jamDatang || 'Tercatat'}</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                clearScannerInput();
+                return;
+            }
+
+            // SCENARIO 2: NOT YET CHECKED IN (NOTICE)
+            if (!isCheckedIn) {
+                playWarningBuzzer();
+                resultCard.className = "p-4 sm:p-5 rounded-2xl border-2 border-yellow-300 bg-yellow-50 anim-error";
+                resultCard.innerHTML = `
+                    <div class="flex items-start gap-3 sm:gap-4">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-yellow-500 text-white flex items-center justify-center text-xl sm:text-2xl shrink-0 shadow-md">⏳</div>
+                        <div class="flex-grow">
+                            <span class="text-[8.5px] font-black uppercase tracking-wider bg-yellow-200 text-yellow-900 px-2 py-0.5 rounded-md">BELUM CHECK-IN MASUK</span>
+                            <h3 class="text-base sm:text-lg font-extrabold text-[#4A3F35] mt-0.5">${guest.nama}</h3>
+                            <p class="text-[11px] text-[#8C7560] mt-0.5">Tamu ini belum terdata melakukan scan check-in masuk.</p>
+                            <button type="button" onclick="executeClaimAndCheckout('${guest.kode}')" class="mt-2.5 bg-[#4A3F35] text-white px-3.5 py-2 rounded-xl text-[11px] font-black hover:bg-black transition-all">
+                                Tetap Serahkan Souvenir &amp; Check-Out
+                            </button>
+                        </div>
+                    </div>
+                `;
+                clearScannerInput();
+                return;
+            }
+
+            // SCENARIO 3: READY TO CLAIM
+            if (isQuickClaim) {
+                await executeClaimAndCheckout(guest.kode);
+            } else {
+                resultCard.className = "p-4 sm:p-5 rounded-2xl border-2 border-[#C8962E] bg-white anim-success";
+                resultCard.innerHTML = `
+                    <div class="flex items-start gap-3 sm:gap-4">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#C8962E] text-white flex items-center justify-center text-xl sm:text-2xl shrink-0 shadow-md">🎁</div>
+                        <div class="flex-grow">
+                            <span class="text-[8.5px] font-black uppercase tracking-wider bg-[#FFF0E6] text-[#C8962E] px-2 py-0.5 rounded-md">SIAP KLAIM SOUVENIR</span>
+                            <h3 class="text-base sm:text-lg font-extrabold text-[#4A3F35] mt-0.5">${guest.nama}</h3>
+                            <p class="text-[11px] text-[#8C7560]">Kategori: <strong>${guest.kategori || 'UMUM'}</strong> &bull; Sesi: <strong>${guest.sesi || '-'}</strong></p>
+                            <div class="mt-2.5 flex gap-2">
+                                <button type="button" onclick="executeClaimAndCheckout('${guest.kode}')" class="bg-[#10B981] hover:bg-[#059669] text-white px-4 py-2 rounded-xl text-xs font-black shadow transition-all">
+                                    ✓ Serahkan &amp; Check-Out
+                                </button>
+                                <button type="button" onclick="clearScannerInput(); document.getElementById('scan-result-card').classList.add('hidden');" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-xs font-bold transition-all">
+                                    Batal
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            clearScannerInput();
+        }
+
+        async function executeClaimAndCheckout(kode) {
+            const guest = guestMap.get(String(kode).trim().toUpperCase());
+            if (!guest) return;
+
+            const nowTimeStr = new Date().toLocaleTimeString('id-ID', { hour12: false });
+            
+            guest.souvenir = "YA";
+            guest.jamPulang = nowTimeStr;
+
+            playSuccessBeep();
+
+            const resultCard = document.getElementById('scan-result-card');
+            resultCard.classList.remove('hidden');
+            resultCard.className = "p-4 sm:p-5 rounded-2xl border-2 border-[#10B981] bg-[#F0FDF4] anim-success";
+            resultCard.innerHTML = `
+                <div class="flex items-start gap-3 sm:gap-4">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#10B981] text-white flex items-center justify-center text-xl sm:text-2xl shrink-0 shadow-md">✓</div>
+                    <div class="flex-grow">
+                        <span class="text-[8.5px] font-black uppercase tracking-wider bg-green-200 text-green-900 px-2 py-0.5 rounded-md">SUKSES KLAIM SOUVENIR</span>
+                        <h3 class="text-base sm:text-lg font-extrabold text-[#4A3F35] mt-0.5">${guest.nama}</h3>
+                        <p class="text-[11px] text-[#8C7560]">Kategori: <strong>${guest.kategori || 'UMUM'}</strong> &bull; Checkout: <strong>${nowTimeStr}</strong></p>
+                        <div class="mt-1.5 text-[11px] font-bold text-green-700">
+                            🎉 Souvenir berhasil diserahkan. Tamu tercatat check-out dari ballroom.
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            updateTelemetryDisplay();
+            renderRecentClaims();
+
+            // Sync to Supabase
+            try {
+                if (window.SB_URL && window.SB_KEY) {
+                    await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${guest.kode}`, {
+                        method: 'PATCH',
+                        headers: {
+                            "apikey": SB_KEY,
+                            "Authorization": "Bearer " + SB_KEY,
+                            "Content-Type": "application/json",
+                            "Prefer": "return=minimal"
+                        },
+                        body: JSON.stringify({
+                            souvenir: "YA",
+                            jam_pulang: nowTimeStr
+                        })
+                    });
+                }
+            } catch (e) { console.warn("Supabase souvenir update error:", e); }
+
+            // Sync to GAS
+            try {
+                fetch(window.SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'claim_souvenir_checkout',
+                        ssId: CURRENT_SS_ID,
+                        kode: guest.kode,
+                        jamPulang: nowTimeStr
+                    })
+                }).catch(() => null);
+            } catch (e) {}
+
+            clearScannerInput();
+        }
+
+        function clearScannerInput() {
+            const input = document.getElementById('barcode-input');
+            if (input) {
+                input.value = "";
+                input.focus();
+            }
+        }
+
+        // ── CAMERA SCANNER TOGGLE (Html5Qrcode) ──
+        function toggleCameraScanner() {
+            const wrap = document.getElementById('camera-viewport-wrap');
+            const textEl = document.getElementById('cam-toggle-text');
+            if (!wrap) return;
+
+            if (isCameraActive) {
+                if (html5QrCode) {
+                    html5QrCode.stop().then(() => {
+                        html5QrCode = null;
+                        wrap.style.display = 'none';
+                        isCameraActive = false;
+                        if (textEl) textEl.innerText = "Buka Kamera";
+                    }).catch(() => {
+                        html5QrCode = null;
+                        wrap.style.display = 'none';
+                        isCameraActive = false;
+                    });
+                }
+            } else {
+                wrap.style.display = 'block';
+                if (textEl) textEl.innerText = "Tutup Kamera";
+                isCameraActive = true;
+                if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 20, qrbox: 240, aspectRatio: 1.0 },
+                    (decodedText) => {
+                        const cleanCode = extractClean9CharCode(decodedText);
+                        if (cleanCode) {
+                            processScannedCode(cleanCode);
+                        }
+                    }
+                ).catch(err => {
+                    console.warn("Camera start error:", err);
+                    showToast("Kamera tidak dapat diakses", "❌");
+                });
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadConfigAndData);
+        } else {
+            loadConfigAndData();
+        }
+    </script>
+</body>
+
+</html>

@@ -799,14 +799,13 @@
                 <div class="nav-group">
                     <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
                     <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                    <a href="souvenir.html" class="nav-link" id="nav-souvenir">Souvenir</a>
                     <a href="analytics.html" class="nav-link active" id="nav-analytics">Analytics</a>
                     <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
                     <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
                     <a href="worker.html" class="nav-link" id="nav-worker">Worker</a>
                     <a href="welcome.html" class="nav-link" id="nav-welcome">Welcome</a>
                     <div class="nav-divider"></div>
-                    
-                    
                 </div>
                 <div class="nav-divider"></div>
                 <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
@@ -849,11 +848,44 @@
                     </div>
                 </div>
 
+                <!-- LIVE BALLROOM OCCUPANCY CARD -->
+                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm p-4">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-gray-400 uppercase tracking-widest" style="font-size: clamp(7px, 0.65vw, 10px);">🏢 Tamu di Ballroom</span>
+                        <span id="occupancy-status-pill" class="text-[8px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700">AMAN</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <div id="side-occupancy" class="font-black text-[#E07B7B] tracking-tighter" style="font-size: clamp(28px, 3.2vh, 48px); line-height:1;">0</div>
+                        <span id="side-occupancy-cap" class="text-[10px] font-bold text-gray-400">/ 0 Kapasitas</span>
+                    </div>
+                    <div class="w-full bg-gray-100 h-2 rounded-full mt-2.5 overflow-hidden">
+                        <div id="occupancy-bar" class="h-full bg-[#E07B7B] transition-all duration-500" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <!-- SOUVENIR DISBURSEMENT CARD -->
+                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm p-4">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-gray-400 uppercase tracking-widest" style="font-size: clamp(7px, 0.65vw, 10px);">🎁 Souvenir Terbagi</span>
+                        <span id="souvenir-ratio-pct" class="text-[8px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">0%</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <div id="side-souvenir-out" class="font-black text-[#C8962E] tracking-tighter" style="font-size: clamp(28px, 3.2vh, 48px); line-height:1;">0</div>
+                        <span id="side-souvenir-left" class="text-[10px] font-bold text-gray-400">/ Sisa 0 Pcs</span>
+                    </div>
+                    <div class="w-full bg-gray-100 h-2 rounded-full mt-2.5 overflow-hidden">
+                        <div id="souvenir-bar" class="h-full bg-[#C8962E] transition-all duration-500" style="width: 0%;"></div>
+                    </div>
+                </div>
+
                 <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm" style="padding: clamp(12px, 1.5vh, 28px) clamp(12px, 1.2vw, 28px);">
                     <div class="font-bold text-gray-400 uppercase tracking-widest mb-1" style="font-size: clamp(7px, 0.65vw, 10px);">Akurasi RSVP</div>
                     <div id="side-acc" class="font-black text-[#C8962E] tracking-tighter" style="font-size: clamp(36px, 4vh, 64px); line-height:1;">0%</div>
                     <div class="font-bold text-gray-300 mt-1 uppercase tracking-widest" style="font-size: clamp(7px, 0.65vw, 9px);">Database Match Rate</div>
                 </div>
+
+                <!-- Custom KPI Container -->
+                <div id="custom-kpi-sidebar-container" class="space-y-2"></div>
             </div>
 
             <!-- Panel 5 Tamu Terakhir Realtime -->
@@ -1440,6 +1472,8 @@
                 let hosts = {};
                 let addresses = {};
                 let flowRaw = [];
+                let claimedSouvenirCount = 0;
+                let checkedOutPax = 0;
 
                 let uniqueSessions = [...new Set((sbData || []).map(g => String(g.sesi || "").trim()))].filter(s => s !== "" && s !== "-");
                 uniqueSessions.sort();
@@ -1467,11 +1501,17 @@
                     const rawStatus = String(item.status_hadir || "").trim().toLowerCase();
                     const hasTime = item.jam_datang && item.jam_datang !== "-" && item.jam_datang !== "";
                     const isCheckedIn = rawStatus === "1" || rawStatus === "true" || hasTime;
+                    const hasClaimedSouv = (item.souvenir && String(item.souvenir).trim().toUpperCase() === "YA") || (item.jam_pulang && item.jam_pulang !== "-" && item.jam_pulang !== "");
 
                     totalRSVP += valH;
 
                     if (isCheckedIn) {
                         totalReal += valN;
+
+                        if (hasClaimedSouv) {
+                            claimedSouvenirCount++;
+                            checkedOutPax += valN;
+                        }
 
                         const catName = String(item.kategori || "UMUM").toUpperCase();
                         const hostName = String(item.pihak_pengundang || "LAINNYA").toUpperCase();
@@ -1510,6 +1550,30 @@
                     }
                 });
 
+                // Fetch event logistics config if not yet loaded
+                let eventConfig = window.__eventConfig || null;
+                if (!eventConfig) {
+                    try {
+                        const sbConf = await fetch(
+                            `${SB_URL}/rest/v1/config_welcome?ssid=eq.${CURRENT_SS_ID}&select=data&limit=1`,
+                            { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } }
+                        );
+                        if (sbConf.ok) {
+                            const confRows = await sbConf.json();
+                            if (confRows && confRows.length > 0) {
+                                eventConfig = confRows[0].data || {};
+                                window.__eventConfig = eventConfig;
+                            }
+                        }
+                    } catch (ce) { console.warn("Config load error:", ce); }
+                }
+
+                const kapasitasBallroom = eventConfig && eventConfig.kapasitasBallroom ? parseInt(eventConfig.kapasitasBallroom) : 0;
+                const totalStokSouvenir = eventConfig && eventConfig.stokSouvenir ? parseInt(eventConfig.stokSouvenir) : 0;
+                const customMetricsList = eventConfig && Array.isArray(eventConfig.customMetrics) ? eventConfig.customMetrics : [];
+
+                const activeInBallroom = Math.max(0, totalReal - checkedOutPax);
+
                 globalData = {
                     totalReal: totalReal,
                     totalRSVP: totalRSVP,
@@ -1520,11 +1584,94 @@
                     hostValues: Object.values(hosts),
                     addrLabels: Object.keys(addresses),
                     addrValues: Object.values(addresses),
-                    flowRaw: flowRaw
+                    flowRaw: flowRaw,
+                    activeInBallroom: activeInBallroom,
+                    claimedSouvenirCount: claimedSouvenirCount
                 };
 
                 document.getElementById('side-real').innerText = globalData.totalReal || 0;
                 document.getElementById('side-acc').innerText = (globalData.percentage || 0) + "%";
+
+                // Update Ballroom Occupancy Card
+                const sideOcc = document.getElementById('side-occupancy');
+                if (sideOcc) sideOcc.innerText = activeInBallroom;
+                const sideOccCap = document.getElementById('side-occupancy-cap');
+                const occBar = document.getElementById('occupancy-bar');
+                const occPill = document.getElementById('occupancy-status-pill');
+
+                if (kapasitasBallroom > 0) {
+                    if (sideOccCap) sideOccCap.innerText = `/ ${kapasitasBallroom} Pax`;
+                    const occPct = Math.min(100, Math.round((activeInBallroom / kapasitasBallroom) * 100));
+                    if (occBar) occBar.style.width = `${occPct}%`;
+                    if (occPill) {
+                        if (occPct >= 90) {
+                            occPill.className = "text-[8px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-700";
+                            occPill.innerText = `PENUH ${occPct}%`;
+                        } else if (occPct >= 70) {
+                            occPill.className = "text-[8px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800";
+                            occPill.innerText = `PADAT ${occPct}%`;
+                        } else {
+                            occPill.className = "text-[8px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+                            occPill.innerText = `AMAN ${occPct}%`;
+                        }
+                    }
+                } else {
+                    if (sideOccCap) sideOccCap.innerText = `/ Kapasitas -`;
+                    if (occBar) occBar.style.width = `0%`;
+                    if (occPill) {
+                        occPill.className = "text-[8px] font-black px-2 py-0.5 rounded-full bg-gray-100 text-gray-700";
+                        occPill.innerText = `AKTIF`;
+                    }
+                }
+
+                // Update Souvenir Disbursement Card
+                const sideSouvOut = document.getElementById('side-souvenir-out');
+                if (sideSouvOut) sideSouvOut.innerText = claimedSouvenirCount;
+                const sideSouvLeft = document.getElementById('side-souvenir-left');
+                const souvBar = document.getElementById('souvenir-bar');
+                const souvPct = document.getElementById('souvenir-ratio-pct');
+
+                if (totalStokSouvenir > 0) {
+                    const sisa = Math.max(0, totalStokSouvenir - claimedSouvenirCount);
+                    if (sideSouvLeft) sideSouvLeft.innerText = `/ Sisa ${sisa} Pcs`;
+                    const ratio = Math.min(100, Math.round((claimedSouvenirCount / totalStokSouvenir) * 100));
+                    if (souvBar) souvBar.style.width = `${ratio}%`;
+                    if (souvPct) souvPct.innerText = `${ratio}%`;
+                } else {
+                    if (sideSouvLeft) sideSouvLeft.innerText = `/ Stok Belum Diatur`;
+                    if (souvBar) souvBar.style.width = `0%`;
+                    if (souvPct) souvPct.innerText = `-`;
+                }
+
+                // Render Custom Metrics KPI in Sidebar
+                const customKpiContainer = document.getElementById('custom-kpi-sidebar-container');
+                if (customKpiContainer) {
+                    if (customMetricsList.length > 0) {
+                        customKpiContainer.innerHTML = customMetricsList.map(m => {
+                            const tgt = parseInt(m.target) || 1;
+                            // Example calculation: relative to total Real or direct progress
+                            const curr = Math.min(tgt, totalReal);
+                            const pct = Math.min(100, Math.round((curr / tgt) * 100));
+                            return `
+                            <div class="bg-white/70 backdrop-blur-md rounded-[20px] border border-[#F0E6DE]/60 shadow-sm p-3">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-bold text-gray-500 uppercase tracking-widest text-[9px] truncate">${m.label || 'Target'}</span>
+                                    <span class="text-[8px] font-black px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">${pct}%</span>
+                                </div>
+                                <div class="flex items-baseline gap-1">
+                                    <div class="font-black text-gray-800 text-base leading-none">${curr}</div>
+                                    <span class="text-[9px] font-bold text-gray-400">/ ${tgt} ${m.unit || ''}</span>
+                                </div>
+                                <div class="w-full bg-gray-100 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                                    <div class="h-full bg-[#C8962E] transition-all duration-500" style="width: ${pct}%;"></div>
+                                </div>
+                            </div>
+                            `;
+                        }).join('');
+                    } else {
+                        customKpiContainer.innerHTML = '';
+                    }
+                }
 
                 const cat = processMergedStats(globalData.catLabels, globalData.catValues);
                 const host = processMergedStats(globalData.hostLabels, globalData.hostValues);
