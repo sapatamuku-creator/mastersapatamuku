@@ -214,6 +214,10 @@ function handleMainPost(payload) {
         result = getSpreadsheetGuestCount(ssId);
         break;
 
+      case "deduplicateSheetGuests":
+        result = deduplicateSheetGuests(ssId);
+        break;
+
       case "getDropdownOptions":
         result = getDropdownOptions(ssId);
         break;
@@ -404,6 +408,45 @@ function deleteGuestsFromSheet(ssId, guestCodes) {
     }
     
     return { status: "success", message: `Berhasil menghapus ${deleteCount} tamu dari Spreadsheet.` };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}
+
+function deduplicateSheetGuests(ssId) {
+  try {
+    const ss = getSS(ssId);
+    const sheet = ss.getSheetByName(SHEET_DATA);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < START_ROW) return { status: "success", message: "Data kosong", removedCount: 0 };
+
+    const data = sheet.getRange(START_ROW, COL_KODE_UNIK, lastRow - (START_ROW - 1), 1).getValues();
+    const seenCodes = new Set();
+    const rowsToDelete = [];
+
+    // Pindai dari atas ke bawah: simpan kemunculan pertama, tandai baris duplikat berikutnya
+    for (let i = 0; i < data.length; i++) {
+      const code = String(data[i][0]).trim();
+      if (!code) continue;
+      if (seenCodes.has(code)) {
+        rowsToDelete.push(i + START_ROW);
+      } else {
+        seenCodes.add(code);
+      }
+    }
+
+    // Hapus dari bawah ke atas agar nomor baris tidak bergeser
+    let removedCount = 0;
+    for (let j = rowsToDelete.length - 1; j >= 0; j--) {
+      sheet.deleteRow(rowsToDelete[j]);
+      removedCount++;
+    }
+
+    return {
+      status: "success",
+      removedCount: removedCount,
+      message: `Berhasil membersihkan ${removedCount} baris duplikat dari Spreadsheet.`
+    };
   } catch (e) {
     return { status: "error", message: e.toString() };
   }

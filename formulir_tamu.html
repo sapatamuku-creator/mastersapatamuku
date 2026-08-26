@@ -2231,6 +2231,27 @@
                 <button onclick="closeSyncCompareModal()" aria-label="Tutup dialog sinkronisasi" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94A3B8; padding:0; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#0F172A'" onmouseout="this.style.color='#94A3B8'">&times;</button>
             </div>
             
+            <!-- Duplicate Banner / Section if duplicates found in Spreadsheet -->
+            <div id="syncDupBanner" style="display:none; padding:16px 24px; background:#FEF2F2; border-bottom:1.5px solid #FCA5A5;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:15px; flex-wrap:wrap;">
+                    <div style="text-align:left;">
+                        <div style="font-size:12.5px; font-weight:800; color:#991B1B; display:flex; align-items:center; gap:6px;">
+                            <span>⚠️</span> <span id="syncDupBannerTitle">Ditemukan Baris Duplikat di Google Spreadsheet</span>
+                        </div>
+                        <div style="font-size:10.5px; font-weight:600; color:#B91C1C; margin-top:3px;">
+                            Baris duplikat ini memiliki kode yang sama persis di baris lain di Google Spreadsheet sehingga menyebabkan selisih perhitungan baris.
+                        </div>
+                    </div>
+                    <button id="btnCleanSheetDups" onclick="cleanSpreadsheetDuplicates()" style="background:#DC2626; color:#FFF; padding:10px 18px; border-radius:10px; border:none; font-weight:800; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(220,38,38,0.25); transition:0.2s;" onmouseover="this.style.background='#B91C1C'" onmouseout="this.style.background='#DC2626'">
+                        🗑️ BERSIHKAN DUPLIKAT SPREADSHEET
+                    </button>
+                </div>
+                <!-- Duplicate items scrollable list -->
+                <div id="syncDupListContainer" style="margin-top:12px; max-height:160px; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:8px; padding-right:4px;">
+                    <!-- JS Render -->
+                </div>
+            </div>
+
             <!-- Body: Two Columns -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-[20px] p-[25px_30px] overflow-y-auto flex-1 bg-[#F8FAFC] sync-grid-container">
                 <!-- Column 1: Hanya di Supabase -->
@@ -5687,10 +5708,31 @@
             
             // list B: in sheet only (not in Supabase)
             const onlyInSheet = sheetGuests.filter(g => !sbCodes.has(String(g.kode || "").trim()));
+
+            // list C: Duplicate rows in Spreadsheet (same code appears multiple times in sheet)
+            const sheetSeen = new Map();
+            const sheetDuplicates = [];
+            sheetGuests.forEach((g, idx) => {
+                const code = String(g.kode || "").trim();
+                if (!code) return;
+                if (sheetSeen.has(code)) {
+                    const firstSeen = sheetSeen.get(code);
+                    sheetDuplicates.push({
+                        kode: code,
+                        nama: g.nama,
+                        kategori: g.kategori || "Umum",
+                        whatsapp: g.whatsapp || "-",
+                        row: idx + 8,
+                        firstRow: firstSeen.row
+                    });
+                } else {
+                    sheetSeen.set(code, { row: idx + 8, nama: g.nama });
+                }
+            });
             
             toggleProcessing(false);
             
-            if (onlyInSb.length === 0 && onlyInSheet.length === 0) {
+            if (onlyInSb.length === 0 && onlyInSheet.length === 0 && sheetDuplicates.length === 0) {
                 // Completely in sync!
                 // Hide mismatch banner
                 const mismatchBanner = document.getElementById("mismatch-banner");
@@ -5702,6 +5744,7 @@
             // Open comparison modal
             window.SYNC_ONLY_IN_SB = onlyInSb;
             window.SYNC_ONLY_IN_SHEET = onlyInSheet;
+            window.SYNC_SHEET_DUPLICATES = sheetDuplicates;
             
             window.renderSyncLists();
             document.getElementById("syncCompareModalOverlay").style.display = "flex";
@@ -5723,12 +5766,97 @@
         checks.forEach(c => c.checked = selectAll);
     };
 
+    window.cleanSpreadsheetDuplicates = async function() {
+        if (!window.SYNC_SHEET_DUPLICATES || window.SYNC_SHEET_DUPLICATES.length === 0) return;
+        const count = window.SYNC_SHEET_DUPLICATES.length;
+        const confirmed = await showConfirm(
+            "Bersihkan Duplikat Spreadsheet",
+            `Anda akan menghapus ${count} baris duplikat dari Google Spreadsheet. Baris pertama (asli) akan tetap dipertahankan dengan aman. Lanjutkan?`,
+            "DELETE"
+        );
+        if (!confirmed) return;
+
+        closeSyncCompareModal();
+        showLiveProgress("Membersihkan Duplikat", `Menghapus ${count} baris duplikat dari Google Spreadsheet...`, "🗑️");
+        updateLiveProgress(0, count, `Memproses pembersihan duplikat di Spreadsheet...`);
+
+        try {
+            const res = await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "deduplicateSheetGuests",
+                    ssId: CURRENT_SS_ID
+                })
+            });
+            const result = await res.json();
+            if (result.status !== "success") {
+                throw new Error(result.message || "Gagal membersihkan duplikat di Spreadsheet.");
+            }
+
+            updateLiveProgress(count, count, "Selesai!");
+            closeLiveProgress();
+            showSapaModal(
+                "Pembersihan Sukses ✅",
+                `Berhasil membersihkan ${result.removedCount || count} baris duplikat dari Google Spreadsheet. Sekarang data Spreadsheet dan Supabase sudah selaras.`,
+                "✅"
+            );
+
+            // Refresh data
+            await refreshApp();
+        } catch (err) {
+            closeLiveProgress();
+            console.error("cleanSpreadsheetDuplicates error:", err);
+            showSapaModal("Gagal Membersihkan ❌", err.message, "❌");
+        }
+    };
+
     window.renderSyncLists = function() {
         const containerSb = document.getElementById("syncListSb");
         const containerSheet = document.getElementById("syncListSheet");
+        const dupBanner = document.getElementById("syncDupBanner");
+        const dupTitle = document.getElementById("syncDupBannerTitle");
+        const dupListContainer = document.getElementById("syncDupListContainer");
+        const btnClean = document.getElementById("btnCleanSheetDups");
         
         containerSb.innerHTML = "";
         containerSheet.innerHTML = "";
+        
+        // Render Duplicate Banner if duplicates found in Spreadsheet
+        if (window.SYNC_SHEET_DUPLICATES && window.SYNC_SHEET_DUPLICATES.length > 0) {
+            const dups = window.SYNC_SHEET_DUPLICATES;
+            if (dupBanner) dupBanner.style.display = "block";
+            if (dupTitle) dupTitle.innerText = `Ditemukan ${dups.length} Baris Duplikat di Google Spreadsheet`;
+            if (btnClean) btnClean.innerText = `🗑️ BERSIHKAN ${dups.length} DUPLIKAT DARI SPREADSHEET`;
+            if (dupListContainer) {
+                dupListContainer.innerHTML = "";
+                dups.forEach((g, i) => {
+                    const card = document.createElement("div");
+                    card.style.background = "#FFF";
+                    card.style.border = "1px solid #FECACA";
+                    card.style.borderRadius = "10px";
+                    card.style.padding = "8px 12px";
+                    card.style.display = "flex";
+                    card.style.alignItems = "center";
+                    card.style.gap = "8px";
+                    card.style.textAlign = "left";
+                    
+                    card.innerHTML = `
+                        <span style="font-size:10px; font-weight:800; color:#EF4444; background:#FEE2E2; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${i + 1}</span>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:11px; font-weight:800; color:#1E293B; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${g.nama}</div>
+                            <div style="display:flex; align-items:center; gap:6px; margin-top:2px; font-size:8.5px; font-weight:700;">
+                                <span style="color:#DC2626;">Baris ${g.row} (Duplikat Baris ${g.firstRow})</span>
+                                <span style="color:#94A3B8;">•</span>
+                                <span style="color:#64748B;">${g.kode}</span>
+                            </div>
+                        </div>
+                    `;
+                    dupListContainer.appendChild(card);
+                });
+            }
+        } else {
+            if (dupBanner) dupBanner.style.display = "none";
+        }
         
         if (window.SYNC_ONLY_IN_SB.length === 0) {
             containerSb.innerHTML = `<div style="text-align:center; padding:30px; font-size:10px; color:#94A3B8; font-weight:700;">Data sudah sinkron.</div>`;
