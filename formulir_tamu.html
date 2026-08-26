@@ -5630,16 +5630,25 @@
                     ssId: CURRENT_SS_ID
                 })
             });
-            const gasResult = await gasResponse.json();
-            if (!gasResult || !gasResult.guestList) {
-                throw new Error("Gagal mengambil data dari Google Sheets.");
+            if (!gasResponse.ok) {
+                throw new Error(`Koneksi ke Google Apps Script gagal (HTTP ${gasResponse.status}).`);
             }
-            const sheetGuests = gasResult.guestList || [];
+            const gasResult = await gasResponse.json();
+            if (gasResult && gasResult.status === "error") {
+                throw new Error(gasResult.message || "Google Apps Script mengembalikan error.");
+            }
+            const sheetGuests = (gasResult && (gasResult.guestList || (gasResult.data && gasResult.data.guestList))) || null;
+            if (!Array.isArray(sheetGuests)) {
+                throw new Error(gasResult && gasResult.message ? gasResult.message : "Data tamu Google Sheets tidak ditemukan atau format respons tidak sesuai.");
+            }
             
             // 2. Fetch latest data from Supabase
             const sbResponse = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&select=*`, {
                 headers: SB_HEADERS
             });
+            if (!sbResponse.ok) {
+                throw new Error(`Koneksi ke Supabase gagal (HTTP ${sbResponse.status}).`);
+            }
             const sbGuests = await sbResponse.json();
             if (!Array.isArray(sbGuests)) {
                 throw new Error("Gagal mengambil data dari Supabase.");
