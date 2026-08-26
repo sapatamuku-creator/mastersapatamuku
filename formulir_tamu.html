@@ -5915,6 +5915,9 @@
                 
                 // 2. Simpan tamu dari Spreadsheet ke Supabase (batch chunk 50 tamu per request)
                 if (codesSheet.length > 0) {
+                    const defaultSubdomain = window.CURRENT_SUBDOMAIN || (window.SAPATAMU_SESSION && window.SAPATAMU_SESSION.subdomain) || "-";
+                    const defaultEventDate = window.EVENT_DATE || (window.WA_HARI_TANGGAL && !isNaN(Date.parse(window.WA_HARI_TANGGAL)) ? new Date(window.WA_HARI_TANGGAL).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+
                     const guestsToSaveToSb = window.SYNC_ONLY_IN_SHEET.filter(g => codesSheet.includes(g.kode)).map(g => {
                         let cleanPhone = String(g.whatsapp || "").replace(/\D/g, ''); 
                         if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
@@ -5935,7 +5938,8 @@
                             tanda_kasih: parseFloat(g.tandaKasih) || 0,
                             jam_datang: g.jamDatang || "-",
                             sesi: g.sesi || "-",
-                            event_date: window.EVENT_DATE || (window.WA_HARI_TANGGAL && !isNaN(Date.parse(window.WA_HARI_TANGGAL)) ? new Date(window.WA_HARI_TANGGAL).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
+                            subdomain: defaultSubdomain,
+                            event_date: defaultEventDate
                         };
                     });
                     
@@ -5947,15 +5951,19 @@
                         
                         updateLiveProgress(currentProcessed, totalItems, `Menyinkronkan ${chunk.length} tamu ke Supabase...`);
                         
-                        const sbRes = await fetch(`${SB_URL}/rest/v1/tamu?on_conflict=ssid,kode`, {
+                        const sbRes = await fetch(`${SB_URL}/rest/v1/tamu`, {
                             method: 'POST',
                             headers: {
                                 ...SB_HEADERS,
-                                "Prefer": "resolution=merge-duplicates"
+                                "Content-Type": "application/json",
+                                "Prefer": "return=minimal"
                             },
                             body: JSON.stringify(chunk)
                         });
-                        if (!sbRes.ok) throw new Error("Gagal menyimpan ke Supabase.");
+                        if (!sbRes.ok) {
+                            const errTxt = await sbRes.text();
+                            throw new Error("Gagal menyimpan ke Supabase: " + errTxt);
+                        }
                         
                         currentProcessed = codesSb.length + toNum;
                         updateLiveProgress(currentProcessed, totalItems, `Tersinkron ${currentProcessed} dari ${totalItems} tamu...`);
