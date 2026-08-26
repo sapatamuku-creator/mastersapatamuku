@@ -13,6 +13,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
         rel="stylesheet">
     <script src="config.js"></script>
+    <script type="module">
+        import { fetchAllTamu, createRealtimeTamu } from './lib/guestbook-core.js';
+        window.__guestbookCore = window.__guestbookCore || {};
+        window.__guestbookCore.fetchAllTamu = fetchAllTamu;
+        window.__guestbookCore.createRealtimeTamu = createRealtimeTamu;
+    </script>
     <script src="subdomain_resolver.js?v=3.5"></script>
     <script src="auth_guard.js?v=1.0"></script>
     <style>
@@ -950,7 +956,8 @@
 
         async function initApp() {
             if (window.SAPATAMU_RESOLVED) {
-                CURRENT_SS_ID = window.CURRENT_SS_ID || CURRENT_SS_ID;
+                const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+                CURRENT_SS_ID = window.CURRENT_SS_ID || sessionObj.ssId || CURRENT_SS_ID;
                 if (!CURRENT_SS_ID) {
                     window.location.href = "login.html";
                     return;
@@ -959,7 +966,8 @@
                 if (typeof SapaGuard !== 'undefined') SapaGuard.apply('sensitive');
                 syncNavbar();
                 initNavScroll();
-                await fetchData(); try{ window.__sapaPerf.measure('analytics:fetchData', _perfAF, (globalData && globalData.flowRaw? globalData.flowRaw.length:0)+' flow'); }catch(e){}
+                initTamuRealtime(CURRENT_SS_ID);
+                await fetchData();
             } else {
                 setTimeout(initApp, 100);
             }
@@ -1327,12 +1335,36 @@
             }
         }
 
+        let _tamuRealtimeCtrl = null;
+        function initTamuRealtime(ssId) {
+            if (_tamuRealtimeCtrl || !ssId) return;
+            if (window.__guestbookCore && window.__guestbookCore.createRealtimeTamu) {
+                try {
+                    _tamuRealtimeCtrl = window.__guestbookCore.createRealtimeTamu(ssId, {
+                        onInsert: () => { fetchData(); },
+                        onUpdate: () => { fetchData(); },
+                        onDelete: () => { fetchData(); }
+                    });
+                } catch(e) { console.warn('core realtime tamu fallback:', e); }
+            }
+            if (!_tamuRealtimeCtrl && window.supabase) {
+                try {
+                    const client = window.supabase.createClient(SB_URL, SB_KEY);
+                    _tamuRealtimeCtrl = client.channel('analytics_tamu_channel_' + ssId.slice(0,6))
+                        .on('postgres_changes', { event: '*', schema: 'public', table: 'tamu', filter: `ssid=eq.${ssId}` }, () => {
+                            fetchData();
+                        })
+                        .subscribe();
+                } catch(e) { console.warn('tamu realtime direct fallback error:', e); }
+            }
+        }
+
         async function fetchData() {
+            var _perfStart = 'analytics:fetch:start'; try { performance.mark(_perfStart); } catch (e) { }
             try {
-                const sessionStr = sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db');
-                if (!sessionStr) return;
-                const sessionData = JSON.parse(sessionStr);
-                const ssId = sessionData.ssId;
+                const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+                const ssId = CURRENT_SS_ID || window.CURRENT_SS_ID || sessionObj.ssId;
+                if (!ssId) return;
 
                 // [v3.0 T4.1] Lazy load welcome mirror iframe (only when container visible)
                 const mirrorIframe = document.getElementById('welcome-mirror-iframe');
@@ -1341,7 +1373,6 @@
                     const loadMirror = () => {
                         if (mirrorIframe.dataset.loaded) return;
                         mirrorIframe.dataset.loaded = '1';
-                        const sessionObj = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
                         const uname = sessionObj.username || sessionObj.subdomain || 'monitor';
                         mirrorIframe.src = `welcome.html?mode=kiosk&ssId=${ssId}&user=${encodeURIComponent(uname)}`;
                         mirrorIframe.onload = () => { resizeWelcomeMirror(); };
@@ -1366,14 +1397,41 @@
                     initArrivalRealtime(ssId);
                 }
 
-                const supabaseUrl = `${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&order=row.desc`;
-                const response = await fetch(supabaseUrl, {
-                    headers: {
-                        "apikey": SB_KEY,
-                        "Authorization": "Bearer " + SB_KEY
+                let sbData = [];
+                if (window.__guestbookCore && window.__guestbookCore.fetchAllTamu) {
+                    try {
+                        const raw = await window.__guestbookCore.fetchAllTamu(ssId);
+                        sbData = raw.map(g => ({
+                            rencana_hadir: g.rencanaHadir,
+                            real_hadir: g.realHadir,
+                            status_hadir: g.statusHadir,
+                            kategori: g.kategori,
+                            pihak_pengundang: g.pihakPengundang,
+                            alamat: g.alamat,
+                            jam_datang: g.jamDatang,
+                            sesi: g.sesi
+                        }));
+                    } catch(e) { console.warn('core fetchAllTamu fallback', e); }
+                }
+
+                if (!sbData || sbData.length === 0) {
+                    const CHUNK = 1000;
+                    let all = []; let offset = 0;
+                    while (true) {
+                        const supabaseUrl = `${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&order=row.desc&limit=${CHUNK}&offset=${offset}`;
+                        const response = await fetch(supabaseUrl, {
+                            headers: {
+                                "apikey": SB_KEY,
+                                "Authorization": "Bearer " + SB_KEY
+                            }
+                        });
+                        const chunk = await response.json();
+                        all = all.concat(chunk || []);
+                        if (!chunk || chunk.length < CHUNK) break;
+                        offset += CHUNK;
                     }
-                });
-                const sbData = await response.json();
+                    sbData = all;
+                }
                 
                 // Hitung analytics di frontend
                 let totalReal = 0;
@@ -1402,13 +1460,17 @@
                 const s3Start = timeToMinutes(cleanTimeText(s3StartStr));
 
                 (sbData || []).forEach(item => {
-                    const valH = parseInt(item.rencana_hadir) || 0;
-                    const valN = parseInt(item.real_hadir) || 0;
-                    const isCheckedIn = String(item.status_hadir).trim();
+                    const valH = parseInt(item.rencana_hadir) || 1;
+                    let valN = parseInt(item.real_hadir);
+                    if (isNaN(valN) || valN <= 0) valN = valH; // fallback ke rencana hadir jika real_hadir belum diset angka
+
+                    const rawStatus = String(item.status_hadir || "").trim().toLowerCase();
+                    const hasTime = item.jam_datang && item.jam_datang !== "-" && item.jam_datang !== "";
+                    const isCheckedIn = rawStatus === "1" || rawStatus === "true" || hasTime;
 
                     totalRSVP += valH;
 
-                    if (isCheckedIn === "1") {
+                    if (isCheckedIn) {
                         totalReal += valN;
 
                         const catName = String(item.kategori || "UMUM").toUpperCase();
@@ -1480,6 +1542,7 @@
                 });
                 sesiContainer.innerHTML = sesiHtml;
                 renderFlow();
+                try { window.__sapaPerf.measure('analytics:fetchData', _perfStart, (globalData.flowRaw ? globalData.flowRaw.length : 0) + ' flow, ' + sbData.length + ' tamu'); } catch(e) {}
             } catch (e) { console.error("Sync Error:", e); }
         }
 

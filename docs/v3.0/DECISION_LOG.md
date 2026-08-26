@@ -27,6 +27,7 @@
 | 2026-08-21 | T4.3 Welcome Slideshow Preload | LANJUT | Resolusi adaptive Drive sz=w800 (kiosk) / w1280 (TV) + preloading next slide memanfaatkan browser HTTP cache. User: lanjut |
 | 2026-08-26 | BUG-FETCH-001 Full Fetch Loop | LANJUT | Tambah fetchAllTamu() di guestbook-core.js: loop offset 1000 sampai habis. Ganti fetchTamu({limit:1000}) di kiosk/checkin/onsite dengan fetchAllTamu(). Tambah race-condition guard (retry 100ms×20) di fetchData() ketiga halaman. Fix: search/scan miss tamu >1000 & data kosong saat reload di Android. User: lanjut |
 | 2026-08-26 | FIX-STATS-AND-PWA-CACHE | LANJUT | Tambah updateStatsOnsite() di renderDetailsOnsite() & updateStats() di renderDetails() (checkin/onsite) agar stats 0 guest ter-update di tablet mode. Update sw.js ke sapatamu-pwa-v6 + strategi Network-First untuk semua aset lokal agar update JS/CSS langsung aktif tanpa stale-cache. User: lanjut |
+| 2026-08-26 | FIX-ANALYTICS-DATA-SYNC | LANJUT | Fix CURRENT_SS_ID resolution di analytics.html, fetchAllTamu loop offset, normalisasi status_hadir/jam_datang & fallback real_hadir, serta tambah realtime subscription pada tabel tamu. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
