@@ -583,39 +583,56 @@
     }
 
     async function initProfile() {
-        const localData = localStorage.getItem('sapatamu_db');
-        if (localData) {
-            const parsed = JSON.parse(localData);
-            const uname = parsed.username || "Client";
-            
-            // Set initial state
-            renderProfileData(uname, parsed.package);
+        if (!window.SAPATAMU_RESOLVED) {
+            setTimeout(initProfile, 80);
+            return;
+        }
 
-            // Fetch live data from Supabase to sync package
+        const session = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+        const ssId = window.CURRENT_SS_ID || session.ssId;
+        const uname = session.username || "Client";
+
+        // Set initial UI state
+        renderProfileData(uname, session.package);
+
+        // 0. Instant Hydration dari Local Storage jika sudah ada
+        if (ssId) {
+            const localLogistics = JSON.parse(localStorage.getItem('sapatamu_logistics_' + ssId) || '{}');
+            if (localLogistics.stokSouvenir !== undefined && localLogistics.stokSouvenir !== null) {
+                document.getElementById('inp-stok-souvenir').value = localLogistics.stokSouvenir;
+            }
+            if (localLogistics.kapasitasBallroom !== undefined && localLogistics.kapasitasBallroom !== null) {
+                document.getElementById('inp-kapasitas-ballroom').value = localLogistics.kapasitasBallroom;
+            }
+        }
+
+        // Fetch live data from Supabase to sync package
+        if (uname) {
             try {
-                const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?username=eq.${uname}&limit=1`, {
+                const response = await fetch(`${SB_URL}/rest/v1/client_public_profile?username=eq.${encodeURIComponent(uname)}&limit=1`, {
                     headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
                 });
-                const rows = await response.json();
-                if (rows && rows.length > 0) {
-                    const livePkg = rows[0].package;
-                    if (livePkg) {
-                        parsed.package = livePkg;
-                        localStorage.setItem('sapatamu_db', JSON.stringify(parsed));
-                        renderProfileData(uname, livePkg);
+                if (response.ok) {
+                    const rows = await response.json();
+                    if (rows && rows.length > 0 && rows[0].package) {
+                        session.package = rows[0].package;
+                        localStorage.setItem('sapatamu_db', JSON.stringify(session));
+                        sessionStorage.setItem('sapatamu_session', JSON.stringify(session));
+                        renderProfileData(uname, rows[0].package);
                     }
                 }
             } catch (e) {
-                console.warn("Live fetch failed", e);
+                console.warn("Live package fetch failed", e);
             }
+        }
 
-            // Fetch metadata_client
-            const ssId = window.CURRENT_SS_ID || parsed.ssId;
-            if (ssId) {
-                try {
-                    const resMeta = await fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${ssId}&limit=1`, {
-                        headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
-                    });
+        // Fetch metadata & config_welcome
+        if (ssId) {
+            try {
+                const resMeta = await fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${encodeURIComponent(ssId)}&limit=1`, {
+                    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                });
+                if (resMeta.ok) {
                     const metaRows = await resMeta.json();
                     if (metaRows && metaRows.length > 0) {
                         const m = metaRows[0];
@@ -627,61 +644,37 @@
                         document.getElementById('meta-sesi-1').value = m.sesi_1 && m.sesi_1 !== 'EMPTY' ? m.sesi_1 : "-";
                         document.getElementById('meta-sesi-2').value = m.sesi_2 && m.sesi_2 !== 'EMPTY' ? m.sesi_2 : "-";
                         document.getElementById('meta-sesi-3').value = m.sesi_3 && m.sesi_3 !== 'EMPTY' ? m.sesi_3 : "-";
-                    } else {
-                        // Fallback ke GAS getMasterData
-                        const gasUrl = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
-                        try {
-                            const resGas = await fetch(gasUrl, {
-                                method: 'POST',
-                                body: JSON.stringify({ action: "getMasterData", ssId: ssId })
-                            });
-                            const result = await resGas.json();
-                            if (result && result.eventMeta) {
-                                const meta = result.eventMeta;
-                                document.getElementById('meta-nama-pengantin').value = meta.pengantin || "-";
-                                document.getElementById('meta-hari-tanggal').value = meta.tanggal || "-";
-                                document.getElementById('meta-waktu-acara').value = meta.waktu || "-";
-                                document.getElementById('meta-lokasi-acara').value = meta.lokasi || "-";
-                                document.getElementById('meta-link-undangan').value = meta.link || "-";
-                                
-                                const sOptions = meta.sesiOptions || [];
-                                document.getElementById('meta-sesi-1').value = sOptions[0] || "-";
-                                document.getElementById('meta-sesi-2').value = sOptions[1] || "-";
-                                document.getElementById('meta-sesi-3').value = sOptions[2] || "-";
-                            } else {
-                                document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Data tidak ditemukan");
-                            }
-                        } catch(gasErr) {
-                            console.warn("GAS fallback failed:", gasErr);
-                            document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Data tidak ditemukan");
-                        }
                     }
-                } catch (e) {
-                    console.warn("Metadata fetch failed", e);
-                    document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Gagal memuat data");
                 }
-
-                // Fetch config_welcome for logistics (stok souvenir & kapasitas ballroom)
-                try {
-                    const resCfg = await fetch(`${SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data&limit=1`, {
-                        headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
-                    });
-                    if (resCfg.ok) {
-                        const cfgRows = await resCfg.json();
-                        if (cfgRows && cfgRows.length > 0 && cfgRows[0].data) {
-                            const d = cfgRows[0].data;
-                            if (d.stokSouvenir !== undefined) document.getElementById('inp-stok-souvenir').value = d.stokSouvenir;
-                            if (d.kapasitasBallroom !== undefined) document.getElementById('inp-kapasitas-ballroom').value = d.kapasitasBallroom;
-                        }
-                    }
-                } catch(cfgErr) {
-                    console.warn("Config welcome fetch failed:", cfgErr);
-                }
-            } else {
-                document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Sesi tidak valid");
+            } catch (e) {
+                console.warn("Metadata fetch failed", e);
             }
-        } else {
-            window.location.href = "login.html";
+
+            // Fetch config_welcome for logistics (stok souvenir & kapasitas ballroom)
+            try {
+                const resCfg = await fetch(`${SB_URL}/rest/v1/config_welcome?ssid=eq.${encodeURIComponent(ssId)}&select=data&limit=1`, {
+                    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                });
+                if (resCfg.ok) {
+                    const cfgRows = await resCfg.json();
+                    if (cfgRows && cfgRows.length > 0 && cfgRows[0].data) {
+                        const d = cfgRows[0].data;
+                        if (d.stokSouvenir !== undefined && d.stokSouvenir !== null) {
+                            document.getElementById('inp-stok-souvenir').value = d.stokSouvenir;
+                        }
+                        if (d.kapasitasBallroom !== undefined && d.kapasitasBallroom !== null) {
+                            document.getElementById('inp-kapasitas-ballroom').value = d.kapasitasBallroom;
+                        }
+                        // Sync ke local cache
+                        localStorage.setItem('sapatamu_logistics_' + ssId, JSON.stringify({
+                            stokSouvenir: d.stokSouvenir,
+                            kapasitasBallroom: d.kapasitasBallroom
+                        }));
+                    }
+                }
+            } catch(cfgErr) {
+                console.warn("Config welcome fetch failed:", cfgErr);
+            }
         }
     }
 
@@ -835,7 +828,8 @@
     }
 
     async function saveLogisticsConfig() {
-        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db') || '{}').ssId);
+        const session = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+        const ssId = window.CURRENT_SS_ID || session.ssId;
         if (!ssId) {
             alert("Sesi tidak valid. Silakan login ulang.");
             return;
@@ -849,24 +843,34 @@
         const stok = parseInt(document.getElementById('inp-stok-souvenir').value, 10) || 0;
         const kapasitas = parseInt(document.getElementById('inp-kapasitas-ballroom').value, 10) || 0;
 
+        // 1. Simpan segera ke cache lokal untuk respon instan saat reload
+        localStorage.setItem('sapatamu_logistics_' + ssId, JSON.stringify({
+            stokSouvenir: stok,
+            kapasitasBallroom: kapasitas
+        }));
+
         try {
-            // 1. Fetch current data in config_welcome
+            // 2. Ambil data konfigurasi terkini dari Supabase
             let existingData = {};
-            const getRes = await fetch(`${SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data&limit=1`, {
-                headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
-            });
-            if (getRes.ok) {
-                const rows = await getRes.json();
-                if (rows && rows.length > 0 && rows[0].data) {
-                    existingData = rows[0].data;
+            try {
+                const getRes = await fetch(`${SB_URL}/rest/v1/config_welcome?ssid=eq.${encodeURIComponent(ssId)}&select=data&limit=1`, {
+                    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                });
+                if (getRes.ok) {
+                    const rows = await getRes.json();
+                    if (rows && rows.length > 0 && rows[0].data) {
+                        existingData = rows[0].data;
+                    }
                 }
+            } catch(fetchErr) {
+                console.warn("Existing data fetch notice:", fetchErr);
             }
 
             existingData.stokSouvenir = stok;
             existingData.kapasitasBallroom = kapasitas;
 
-            // 2. Upsert to Supabase
-            await fetch(`${SB_URL}/rest/v1/config_welcome`, {
+            // 3. Upsert ke Supabase config_welcome
+            const upsertRes = await fetch(`${SB_URL}/rest/v1/config_welcome`, {
                 method: 'POST',
                 headers: {
                     "apikey": SB_KEY,
@@ -881,18 +885,22 @@
                 })
             });
 
-            // 3. Fallback sync to GAS
+            // 4. Fallback sync ke GAS
             const gasUrl = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
             fetch(gasUrl, {
                 method: 'POST',
                 body: JSON.stringify({
-                    action: "saveSettings",
+                    action: "saveWelcomePhotos",
                     ssId: ssId,
-                    data: existingData
+                    urlFoto: existingData.urlFoto || "",
+                    teks1: existingData.teksSambutan1 || "",
+                    teks2: existingData.teksSambutan2 || "",
+                    stokSouvenir: stok,
+                    kapasitasBallroom: kapasitas
                 })
-            }).catch(err => console.warn("GAS saveSettings fallback notice:", err));
+            }).catch(err => console.warn("GAS sync notice:", err));
 
-            alert("✓ Pengaturan Logistik & Souvenir berhasil disimpan!");
+            alert(`✓ Pengaturan Logistik Tersimpan!\n🎁 Stok Souvenir: ${stok} Pcs\n🏢 Kapasitas Ballroom: ${kapasitas} Pax`);
         } catch(e) {
             console.error("Save logistics error:", e);
             alert("Gagal menyimpan ke server: " + e.message);
@@ -903,12 +911,14 @@
     }
 
     function goToSouvenirPage() {
-        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db') || '{}').ssId);
+        const session = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+        const ssId = window.CURRENT_SS_ID || session.ssId;
         window.location.href = `souvenir.html?ssId=${ssId}`;
     }
 
     function goToAnalyticsPage() {
-        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db') || '{}').ssId);
+        const session = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+        const ssId = window.CURRENT_SS_ID || session.ssId;
         window.location.href = `analytics.html?ssId=${ssId}`;
     }
 
