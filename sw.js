@@ -2,8 +2,8 @@
    SERVICE WORKER — SapaTamu PWA Offline Mode
    ═══════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'sapatamu-pwa-v5';
-const CACHE_VERSION = '4.1.0';
+const CACHE_NAME = 'sapatamu-pwa-v6';
+const CACHE_VERSION = '4.2.0';
 
 // Files to cache on install (lokal saja — CDN tidak di-cache untuk hindari supply chain risk)
 const PRECACHE_ASSETS = [
@@ -14,8 +14,12 @@ const PRECACHE_ASSETS = [
   './onsite.html',
   './welcome.html',
   './sortir.html',
+  './kiosk.html',
   './offline-db.js',
   './sync-engine.js',
+  './lib/guestbook-core.js',
+  './lib/jalur-store.js',
+  './scripts/printer_widget.js',
   './animations.css',
   './subdomain_resolver.js',
   './config.js',
@@ -61,7 +65,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// ── FETCH: Cache-first strategy ──
+// ── FETCH: Network-First strategy (Online First, Offline Fallback to Cache) ──
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -75,65 +79,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML navigation → network-first, agar update kode langsung tampil
-  // (fallback ke cache hanya saat offline, bukan saat online)
-  if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
-        }
-        return networkResponse;
-      }).catch(() =>
-        caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-          return caches.match('./formulir_tamu.html');
-        }).then((offlinePage) => {
-          if (offlinePage) return offlinePage;
-          return new Response(
-            '<!DOCTYPE html><html><head><title>Offline</title></head><body style="text-align:center;padding:50px;font-family:sans-serif;"><h2>Mode Offline</h2><p>Koneksi internet Anda terputus. Silakan hubungkan kembali perangkat Anda.</p></body></html>',
-            { headers: { 'Content-Type': 'text/html' } }
-          );
-        })
-      )
-    );
-    return;
-  }
-
-  // Cache-first for local assets
+  // Network-First untuk semua aset lokal (HTML, JS, CSS, JSON, images)
+  // Saat online: fetch versi terbaru dari server dan update cache
+  // Saat offline: fallback ke cache
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached, but also update cache in background (only for same-origin)
-        if (url.origin === self.location.origin) {
-          event.waitUntil(
-            fetch(request).then((networkResponse) => {
-              if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-                caches.open(CACHE_NAME).then((cache) => {
-                  cache.put(request, networkResponse);
-                });
-              }
-            }).catch(() => null)
-          );
-        }
-        return cachedResponse;
+    fetch(request).then((networkResponse) => {
+      if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
+        const responseClone = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(request, responseClone);
+        });
       }
-
-      // Not in cache → fetch from network
-      return fetch(request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && url.origin === self.location.origin) {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
-        }
-        return networkResponse;
-      }).catch(() => {
-        // Offline and not in cache → return cached offline page or generic offline HTML
-        if (request.headers.get('accept')?.includes('text/html')) {
+      return networkResponse;
+    }).catch(() =>
+      caches.match(request).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+        if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
           return caches.match('./formulir_tamu.html').then((offlinePage) => {
             if (offlinePage) return offlinePage;
             return new Response(
@@ -142,8 +103,8 @@ self.addEventListener('fetch', (event) => {
             );
           });
         }
-      });
-    })
+      })
+    )
   );
 });
 
