@@ -30,6 +30,7 @@
 | 2026-08-26 | FIX-ANALYTICS-DATA-SYNC | LANJUT | Fix CURRENT_SS_ID resolution di analytics.html, fetchAllTamu loop offset, normalisasi status_hadir/jam_datang & fallback real_hadir, serta tambah realtime subscription pada tabel tamu. User: lanjut |
 | 2026-08-26 | FEAT-SOUVENIR-AND-CHECKOUT | LANJUT | Buat souvenir.html (pos scanner souvenir & check-out) dengan HID Barcode Anti-Burst Protection (120ms debounce + 9-char slice + auto claim), integrasi stok & kapasitas ballroom di config.html, live Ballroom Occupancy & Souvenir Disbursement widget di analytics.html, dan backend action claim_souvenir_checkout. User: lanjut semua |
 | 2026-08-26 | FEAT-LUCKYDRAW-CHECKOUT-FILTER | LANJUT | Update luckydraw.html: hanya undi kandidat tamu yang hadir dan BELUM checkout (masih di ballroom), loop pagination fetchAllTamuRows (cegah cap 1000 baris), Supabase Realtime sync pool undian, dan 4-metric monitor bar. User: lanjut, perbaiki luckydraw setelah normal, push semua |
+| 2026-08-26 | FIX-ANGPAO-FULLFETCH-AND-BARCODE | LANJUT | Update angpao.html: ganti hardcoded URL Supabase ke SB_URL, terapkan fetchAllTamuRows loop offset (anti cap 1000), sanitasi 9-char barcode slicer di onScanSuccess & handleSearchKey, dan lengkapi mapping jam_pulang di realtime sync. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.

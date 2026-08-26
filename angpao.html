@@ -316,7 +316,7 @@
                 </div>
             </div>
             <div class="search-container" style="display:flex; gap:10px;">
-                <input type="text" class="search-input" id="search-box" placeholder="Cari nama atau kode..." oninput="renderUI()" style="flex:1;">
+                <input type="text" class="search-input" id="search-box" placeholder="Cari nama atau scan kode..." oninput="renderUI()" onkeydown="handleSearchKey(event)" style="flex:1;">
                 <button onclick="openOfflineModal()" style="background:var(--text-main); color:#fff; border:none; border-radius:12px; padding:0 15px; font-weight:800; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 4px 10px rgba(0,0,0,0.1);"><span style="font-size:14px;">+</span> TAMU OFFLINE</button>
             </div>
             <div class="list-wrapper" id="guest-list"></div>
@@ -566,6 +566,7 @@
                                     rencanaHadir: item.rencana_hadir,
                                     statusHadir: String(item.status_hadir),
                                     jamDatang: item.jam_datang,
+                                    jamPulang: item.jam_pulang,
                                     souvenir: item.souvenir,
                                     pihakPengundang: item.pihak_pengundang,
                                     alamat: item.alamat,
@@ -592,6 +593,7 @@
                                         rencanaHadir: item.rencana_hadir,
                                         statusHadir: String(item.status_hadir),
                                         jamDatang: item.jam_datang,
+                                        jamPulang: item.jam_pulang,
                                         souvenir: item.souvenir,
                                         pihakPengundang: item.pihak_pengundang,
                                         alamat: item.alamat,
@@ -717,17 +719,40 @@
         ).catch(err => console.error("Scanner Error", err));
     }
 
-    async function fetchData() {
-        try {
-            // Fetch guest list dari Supabase REST API (Super Fast)
-            const supabaseUrl = "https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
-            const res = await fetch(supabaseUrl, {
+    async function fetchAllTamuRows(ssId) {
+        const PAGE_SIZE = 1000;
+        let allRows = [];
+        let from = 0;
+        let hasMore = true;
+        
+        while (hasMore) {
+            const url = `${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&order=row.desc&limit=${PAGE_SIZE}&offset=${from}`;
+            const res = await fetch(url, {
                 headers: {
                     "apikey": SB_KEY,
                     "Authorization": "Bearer " + SB_KEY
                 }
             });
-            const sbData = await res.json();
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const chunk = await res.json();
+            if (chunk && chunk.length > 0) {
+                allRows = allRows.concat(chunk);
+                if (chunk.length < PAGE_SIZE) {
+                    hasMore = false;
+                } else {
+                    from += PAGE_SIZE;
+                }
+            } else {
+                hasMore = false;
+            }
+        }
+        return allRows;
+    }
+
+    async function fetchData() {
+        try {
+            toggleProcessing(true);
+            const sbData = await fetchAllTamuRows(CURRENT_SS_ID);
             
             if (sbData && sbData.length > 0 && sbData[0].event_date) {
                 window.EVENT_DATE = sbData[0].event_date;
@@ -764,6 +789,7 @@
                 rencanaHadir: item.rencana_hadir,
                 statusHadir: String(item.status_hadir),
                 jamDatang: item.jam_datang,
+                jamPulang: item.jam_pulang,
                 souvenir: item.souvenir,
                 pihakPengundang: item.pihak_pengundang,
                 alamat: item.alamat,
@@ -776,12 +802,27 @@
             }));
             
             renderUI();
-            toggleProcessing(false);
         } catch (e) { 
             console.error("Sync error", e); 
+        } finally {
             toggleProcessing(false);
         }
     }
+
+    window.handleSearchKey = function(e) {
+        if (e.key === "Enter") {
+            let val = e.target.value.trim().toUpperCase();
+            if (!val) return;
+            if (val.length > 9) val = val.slice(-9);
+            const guest = masterData.find(r => r.kode && (
+                String(r.kode).trim().toUpperCase() === val || 
+                String(r.nama || '').trim().toUpperCase() === val
+            ));
+            if (guest) {
+                openAngpaoModal(guest.kode);
+            }
+        }
+    };
 
     window.renderUI = function() {
         const listBody = document.getElementById('guest-list');
@@ -859,17 +900,24 @@
     function onScanSuccess(decodedText) {
         if (isBusy || document.getElementById('modalConfirm').style.display === 'flex') return;
         const frame = document.getElementById('target-frame');
-        const guest = masterData.find(r => r.kode && r.kode.toString() === decodedText);
         
-        frame.classList.add('qr-detected');
+        let cleanCode = String(decodedText || '').trim().toUpperCase();
+        if (cleanCode.length > 9) cleanCode = cleanCode.slice(-9);
+
+        const guest = masterData.find(r => r.kode && (
+            String(r.kode).trim().toUpperCase() === cleanCode || 
+            String(r.kode).trim().toUpperCase() === String(decodedText).trim().toUpperCase()
+        ));
+        
+        if (frame) frame.classList.add('qr-detected');
         if (guest) {
-            frame.classList.add('qr-success');
+            if (frame) frame.classList.add('qr-success');
             setTimeout(() => {
-                frame.classList.remove('qr-success', 'qr-detected');
+                if (frame) frame.classList.remove('qr-success', 'qr-detected');
                 openAngpaoModal(guest.kode);
             }, 400);
         } else {
-            setTimeout(() => frame.classList.remove('qr-detected'), 1000);
+            setTimeout(() => { if (frame) frame.classList.remove('qr-detected'); }, 1000);
         }
     }
 
@@ -1158,7 +1206,7 @@
                 
             } else {
                 // Flow Normal -> Update Supabase & GS
-                const patchRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${activeGuest.kode}`, {
+                const patchRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${encodeURIComponent(activeGuest.kode)}`, {
                     method: "PATCH",
                     headers: SB_HEADERS,
                     body: JSON.stringify({
