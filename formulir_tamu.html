@@ -5805,30 +5805,50 @@
         
         try {
             if (actionType === 'delete') {
-                // 1. Delete selected from Supabase
+                // 1. Delete selected from Supabase (batch chunk 50)
                 if (codesSb.length > 0) {
-                    updateLiveProgress(0, totalItems, `Menghapus ${codesSb.length} tamu dari Supabase...`);
-                    const deleteUrl = `${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=in.(${codesSb.map(c => `"${c}"`).join(',')})`;
-                    const sbRes = await fetch(deleteUrl, {
-                        method: 'DELETE',
-                        headers: SB_HEADERS
-                    });
-                    if (!sbRes.ok) throw new Error("Gagal menghapus dari Supabase.");
+                    const sbChunkSize = 50;
+                    for (let i = 0; i < codesSb.length; i += sbChunkSize) {
+                        const chunk = codesSb.slice(i, i + sbChunkSize);
+                        const processed = i;
+                        updateLiveProgress(processed, totalItems, `Menghapus ${chunk.length} tamu dari Supabase...`);
+                        
+                        const deleteUrl = `${SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=in.(${chunk.map(c => `"${c}"`).join(',')})`;
+                        const sbRes = await fetch(deleteUrl, {
+                            method: 'DELETE',
+                            headers: SB_HEADERS
+                        });
+                        if (!sbRes.ok) throw new Error("Gagal menghapus dari Supabase.");
+                        
+                        const newProcessed = Math.min(i + sbChunkSize, codesSb.length);
+                        updateLiveProgress(newProcessed, totalItems, `Terhapus ${newProcessed} dari ${totalItems} data...`);
+                        await new Promise(r => setTimeout(r, 20));
+                    }
                 }
                 
-                // 2. Delete selected from Spreadsheet via GAS
+                // 2. Delete selected from Spreadsheet via GAS (batch chunk 25)
                 if (codesSheet.length > 0) {
-                    updateLiveProgress(codesSb.length, totalItems, `Menghapus ${codesSheet.length} tamu dari Google Sheets...`);
-                    const gasRes = await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            action: "deleteGuestsFromSheet",
-                            ssId: CURRENT_SS_ID,
-                            codes: codesSheet
-                        })
-                    });
-                    const gasResult = await gasRes.json();
-                    if (gasResult.status !== 'success') throw new Error(gasResult.message || "Gagal menghapus dari Spreadsheet.");
+                    const gasChunkSize = 25;
+                    for (let i = 0; i < codesSheet.length; i += gasChunkSize) {
+                        const chunk = codesSheet.slice(i, i + gasChunkSize);
+                        const processed = codesSb.length + i;
+                        updateLiveProgress(processed, totalItems, `Menghapus ${chunk.length} tamu dari Google Sheets...`);
+                        
+                        const gasRes = await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                action: "deleteGuestsFromSheet",
+                                ssId: CURRENT_SS_ID,
+                                codes: chunk
+                            })
+                        });
+                        const gasResult = await gasRes.json();
+                        if (gasResult.status !== 'success') throw new Error(gasResult.message || "Gagal menghapus dari Spreadsheet.");
+                        
+                        const newProcessed = codesSb.length + Math.min(i + gasChunkSize, codesSheet.length);
+                        updateLiveProgress(newProcessed, totalItems, `Terhapus ${newProcessed} dari ${totalItems} data...`);
+                        await new Promise(r => setTimeout(r, 20));
+                    }
                 }
                 
                 updateLiveProgress(totalItems, totalItems, "Selesai!");
@@ -5837,10 +5857,10 @@
                 
             } else {
                 // Save / sync actions
-                
-                // 1. Simpan tamu dari Supabase ke Spreadsheet
+                let currentProcessed = 0;
+
+                // 1. Simpan tamu dari Supabase ke Spreadsheet (batch chunk 15 tamu per GAS request)
                 if (codesSb.length > 0) {
-                    updateLiveProgress(0, totalItems, `Menyinkronkan ${codesSb.length} tamu ke Spreadsheet...`);
                     const guestsToSaveToSheet = window.SYNC_ONLY_IN_SB.filter(g => codesSb.includes(g.kode)).map(g => ({
                         nama: g.nama,
                         whatsapp: g.whatsapp,
@@ -5859,21 +5879,33 @@
                         sesi: g.sesi
                     }));
                     
-                    const gasRes = await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            action: "saveGuestsToSheet",
-                            ssId: CURRENT_SS_ID,
-                            guests: guestsToSaveToSheet
-                        })
-                    });
-                    const gasResult = await gasRes.json();
-                    if (gasResult.status !== 'success') throw new Error(gasResult.message || "Gagal menyimpan ke Spreadsheet.");
+                    const gasChunkSize = 15;
+                    for (let i = 0; i < guestsToSaveToSheet.length; i += gasChunkSize) {
+                        const chunk = guestsToSaveToSheet.slice(i, i + gasChunkSize);
+                        const fromNum = i + 1;
+                        const toNum = Math.min(i + gasChunkSize, guestsToSaveToSheet.length);
+                        
+                        updateLiveProgress(currentProcessed, totalItems, `Menyinkronkan tamu ${fromNum}–${toNum} (${chunk.length} tamu) ke Spreadsheet...`);
+                        
+                        const gasRes = await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                action: "saveGuestsToSheet",
+                                ssId: CURRENT_SS_ID,
+                                guests: chunk
+                            })
+                        });
+                        const gasResult = await gasRes.json();
+                        if (gasResult.status !== 'success') throw new Error(gasResult.message || "Gagal menyimpan ke Spreadsheet.");
+                        
+                        currentProcessed = toNum;
+                        updateLiveProgress(currentProcessed, totalItems, `Tersinkron ${currentProcessed} dari ${totalItems} tamu...`);
+                        await new Promise(r => setTimeout(r, 20));
+                    }
                 }
                 
-                // 2. Simpan tamu dari Spreadsheet ke Supabase
+                // 2. Simpan tamu dari Spreadsheet ke Supabase (batch chunk 50 tamu per request)
                 if (codesSheet.length > 0) {
-                    updateLiveProgress(codesSb.length, totalItems, `Menyinkronkan ${codesSheet.length} tamu ke Supabase...`);
                     const guestsToSaveToSb = window.SYNC_ONLY_IN_SHEET.filter(g => codesSheet.includes(g.kode)).map(g => {
                         let cleanPhone = String(g.whatsapp || "").replace(/\D/g, ''); 
                         if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
@@ -5898,15 +5930,28 @@
                         };
                     });
                     
-                    const sbRes = await fetch(`${SB_URL}/rest/v1/tamu?on_conflict=ssid,kode`, {
-                        method: 'POST',
-                        headers: {
-                            ...SB_HEADERS,
-                            "Prefer": "resolution=merge-duplicates"
-                        },
-                        body: JSON.stringify(guestsToSaveToSb)
-                    });
-                    if (!sbRes.ok) throw new Error("Gagal menyimpan ke Supabase.");
+                    const sbChunkSize = 50;
+                    for (let i = 0; i < guestsToSaveToSb.length; i += sbChunkSize) {
+                        const chunk = guestsToSaveToSb.slice(i, i + sbChunkSize);
+                        const fromNum = i + 1;
+                        const toNum = Math.min(i + sbChunkSize, guestsToSaveToSb.length);
+                        
+                        updateLiveProgress(currentProcessed, totalItems, `Menyinkronkan ${chunk.length} tamu ke Supabase...`);
+                        
+                        const sbRes = await fetch(`${SB_URL}/rest/v1/tamu?on_conflict=ssid,kode`, {
+                            method: 'POST',
+                            headers: {
+                                ...SB_HEADERS,
+                                "Prefer": "resolution=merge-duplicates"
+                            },
+                            body: JSON.stringify(chunk)
+                        });
+                        if (!sbRes.ok) throw new Error("Gagal menyimpan ke Supabase.");
+                        
+                        currentProcessed = codesSb.length + toNum;
+                        updateLiveProgress(currentProcessed, totalItems, `Tersinkron ${currentProcessed} dari ${totalItems} tamu...`);
+                        await new Promise(r => setTimeout(r, 20));
+                    }
                 }
                 
                 updateLiveProgress(totalItems, totalItems, "Selesai!");
@@ -6091,30 +6136,27 @@
 
             // ===== STEP 1: Supabase — batch deletion dengan live telemetry =====
             var deletedKodes = [];
-            var batchSize = 10;
+            var batchSize = 25;
             for (var bi = 0; bi < toDeleteKodes.length; bi += batchSize) {
                 var chunk = toDeleteKodes.slice(bi, bi + batchSize);
-                var sbPromises = chunk.map(function(kode) {
-                    return fetch(SB_URL + "/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&kode=eq." + kode, {
+                try {
+                    var deleteUrl = SB_URL + "/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&kode=in.(" + chunk.map(function(c) { return '"' + c + '"'; }).join(',') + ")";
+                    var sbRes = await fetch(deleteUrl, {
                         method: "DELETE",
                         headers: SB_HEADERS
-                    }).then(function(res) {
-                        return { kode: kode, ok: res.ok || res.status === 204 };
-                    }).catch(function() {
-                        return { kode: kode, ok: false };
                     });
-                });
-
-                var sbResults = await Promise.all(sbPromises);
-                sbResults.forEach(function(r) {
-                    if (r.ok) {
-                        var idx = MASTER_LIST.findIndex(function(g) { return g.kode === r.kode; });
-                        if (idx !== -1) MASTER_LIST.splice(idx, 1);
-                        deletedKodes.push(r.kode);
+                    if (sbRes.ok || sbRes.status === 204) {
+                        chunk.forEach(function(kode) {
+                            var idx = MASTER_LIST.findIndex(function(g) { return g.kode === kode; });
+                            if (idx !== -1) MASTER_LIST.splice(idx, 1);
+                            deletedKodes.push(kode);
+                        });
                     }
-                });
+                } catch (e) {
+                    console.error("Supabase bulk delete chunk failed:", e);
+                }
 
-                updateLiveProgress(deletedKodes.length, total, "Kode: " + chunk[chunk.length - 1]);
+                updateLiveProgress(deletedKodes.length, total, "Terhapus " + deletedKodes.length + " dari " + total + " tamu...");
                 await new Promise(function(r) { setTimeout(r, 15); });
             }
 
@@ -6129,26 +6171,27 @@
                 showSapaModal('Sebagian Berhasil', deletedKodes.length + ' berhasil dari Supabase, ' + sbFail + ' gagal.', 'WARN');
             }
 
-            // ===== STEP 2: GAS — background fire-and-forget dengan countdown indicator =====
+            // ===== STEP 2: GAS — background fire-and-forget batch deletion dengan countdown indicator =====
             if (deletedKodes.length === 0) return;
 
             var gasRemaining = deletedKodes.length;
             var gasTotal = deletedKodes.length;
             showGasCountdown(gasRemaining, gasTotal);
 
-            // Run GAS deletions one-by-one in background (no await blocking UI)
+            // Run GAS deletions in fast chunks (chunk 25 per request)
             (async function runGasBackground() {
-                for (var gi = 0; gi < deletedKodes.length; gi++) {
-                    var kode = deletedKodes[gi];
+                var gasChunkSize = 25;
+                for (var gi = 0; gi < deletedKodes.length; gi += gasChunkSize) {
+                    var chunk = deletedKodes.slice(gi, gi + gasChunkSize);
                     try {
                         await fetch(SCRIPT_URL, {
                             method: 'POST',
-                            body: JSON.stringify({ action: 'deleteGuest', ssId: CURRENT_SS_ID, kodeUnik: kode })
+                            body: JSON.stringify({ action: 'deleteGuestsFromSheet', ssId: CURRENT_SS_ID, codes: chunk })
                         });
                     } catch (e) {
-                        console.warn('GAS background delete failed for kode:', kode, e);
+                        console.warn('GAS background batch delete failed for chunk:', chunk, e);
                     }
-                    gasRemaining--;
+                    gasRemaining = Math.max(0, gasRemaining - chunk.length);
                     updateGasCountdown(gasRemaining, gasTotal);
                 }
                 // All done — show "Selesai" then hide
