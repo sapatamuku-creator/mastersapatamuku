@@ -34,6 +34,7 @@
 | 2026-08-26 | FEAT-SOUVENIR-LUXURY-REDESIGN | LANJUT | Redesain luxury Glassmorphism souvenir.html: background slideshow foto prewedding klien (Ken Burns 8.5s), frost glass overlay, floating particles, event hero header nama pengantin, dan konsol scanner laser beam 3-mode responsive. User: lanjut |
 | 2026-08-26 | UPGRADE-SOUVENIR-EDITORIAL-UI | LANJUT | Transformasi estetika editorial souvenir.html: tipografi Lora display, kartu st-card ala wa_blast/analytics, boutique scanner arena, 3 KPI card ber-progress bar, dan arrival-style claim list. User: lanjut |
 | 2026-08-26 | FIX-SOUVENIR-CALCULATION-AND-CANON-UI | LANJUT | Fix formula status souvenir (isGuestClaimed berbasis jam_pulang / statusSouvenir, bukan field entitlement souvenir=ya) agar tidak false 100%, serta tata ulang tata letak kartu dan tipografi canon sapatamu-projects. User: lanjut |
+| 2026-08-26 | UPGRADE-SOUVENIR-MOBILE-GLASSMORPHISM | LANJUT | Rombak UI mobile mode souvenir.html: Frosted Glassmorphism blur(20px), iOS-style segmented pill control, penataan micro-typography kartu KPI anti-overflow, flex scanner input anti-truncate tombol PROSES, dan Dynamic Island compact. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
