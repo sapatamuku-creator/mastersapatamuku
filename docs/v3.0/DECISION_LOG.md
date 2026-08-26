@@ -32,6 +32,7 @@
 | 2026-08-26 | FEAT-LUCKYDRAW-CHECKOUT-FILTER | LANJUT | Update luckydraw.html: hanya undi kandidat tamu yang hadir dan BELUM checkout (masih di ballroom), loop pagination fetchAllTamuRows (cegah cap 1000 baris), Supabase Realtime sync pool undian, dan 4-metric monitor bar. User: lanjut, perbaiki luckydraw setelah normal, push semua |
 | 2026-08-26 | FIX-ANGPAO-FULLFETCH-AND-BARCODE | LANJUT | Update angpao.html: ganti hardcoded URL Supabase ke SB_URL, terapkan fetchAllTamuRows loop offset (anti cap 1000), sanitasi 9-char barcode slicer di onScanSuccess & handleSearchKey, dan lengkapi mapping jam_pulang di realtime sync. User: lanjut |
 | 2026-08-26 | FEAT-SOUVENIR-LUXURY-REDESIGN | LANJUT | Redesain luxury Glassmorphism souvenir.html: background slideshow foto prewedding klien (Ken Burns 8.5s), frost glass overlay, floating particles, event hero header nama pengantin, dan konsol scanner laser beam 3-mode responsive. User: lanjut |
+| 2026-08-26 | UPGRADE-SOUVENIR-EDITORIAL-UI | LANJUT | Transformasi estetika editorial souvenir.html: tipografi Lora display, kartu st-card ala wa_blast/analytics, boutique scanner arena, 3 KPI card ber-progress bar, dan arrival-style claim list. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
