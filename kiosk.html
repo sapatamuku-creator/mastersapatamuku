@@ -154,8 +154,9 @@
     <script src="config.js"></script>
     <script type="module">
       // [v3.0 T2.1/T2.6] import core — no route change, fallback to inline if fail
-      import { fetchTamu, createScanner, createRealtimeTamu } from './lib/guestbook-core.js';
-      window.__guestbookCore = { fetchTamu, createScanner, createRealtimeTamu };
+      // [BUG-FETCH-001] tambah fetchAllTamu untuk initial load tanpa batas 1000
+      import { fetchTamu, fetchAllTamu, createScanner, createRealtimeTamu } from './lib/guestbook-core.js';
+      window.__guestbookCore = { fetchTamu, fetchAllTamu, createScanner, createRealtimeTamu };
     </script>
     <script src="subdomain_resolver.js?v=3.5"></script>
     <script src="auth_guard.js?v=1.0"></script>
@@ -562,46 +563,44 @@
 
         async function fetchData() {
             var _perfStart='kiosk:fetch:start'; try{ performance.mark(_perfStart); }catch(e){}
-            // [v3.0 T2.1] core delegation — no route change, fallback to inline
-            if(window.__guestbookCore && window.__guestbookCore.fetchTamu){
+            // [BUG-FETCH-001] Race condition guard: tunggu __guestbookCore siap (ES6 module async)
+            if (!window.__guestbookCore || !window.__guestbookCore.fetchAllTamu) {
+                var _rcAttempts = (fetchData._rcAttempts = (fetchData._rcAttempts || 0) + 1);
+                if (_rcAttempts <= 20) { setTimeout(fetchData, 100); return; }
+                fetchData._rcAttempts = 0; // reset, lanjut fallback inline
+            }
+            // [BUG-FETCH-001] Pakai fetchAllTamu untuk ambil SEMUA tamu (loop offset), bukan hanya 1000
+            if(window.__guestbookCore && window.__guestbookCore.fetchAllTamu){
               try{
-                masterData = await window.__guestbookCore.fetchTamu(CURRENT_SS_ID, { limit: 1000 });
+                masterData = await window.__guestbookCore.fetchAllTamu(CURRENT_SS_ID);
                 try{ guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g])); }catch(e){}
                 try{ window.__sapaPerf.measure('kiosk:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
                 initKioskRealtime(); // [v3.0 T2.6] start realtime after first fetch
                 return;
-              }catch(e){ console.warn('[kiosk] core fetch fallback', e); }
+              }catch(e){ console.warn('[kiosk] core fetchAll fallback', e); }
             }
+            // Fallback inline — loop offset sama seperti fetchAllTamu
             try {
-                const supabaseUrl = SB_URL + "/rest/v1/tamu?ssid=eq." + CURRENT_SS_ID + "&order=row.desc";
-                const response = await fetch(supabaseUrl, {
-                    headers: {
-                        "apikey": SB_KEY,
-                        "Authorization": "Bearer " + SB_KEY
-                    }
-                });
-                const sbData = await response.json();
-                
-                // Map data snake_case Supabase ke format camelCase frontend
-                masterData = (sbData || []).map(item => ({
-                    row: item.row,
-                    nama: item.nama,
-                    whatsapp: item.whatsapp,
-                    kategori: item.kategori,
-                    kode: item.kode,
-                    barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
-                    rencanaHadir: item.rencana_hadir,
-                    statusHadir: String(item.status_hadir),
-                    jamDatang: item.jam_datang,
-                    souvenir: item.souvenir,
-                    pihakPengundang: item.pihak_pengundang,
-                    alamat: item.alamat,
-                    realHadir: item.real_hadir,
-                    statusWA: item.status_wa,
-                    statusHadiah: item.status_hadiah,
-                    tandaKasih: item.tanda_kasih,
-                    sesi: item.sesi
-                }));
+                const CHUNK = 1000;
+                let all = []; let offset = 0;
+                while (true) {
+                    const res = await fetch(SB_URL + '/rest/v1/tamu?ssid=eq.' + CURRENT_SS_ID + '&order=row.desc&limit=' + CHUNK + '&offset=' + offset, {
+                        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+                    });
+                    const sbData = await res.json();
+                    const chunk = (sbData || []).map(item => ({
+                        row: item.row, nama: item.nama, whatsapp: item.whatsapp, kategori: item.kategori,
+                        kode: item.kode, barcode: `https://api.qrserver.com/v1/create-qr-code/?data=${item.kode}&size=400x400`,
+                        rencanaHadir: item.rencana_hadir, statusHadir: String(item.status_hadir),
+                        jamDatang: item.jam_datang, souvenir: item.souvenir, pihakPengundang: item.pihak_pengundang,
+                        alamat: item.alamat, realHadir: item.real_hadir, statusWA: item.status_wa,
+                        statusHadiah: item.status_hadiah, tandaKasih: item.tanda_kasih, sesi: item.sesi
+                    }));
+                    all = all.concat(chunk);
+                    if (chunk.length < CHUNK) break;
+                    offset += CHUNK;
+                }
+                masterData = all;
                 try{ guestMap = new Map(masterData.map(g=>[String(g.kode).trim().toUpperCase(), g])); }catch(e){}
                 try{ window.__sapaPerf.measure('kiosk:fetchData', _perfStart, (masterData.length||0)+' rows, '+Math.round(JSON.stringify(masterData).length/1024)+'KB'); }catch(e){}
                 initKioskRealtime(); // [v3.0 T2.6]

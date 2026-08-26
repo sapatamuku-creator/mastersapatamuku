@@ -25,6 +25,7 @@
 | 2026-08-21 | T4.1 Analytics Mirror Ringan | LANJUT | Kurangi floating hearts ke 6 partikel + lazy load iframe welcome mirror via IntersectionObserver. User: lanjut |
 | 2026-08-21 | T4.2 Memoize Flow Monitoring | LANJUT | Memoize komputasi grouping renderFlow() di analytics.html via _cachedFlowKey. User: lanjut |
 | 2026-08-21 | T4.3 Welcome Slideshow Preload | LANJUT | Resolusi adaptive Drive sz=w800 (kiosk) / w1280 (TV) + preloading next slide memanfaatkan browser HTTP cache. User: lanjut |
+| 2026-08-26 | BUG-FETCH-001 Full Fetch Loop | LANJUT | Tambah fetchAllTamu() di guestbook-core.js: loop offset 1000 sampai habis. Ganti fetchTamu({limit:1000}) di kiosk/checkin/onsite dengan fetchAllTamu(). Tambah race-condition guard (retry 100ms×20) di fetchData() ketiga halaman. Fix: search/scan miss tamu >1000 & data kosong saat reload di Android. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
