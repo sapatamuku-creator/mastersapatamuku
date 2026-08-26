@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -327,6 +327,9 @@
             <div class="menu-item" onclick="switchTab('display', this)">
                 <img src="https://img.icons8.com/ios-filled/50/000000/settings.png"/> Layar Acara
             </div>
+            <div class="menu-item" onclick="switchTab('logistics', this)">
+                <img src="https://img.icons8.com/ios-filled/50/000000/box.png"/> Logistik & Souvenir
+            </div>
         </div>
     </aside>
 
@@ -500,6 +503,52 @@
             </div>
         </div>
 
+        <!-- Tab: Logistics & Souvenir -->
+        <div id="tab-logistics" class="tab-content">
+            <h2 class="section-title">Logistik &amp; Souvenir</h2>
+            <p class="section-desc">Atur persediaan stok souvenir dan kapasitas daya tampung ballroom acara Anda.</p>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom: 20px;">
+                <div class="form-group">
+                    <label class="form-label">🎁 Total Stok Souvenir (Pcs)</label>
+                    <input type="number" class="form-input" id="inp-stok-souvenir" min="0" placeholder="Contoh: 500">
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:6px;">Total kuota souvenir yang disiapkan untuk dibagikan ke tamu saat check-out.</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">🏢 Kapasitas Maksimal Ballroom (Pax)</label>
+                    <input type="number" class="form-input" id="inp-kapasitas-ballroom" min="0" placeholder="Contoh: 1000">
+                    <p style="font-size:11px; color:var(--text-muted); margin-top:6px;">Batas kapasitas gedung/ballroom untuk live occupancy monitor.</p>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-bottom: 30px;">
+                <button class="btn-action btn-primary" id="btn-save-logistics" onclick="saveLogisticsConfig()" style="display:inline-flex; align-items:center; gap:8px;">
+                    <span>💾</span> Simpan Pengaturan Logistik
+                </button>
+            </div>
+
+            <div class="section-title-line" style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; color:#B5ADA5; margin: 25px 0 15px; display:flex; align-items:center; gap:10px;">
+                <span>🚀 Pintasan Stasiun Terkait</span>
+                <div style="flex:1; height:1px; background:var(--border);"></div>
+            </div>
+
+            <div class="action-card">
+                <div class="action-info">
+                    <h4>Pos Scanner Souvenir &amp; Check-Out</h4>
+                    <p>Buka konsol scanner barcode untuk pembagian souvenir dan pencatatan jam pulang tamu.</p>
+                </div>
+                <button class="btn-action btn-primary" onclick="goToSouvenirPage()">Buka Pos Souvenir</button>
+            </div>
+
+            <div class="action-card">
+                <div class="action-info">
+                    <h4>Live Monitor &amp; Analytics</h4>
+                    <p>Pantau persentase souvenir terbagi, sisa stok, dan okupansi ballroom secara realtime.</p>
+                </div>
+                <button class="btn-action btn-outline" onclick="goToAnalyticsPage()">Buka Analytics</button>
+            </div>
+        </div>
+
     </main>
 </div>
 
@@ -610,6 +659,23 @@
                 } catch (e) {
                     console.warn("Metadata fetch failed", e);
                     document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Gagal memuat data");
+                }
+
+                // Fetch config_welcome for logistics (stok souvenir & kapasitas ballroom)
+                try {
+                    const resCfg = await fetch(`${SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data&limit=1`, {
+                        headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                    });
+                    if (resCfg.ok) {
+                        const cfgRows = await resCfg.json();
+                        if (cfgRows && cfgRows.length > 0 && cfgRows[0].data) {
+                            const d = cfgRows[0].data;
+                            if (d.stokSouvenir !== undefined) document.getElementById('inp-stok-souvenir').value = d.stokSouvenir;
+                            if (d.kapasitasBallroom !== undefined) document.getElementById('inp-kapasitas-ballroom').value = d.kapasitasBallroom;
+                        }
+                    }
+                } catch(cfgErr) {
+                    console.warn("Config welcome fetch failed:", cfgErr);
                 }
             } else {
                 document.querySelectorAll('[id^="meta-"]').forEach(el => el.value = "Sesi tidak valid");
@@ -766,6 +832,84 @@
             alert('Akses Terbatas 🔒\nUntuk mengakses Layar Sapa, silakan upgrade ke Guestbook Paket Silver atau lebih tinggi.');
             window.location.href = 'upgrade.html';
         }
+    }
+
+    async function saveLogisticsConfig() {
+        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db') || '{}').ssId);
+        if (!ssId) {
+            alert("Sesi tidak valid. Silakan login ulang.");
+            return;
+        }
+
+        const btn = document.getElementById('btn-save-logistics');
+        const origText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = "<span>⏳</span> Menyimpan...";
+
+        const stok = parseInt(document.getElementById('inp-stok-souvenir').value, 10) || 0;
+        const kapasitas = parseInt(document.getElementById('inp-kapasitas-ballroom').value, 10) || 0;
+
+        try {
+            // 1. Fetch current data in config_welcome
+            let existingData = {};
+            const getRes = await fetch(`${SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data&limit=1`, {
+                headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+            });
+            if (getRes.ok) {
+                const rows = await getRes.json();
+                if (rows && rows.length > 0 && rows[0].data) {
+                    existingData = rows[0].data;
+                }
+            }
+
+            existingData.stokSouvenir = stok;
+            existingData.kapasitasBallroom = kapasitas;
+
+            // 2. Upsert to Supabase
+            await fetch(`${SB_URL}/rest/v1/config_welcome`, {
+                method: 'POST',
+                headers: {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json",
+                    "Prefer": "resolution=merge-duplicates"
+                },
+                body: JSON.stringify({
+                    ssid: ssId,
+                    data: existingData,
+                    updated_at: new Date().toISOString()
+                })
+            });
+
+            // 3. Fallback sync to GAS
+            const gasUrl = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+            fetch(gasUrl, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: "saveSettings",
+                    ssId: ssId,
+                    data: existingData
+                })
+            }).catch(err => console.warn("GAS saveSettings fallback notice:", err));
+
+            alert("✓ Pengaturan Logistik & Souvenir berhasil disimpan!");
+        } catch(e) {
+            console.error("Save logistics error:", e);
+            alert("Gagal menyimpan ke server: " + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+        }
+    }
+
+    function goToSouvenirPage() {
+        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db') || '{}').ssId);
+        window.location.href = `souvenir.html?ssId=${ssId}`;
+    }
+
+    function goToAnalyticsPage() {
+        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db') || '{}').ssId);
+        window.location.href = `analytics.html?ssId=${ssId}`;
     }
 
     document.addEventListener('DOMContentLoaded', () => {

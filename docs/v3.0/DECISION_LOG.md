@@ -35,6 +35,7 @@
 | 2026-08-26 | UPGRADE-SOUVENIR-EDITORIAL-UI | LANJUT | Transformasi estetika editorial souvenir.html: tipografi Lora display, kartu st-card ala wa_blast/analytics, boutique scanner arena, 3 KPI card ber-progress bar, dan arrival-style claim list. User: lanjut |
 | 2026-08-26 | FIX-SOUVENIR-CALCULATION-AND-CANON-UI | LANJUT | Fix formula status souvenir (isGuestClaimed berbasis jam_pulang / statusSouvenir, bukan field entitlement souvenir=ya) agar tidak false 100%, serta tata ulang tata letak kartu dan tipografi canon sapatamu-projects. User: lanjut |
 | 2026-08-26 | UPGRADE-SOUVENIR-MOBILE-GLASSMORPHISM | LANJUT | Rombak UI mobile mode souvenir.html: Frosted Glassmorphism blur(20px), iOS-style segmented pill control, penataan micro-typography kartu KPI anti-overflow, flex scanner input anti-truncate tombol PROSES, dan Dynamic Island compact. User: lanjut |
+| 2026-08-26 | FEAT-PROFILE-SOUVENIR-LOGISTICS-PANEL | LANJUT | Tambahkan tab Logistik & Souvenir di profile.html: input Total Stok Souvenir & Kapasitas Ballroom dengan auto-load/save ke config_welcome Supabase & GAS, serta link pintasan langsung ke souvenir.html & analytics.html. User: lanjut dan push |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
