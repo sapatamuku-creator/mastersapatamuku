@@ -31,6 +31,7 @@
 | 2026-08-26 | FEAT-SOUVENIR-AND-CHECKOUT | LANJUT | Buat souvenir.html (pos scanner souvenir & check-out) dengan HID Barcode Anti-Burst Protection (120ms debounce + 9-char slice + auto claim), integrasi stok & kapasitas ballroom di config.html, live Ballroom Occupancy & Souvenir Disbursement widget di analytics.html, dan backend action claim_souvenir_checkout. User: lanjut semua |
 | 2026-08-26 | FEAT-LUCKYDRAW-CHECKOUT-FILTER | LANJUT | Update luckydraw.html: hanya undi kandidat tamu yang hadir dan BELUM checkout (masih di ballroom), loop pagination fetchAllTamuRows (cegah cap 1000 baris), Supabase Realtime sync pool undian, dan 4-metric monitor bar. User: lanjut, perbaiki luckydraw setelah normal, push semua |
 | 2026-08-26 | FIX-ANGPAO-FULLFETCH-AND-BARCODE | LANJUT | Update angpao.html: ganti hardcoded URL Supabase ke SB_URL, terapkan fetchAllTamuRows loop offset (anti cap 1000), sanitasi 9-char barcode slicer di onScanSuccess & handleSearchKey, dan lengkapi mapping jam_pulang di realtime sync. User: lanjut |
+| 2026-08-26 | FEAT-SOUVENIR-LUXURY-REDESIGN | LANJUT | Redesain luxury Glassmorphism souvenir.html: background slideshow foto prewedding klien (Ken Burns 8.5s), frost glass overlay, floating particles, event hero header nama pengantin, dan konsol scanner laser beam 3-mode responsive. User: lanjut |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
