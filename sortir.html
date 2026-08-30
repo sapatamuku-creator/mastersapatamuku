@@ -1011,11 +1011,32 @@
             <span class="logo-badge">SORTIR</span>
             <span class="logo-title">SapaTamu</span>
         </a>
-        <div id="header-actions" class="flex gap-12">
+        <div id="header-actions" class="flex gap-12" style="align-items:center;">
             <!-- Dynamic Actions populated by JS -->
+            <button id="vendor-login-btn" onclick="openVendorLogin()" class="btn btn-secondary" style="padding:8px 16px; font-size:12px; display:none;">Masuk Vendor</button>
+            <div id="vendor-user-info" style="display:none; align-items:center; gap:8px; font-size:12px;">
+                <span id="vendor-user-email" style="color:var(--text-muted); max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+                <button onclick="vendorLogout()" class="btn btn-secondary" style="padding:6px 12px; font-size:11px;">Keluar</button>
+            </div>
         </div>
     </div>
 </header>
+
+<!-- Vendor Login Modal (untuk Cloud mode vendor-isolated) -->
+<div id="vendor-login-modal" style="display:none; position:fixed; inset:0; background:rgba(74,63,53,0.5); backdrop-filter:blur(8px); z-index:999999; align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this) closeVendorLogin()">
+    <div style="background:white; border-radius:24px; padding:32px; width:100%; max-width:380px; box-shadow:var(--shadow-lg);">
+        <h3 style="font-size:20px; font-weight:800; color:var(--text-main); margin-bottom:6px;">Masuk Vendor</h3>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Untuk mode Cloud (beda Wi-Fi) & isolasi file — LAN 1-klik tidak wajib login.</p>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            <input id="vendor-login-email" type="email" placeholder="email vendor" class="form-control">
+            <input id="vendor-login-pass" type="password" placeholder="password" class="form-control">
+            <button onclick="vendorLogin()" class="btn btn-primary" style="width:100%;">Masuk</button>
+            <button onclick="vendorRegister()" class="btn btn-secondary" style="width:100%;">Daftar Vendor Baru</button>
+            <p id="vendor-login-msg" style="font-size:11px; color:#E07B7B; min-height:16px;"></p>
+        </div>
+        <button onclick="closeVendorLogin()" class="btn btn-secondary" style="margin-top:12px; width:100%;">Tutup</button>
+    </div>
+</div>
 
 <!-- Main Wrapper -->
 <main class="container" style="padding-top: 32px; padding-bottom: 64px;">
@@ -4188,6 +4209,60 @@ async function hpJoinShare(sid){
         showAlert('Join','Menghubungkan ke PC...','⏳');
     }catch(e){ showAlert('Gagal join', e.message,'❌'); }
 }
+
+function openVendorLogin(){ document.getElementById('vendor-login-modal').style.display='flex'; }
+function closeVendorLogin(){ document.getElementById('vendor-login-modal').style.display='none'; }
+async function vendorLogin(){
+    const email=document.getElementById('vendor-login-email').value.trim();
+    const pass=document.getElementById('vendor-login-pass').value;
+    const msgEl=document.getElementById('vendor-login-msg');
+    if(!email||!pass){ msgEl.textContent='Isi email & password'; return; }
+    const sb=getSupabaseClient();
+    if(!sb){ msgEl.textContent='Supabase belum siap'; return; }
+    msgEl.textContent='Masuk...';
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error){ msgEl.textContent=error.message; return; }
+    msgEl.textContent='Berhasil — refresh...';
+    closeVendorLogin(); updateVendorHeader(); location.reload();
+}
+async function vendorRegister(){
+    const email=document.getElementById('vendor-login-email').value.trim();
+    const pass=document.getElementById('vendor-login-pass').value;
+    const msgEl=document.getElementById('vendor-login-msg');
+    if(!email||!pass){ msgEl.textContent='Isi email & password'; return; }
+    const sb=getSupabaseClient();
+    if(!sb){ msgEl.textContent='Supabase belum siap'; return; }
+    msgEl.textContent='Mendaftar...';
+    const {data,error}=await sb.auth.signUp({email,password:pass});
+    if(error){ msgEl.textContent=error.message; return; }
+    msgEl.textContent='Cek email verifikasi, lalu Masuk lagi';
+}
+async function vendorLogout(){
+    const sb=getSupabaseClient();
+    if(sb) await sb.auth.signOut();
+    updateVendorHeader(); location.reload();
+}
+async function updateVendorHeader(){
+    const sb=getSupabaseClient();
+    const btn=document.getElementById('vendor-login-btn');
+    const info=document.getElementById('vendor-user-info');
+    const emailEl=document.getElementById('vendor-user-email');
+    if(!sb){ if(btn) btn.style.display='inline-flex'; return; }
+    try{
+        const {data:{user}} = await sb.auth.getUser();
+        if(user && user.email){
+            if(btn) btn.style.display='none';
+            if(info) info.style.display='flex';
+            if(emailEl) emailEl.textContent=user.email;
+        } else {
+            if(btn) btn.style.display='inline-flex';
+            if(info) info.style.display='none';
+        }
+    }catch(e){
+        if(btn) btn.style.display='inline-flex';
+    }
+}
+document.addEventListener('DOMContentLoaded', updateVendorHeader);
 </script>
 <script src="offline-db.js"></script>
 <script src="sync-engine.js"></script>
