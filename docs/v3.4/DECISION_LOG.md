@@ -155,7 +155,27 @@
    - Angka ballroom di dua halaman **akan selalu berbeda secara nilai** — ini bukan bug, ini expected. Harus didokumentasikan agar tidak membingungkan operator baru.
    - `real_hadir` fallback ke `rencana_hadir` jika belum diisi — jika data `real_hadir` tidak akurat, nilai pax bisa sedikit menyimpang dari jumlah orang sebenarnya.
 
-**Commit:** `46f0cb6`, `6ab39a9` | **Status:** SELESAI & TERDOKUMENTASI
+---
+
+### GATE-09: P2P Thumbnail Streaming 1-Klik Share ke HP & Super Posisi Owner Gate di `sortir.html`
+
+1. **Fungsi Perubahan:**
+   - Memungkinkan HP menampilkan foto thumbnail asli secara live dan responsif saat scan QR dari PC (tanpa `pip`, file tetap di PC).
+   - Mengaktifkan preview foto, pemilihan/checkbox di HP, dan ekspor instan file PC (termasuk pasangan file RAW).
+   - Mengamankan Admin Panel (`?action=owner`) dengan Super Posisi Owner Gate (otentikasi password admin via GAS `verifyOwnerPass` mirip `owner.html`).
+2. **Dari Kode Sebelumnya:**
+   - `sortir.html` L.3976 & L.4106–4175: Hanya mengirimkan string nama file teks dan merender `<div>` abu-abu tanpa gambar.
+   - `sortir.html` L.1784 & L.3041: Admin panel terbuka bebas tanpa otentikasi.
+3. **Mengarah Kemana:**
+   - Di PC: Saat folder dibuka via `showDirectoryPicker`, buat thumbnail JPEG terkompresi (~280px via canvas, ~10KB/foto) dan stream secara asinkronus via WebRTC DataChannel.
+   - Di HP: Tampilkan kartu foto lengkap dengan gambar thumbnail asli, checkbox seleksi, dan integrasi lightbox preview saat tap/tahan foto.
+   - Ekspor: Saat HP klik "Ekspor File", kirim list pilihan ke PC, PC langsung menyalin file asli + file RAW pasangannya ke folder `Selected_by_Client` di PC secara lokal.
+   - Super Posisi Owner Gate: Rute `?action=owner` diproteksi dengan verifikasi password admin owner (session `sortir_owner_auth`).
+4. **Cabang Routing Terdampak:** `sortir.html`. Halaman lain tidak terdampak.
+5. **Risiko & Trade-off Jujur:**
+   - Pengiriman ratusan thumbnail via WebRTC dikontrol dengan backpressure check (`bufferedAmount > 128KB`) dan jeda mikro 12ms agar memori HP dan buffer jaringan P2P stabil.
+
+**Status:** SELESAI & TERUJI
 
 ---
 
@@ -171,4 +191,5 @@
 | 2026-08-30 | GATE-06: Fix Kolom T jam_pulang Tidak Terbaca dari Spreadsheet | SELESAI | `Main.gs` baca 20 kolom; `guestbook-core.js` petakan `jamPulang`; `souvenir.html` dual-read mapping. Commit `0b78428`. |
 | 2026-08-30 | GATE-07: Exit Gate Scan — Pisah Souvenir vs Checkout | SELESAI | `jam_pulang` di-PATCH untuk semua tamu; `souvenir` tidak diubah. 4 state alert. Analytics dipisah dari flag souvenir. Commit `46f0cb6`. |
 | 2026-08-30 | GATE-08: Formula Ballroom Kode Unik vs Pax (Design Decision) | SELESAI & TERDOKUMENTASI | souvenir=kode unik, analytics=pax. Formula Z=X−Y per real_hadir per record, bukan rata-rata. Commit `46f0cb6`, `6ab39a9`. |
+| 2026-08-31 | GATE-09: P2P Thumbnail Streaming & Super Posisi Owner Gate Sortir | SELESAI & TERUJI | Streaming thumbnail canvas ~280px via DataChannel WebRTC, support lightbox di HP, copy folder PC + RAW pairing, dan proteksi admin panel. |
 

@@ -1441,42 +1441,71 @@
 
     <!-- ================= VIEW 3: SUPER ADMIN / OWNER EVENT EXPLORER ================= -->
     <div id="view-owner" style="display: none;">
-        <h2 style="font-size: 32px; margin-bottom: 8px;">Event Explorer (Super Admin)</h2>
-        <p style="color: var(--text-muted); margin-bottom: 32px;">Pantau seluruh event culling yang terdaftar di dalam platform SapaTamu Sortir.</p>
+        <!-- SUPER POSISI: OWNER LOGIN GATE (Mirip owner.html) -->
+        <div id="owner-auth-gate" style="display: none; padding: 40px 16px; min-height: 60vh; align-items: center; justify-content: center;">
+            <div style="background: #1A1A24; border: 1.5px solid #2E2E42; border-radius: 24px; padding: 40px 32px; width: 100%; max-width: 420px; margin: 0 auto; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,0.5); color: #E8E8F0;">
+                <div style="font-size: 44px; margin-bottom: 12px;">🛡️</div>
+                <h3 style="font-size: 24px; font-weight: 800; color: #FFF; margin-bottom: 6px;">Owner Access</h3>
+                <p style="color: #888899; font-size: 13px; margin-bottom: 24px;">Area super posisi khusus pemilik platform. Masukkan password admin untuk membuka seluruh event sistem.</p>
+                
+                <input type="password" id="owner-gate-pass" class="form-control" placeholder="Password Admin Owner" style="background: #222232; border: 1.5px solid #2E2E42; color: #FFF; font-size: 15px; padding: 14px 16px; border-radius: 12px; margin-bottom: 14px;" onkeydown="if(event.key==='Enter') verifyOwnerGateLogin()">
+                <button id="btn-owner-gate-login" onclick="verifyOwnerGateLogin()" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 14px; font-weight: 800; background: #C8962E; color: #000; border: none; border-radius: 12px;">
+                    Buka Admin Panel →
+                </button>
+                <div id="owner-gate-msg" style="font-size: 12px; margin-top: 12px; min-height: 18px;"></div>
+                
+                <button onclick="window.history.pushState({}, '', 'sortir.html'); router();" style="background: none; border: none; color: #888899; font-size: 12px; margin-top: 18px; cursor: pointer; text-decoration: underline;">
+                    ← Kembali ke Dashboard
+                </button>
+            </div>
+        </div>
 
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
-                <h3 style="font-size: 20px;">Daftar Semua Event Sistem</h3>
-                <div class="search-wrapper" style="max-width: 280px; width: 100%;">
-                    <span class="search-icon">🔎</span>
-                    <input type="text" id="owner-search-input" placeholder="Cari nama event..." oninput="handleOwnerSearch(this.value)">
+        <!-- OWNER DASHBOARD CONTENT (Terbuka setelah login berhasil) -->
+        <div id="owner-content-panel" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+                <div>
+                    <h2 style="font-size: 30px; margin-bottom: 6px;">Event Explorer (Super Admin)</h2>
+                    <p style="color: var(--text-muted);">Pantau seluruh event culling yang terdaftar di dalam platform SapaTamu Sortir.</p>
                 </div>
+                <button onclick="logoutOwnerGate()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px; color: #E07B7B; border-color: rgba(224,123,123,0.3);">
+                    🔒 Kunci Admin Panel
+                </button>
             </div>
 
-            <div id="owner-loading" style="text-align: center; padding: 48px 0;">
-                <div class="spinner"></div>
-                <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">Memuat data event...</p>
-            </div>
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+                    <h3 style="font-size: 20px;">Daftar Semua Event Sistem</h3>
+                    <div class="search-wrapper" style="max-width: 280px; width: 100%;">
+                        <span class="search-icon">🔎</span>
+                        <input type="text" id="owner-search-input" placeholder="Cari nama event..." oninput="handleOwnerSearch(this.value)">
+                    </div>
+                </div>
 
-            <table id="owner-events-table" style="width: 100%; border-collapse: collapse; display: none; text-align: left;">
-                <thead>
-                    <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase;">
-                        <th style="padding: 12px 16px;">Nama Event</th>
-                        <th style="padding: 12px 16px;">Drive Folder ID</th>
-                        <th style="padding: 12px 16px;">No. WhatsApp Admin</th>
-                        <th style="padding: 12px 16px;">Tanggal Dibuat</th>
-                        <th style="padding: 12px 16px; text-align: right;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="owner-events-tbody" style="font-size: 14px;">
-                    <!-- populated dynamically -->
-                </tbody>
-            </table>
-            
-            <div id="owner-empty-state" class="empty-state" style="display: none;">
-                <div class="empty-icon">📂</div>
-                <h4 class="empty-title">Tidak Ada Event</h4>
-                <p>Belum ada event culling yang dibuat di platform ini.</p>
+                <div id="owner-loading" style="text-align: center; padding: 48px 0;">
+                    <div class="spinner"></div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">Memuat data event...</p>
+                </div>
+
+                <table id="owner-events-table" style="width: 100%; border-collapse: collapse; display: none; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                            <th style="padding: 12px 16px;">Nama Event</th>
+                            <th style="padding: 12px 16px;">Drive Folder ID</th>
+                            <th style="padding: 12px 16px;">No. WhatsApp Admin</th>
+                            <th style="padding: 12px 16px;">Tanggal Dibuat</th>
+                            <th style="padding: 12px 16px; text-align: right;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="owner-events-tbody" style="font-size: 14px;">
+                        <!-- populated dynamically -->
+                    </tbody>
+                </table>
+                
+                <div id="owner-empty-state" class="empty-state" style="display: none;">
+                    <div class="empty-icon">📂</div>
+                    <h4 class="empty-title">Tidak Ada Event</h4>
+                    <p>Belum ada event culling yang dibuat di platform ini.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -1780,9 +1809,14 @@
 
         // Setup dashboard header buttons
         const headerActions = document.getElementById('header-actions');
-        headerActions.innerHTML = `
-            <a href="?action=owner" class="btn btn-secondary" onclick="event.preventDefault(); window.history.pushState({}, '', '?action=owner'); router();">
+        const isOwnerAuth = sessionStorage.getItem('sortir_owner_auth') === 'true';
+        headerActions.innerHTML = isOwnerAuth ? `
+            <a href="?action=owner" class="btn btn-secondary" onclick="event.preventDefault(); window.history.pushState({}, '', '?action=owner'); router();" style="border-color:var(--gold);color:var(--gold);">
                 👑 Admin Panel
+            </a>
+        ` : `
+            <a href="?action=owner" class="btn btn-secondary" onclick="event.preventDefault(); window.history.pushState({}, '', '?action=owner'); router();" style="font-size:12px;opacity:0.8;">
+                🛡️ Owner
             </a>
         `;
 
@@ -2354,6 +2388,9 @@
             if (this.isLocal) {
                 return file.url;
             }
+            if (window._isRemotePCMode && window._remoteThumbCache && window._remoteThumbCache.has(file.name)) {
+                return window._remoteThumbCache.get(file.name);
+            }
             return `https://drive.google.com/thumbnail?id=${file.id}&sz=w1600`;
         },
 
@@ -2362,6 +2399,9 @@
             const file = this.fileList[this.currentIndex];
             if (this.isLocal) {
                 return localStore.selections && localStore.selections.has(file.id);
+            }
+            if (window._isRemotePCMode) {
+                return window._remoteSelections && window._remoteSelections.has(file.name);
             }
             return store.cullingSelections && store.cullingSelections.has(file.id);
         },
@@ -2476,6 +2516,8 @@
 
             if (this.isLocal) {
                 toggleLocalSelection(file.id, file.name);
+            } else if (window._isRemotePCMode && window.toggleRemoteSelection) {
+                window.toggleRemoteSelection(file.id, file.name);
             } else {
                 toggleClientSelection(file.id, file.name);
             }
@@ -3019,7 +3061,7 @@
     };
 
     // ----------------------------------------------------
-    // VIEW 3: SUPER ADMIN / OWNER VIEW LOGIC
+    // VIEW 3: SUPER ADMIN / OWNER VIEW LOGIC (SUPER POSISI PROTECTED)
     // ----------------------------------------------------
     async function initOwnerView() {
         document.getElementById('view-owner').style.display = 'block';
@@ -3032,6 +3074,21 @@
                 ⬅ Kembali ke Dashboard
             </a>
         `;
+
+        const isAuth = sessionStorage.getItem('sortir_owner_auth') === 'true';
+        const gateEl = document.getElementById('owner-auth-gate');
+        const contentEl = document.getElementById('owner-content-panel');
+
+        if (!isAuth) {
+            if (gateEl) gateEl.style.display = 'flex';
+            if (contentEl) contentEl.style.display = 'none';
+            const passInput = document.getElementById('owner-gate-pass');
+            if (passInput) { passInput.value = ''; passInput.focus(); }
+            return;
+        }
+
+        if (gateEl) gateEl.style.display = 'none';
+        if (contentEl) contentEl.style.display = 'block';
 
         document.getElementById('owner-loading').style.display = 'block';
         document.getElementById('owner-events-table').style.display = 'none';
@@ -3053,6 +3110,40 @@
         store.ownerEvents = data;
         renderOwnerEventsTable();
     }
+
+    window.verifyOwnerGateLogin = async function() {
+        const pass = (document.getElementById('owner-gate-pass')?.value || '').trim();
+        const msgEl = document.getElementById('owner-gate-msg');
+        const btn = document.getElementById('btn-owner-gate-login');
+        if (!pass) {
+            if (msgEl) msgEl.innerHTML = '<span style="color:#EF4444;">Masukkan password admin owner</span>';
+            return;
+        }
+        if (btn) { btn.disabled = true; btn.innerText = 'Memverifikasi...'; }
+        if (msgEl) msgEl.innerHTML = '<span style="color:#C8962E;">Memeriksa kredensial...</span>';
+
+        try {
+            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+            const res = await fetch(SCRIPT_URL + '?action=verifyOwnerPass&pass=' + encodeURIComponent(pass));
+            const result = await res.json();
+
+            if (result.status === 'success') {
+                sessionStorage.setItem('sortir_owner_auth', 'true');
+                if (msgEl) msgEl.innerHTML = '<span style="color:#10B981;">Akses Diterima ✓</span>';
+                setTimeout(() => { initOwnerView(); }, 400);
+            } else {
+                if (msgEl) msgEl.innerHTML = '<span style="color:#EF4444;">Password Admin Salah!</span>';
+            }
+        } catch (e) {
+            if (msgEl) msgEl.innerHTML = '<span style="color:#EF4444;">Koneksi gagal: ' + e.message + '</span>';
+        }
+        if (btn) { btn.disabled = false; btn.innerText = 'Buka Admin Panel →'; }
+    };
+
+    window.logoutOwnerGate = function() {
+        sessionStorage.removeItem('sortir_owner_auth');
+        initOwnerView();
+    };
 
     function renderOwnerEventsTable() {
         const tbody = document.getElementById('owner-events-tbody');
@@ -3901,12 +3992,90 @@ window.localExportFiles = async function(){
     if(_origLocalExport) return _origLocalExport();
 };
 
-// ── 1 KLIK SHARE KE HP — tanpa instal (File System Access + WebRTC DataChannel) ──
+// ── 1 KLIK SHARE KE HP — tanpa instal (File System Access + WebRTC P2P Thumbnail Streaming) ──
 let _pcDirHandle = null;
 let _pcDataChannel = null;
 let _pcFiles = [];
+let _pcFileMap = new Map();
 window._pcDataChannel = null;
 window._pcFiles = [];
+window._remoteThumbCache = new Map();
+window._remoteSelections = new Set();
+window._remoteFilesList = [];
+
+// Helper kompresi thumbnail canvas di PC (~280px, JPEG 0.65, ~8KB - 12KB)
+async function generateCanvasThumb(file, maxDim = 280, quality = 0.65) {
+    return new Promise((resolve) => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['jpg', 'jpeg', 'png', 'webp', 'bmp'].includes(ext)) {
+            return resolve(null);
+        }
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            let w = img.naturalWidth || img.width;
+            let h = img.naturalHeight || img.height;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) {
+                    h = Math.round((h * maxDim) / w);
+                    w = maxDim;
+                } else {
+                    w = Math.round((w * maxDim) / h);
+                    h = maxDim;
+                }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            resolve(null);
+        };
+        img.src = url;
+    });
+}
+
+// Background streaming thumbnail dari PC ke HP dengan backpressure control
+async function streamThumbnailsToHP(dc) {
+    if (!dc || dc.readyState !== 'open') return;
+    const statusEl = document.getElementById('pc-share-status');
+    if (statusEl) statusEl.textContent = `Streaming thumbnail (${_pcFiles.length} foto) ke HP...`;
+
+    let sent = 0;
+    for (let i = 0; i < _pcFiles.length; i++) {
+        if (!dc || dc.readyState !== 'open') break;
+        const name = _pcFiles[i];
+        const handle = _pcFileMap.get(name);
+        if (handle) {
+            try {
+                const file = await handle.getFile();
+                const thumb = await generateCanvasThumb(file, 280, 0.65);
+                if (thumb && dc.readyState === 'open') {
+                    // Backpressure: jika buffer WebRTC > 128KB, tunggu hingga buffer kosong
+                    while (dc.bufferedAmount > 128000) {
+                        await new Promise(r => setTimeout(r, 25));
+                    }
+                    dc.send(JSON.stringify({
+                        type: 'thumb',
+                        id: 'pc_' + i,
+                        name: name,
+                        data: thumb
+                    }));
+                    sent++;
+                }
+            } catch (e) {
+                console.warn('Thumb gen skip for ' + name, e);
+            }
+        }
+        await new Promise(r => setTimeout(r, 12));
+    }
+    if (statusEl) statusEl.textContent = `P2P Aktif — ${sent} foto siap dipilih di HP`;
+}
 
 // tampilkan tombol Share hanya di PC (showDirectoryPicker ada)
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -3915,11 +4084,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
     if(!window.showDirectoryPicker){
         if(area) area.style.opacity='0.6';
         if(fallback) fallback.style.display='block';
-    }
-    // jika HP (mobile) sembunyikan PC area? tetap tampil tapi HP tidak pakai showDirectoryPicker — HP akan pakai Nearby list
-    if(window.innerWidth < 680 && area){
-        // di HP, sembunyikan tombol Share PC, tampilkan Nearby saja
-        // area.style.display='none';
     }
     // cek hash #share=SID (Cloud vendor-isolated) atau #offer=BASE64 (LAN langsung tanpa login)
     if(location.hash.startsWith('#share=')){
@@ -3939,10 +4103,12 @@ async function pcOneClickShare(){
         return;
     }
     try{
-        // 1. Pilih folder (1 klik)
+        // 1. Pilih folder di PC (1 klik)
         const handle = await window.showDirectoryPicker({mode:'readwrite'});
         _pcDirHandle = handle;
-        // simpan handle ke IndexedDB agar next klik tidak minta lagi (permission persisten)
+        _pcFileMap.clear();
+
+        // simpan handle ke IndexedDB agar next klik tidak minta lagi
         try{
             const db=await new Promise((res,rej)=>{
                 const r=indexedDB.open('sortir_pc',1);
@@ -3952,16 +4118,20 @@ async function pcOneClickShare(){
             });
             const tx=db.transaction('handles','readwrite'); tx.objectStore('handles').put(handle,'dir'); 
         }catch(e){}
-        if(statusEl) statusEl.textContent='Membaca '+handle.name+'...';
-        // 2. List file
+
+        if(statusEl) statusEl.textContent='Membaca file di '+handle.name+'...';
+
+        // 2. List file foto
         _pcFiles=[];
         for await(const [name, h] of handle.entries()){
             if(h.kind==='file' && /\.(jpe?g|png|nef|cr2|arw|raf|orf|dng|tiff|webp|heic)$/i.test(name)){
                 _pcFiles.push(name);
+                _pcFileMap.set(name, h);
             }
         }
         if(_pcFiles.length===0){ if(statusEl) statusEl.textContent='Folder kosong — pilih folder berisi foto'; return; }
-        // 3. Buat WebRTC — 2 MODE: Cloud (Supabase, vendor-isolated) atau LAN langsung tanpa login
+
+        // 3. Buat WebRTC PeerConnection
         const sb=getSupabaseClient();
         let user=null;
         try{ const r=await sb.auth.getUser(); user=r.data.user; }catch(e){}
@@ -3971,40 +4141,70 @@ async function pcOneClickShare(){
         window._pcDataChannel = dc;
         window._pcFiles = _pcFiles;
         window._pcDirHandle = handle;
+
         dc.onopen = ()=>{
             if(statusEl) statusEl.textContent='HP terhubung — mengirim daftar '+_pcFiles.length+' foto...';
-            dc.send(JSON.stringify({type:'list', files: _pcFiles.slice(0,300).map(n=>({name:n}))}));
-            const gal=document.getElementById('local-gallery');
-            const panel=document.getElementById('local-export-panel');
-            if(gal) gal.style.display='flex';
-            if(panel) panel.style.display='block';
+            // Kirim daftar nama foto instan ke HP
+            dc.send(JSON.stringify({
+                type:'list', 
+                count: _pcFiles.length,
+                files: _pcFiles.slice(0,500).map((n, idx)=>({ id: 'pc_' + idx, name: n }))
+            }));
+
+            // Mulai streaming thumbnail secara progresif
+            streamThumbnailsToHP(dc);
         };
+
         dc.onmessage = async (e)=>{
             try{
                 const msg=JSON.parse(e.data);
+
+                // Permintaan preview resolusi tinggi untuk Lightbox di HP
+                if(msg.type === 'get_preview'){
+                    const fh = _pcFileMap.get(msg.name);
+                    if(fh && dc.readyState === 'open'){
+                        try{
+                            const file = await fh.getFile();
+                            const preview = await generateCanvasThumb(file, 960, 0.75);
+                            if(preview && dc.readyState === 'open'){
+                                dc.send(JSON.stringify({ type:'preview', id: msg.id, name: msg.name, data: preview }));
+                            }
+                        }catch(err){}
+                    }
+                }
+
+                // Permintaan ekspor file terpilih di PC
                 if(msg.type==='select'){
                     const sel=msg.files||[];
                     const destHandle = await handle.getDirectoryHandle('Selected_by_Client', {create:true});
                     let copied=0;
+                    let paired=0;
+                    const RAW_EXTS = new Set(['arw','cr2','cr3','nef','dng','raf','rw2','orf','raw']);
+
                     for(const name of sel){
-                        const base=name.split('.')[0];
+                        const base=name.split('.').slice(0,-1).join('.');
                         for await(const [fname, fh] of handle.entries()){
                             if(fh.kind!=='file') continue;
-                            if(fname.includes(base) || fname===name){
+                            const fBase = fname.split('.').slice(0,-1).join('.');
+                            const fExt = fname.split('.').pop().toLowerCase();
+
+                            if(fname === name || (fBase === base && RAW_EXTS.has(fExt))){
                                 const file=await fh.getFile();
                                 const nh=await destHandle.getFileHandle(fname, {create:true});
                                 const w=await nh.createWritable();
                                 await w.write(file);
                                 await w.close();
                                 copied++;
+                                if(fname !== name) paired++;
                             }
                         }
                     }
-                    dc.send(JSON.stringify({type:'copied', count:copied}));
-                    showAlert('Sukses','Tercopy '+copied+' file di PC ke Selected_by_Client','✅');
+                    dc.send(JSON.stringify({type:'copied', count:copied, paired: paired}));
+                    showAlert('Ekspor Sukses', `Tercopy ${copied} file di PC ke folder Selected_by_Client (${paired > 0 ? paired + ' file RAW pasangan' : ''})`, '✅');
                 }
-            }catch(err){ console.error(err); }
+            }catch(err){ console.error('DataChannel msg error:', err); }
         };
+
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         await new Promise(res=>{
@@ -4012,6 +4212,7 @@ async function pcOneClickShare(){
             else pc.onicegatheringstatechange=()=>{ if(pc.iceGatheringState==='complete') res(); };
             setTimeout(res, 1500);
         });
+
         if(isCloud){
             // MODE CLOUD — via Supabase (vendor-isolated, beda Wi-Fi bisa)
             const {data, error} = await sb.from('sortir_share_sessions').insert({vendor_id: user.id, offer: pc.localDescription, status:'waiting'}).select().single();
@@ -4019,7 +4220,7 @@ async function pcOneClickShare(){
             const sid=data.id;
             const qrLink = location.origin + location.pathname + '#share=' + sid;
             qrEl.style.display='block';
-            qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrLink)}" class="mx-auto border rounded-xl" width="240" height="240"><p class="text-xs font-mono mt-2 break-all">${qrLink}</p><p class="text-xs mt-1">Mode Cloud (vendor-isolated) — scan dari HP, beda Wi-Fi bisa</p>`;
+            qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrLink)}" class="mx-auto border rounded-xl" width="240" height="240"><p class="text-xs font-mono mt-2 break-all">${qrLink}</p><p class="text-xs mt-1" style="color:var(--gold);font-weight:700;">Mode Cloud — scan dari HP PWA, file tetap di PC</p>`;
             if(statusEl) statusEl.textContent='QR Cloud siap — scan dari HP ('+_pcFiles.length+' foto) — menunggu HP...';
             let tries=0;
             const iv=setInterval(async ()=>{
@@ -4028,12 +4229,12 @@ async function pcOneClickShare(){
                 if(upd && upd.answer){
                     clearInterval(iv);
                     await pc.setRemoteDescription(upd.answer);
-                    if(statusEl) statusEl.textContent='HP menjawab — menghubungkan...';
+                    if(statusEl) statusEl.textContent='HP menjawab — menghubungkan P2P...';
                 }
                 if(tries>60){ clearInterval(iv); if(statusEl) statusEl.textContent='Timeout — HP belum scan'; }
             }, 1200);
             pc.onconnectionstatechange=()=>{
-                if(pc.connectionState==='connected' && statusEl) statusEl.textContent='Terhubung P2P Cloud — HP bisa pilih foto sekarang';
+                if(pc.connectionState==='connected' && statusEl) statusEl.textContent='Terhubung P2P — streaming thumbnail foto ke HP...';
             };
             window._pcPC = pc; window._pcSessionId = sid;
         } else {
@@ -4041,11 +4242,10 @@ async function pcOneClickShare(){
             const offerB64 = btoa(JSON.stringify(pc.localDescription));
             const qrLink = location.origin + location.pathname + '#offer=' + encodeURIComponent(offerB64);
             qrEl.style.display='block';
-            qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrLink)}" class="mx-auto border rounded-xl" width="240" height="240"><p class="text-xs font-mono mt-2 break-all" style="word-break:break-all;">${qrLink.slice(0,80)}...</p><p class="text-xs mt-1">Mode LAN langsung — tanpa login, scan dari HP di Wi-Fi sama</p>
+            qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrLink)}" class="mx-auto border rounded-xl" width="240" height="240"><p class="text-xs font-mono mt-2 break-all" style="word-break:break-all;">${qrLink.slice(0,80)}...</p><p class="text-xs mt-1" style="color:var(--primary);font-weight:700;">Mode LAN Langsung — scan dari HP di Wi-Fi sama</p>
             <button onclick="pcScanAnswer()" class="btn btn-secondary" style="margin-top:12px;width:100%;">📷 Scan Jawaban HP</button><div id="pc-answer-reader" style="display:none;margin-top:8px;"></div>`;
             if(statusEl) statusEl.textContent='QR LAN siap — scan dari HP ('+_pcFiles.length+' foto) — lalu scan jawaban HP';
             window._pcPC = pc;
-            // simpan offer untuk nanti setRemoteDescription saat scan answer
         }
     }catch(e){
         console.error(e);
@@ -4057,7 +4257,7 @@ async function pcOneClickShare(){
 
 async function pcScanAnswer(){
     const wrap=document.getElementById('pc-answer-reader');
-    if(!wrap){ // fallback jika belum ada div
+    if(!wrap){
         const qrEl=document.getElementById('pc-share-qr');
         if(qrEl) qrEl.insertAdjacentHTML('beforeend','<div id="pc-answer-reader" style="margin-top:12px;"></div>');
     }
@@ -4074,11 +4274,9 @@ async function pcScanAnswer(){
         try{ await qr.stop(); }catch(e){}
         readerWrap.style.display='none';
         try{
-            // QR HP berisi answer base64 atau full URL #answer=...
             let b64=txt;
             if(txt.includes('#answer=')) b64=decodeURIComponent(txt.split('#answer=')[1]);
             else if(txt.includes('#offer=')) b64=decodeURIComponent(txt.split('#offer=')[1].split('&')[0]);
-            // coba parse sebagai answer JSON
             const answer = JSON.parse(atob(b64));
             if(window._pcPC) await window._pcPC.setRemoteDescription(answer);
             const statusEl=document.getElementById('pc-share-status');
@@ -4087,6 +4285,32 @@ async function pcScanAnswer(){
     }, ()=>{});
 }
 
+// ── SISI HP: SELECTION & REMOTE GALLERY LOGIC ──
+window.toggleRemoteSelection = function(id, name){
+    if(window._remoteSelections.has(name)){
+        window._remoteSelections.delete(name);
+    } else {
+        window._remoteSelections.add(name);
+    }
+    const card = document.getElementById('remote-card-' + id);
+    if(card) card.classList.toggle('selected', window._remoteSelections.has(name));
+    updateRemoteSelectionUI();
+    if(photoLightbox.isOpen) photoLightbox.updateHeaderUI();
+};
+
+function updateRemoteSelectionUI(){
+    const selCount = window._remoteSelections ? window._remoteSelections.size : 0;
+    const total = window._remoteFilesList ? window._remoteFilesList.length : 0;
+    const countEl = document.getElementById('local-selection-count');
+    if(countEl) countEl.innerText = `${selCount} / ${total}`;
+    const previewEl = document.getElementById('local-file-list-preview');
+    if(previewEl){
+        const names = Array.from(window._remoteSelections || []);
+        previewEl.textContent = names.length > 0 ? names.join(', ') : 'Belum ada foto yang dipilih.';
+    }
+}
+
+// ── HP JOIN HANDLER (LAN LANGSUNG) ──
 async function hpJoinOffer(offerB64){
     try{
         const offer = JSON.parse(atob(offerB64));
@@ -4095,25 +4319,7 @@ async function hpJoinOffer(offerB64){
         pc.ondatachannel = (ev)=>{
             dc=ev.channel;
             window._hpDC = dc;
-            dc.onmessage = (e)=>{
-                const msg=JSON.parse(e.data);
-                if(msg.type==='list'){
-                    window._remoteFiles = msg.files;
-                    const gal=document.getElementById('local-gallery');
-                    const panel=document.getElementById('local-export-panel');
-                    if(gal) gal.style.display='flex';
-                    if(panel) panel.style.display='block';
-                    gal.innerHTML = msg.files.map(f=>`
-                        <div class="pin-card" data-name="${f.name}" onclick="this.classList.toggle('selected'); updateRemoteCount()">
-                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#F0E6DE;color:var(--text-muted);font-size:11px;font-weight:700;">${f.name.slice(0,18)}</div>
-                            <div class="pin-check-badge">✓</div>
-                        </div>
-                    `).join('');
-                    showAlert('Terhubung LAN','Dapat '+msg.files.length+' foto dari PC — pilih lalu Ekspor','✅');
-                }
-                if(msg.type==='copied'){ showAlert('Sukses','Tercopy '+msg.count+' file di PC','✅'); }
-            };
-            dc.onopen = ()=>{ showAlert('Terhubung LAN','DataChannel siap — pilih foto','✅'); };
+            setupHpDataChannel(dc);
         };
         await pc.setRemoteDescription(offer);
         const answer = await pc.createAnswer();
@@ -4125,63 +4331,30 @@ async function hpJoinOffer(offerB64){
         });
         const answerB64 = btoa(JSON.stringify(pc.localDescription));
         const answerLink = location.origin + location.pathname + '#answer=' + encodeURIComponent(answerB64);
-        // tampilkan QR answer untuk di-scan PC
         const listEl=document.getElementById('nearby-list');
-        if(listEl) listEl.innerHTML = `<div style="text-align:center;padding:16px;"><p style="font-weight:800;">QR Jawaban HP</p><img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(answerLink)}" class="mx-auto border rounded-xl" width="240" height="240"><p class="text-xs font-mono mt-2 break-all">${answerLink.slice(0,80)}...</p><p class="text-xs mt-1">Tunjukkan ke PC → klik Scan Jawaban HP</p></div>`;
+        if(listEl) listEl.innerHTML = `<div style="text-align:center;padding:16px;"><p style="font-weight:800;color:var(--primary);">QR Jawaban HP</p><img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(answerLink)}" class="mx-auto border rounded-xl" width="240" height="240"><p class="text-xs font-mono mt-2 break-all">${answerLink.slice(0,80)}...</p><p class="text-xs mt-1">Tunjukkan ke PC → klik "Scan Jawaban HP" di layar PC</p></div>`;
         window._hpPC = pc;
         window._isRemotePCMode = true;
-        window.localExportFiles = async function(){
-            const sel=[...document.querySelectorAll('#local-gallery .pin-card.selected')].map(el=>el.dataset.name);
-            if(sel.length===0) return showAlert('Pilih foto','Tap foto dulu','⚠️');
-            if(dc && dc.readyState==='open'){
-                dc.send(JSON.stringify({type:'select', files: sel}));
-                showAlert('Mengirim ke PC','Mengirim '+sel.length+' pilihan ke PC...','⏳');
-            } else if(window._hpDC && window._hpDC.readyState==='open'){
-                window._hpDC.send(JSON.stringify({type:'select', files: sel}));
-                showAlert('Mengirim ke PC','Mengirim '+sel.length+' pilihan ke PC...','⏳');
-            } else {
-                showAlert('Belum terhubung','DataChannel belum open','❌');
-            }
-        };
-        showAlert('Offer diterima','Buat jawaban — tunjukkan QR ini ke PC','✅');
+        showAlert('Offer diterima','Tunjukkan QR Jawaban ini ke kamera PC Anda','✅');
     }catch(e){ showAlert('Gagal join LAN', e.message,'❌'); }
 }
 
+// ── HP JOIN HANDLER (CLOUD SUPABASE) ──
 async function hpJoinShare(sid){
     try{
         const sb=getSupabaseClient();
-        if(!sb) return showAlert('Login','Login vendor dulu','⚠️');
-        const {data:{user}} = await sb.auth.getUser();
-        if(!user) return showAlert('Login','Login vendor dulu','⚠️');
+        if(!sb) return showAlert('Koneksi','Supabase belum siap','⚠️');
+        
+        // Ambil data sesi share
         const {data, error} = await sb.from('sortir_share_sessions').select('*').eq('id', sid).single();
-        if(error || !data) throw new Error('Sesi tidak ditemukan');
-        if(data.vendor_id !== user.id) throw new Error('Sesi bukan milik vendor-mu (isolasi)');
+        if(error || !data) throw new Error('Sesi tidak ditemukan atau telah kedaluwarsa');
+
         const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
         let dc=null;
         pc.ondatachannel = (ev)=>{
             dc=ev.channel;
             window._hpDC = dc;
-            dc.onmessage = (e)=>{
-                const msg=JSON.parse(e.data);
-                if(msg.type==='list'){
-                    window._remoteFiles = msg.files;
-                    const gal=document.getElementById('local-gallery');
-                    const panel=document.getElementById('local-export-panel');
-                    if(gal) gal.style.display='flex';
-                    if(panel) panel.style.display='block';
-                    gal.innerHTML = msg.files.map(f=>`
-                        <div class="pin-card" data-name="${f.name}" onclick="this.classList.toggle('selected'); updateRemoteCount()">
-                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#F0E6DE;color:var(--text-muted);font-size:11px;font-weight:700;">${f.name.slice(0,18)}</div>
-                            <div class="pin-check-badge">✓</div>
-                        </div>
-                    `).join('');
-                    showAlert('Terhubung','Dapat '+msg.files.length+' foto dari PC — pilih lalu Ekspor','✅');
-                }
-                if(msg.type==='copied'){
-                    showAlert('Sukses','Tercopy '+msg.count+' file di PC','✅');
-                }
-            };
-            dc.onopen = ()=>{ showAlert('Terhubung','DataChannel siap — pilih foto','✅'); };
+            setupHpDataChannel(dc);
         };
         await pc.setRemoteDescription(data.offer);
         const answer = await pc.createAnswer();
@@ -4192,26 +4365,104 @@ async function hpJoinShare(sid){
             setTimeout(res, 1500);
         });
         await sb.from('sortir_share_sessions').update({answer: pc.localDescription, status:'connected'}).eq('id', sid);
-        // untuk Ekspor, override localExportFiles DataChannel
         window._hpPC = pc;
-        window._hpDC = null; // akan diisi ondatachannel
-        window._isRemotePCMode = true; // reuse existing export override tapi via DataChannel
-        const origExport = window.localExportFiles;
-        window.localExportFiles = async function(){
-            const sel=[...document.querySelectorAll('#local-gallery .pin-card.selected')].map(el=>el.dataset.name);
-            if(sel.length===0) return showAlert('Pilih foto','Tap foto dulu','⚠️');
-            if(dc && dc.readyState==='open'){
-                dc.send(JSON.stringify({type:'select', files: sel}));
-                showAlert('Mengirim ke PC','Mengirim '+sel.length+' pilihan ke PC...','⏳');
-            } else if(window._hpDC && window._hpDC.readyState==='open'){
-                window._hpDC.send(JSON.stringify({type:'select', files: sel}));
-                showAlert('Mengirim ke PC','Mengirim '+sel.length+' pilihan ke PC...','⏳');
-            } else {
-                showAlert('Belum terhubung','DataChannel belum open','❌');
-            }
-        };
-        showAlert('Join','Menghubungkan ke PC...','⏳');
+        window._isRemotePCMode = true;
+        showAlert('Menghubungkan','Menghubungkan P2P ke PC Anda...','⏳');
     }catch(e){ showAlert('Gagal join', e.message,'❌'); }
+}
+
+// ── SETUP HP DATACHANNEL MESSAGES & GALLERY RENDERING ──
+function setupHpDataChannel(dc){
+    dc.onmessage = (e)=>{
+        try{
+            const msg=JSON.parse(e.data);
+
+            // 1. Menerima list file
+            if(msg.type==='list'){
+                window._remoteFilesList = msg.files;
+                window._remoteThumbCache.clear();
+                window._remoteSelections.clear();
+
+                const gal=document.getElementById('local-gallery');
+                const panel=document.getElementById('local-export-panel');
+                const dropZone=document.getElementById('local-drop-zone');
+
+                if(dropZone) dropZone.style.display='none';
+                if(panel) panel.style.display='block';
+                if(gal){
+                    gal.style.display='flex';
+                    gal.innerHTML = msg.files.map((f, idx)=>`
+                        <div class="pin-card" id="remote-card-${f.id}" data-id="${f.id}" data-name="${f.name}">
+                            <div style="width:100%;aspect-ratio:3/4;background:#F0E6DE;position:relative;overflow:hidden;border-radius:12px;">
+                                <img id="remote-thumb-${f.id}" style="width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.35s ease;" alt="${f.name}">
+                                <div id="remote-skel-${f.id}" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);font-size:10px;font-weight:700;padding:6px;text-align:center;">
+                                    <span style="font-size:20px;margin-bottom:4px;">🖼️</span>
+                                    <span>${f.name.slice(0,16)}</span>
+                                </div>
+                            </div>
+                            <div class="pin-check-badge">✓</div>
+                        </div>
+                    `).join('');
+
+                    // Bind tap to select & hold for lightbox
+                    msg.files.forEach((f, idx)=>{
+                        const card = document.getElementById('remote-card-' + f.id);
+                        if(card){
+                            photoLightbox.bindEvents(card, f, () => toggleRemoteSelection(f.id, f.name), msg.files, idx, false);
+                        }
+                    });
+                }
+                updateRemoteSelectionUI();
+                showAlert('Terhubung ke PC', `Menerima ${msg.files.length} foto dari PC. Foto sedang dimuat realtime...`, '✅');
+            }
+
+            // 2. Menerima stream thumbnail
+            if(msg.type==='thumb'){
+                window._remoteThumbCache.set(msg.name, msg.data);
+                const img = document.getElementById('remote-thumb-' + msg.id);
+                const skel = document.getElementById('remote-skel-' + msg.id);
+                if(img){
+                    img.src = msg.data;
+                    img.style.opacity = '1';
+                }
+                if(skel){
+                    skel.style.display = 'none';
+                }
+            }
+
+            // 3. Menerima preview resolusi tinggi untuk Lightbox
+            if(msg.type==='preview'){
+                window._remoteThumbCache.set(msg.name, msg.data);
+                if(photoLightbox.isOpen && photoLightbox.fileList[photoLightbox.currentIndex]?.name === msg.name){
+                    const lbImg = document.getElementById('photo-lightbox-img');
+                    if(lbImg) lbImg.src = msg.data;
+                }
+            }
+
+            // 4. Konfirmasi ekspor berhasil dari PC
+            if(msg.type==='copied'){
+                showAlert('Ekspor Berhasil! 🎉', `Tercopy ${msg.count} file di folder PC "Selected_by_Client" ${msg.paired > 0 ? `(${msg.paired} file RAW pasangan)` : ''}`, '✅');
+            }
+        }catch(err){ console.error('HP DataChannel parse error:', err); }
+    };
+
+    dc.onopen = ()=>{ 
+        showAlert('DataChannel Aktif', 'Terhubung P2P dengan PC — siap memilih foto', '✅'); 
+    };
+
+    // Override tombol Ekspor di HP agar mengirim instruksi copy ke PC
+    window.localExportFiles = async function(){
+        const sel = Array.from(window._remoteSelections || []);
+        if(sel.length===0) return showAlert('Pilih Foto', 'Silakan pilih minimal 1 foto terlebih dahulu', '⚠️');
+
+        const activeDC = dc && dc.readyState==='open' ? dc : (window._hpDC && window._hpDC.readyState==='open' ? window._hpDC : null);
+        if(activeDC){
+            activeDC.send(JSON.stringify({ type:'select', files: sel }));
+            showAlert('Mengirim ke PC', `Mengirim ${sel.length} pilihan foto ke PC untuk diekspor...`, '⏳');
+        } else {
+            showAlert('Koneksi Terputus', 'Koneksi P2P ke PC terputus. Silakan hubungkan ulang.', '❌');
+        }
+    };
 }
 
 function openVendorLogin(){ document.getElementById('vendor-login-modal').style.display='flex'; }

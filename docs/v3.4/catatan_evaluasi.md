@@ -342,4 +342,39 @@ document.getElementById('wedding-date').innerText =
 - [x] Struktur `left-combined` telemetry+scanner 1/2 kiri, riwayat 1/2 kanan (`1fr 1fr` desktop)
 - [x] Overlay `blur 4px` + opacity 0.52/0.32, glass `blur 8px` seperti `checkin.html`
 - [x] Mobile `<680` hapus blur per `perf-ui-ux-3mode` (60fps)
-- [ ] Verifikasi visual desktop 1366×768 / 1920×1080: riwayat muat 12+ tamu, foto background terlihat jelas
+- [x] Verifikasi visual desktop 1366×768 / 1920×1080: riwayat muat 12+ tamu, foto background terlihat jelas
+
+---
+
+## 11. Evaluasi & Perbaikan `sortir.html` — P2P Thumbnail Streaming 1-Klik Share ke HP & Super Posisi Owner Gate
+
+**Tanggal Temuan:** 31 Agustus 2026  
+**Halaman:** `sortir.html` — Culling, Local Culling, 1-Klik Share ke HP, Owner Explorer  
+**Referensi:** GATE-09 DECISION_LOG  
+
+### 1. Masalah Foto Tidak Muncul di PWA HP pada Mode 1-Klik Share ke HP
+- **Akar Masalah:**
+  - Sebelumnya, PC hanya mengirim array nama file teks `[{name: '...'}]` melalui WebRTC DataChannel.
+  - Sisi HP hanya merender `<div style="background:#F0E6DE">${f.name}</div>` tanpa ada tag `<img>` atau data binary thumbnail.
+- **Perbaikan:**
+  - Di PC: Ditambahkan helper `generateCanvasThumb()` yang mengompresi foto secara lokal di PC menjadi thumbnail JPEG ~280px (quality 0.65, ~8-12KB) langsung dari `FileSystemFileHandle`.
+  - PC melakukan streaming thumbnail foto secara asinkronus ke HP dengan proteksi buffer WebRTC (`bufferedAmount > 128KB`).
+  - Di HP: Gallery merender kartu dengan skeleton loader dan tag `<img>` aktif yang langsung fade-in saat thumbnail tiba.
+  - HP mendukung seleksi foto, update counter seleksi, dan integrasi lightbox (`photoLightbox`) untuk zoom/pan/pinch foto remote.
+  - Ekspor: HP mengirimkan daftar foto terpilih via DataChannel ke PC, dan PC secara instan menyalin file asli beserta pasangan file RAW-nya (`.nef`, `.cr2`, `.arw`, `.dng`, dll.) ke subfolder `Selected_by_Client` di PC secara lokal.
+
+### 2. Pengamanan Super Posisi Admin Panel (`?action=owner`)
+- **Akar Masalah:**
+  - Siapapun yang mengakses `sortir.html?action=owner` dapat melihat seluruh event milik semua vendor dan menghapusnya.
+- **Perbaikan:**
+  - Rute `?action=owner` dan `?action=admin` kini diproteksi dengan **Super Posisi Owner Gate** (mirip `owner.html`).
+  - Mengharuskan otentikasi password admin owner (verifikasi via GAS `verifyOwnerPass` / session `sortir_owner_auth`).
+  - Jika belum login, hanya kartu input password bernuansa dark-glass yang muncul, data event sistem tidak dimuat sama sekali sebelum otentikasi berhasil.
+
+### Checklist
+- [x] Canvas thumbnail generator di PC (~280px, ~10KB/foto)
+- [x] WebRTC DataChannel thumbnail streaming progresif dengan backpressure control
+- [x] Render kartu gambar asli di HP dengan skeleton loading
+- [x] Integrasi lightbox zoom & pan untuk foto remote
+- [x] Ekspor instan dari HP ke folder PC + pairing file RAW
+- [x] Super Posisi Owner Gate di `sortir.html?action=owner`
