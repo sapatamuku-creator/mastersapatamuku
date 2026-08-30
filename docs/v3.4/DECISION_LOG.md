@@ -99,6 +99,66 @@
 
 ---
 
+### GATE-06: Perbaikan Kolom T (jam_pulang) Tidak Terbaca dari Spreadsheet ke Supabase
+
+1. **Fungsi Perubahan:** Memastikan data jam keluar tamu (Kolom T: `jam_pulang`) dari Google Spreadsheet ter-sync ke Supabase dan ter-propagasi ke `souvenir.html` agar riwayat checkout tampil benar.
+2. **Dari Kode Sebelumnya:**
+   - `backend/Main.gs` `syncSheetToSupabase`: `getRange(..., 19)` hanya membaca 19 kolom (A–S), Kolom T (`jam_pulang`) tidak pernah dibaca maupun dikirim ke Supabase.
+   - `lib/guestbook-core.js` `fetchAllTamu`: mapping tidak menyertakan `jamPulang: item.jam_pulang`, sehingga nilai terhapus di perjalanan.
+   - `souvenir.html` `initPage()`: mapping `masterData` hanya membaca snake_case (`item.jam_pulang`), tidak kompatibel dengan camelCase yang dikirim oleh core.
+3. **Mengarah Kemana:**
+   - `Main.gs`: `getRange(..., 20)` + mapping `jam_pulang` dari `row[19]` dengan format time parse.
+   - `guestbook-core.js`: tambah `jamPulang: item.jam_pulang` dan `jam_pulang: item.jam_pulang` ke chunk.
+   - `souvenir.html`: mapping dual-read (`item.jamPulang || item.jam_pulang || "-"`).
+4. **Cabang Routing Terdampak:** `backend/Main.gs`, `lib/guestbook-core.js`, `souvenir.html`. Tidak menyentuh halaman lain.
+5. **Risiko & Trade-off Jujur:**
+   - Data lama di Supabase kolom `jam_pulang` tetap `NULL` sampai GAS `syncSheetToSupabase` dijalankan ulang secara manual untuk event yang sudah berjalan.
+   - Setelah sync manual dilakukan, data riwayat checkout langsung tampil tanpa perubahan tambahan.
+
+**Commit:** `0b78428` | **Status:** SELESAI
+
+---
+
+### GATE-07: Logika Exit Gate Scan — Pisah Hak Souvenir vs Status Checkout
+
+1. **Fungsi Perubahan:** Scan barcode di gerbang keluar (exit gate) memicu **checkout untuk semua tamu** (jam_pulang selalu di-set), tetapi alert berbeda tergantung hak souvenir: 🎁 TERBAGI atau 🚪 TIDAK ADA SOUVENIR.
+2. **Dari Kode Sebelumnya:**
+   - `handleClaimByCode` selalu mem-PATCH `souvenir: "ya"` untuk semua tamu — termasuk yang tidak berhak souvenir, mengacaukan data kolom K.
+   - `renderResultCard` hanya punya 3 state: SUCCESS, ALREADY_CLAIMED, NOT_FOUND. Tidak ada state untuk tamu tanpa hak souvenir.
+   - `analytics.html` menghitung `checkedOutPax` berdasarkan `souvenir=YA OR jam_pulang`, sehingga tamu yang ada di Spreadsheet dengan `souvenir=ya` (hak awal) ikut dihitung sebagai checkout meskipun belum scan.
+3. **Mengarah Kemana:**
+   - `souvenir.html` scan: hanya PATCH `jam_pulang` (souvenir tidak diubah). Cek `hasSouvenirRight = souvenir === "ya"` sebelum alert.
+   - 4 state renderResultCard: SUCCESS (hijau 🎁), NO_SOUVENIR (biru 🚪), ALREADY_CLAIMED (kuning ⚠️), NOT_FOUND (merah ✕).
+   - Riwayat checkout: badge 🎁 TERBAGI vs 🚪 PULANG.
+   - `analytics.html`: `checkedOutPax` = murni dari `jam_pulang`; `claimedSouvenirCount` = `souvenir=ya AND jam_pulang ada`.
+4. **Cabang Routing Terdampak:** `souvenir.html`, `analytics.html`. Halaman lain tidak tersentuh.
+5. **Risiko & Trade-off Jujur:**
+   - Data historis yang sebelumnya ter-patch `souvenir=ya` oleh bug lama tidak di-rollback (tetap `ya`). Ini berarti tamu yang di-scan sebelum patch ini akan tampil sebagai TERBAGI meskipun seharusnya tidak.
+   - Mitigasi: Event baru/berikutnya akan bersih karena souvenir tidak lagi diubah saat scan exit.
+
+**Commit:** `46f0cb6` | **Status:** SELESAI
+
+---
+
+### GATE-08: Keputusan Arsitektur Formula Ballroom — Kode Unik vs Pax
+
+1. **Fungsi Perubahan:** Menetapkan formula definitif kapasitas ballroom yang berbeda di dua halaman, sesuai kebutuhan operator masing-masing.
+2. **Formula Final:**
+   - **`souvenir.html`** (operator scan): Ballroom = kode checkin − kode checkout (per **kode unik**). Alasan: operator bekerja per kartu barcode.
+   - **`analytics.html`** (dashboard manajemen): Ballroom = `Σ real_hadir checkin − Σ real_hadir checkout` (per **pax/orang**). Alasan: manajemen butuh jumlah orang aktual, bukan jumlah kartu. Setiap kode bisa membawa keluarga dengan jumlah berbeda — tidak bisa dibagi rata.
+3. **Formula Matematis Analytics:**
+   - `X` = Σ `real_hadir` untuk semua tamu yang checkin
+   - `Y` = Σ `real_hadir` untuk tamu yang `jam_pulang` terisi (scan keluar)
+   - `Z` = X − Y (tamu masih di ballroom, dalam pax)
+4. **Cabang Routing Terdampak:** `analytics.html` (formula `activeInBallroom`), `souvenir.html` (label "Kode" bukan "Pax").
+5. **Risiko & Trade-off Jujur:**
+   - Angka ballroom di dua halaman **akan selalu berbeda secara nilai** — ini bukan bug, ini expected. Harus didokumentasikan agar tidak membingungkan operator baru.
+   - `real_hadir` fallback ke `rencana_hadir` jika belum diisi — jika data `real_hadir` tidak akurat, nilai pax bisa sedikit menyimpang dari jumlah orang sebenarnya.
+
+**Commit:** `46f0cb6`, `6ab39a9` | **Status:** SELESAI & TERDOKUMENTASI
+
+---
+
 ## 📝 Tabel Log Keputusan
 
 | Tanggal | ID GATE / Task | Status | Catatan / Tindak Lanjut |
@@ -108,5 +168,7 @@
 | 2026-08-30 | GATE-03: Pemetaan Kapasitas & Souvenir Config | SELESAI & TERUJI | Menyelaraskan payload `config.html` dan handler `Main.gs` untuk pemetaan sheet `CONFIG` (sel A9:B10) & Supabase `config_welcome`. |
 | 2026-08-30 | GATE-04: Universal Off-Grid Switch Halaman Operasional | SELESAI & TERUJI | 10 Halaman operasional terstandarisasi dengan saklar Off-Grid, IndexedDB mirror, sync-engine, dan banner offline. |
 | 2026-08-30 | GATE-05: Server-Authoritative Conflict Guard | SELESAI & TERUJI | Proteksi anti-overwrite terpasang di `sync-engine.js` (pre-check diffing & conditional filtering). |
-
+| 2026-08-30 | GATE-06: Fix Kolom T jam_pulang Tidak Terbaca dari Spreadsheet | SELESAI | `Main.gs` baca 20 kolom; `guestbook-core.js` petakan `jamPulang`; `souvenir.html` dual-read mapping. Commit `0b78428`. |
+| 2026-08-30 | GATE-07: Exit Gate Scan — Pisah Souvenir vs Checkout | SELESAI | `jam_pulang` di-PATCH untuk semua tamu; `souvenir` tidak diubah. 4 state alert. Analytics dipisah dari flag souvenir. Commit `46f0cb6`. |
+| 2026-08-30 | GATE-08: Formula Ballroom Kode Unik vs Pax (Design Decision) | SELESAI & TERDOKUMENTASI | souvenir=kode unik, analytics=pax. Formula Z=X−Y per real_hadir per record, bukan rata-rata. Commit `46f0cb6`, `6ab39a9`. |
 
