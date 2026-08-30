@@ -27,7 +27,10 @@ const PRECACHE_ASSETS = [
   './subdomain_resolver.js',
   './config.js',
   './manifest.json',
-  './manifest-sortir.json'
+  './manifest-sortir.json',
+  './assets/favicon.png',
+  './assets/icon-sortir-192.png',
+  './assets/icon-sortir-512.png'
 ];
 
 // ── INSTALL: Cache all static assets ──
