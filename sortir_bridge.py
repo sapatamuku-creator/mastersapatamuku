@@ -728,7 +728,7 @@ if __name__ == "__main__":
         time.sleep(1.2)
         webbrowser.open(f"http://localhost:{BASE_PORT}")
     
-    import threading
-    threading.Thread(target=open_browser, daemon=True).start()
-    
-    uvicorn.run(app, host="0.0.0.0", port=BASE_PORT)
+    try:
+        uvicorn.run(app, host="0.0.0.0", port=BASE_PORT, log_level="info")
+    except Exception as e:
+        print(f"\n[ERROR] Server tidak dapat berjalan pada port {BASE_PORT}: {e}")
