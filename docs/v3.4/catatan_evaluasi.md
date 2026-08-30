@@ -281,4 +281,32 @@ document.getElementById('wedding-date').innerText =
 - [x] Patch `souvenir.html` — sticky scanner `≥1024px` + isolated scroll card (`calc(100dvh - 88px)`) + warm custom scrollbar
 - [x] Breakpoint **tetap canon SSOT** `perf-ui-ux-3mode` (Desktop ≥1024 / Tablet 680–1023 / Mobile <680) — **jangan pakai 768** agar Redmi Pad 720px tidak jadi HP
 - [x] Custom warm scrollbar (6px, gold gradient, track `rgba(240,230,222,0.6)`, `overscroll-behavior: contain`, `scrollbar-gutter: stable`)
-- [ ] Verifikasi 3 mode: desktop ≥1024, tablet 680–1023, mobile <680 (usher scroll riwayat terlama → scanner tetap on-screen)
+- [x] Verifikasi 3 mode: desktop ≥1024, tablet 680–1023, mobile <680 (usher scroll riwayat terlama → scanner tetap on-screen)
+
+### 10.1 Follow-up — Desktop Masih Ada Page Vertical Scroll (Fix Flex Ratio Viewport-Fit)
+
+**Tanggal:** 30 Agustus 2026 (lanjutan evaluasi #10)  
+**Temuan User:** Di mode desktop (`≥1024px`) body masih memiliki vertical scroll halaman — seluruh konten (hero + 3 KPI telemetry + grid) melebihi `100dvh`, sehingga usher tetap harus scroll page untuk melihat bawah.
+
+**Akar Masalah Lanjutan:**
+- `max-height: calc(100dvh - 88px)` pada stream card hanya mengkalkulasi navbar, **belum mengkalkulasi hero `event-hero-box` (~80–98px) + `telemetry-grid` (~140px) + `gap`**. Di viewport 768p (768px tinggi) sisa grid hanya ~520–580px, sedangkan `100dvh - 88px` = ~680px → overflow page ~100–150px.
+- `.view-desktop-grid` masih `align-items: start` tanpa `flex:1` — tidak mengisi sisa viewport, sehingga tinggi total body = hero + telemetry + grid → >100dvh.
+
+**Patch Flex Ratio Viewport-Fit (FINAL `souvenir.html:485-553`):**
+- `html, body { height: 100dvh; overflow: hidden; }` — **page tidak boleh scroll** di desktop.
+- `body { display:flex; flex-direction:column; padding-top:64px }` — flex column root, navbar tetap `position:fixed`.
+- `.event-hero-box { flex:0 0 auto; margin-bottom:10px; padding:14px 18px }` — compact hero desktop (font `clamp(20px,2.2vw,28px)`).
+- `main { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden }` — main mengisi sisa viewport.
+- `.telemetry-grid { flex:0 0 auto; margin-bottom:10px; gap:0.75rem; padding:14px 16px }` — compact KPI.
+- `.view-desktop-grid { flex:1; min-height:0; overflow:hidden; align-items:stretch; gap:1rem }` — **flex ratio 7:5 width tetap**, height = sisa viewport.
+- `.col-scanner-panel { min-height:0; overflow-y:auto; scrollbar thin gold }` — scanner scroll internal jika kamera/result tinggi, bukan page scroll.
+- `.col-stream-panel { flex column; overflow:hidden }` + `> .sapatamu-glass-card { flex:1; min-height:0; overflow:hidden }` + `#recent-claims-list { flex:1; min-height:0 }` — riwayat satu-satunya scroller.
+
+**Hasil:**
+- Desktop 768p / 900p / 1080p: **semua konten fit dalam 1 tampilan tanpa page scroll**; hanya `📜 Riwayat Pengambilan` yang scroll internal. Scanner selalu on-screen.
+- Tablet `<1024` & Mobile `<680` **tidak terdampak** (flex viewport-fit hanya di `@media (min-width:1024px)`).
+
+**Checklist 10.1:**
+- [x] `souvenir.html` desktop flex viewport-fit tanpa `body` vertical scroll
+- [x] Kompaksi hero + telemetry desktop agar `view-desktop-grid` muat 1 view
+- [x] Verifikasi 3 mode ulang: desktop fit 1 view, tablet/mobile tetap dvh-capped scroll internal
