@@ -3230,11 +3230,12 @@
         if (store.isP2PMode) {
             showAlert("Menyimpan Pilihan...", "Sedang mengirim pilihan foto ke PC...", "⏳");
             try {
-                const { error } = await supabase
+                const sb = window._supabase || (window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null);
+                const { error } = await sb
                     .from('sortir_share_sessions')
                     .update({
                         answer: { selected: selectedNames, updated_at: new Date().toISOString() },
-                        status: 'submitted'
+                        status: 'connected'
                     })
                     .eq('session_key', store.p2pSessionKey);
 
@@ -4392,14 +4393,19 @@ async function pcOneClickShare(){
             url: ''
         }));
 
-        await sb.from('sortir_share_sessions').upsert({
+        const { error: insErr } = await sb.from('sortir_share_sessions').upsert({
             session_key: sid,
             offer: {
                 event_name: handle.name,
                 files: initialFiles
             },
-            status: 'ready'
+            status: 'waiting'
         });
+
+        if(insErr){
+            console.error('Supabase session insert error:', insErr);
+            throw insErr;
+        }
 
         // 2. LANGSUNG MUNCULKAN QR CODE SEKETIKA!
         const qrLink = location.origin + location.pathname + '?share=' + sid;
@@ -4433,7 +4439,8 @@ async function pcOneClickShare(){
                         offer: {
                             event_name: handle.name,
                             files: currentFiles
-                        }
+                        },
+                        status: 'waiting'
                     }).eq('session_key', sid);
                 } catch (e) {}
 
@@ -4461,7 +4468,7 @@ async function pcOneClickShare(){
                     const sel = session.answer.selected;
                     if(statusEl) statusEl.textContent = `HP Terhubung — ${sel.length} foto sedang dipilih di HP`;
 
-                    if(session.status === 'submitted' && sel.length > 0 && sel.length !== lastHandledCount){
+                    if(sel.length > 0 && sel.length !== lastHandledCount){
                         lastHandledCount = sel.length;
                         if(statusEl) statusEl.textContent = `Menyalin ${sel.length} foto pilihan ke folder PC...`;
 
