@@ -2397,6 +2397,47 @@
                 photoGrid.style.display = 'flex';
                 renderClientPhotosGrid();
             }
+
+            // Progressive live thumbnail updater
+            let pollTries = 0;
+            const thumbPoll = setInterval(async () => {
+                pollTries++;
+                if (!store.isP2PMode || store.p2pSessionKey !== shareKey || pollTries > 60) {
+                    clearInterval(thumbPoll);
+                    return;
+                }
+                try {
+                    const { data: sData } = await supabase
+                        .from('sortir_share_sessions')
+                        .select('offer')
+                        .eq('session_key', shareKey)
+                        .single();
+
+                    if (sData && sData.offer && sData.offer.files) {
+                        let missing = 0;
+                        sData.offer.files.forEach(f => {
+                            if (f.url) {
+                                const localF = store.cullingFiles.find(cf => cf.id === f.id);
+                                if (localF && !localF.url) {
+                                    localF.url = f.url;
+                                    const card = document.getElementById(`card-${f.id}`);
+                                    if (card) {
+                                        const img = card.querySelector('img');
+                                        if (img && img.src !== f.url) {
+                                            img.src = f.url;
+                                            img.style.opacity = '1';
+                                        }
+                                    }
+                                }
+                            } else {
+                                missing++;
+                            }
+                        });
+                        if (missing === 0) clearInterval(thumbPoll);
+                    }
+                } catch (e) {}
+            }, 1200);
+
         } catch (e) {
             console.error("Gagal load P2P culling view:", e);
             document.getElementById('culling-loading-grid').style.display = 'none';
@@ -3052,10 +3093,21 @@
             pin.className = `pin-card ${isSelected ? 'selected' : ''}`;
             pin.id = `card-${file.id}`;
 
-            // Endpoint resmi drive.google.com/thumbnail yang menyajikan binary JPEG langsung (bebas 302 redirect & net::ERR_FAILED CORB Chromium)
-            const primaryUrl = file.url || `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
-            const altUrl = file.url || `https://drive.google.com/thumbnail?id=${file.id}&sz=s800`;
-            const altUrl2 = file.url || `https://drive.google.com/uc?export=view&id=${file.id}`;
+            let primaryUrl = file.url;
+            let altUrl = file.url;
+            let altUrl2 = file.url;
+
+            if (!primaryUrl) {
+                if (store.isP2PMode) {
+                    primaryUrl = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="250" viewBox="0 0 200 250"><rect width="200" height="250" fill="%23F0E6DE"/><text x="50%" y="45%" text-anchor="middle" font-size="28">📷</text><text x="50%" y="60%" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="%238C7E74">${encodeURIComponent(file.name.slice(0, 16))}</text></svg>`;
+                    altUrl = primaryUrl;
+                    altUrl2 = primaryUrl;
+                } else {
+                    primaryUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+                    altUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=s800`;
+                    altUrl2 = `https://drive.google.com/uc?export=view&id=${file.id}`;
+                }
+            }
 
             pin.innerHTML = `
                 <img src="${primaryUrl}" 
@@ -4264,7 +4316,24 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
 });
 
-// ── 1-KLIK SHARE KE HP (PINTEREST GRID SYNC) ──
+// Helper kompresi thumbnail canvas super cepat (GPU Accelerated via createImageBitmap)
+async function generateFastThumb(file, maxDim = 220, quality = 0.55){
+    try{
+        if('createImageBitmap' in window){
+            const bmp = await createImageBitmap(file, { resizeWidth: maxDim, resizeQuality: 'low' });
+            const canvas = document.createElement('canvas');
+            canvas.width = bmp.width;
+            canvas.height = bmp.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(bmp, 0, 0);
+            bmp.close();
+            return canvas.toDataURL('image/jpeg', quality);
+        }
+    }catch(e){}
+    return generateCanvasThumb(file, maxDim, quality);
+}
+
+// ── 1-KLIK SHARE KE HP (INSTANT LOAD + PROGRESSIVE SYNC) ──
 async function pcOneClickShare(){
     const statusEl=document.getElementById('pc-share-status');
     const qrEl=document.getElementById('pc-share-qr');
@@ -4294,44 +4363,26 @@ async function pcOneClickShare(){
             return;
         }
 
-        if(statusEl) statusEl.textContent=`Membuat thumbnail (${imageFiles.length} foto)...`;
-        showProgressModal('Menyiapkan Foto untuk HP...', `Membuat thumbnail instan dari folder "${handle.name}"`);
-
-        const thumbsList = [];
-        for(let i = 0; i < imageFiles.length; i++){
-            const f = imageFiles[i];
-            try{
-                const fileObj = await f.handle.getFile();
-                const thumbData = await generateCanvasThumb(fileObj, 240, 0.55);
-                thumbsList.push({
-                    id: 'p_' + i,
-                    name: f.name,
-                    url: thumbData
-                });
-            }catch(err){
-                thumbsList.push({ id: 'p_' + i, name: f.name, url: '' });
-            }
-            updateProgressModal(i + 1, imageFiles.length, `Memproses ${f.name}`);
-        }
-
-        closeProgressModal();
-
+        // 1. BUAT SESI INSTAN (< 200ms) TANPA BLOCKING
         const sid = 'p2p_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
         const sb = getSupabaseClient();
 
-        if(statusEl) statusEl.textContent='Mengunggah sesi share ke server...';
+        const initialFiles = imageFiles.map((f, i) => ({
+            id: 'p_' + i,
+            name: f.name,
+            url: ''
+        }));
 
-        const { error: insErr } = await sb.from('sortir_share_sessions').upsert({
+        await sb.from('sortir_share_sessions').upsert({
             session_key: sid,
             offer: {
                 event_name: handle.name,
-                files: thumbsList
+                files: initialFiles
             },
             status: 'ready'
         });
 
-        if(insErr) throw insErr;
-
+        // 2. LANGSUNG MUNCULKAN QR CODE SEKETIKA!
         const qrLink = location.origin + location.pathname + '?share=' + sid;
         qrEl.style.display='block';
         qrEl.innerHTML = `
@@ -4339,9 +4390,43 @@ async function pcOneClickShare(){
             <p class="text-xs font-mono mt-2 break-all" style="word-break:break-all;color:var(--text-muted);">${qrLink}</p>
             <p class="text-xs mt-1" style="color:var(--gold);font-weight:800;">📷 Scan QR ini dari HP — Layar HP langsung membuka galeri Pinterest untuk checklist foto</p>
         `;
-        if(statusEl) statusEl.textContent = `QR Siap (${thumbsList.length} foto) — Menunggu scan dari HP...`;
+        if(statusEl) statusEl.textContent = `⚡ QR Siap (${imageFiles.length} foto) — HP bisa langsung scan sekarang!`;
 
-        // Background listener on PC for selection from HP
+        // 3. BACKGROUND THUMBNAIL STREAMING (GPU ACCELERATED)
+        (async () => {
+            const BATCH_SIZE = 25;
+            let currentFiles = [...initialFiles];
+
+            for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
+                const batch = imageFiles.slice(i, i + BATCH_SIZE);
+                await Promise.all(batch.map(async (f, bIdx) => {
+                    const globalIdx = i + bIdx;
+                    try {
+                        const fileObj = await f.handle.getFile();
+                        const thumb = await generateFastThumb(fileObj, 220, 0.55);
+                        currentFiles[globalIdx].url = thumb || '';
+                    } catch (e) {}
+                }));
+
+                // Update session batch ke Supabase
+                try {
+                    await sb.from('sortir_share_sessions').update({
+                        offer: {
+                            event_name: handle.name,
+                            files: currentFiles
+                        }
+                    }).eq('session_key', sid);
+                } catch (e) {}
+
+                const progressCount = Math.min(i + BATCH_SIZE, imageFiles.length);
+                if (statusEl) statusEl.textContent = `Memuat thumbnail live: ${progressCount}/${imageFiles.length} foto (HP tetap bisa scan & pilih foto)`;
+                await new Promise(r => setTimeout(r, 25));
+            }
+
+            if (statusEl) statusEl.textContent = `✅ Siap! ${imageFiles.length} foto aktif tersinkron ke HP`;
+        })();
+
+        // 4. Background listener on PC for selection from HP
         let lastHandledCount = 0;
         const RAW_EXTS = new Set(['arw','cr2','cr3','nef','dng','raf','rw2','orf','raw']);
 
@@ -4393,7 +4478,6 @@ async function pcOneClickShare(){
 
     }catch(e){
         console.error('pcOneClickShare error:', e);
-        closeProgressModal();
         if(statusEl) statusEl.textContent = 'Gagal: ' + e.message;
         showAlert('Gagal Share', e.message, '❌');
     }
