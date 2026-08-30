@@ -1437,10 +1437,12 @@
                             rencana_hadir: g.rencanaHadir,
                             real_hadir: g.realHadir,
                             status_hadir: g.statusHadir,
+                            souvenir: g.souvenir,
                             kategori: g.kategori,
                             pihak_pengundang: g.pihakPengundang,
                             alamat: g.alamat,
                             jam_datang: g.jamDatang,
+                            jam_pulang: g.jamPulang || g.jam_pulang || "-",
                             sesi: g.sesi
                         }));
                     } catch(e) { console.warn('core fetchAllTamu fallback', e); }
@@ -1501,16 +1503,20 @@
                     const rawStatus = String(item.status_hadir || "").trim().toLowerCase();
                     const hasTime = item.jam_datang && item.jam_datang !== "-" && item.jam_datang !== "";
                     const isCheckedIn = rawStatus === "1" || rawStatus === "true" || hasTime;
-                    const hasClaimedSouv = (item.souvenir && String(item.souvenir).trim().toUpperCase() === "YA") || (item.jam_pulang && item.jam_pulang !== "-" && item.jam_pulang !== "");
 
                     totalRSVP += valH;
 
                     if (isCheckedIn) {
                         totalReal += valN;
 
-                        if (hasClaimedSouv) {
-                            claimedSouvenirCount++;
+                        // Checkout: tamu yang sudah punya jam_pulang (scan di exit gate)
+                        const hasCheckout = item.jam_pulang && item.jam_pulang !== "-" && item.jam_pulang !== "" && item.jam_pulang !== "null";
+                        if (hasCheckout) {
                             checkedOutPax += valN;
+                            // Souvenir terbagi: hanya tamu yang BERHAK souvenir (souvenir=ya) DAN sudah checkout
+                            if (item.souvenir && String(item.souvenir).trim().toLowerCase() === "ya") {
+                                claimedSouvenirCount++;
+                            }
                         }
 
                         const catName = String(item.kategori || "UMUM").toUpperCase();
