@@ -225,6 +225,14 @@
         .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text-main); }
         .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
 
+        /* CUSTOM NOTIFICATION MODAL */
+        #sapa-notify-modal { position: fixed; inset: 0; background: rgba(74, 63, 53, 0.45); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999; }
+        .sapa-modal-content { background: #fff; width: 90%; max-width: 420px; border-radius: 28px; padding: 40px 32px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .sapa-modal-icon { font-size: 48px; margin-bottom: 16px; line-height: 1; }
+        .sapa-modal-title { font-family: 'Lora', serif; font-size: 22px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; }
+        .sapa-modal-msg { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 28px; }
+        @keyframes modalPop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
         /* -------------------------------------
            ANIMASI BACKGROUND FLOATING HEARTS
         ---------------------------------------- */
@@ -572,6 +580,16 @@
     </div>
 </div>
 
+<!-- Custom Sapa Notification Modal -->
+<div id="sapa-notify-modal">
+    <div class="sapa-modal-content">
+        <div id="notify-icon" class="sapa-modal-icon">✨</div>
+        <h2 id="notify-title" class="sapa-modal-title">Pesan</h2>
+        <div id="notify-msg" class="sapa-modal-msg">Pesan notifikasi akan muncul di sini.</div>
+        <button onclick="closeSapaModal()" class="btn-action btn-primary" style="width:100%; padding:14px; border-radius:14px; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Mengerti</button>
+    </div>
+</div>
+
 <script src="config.js"></script>
 <script>
     function switchTab(tabId, el) {
@@ -794,10 +812,27 @@
         document.getElementById('btn-save-avatar').disabled = true;
     }
 
+    function showSapaModal(title, msg, icon = "✨", onConfirm = null) {
+        document.getElementById('notify-title').innerText = title;
+        document.getElementById('notify-msg').innerHTML = msg;
+        document.getElementById('notify-icon').innerText = icon;
+        document.getElementById('sapa-notify-modal').style.display = 'flex';
+        window._modalConfirmCallback = onConfirm;
+    }
+
+    function closeSapaModal() {
+        document.getElementById('sapa-notify-modal').style.display = 'none';
+        if (typeof window._modalConfirmCallback === 'function') {
+            const cb = window._modalConfirmCallback;
+            window._modalConfirmCallback = null;
+            cb();
+        }
+    }
+
     function copyLink() {
         const link = document.getElementById('inp-subdomain').value;
         navigator.clipboard.writeText(link);
-        alert("Link tersalin!");
+        showSapaModal("Link Tersalin", "Tautan website undangan Anda telah disalin ke clipboard.", "🔗");
     }
 
     function goToEditMetadata() {
@@ -822,8 +857,9 @@
         if (tier === 0 || tier >= 4) {
             window.location.href = 'config.html';
         } else {
-            alert('Akses Terbatas 🔒\nUntuk mengakses Layar Sapa, silakan upgrade ke Guestbook Paket Silver atau lebih tinggi.');
-            window.location.href = 'upgrade.html';
+            showSapaModal("Akses Terbatas 🔒", "Untuk mengakses Layar Sapa, silakan upgrade ke Guestbook Paket Silver atau lebih tinggi.", "🔒", () => {
+                window.location.href = 'upgrade.html';
+            });
         }
     }
 
@@ -831,7 +867,7 @@
         const session = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
         const ssId = window.CURRENT_SS_ID || session.ssId;
         if (!ssId) {
-            alert("Sesi tidak valid. Silakan login ulang.");
+            showSapaModal("Sesi Tidak Valid", "Sesi Anda telah kedaluwarsa. Silakan login ulang.", "⚠️");
             return;
         }
 
@@ -862,7 +898,7 @@
                         existingData = rows[0].data;
                     }
                 }
-            } catch(fetchErr) {
+            } catch (fetchErr) {
                 console.warn("Existing data fetch notice:", fetchErr);
             }
 
@@ -900,10 +936,19 @@
                 })
             }).catch(err => console.warn("GAS sync notice:", err));
 
-            alert(`✓ Pengaturan Logistik Tersimpan!\n🎁 Stok Souvenir: ${stok} Pcs\n🏢 Kapasitas Ballroom: ${kapasitas} Pax`);
-        } catch(e) {
+            showSapaModal(
+                "Pengaturan Tersimpan",
+                `<div style="text-align:left; background:var(--input-bg); padding:16px 20px; border-radius:16px; border:1px solid var(--border); font-size:13px; line-height:1.8; margin-bottom:10px;">` +
+                `✨ <b>Pengaturan Logistik Berhasil Diperbarui!</b><br>` +
+                `🎁 Total Stok Souvenir: <b>${stok} Pcs</b><br>` +
+                `🏢 Kapasitas Ballroom: <b>${kapasitas} Pax</b>` +
+                `</div>` +
+                `<span style="font-size:12px; color:var(--text-muted);">Perubahan telah disinkronkan ke Supabase & Google Spreadsheet.</span>`,
+                "✅"
+            );
+        } catch (e) {
             console.error("Save logistics error:", e);
-            alert("Gagal menyimpan ke server: " + e.message);
+            showSapaModal("Gagal Menyimpan", "Terjadi kendala saat menyimpan ke server: " + e.message, "❌");
         } finally {
             btn.disabled = false;
             btn.innerHTML = origText;

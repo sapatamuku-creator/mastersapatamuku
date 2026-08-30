@@ -1,4 +1,4 @@
-﻿
+
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 
         function sanitizeHTML(str) {
@@ -527,7 +527,13 @@
                     btn.style.background = "var(--gold)";
                     btn.style.color = "white";
                 } catch (err) {
-                    alert("Gagal mengakses kamera: " + err.message);
+                    if (typeof showSapaModal === 'function') {
+                        showSapaModal("Kamera Bermasalah", "Gagal mengakses kamera: " + err.message, "📷");
+                    } else if (typeof showToast === 'function') {
+                        showToast("Gagal mengakses kamera: " + err.message, "📷");
+                    } else {
+                        alert("Gagal mengakses kamera: " + err.message);
+                    }
                 }
             } else if (regStream && !capturedBase64) {
                 btn.disabled = true;
