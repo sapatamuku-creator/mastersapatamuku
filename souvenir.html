@@ -1429,26 +1429,26 @@
                     masterData = await res.json();
                 }
 
-                // Map data to camelCase
+                // Map data to camelCase (dukung baik camelCase dari core maupun snake_case dari Supabase)
                 masterData = (masterData || []).map(item => ({
                     row: item.row,
                     nama: item.nama,
                     whatsapp: item.whatsapp,
                     kategori: item.kategori,
                     kode: item.kode,
-                    rencanaHadir: item.rencana_hadir,
-                    statusHadir: String(item.status_hadir),
-                    jamDatang: item.jam_datang,
-                    jamPulang: item.jam_pulang,
-                    souvenir: item.souvenir,
-                    pihakPengundang: item.pihak_pengundang,
-                    alamat: item.alamat,
-                    realHadir: item.real_hadir,
-                    statusWA: item.status_wa,
-                    statusHadiah: item.status_hadiah,
-                    statusUndian: item.status_undian || "-",
-                    tandaKasih: item.tanda_kasih,
-                    sesi: item.sesi
+                    rencanaHadir: item.rencanaHadir !== undefined ? item.rencanaHadir : item.rencana_hadir,
+                    statusHadir: String(item.statusHadir !== undefined ? item.statusHadir : (item.status_hadir || "0")),
+                    jamDatang: item.jamDatang || item.jam_datang || "-",
+                    jamPulang: item.jamPulang || item.jam_pulang || "-",
+                    souvenir: item.souvenir || "tidak",
+                    pihakPengundang: item.pihakPengundang || item.pihak_pengundang || "-",
+                    alamat: item.alamat || "-",
+                    realHadir: item.realHadir !== undefined ? item.realHadir : item.real_hadir,
+                    statusWA: item.statusWA || item.status_wa || "-",
+                    statusHadiah: item.statusHadiah || item.status_hadiah || "-",
+                    statusUndian: item.statusUndian || item.status_undian || "-",
+                    tandaKasih: item.tandaKasih !== undefined ? item.tandaKasih : item.tanda_kasih,
+                    sesi: item.sesi || "-"
                 }));
 
                 guestMap = new Map(masterData.map(g => [String(g.kode).trim().toUpperCase(), g]));
@@ -1468,9 +1468,9 @@
                                 if (payload.eventType === 'UPDATE' && item) {
                                     const idx = masterData.findIndex(g => g.kode === item.kode || g.row === item.row);
                                     if (idx !== -1) {
-                                        masterData[idx].statusHadir = String(item.status_hadir);
-                                        masterData[idx].jamDatang = item.jam_datang;
-                                        masterData[idx].jamPulang = item.jam_pulang;
+                                        masterData[idx].statusHadir = String(item.status_hadir !== undefined ? item.status_hadir : item.statusHadir);
+                                        masterData[idx].jamDatang = item.jam_datang || item.jamDatang;
+                                        masterData[idx].jamPulang = item.jam_pulang || item.jamPulang;
                                         masterData[idx].souvenir = item.souvenir;
                                         guestMap.set(String(item.kode).trim().toUpperCase(), masterData[idx]);
                                         updateStats();

@@ -2008,8 +2008,8 @@ function syncSheetToSupabase(ssId) {
     const eventDateRaw = sheet.getRange("B2").getValue();
     const eventDate = Utilities.formatDate(parseEventDate(eventDateRaw), "GMT+7", "yyyy-MM-dd");
 
-    // Ambil data tamu
-    const dataRange = sheet.getRange(START_ROW, 1, lastRow - (START_ROW - 1), 19).getValues();
+    // Ambil data tamu (baca 20 kolom sampai Kolom T: Jam Pulang)
+    const dataRange = sheet.getRange(START_ROW, 1, lastRow - (START_ROW - 1), 20).getValues();
     let guestList = dataRange.map((row, index) => {
       let cleanPhone = String(row[3] || "").replace(/\D/g, ''); 
       if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
@@ -2041,6 +2041,23 @@ function syncSheetToSupabase(ssId) {
         sesi: String(row[18] || "-"),
         jam_datang: (() => {
           let val = row[9];
+          if (val === "" || val === null || val === undefined || String(val).trim() === "-") return "-";
+          if (val instanceof Date) {
+            return Utilities.formatDate(val, "GMT+7", "HH:mm:ss");
+          }
+          let str = String(val).trim();
+          if (str.includes("T") || str.includes("GMT") || str.length > 10) {
+            try {
+              let parsedDate = new Date(str);
+              if (!isNaN(parsedDate.getTime())) {
+                return Utilities.formatDate(parsedDate, "GMT+7", "HH:mm:ss");
+              }
+            } catch(e) {}
+          }
+          return str;
+        })(),
+        jam_pulang: (() => {
+          let val = row[19];
           if (val === "" || val === null || val === undefined || String(val).trim() === "-") return "-";
           if (val instanceof Date) {
             return Utilities.formatDate(val, "GMT+7", "HH:mm:ss");
