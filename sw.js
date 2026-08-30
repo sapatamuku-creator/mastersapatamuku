@@ -30,7 +30,9 @@ const PRECACHE_ASSETS = [
   './manifest-sortir.json',
   './assets/favicon.png',
   './assets/icon-sortir-192.png',
-  './assets/icon-sortir-512.png'
+  './assets/icon-sortir-512.png',
+  './assets/icon-guestbook-192.png',
+  './assets/icon-guestbook-512.png'
 ];
 
 // ── INSTALL: Cache all static assets ──
