@@ -4397,12 +4397,289 @@ async function streamThumbnailsToHP(dc) {
     if (statusEl) statusEl.textContent = `P2P Aktif — ${sent} foto siap dipilih di HP`;
 }
 
-// Auto-execute hash listener on page load or hash change
-function checkUrlHashOnLoad(){
+// ── P2P MOBILE/CLIENT PINTEREST CULLING VIEW ──
+async function initP2PCullingView(sid) {
+    console.log('[SapaTamu] Opening P2P Culling View for session:', sid);
+    window._currentP2PSession = sid;
+    
+    // 1. Hide default dashboard elements
+    const defaultHeaders = document.querySelectorAll('header, footer, #view-dashboard, #local-culling-view, .container');
+    defaultHeaders.forEach(el => el.style.setProperty('display', 'none', 'important'));
+    
+    // 2. Buat / Tampilkan P2P Container
+    let container = document.getElementById('p2p-culling-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'p2p-culling-container';
+        container.style.cssText = 'position:fixed;inset:0;background:#FFF9F5;color:#4A3F35;z-index:9999;overflow-y:auto;padding-bottom:90px;font-family:"Plus Jakarta Sans",sans-serif;';
+        document.body.appendChild(container);
+    }
+    container.style.display = 'block';
+    
+    container.innerHTML = `
+        <div style="position:sticky;top:0;z-index:100;background:rgba(255,249,245,0.92);backdrop-filter:blur(16px);border-bottom:1px solid #F0E6DE;padding:12px 16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div>
+                    <span id="p2p-event-badge" style="background:#E07B7B;color:white;font-weight:800;font-size:11px;padding:3px 10px;border-radius:10px;letter-spacing:0.5px;">P2P LIVE</span>
+                    <h2 id="p2p-event-title" style="font-family:'Lora',serif;font-size:18px;font-weight:700;margin-top:4px;color:#4A3F35;">Memuat Galeri Foto...</h2>
+                </div>
+                <div style="text-align:right;">
+                    <div id="p2p-sync-status" style="font-size:11px;font-weight:700;color:#10B981;display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+                        <span style="width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block;"></span> Terhubung ke PC
+                    </div>
+                    <span id="p2p-counter-text" style="font-size:12px;font-weight:800;color:#C8962E;">0 Terpilih</span>
+                </div>
+            </div>
+            <!-- Filter Pills -->
+            <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;">
+                <button class="p2p-filter-btn active" data-filter="all" onclick="filterP2PGrid('all')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;background:#C8962E;color:white;border:none;cursor:pointer;">Semua (<span id="count-all">0</span>)</button>
+                <button class="p2p-filter-btn" data-filter="selected" onclick="filterP2PGrid('selected')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;background:#EFE8E2;color:#8C7560;border:none;cursor:pointer;">Dipilih (<span id="count-sel">0</span>)</button>
+                <button class="p2p-filter-btn" data-filter="unselected" onclick="filterP2PGrid('unselected')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;background:#EFE8E2;color:#8C7560;border:none;cursor:pointer;">Belum Dipilih (<span id="count-unsel">0</span>)</button>
+            </div>
+        </div>
+
+        <!-- Pinterest Grid -->
+        <div id="p2p-pinterest-grid" style="column-count:2;column-gap:10px;padding:12px;"></div>
+
+        <!-- Bottom Action Bar -->
+        <div style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,253,251,0.95);backdrop-filter:blur(16px);border-top:1px solid #F0E6DE;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:100;box-shadow:0 -4px 20px rgba(0,0,0,0.06);">
+            <div>
+                <div style="font-size:11px;color:#8C7560;font-weight:600;">Pilihan Anda</div>
+                <div id="p2p-bottom-count" style="font-size:15px;font-weight:800;color:#C8962E;">0 Foto</div>
+            </div>
+            <button id="p2p-btn-submit" onclick="submitP2PSelections()" style="background:linear-gradient(135deg, #C8962E, #E07B7B);color:white;font-weight:800;font-size:13px;padding:12px 24px;border-radius:14px;border:none;box-shadow:0 6px 20px rgba(200,150,46,0.3);cursor:pointer;">
+                💾 Kirim Pilihan ke PC
+            </button>
+        </div>
+
+        <!-- Fullscreen Lightbox -->
+        <div id="p2p-lightbox" style="display:none;position:fixed;inset:0;background:rgba(20,16,14,0.96);z-index:99999;flex-direction:column;justify-content:space-between;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;color:white;">
+                <span id="p2p-lightbox-name" style="font-size:13px;font-weight:700;opacity:0.9;"></span>
+                <button onclick="closeP2PLightbox()" style="background:rgba(255,255,255,0.2);color:white;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;">✕</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;flex:1;overflow:hidden;padding:12px 0;">
+                <img id="p2p-lightbox-img" src="" style="max-width:100%;max-height:85vh;object-fit:contain;border-radius:12px;">
+            </div>
+            <div style="display:flex;justify-content:center;gap:16px;">
+                <button id="p2p-lightbox-toggle" onclick="toggleLightboxSelect()" style="background:#C8962E;color:white;font-weight:800;font-size:14px;padding:12px 32px;border-radius:25px;border:none;cursor:pointer;">
+                    ✓ Pilih Foto Ini
+                </button>
+            </div>
+        </div>
+    `;
+
+    // State management
+    window._p2pFiles = [];
+    window._p2pSelected = new Set();
+    window._p2pCurrentFilter = 'all';
+    window._p2pLightboxIndex = -1;
+
+    const sb = getSupabaseClient();
+    if (!sb) {
+        alert('Supabase client tidak tersedia.');
+        return;
+    }
+
+    // Hydrate data function
+    function updateGridCards(files, eventName) {
+        if (eventName) {
+            const titleEl = document.getElementById('p2p-event-title');
+            if (titleEl) titleEl.textContent = eventName;
+        }
+        window._p2pFiles = files;
+        
+        const grid = document.getElementById('p2p-pinterest-grid');
+        if (!grid) return;
+
+        // Render card jika belum ada di DOM atau update thumbnail
+        files.forEach((f, idx) => {
+            let card = document.getElementById('card_' + f.id);
+            const isSel = window._p2pSelected.has(f.name);
+            const imgSrc = f.url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" fill="%23eee"/>';
+
+            if (!card) {
+                card = document.createElement('div');
+                card.id = 'card_' + f.id;
+                card.dataset.name = f.name;
+                card.dataset.index = idx;
+                card.style.cssText = 'break-inside:avoid;margin-bottom:10px;background:#FFF;border-radius:14px;overflow:hidden;position:relative;cursor:pointer;border:2px solid ' + (isSel ? '#C8962E' : 'transparent') + ';box-shadow:0 4px 14px rgba(61,49,42,0.06);transition:transform 0.15s ease, border-color 0.15s;';
+                
+                card.innerHTML = `
+                    <img id="img_${f.id}" src="${imgSrc}" loading="lazy" style="width:100%;display:block;background:#EDE4DC;min-height:120px;object-fit:cover;">
+                    <div class="badge-check" style="position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:${isSel ? '#C8962E' : 'rgba(255,255,255,0.85)'};color:${isSel ? '#FFF' : '#AAA'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.15);">✓</div>
+                    <div style="padding:6px 8px;font-size:10px;font-weight:600;color:#8C7560;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
+                `;
+
+                // Event Listeners: Tap to toggle select, Hold to open Lightbox
+                card.addEventListener('click', (e) => {
+                    toggleP2PCardSelection(f.name, card);
+                });
+                card.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    openP2PLightbox(idx);
+                });
+
+                grid.appendChild(card);
+            } else {
+                // Update image src if newly arrived
+                const img = document.getElementById('img_' + f.id);
+                if (img && f.url && img.src !== f.url) {
+                    img.src = f.url;
+                }
+            }
+        });
+
+        updateP2PCounters();
+    }
+
+    // Initial Fetch
+    try {
+        const { data: session } = await sb.from('sortir_share_sessions').select('*').eq('session_key', sid).single();
+        if (session && session.offer && session.offer.files) {
+            updateGridCards(session.offer.files, session.offer.event_name);
+        }
+    } catch (e) {
+        console.warn('Initial fetch error:', e);
+    }
+
+    // Polling Live Update (setiap 1.2 detik agar foto baru langsung muncul)
+    const livePoller = setInterval(async () => {
+        try {
+            const { data: session } = await sb.from('sortir_share_sessions').select('offer, status').eq('session_key', sid).single();
+            if (session && session.offer && session.offer.files) {
+                updateGridCards(session.offer.files, session.offer.event_name);
+            }
+        } catch (e) {}
+    }, 1200);
+
+    // Global Handlers
+    window.toggleP2PCardSelection = function(name, cardEl) {
+        if (window._p2pSelected.has(name)) {
+            window._p2pSelected.delete(name);
+            cardEl.style.borderColor = 'transparent';
+            const badge = cardEl.querySelector('.badge-check');
+            if (badge) { badge.style.background = 'rgba(255,255,255,0.85)'; badge.style.color = '#AAA'; }
+        } else {
+            window._p2pSelected.add(name);
+            cardEl.style.borderColor = '#C8962E';
+            const badge = cardEl.querySelector('.badge-check');
+            if (badge) { badge.style.background = '#C8962E'; badge.style.color = '#FFF'; }
+        }
+        updateP2PCounters();
+    };
+
+    window.updateP2PCounters = function() {
+        const total = window._p2pFiles ? window._p2pFiles.length : 0;
+        const sel = window._p2pSelected ? window._p2pSelected.size : 0;
+        const unsel = Math.max(0, total - sel);
+
+        const counterEl = document.getElementById('p2p-counter-text');
+        if (counterEl) counterEl.textContent = sel + ' / ' + total + ' Terpilih';
+        const bottomCountEl = document.getElementById('p2p-bottom-count');
+        if (bottomCountEl) bottomCountEl.textContent = sel + ' Foto Terpilih';
+        const cAll = document.getElementById('count-all');
+        if (cAll) cAll.textContent = total;
+        const cSel = document.getElementById('count-sel');
+        if (cSel) cSel.textContent = sel;
+        const cUnsel = document.getElementById('count-unsel');
+        if (cUnsel) cUnsel.textContent = unsel;
+    };
+
+    window.filterP2PGrid = function(filter) {
+        window._p2pCurrentFilter = filter;
+        document.querySelectorAll('.p2p-filter-btn').forEach(btn => {
+            if (btn.dataset.filter === filter) {
+                btn.style.background = '#C8962E'; btn.style.color = '#FFF';
+            } else {
+                btn.style.background = '#EFE8E2'; btn.style.color = '#8C7560';
+            }
+        });
+
+        window._p2pFiles.forEach(f => {
+            const card = document.getElementById('card_' + f.id);
+            if (!card) return;
+            const isSel = window._p2pSelected.has(f.name);
+            if (filter === 'all') card.style.display = 'block';
+            else if (filter === 'selected') card.style.display = isSel ? 'block' : 'none';
+            else if (filter === 'unselected') card.style.display = !isSel ? 'block' : 'none';
+        });
+    };
+
+    window.openP2PLightbox = function(idx) {
+        if (!window._p2pFiles || !window._p2pFiles[idx]) return;
+        window._p2pLightboxIndex = idx;
+        const f = window._p2pFiles[idx];
+        const lb = document.getElementById('p2p-lightbox');
+        const img = document.getElementById('p2p-lightbox-img');
+        const name = document.getElementById('p2p-lightbox-name');
+        const toggleBtn = document.getElementById('p2p-lightbox-toggle');
+
+        img.src = f.url || '';
+        name.textContent = f.name;
+        const isSel = window._p2pSelected.has(f.name);
+        toggleBtn.textContent = isSel ? '✕ Batalkan Pilihan' : '✓ Pilih Foto Ini';
+        toggleBtn.style.background = isSel ? '#E07B7B' : '#C8962E';
+
+        lb.style.display = 'flex';
+    };
+
+    window.closeP2PLightbox = function() {
+        document.getElementById('p2p-lightbox').style.display = 'none';
+    };
+
+    window.toggleLightboxSelect = function() {
+        if (window._p2pLightboxIndex < 0 || !window._p2pFiles) return;
+        const f = window._p2pFiles[window._p2pLightboxIndex];
+        const card = document.getElementById('card_' + f.id);
+        if (card) toggleP2PCardSelection(f.name, card);
+        const isSel = window._p2pSelected.has(f.name);
+        const toggleBtn = document.getElementById('p2p-lightbox-toggle');
+        toggleBtn.textContent = isSel ? '✕ Batalkan Pilihan' : '✓ Pilih Foto Ini';
+        toggleBtn.style.background = isSel ? '#E07B7B' : '#C8962E';
+    };
+
+    window.submitP2PSelections = async function() {
+        const selArr = Array.from(window._p2pSelected);
+        if (selArr.length === 0) {
+            alert('Silakan pilih minimal 1 foto terlebih dahulu.');
+            return;
+        }
+
+        const btn = document.getElementById('p2p-btn-submit');
+        btn.textContent = '⏳ Mengirim ke PC...';
+        btn.disabled = true;
+
+        try {
+            await sb.from('sortir_share_sessions').update({
+                answer: {
+                    selected: selArr,
+                    updated_at: new Date().toISOString()
+                }
+            }).eq('session_key', sid);
+
+            alert('🎉 ' + selArr.length + ' Foto Pilihan Berhasil Dikirim ke PC!\nPC Anda sedang otomatis menyalin file JPG & RAW.');
+            btn.textContent = '✅ Pilihan Terkirim (' + selArr.length + ')';
+        } catch (e) {
+            alert('Gagal mengirim pilihan: ' + e.message);
+            btn.textContent = '💾 Kirim Pilihan ke PC';
+            btn.disabled = false;
+        }
+    };
+}
+
+// Auto-execute router listener on page load or hash change
+function checkUrlParamsOnLoad(){
+    const urlParams = new URLSearchParams(window.location.search);
+    const qShare = urlParams.get('share') || urlParams.get('session');
+    if(qShare){
+        initP2PCullingView(qShare);
+        return;
+    }
     const hash = window.location.hash || '';
     if(hash.startsWith('#share=')){
         const sid = hash.slice(7).split('&')[0];
-        if(sid) hpJoinShare(sid);
+        if(sid) initP2PCullingView(sid);
     } else if(hash.startsWith('#offer=')){
         const b64 = decodeURIComponent(hash.slice(7).split('&')[0]);
         if(b64) hpJoinOffer(b64);
@@ -4410,12 +4687,12 @@ function checkUrlHashOnLoad(){
 }
 
 if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', checkUrlHashOnLoad);
+    document.addEventListener('DOMContentLoaded', checkUrlParamsOnLoad);
 } else {
-    checkUrlHashOnLoad();
+    checkUrlParamsOnLoad();
 }
-window.addEventListener('load', checkUrlHashOnLoad);
-window.addEventListener('hashchange', checkUrlHashOnLoad);
+window.addEventListener('load', checkUrlParamsOnLoad);
+window.addEventListener('hashchange', checkUrlParamsOnLoad);
 
 document.addEventListener('DOMContentLoaded', ()=>{
     const area=document.getElementById('pc-share-area');
