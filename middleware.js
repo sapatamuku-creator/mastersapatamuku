@@ -1,7 +1,7 @@
 // Vercel Middleware (edge) — preview dinamis untuk crawler sosial di /invitation,
-// /vendor/:slug, /vendor-product, dan /product/:id.
+// /vendor/:slug, /vendor-product, /product/:id, dan /sortir.
 // Pengunjung manusia tetap dilayani file statis (cepat + ter-cache); hanya bot
-// (WhatsApp/Facebook/Telegram/dll) yang mendapat HTML dengan meta OG per-wedding / per-vendor.
+// (WhatsApp/Facebook/Telegram/dll) yang mendapat HTML dengan meta OG per-wedding / per-vendor / per-sortir-event.
 import {
   resolveWeddingData,
   buildOgMeta,
@@ -10,7 +10,9 @@ import {
   resolveVendorBySlug,
   resolveProductById,
   buildVendorOgMeta,
-  buildProductOgMeta
+  buildProductOgMeta,
+  resolveSortirEventBySlug,
+  buildSortirOgMeta
 } from './lib/og-shared.js';
 
 // UA crawler media sosial & mesin pencari (untuk link preview)
@@ -28,12 +30,15 @@ export default async function middleware(request) {
   const reqUrl = new URL(request.url);
   const pathname = reqUrl.pathname;
 
-  // Hanya picu untuk path undangan, vendor, dan produk
+  // Hanya picu untuk path undangan, vendor, produk, dan sortir
   const isInvitation = pathname === '/invitation' || pathname === '/invitation.html';
   const vendorMatch = pathname.match(/^\/vendor\/([a-z0-9-]+)$/i);
   const prodPathMatch = pathname.match(/^\/product\/([^/]+)$/i);
   const isProductPage = pathname === '/vendor-product' || pathname === '/vendor-product.html';
-  if (!isInvitation && !vendorMatch && !prodPathMatch && !isProductPage) return;
+  const isSortir = pathname === '/sortir' || pathname === '/sortir.html';
+  const sortirMatch = pathname.match(/^\/sortir\/([a-z0-9-_]+)$/i);
+
+  if (!isInvitation && !vendorMatch && !prodPathMatch && !isProductPage && !isSortir && !sortirMatch) return;
 
   // Guard loop: fetch internal salinan file statis memakai query ini
   if (reqUrl.searchParams.get('og-static')) return;
@@ -48,6 +53,28 @@ export default async function middleware(request) {
   };
 
   try {
+    // ── Halaman Sortir (/sortir?event=... atau /sortir/:slug) ──
+    if (isSortir || sortirMatch) {
+      const eventSlug = sortirMatch
+        ? decodeURIComponent(sortirMatch[1])
+        : (reqUrl.searchParams.get('event') || reqUrl.searchParams.get('slug') || reqUrl.searchParams.get('id'));
+
+      if (eventSlug) {
+        const eventData = await resolveSortirEventBySlug(eventSlug);
+        if (eventData) {
+          const meta = buildSortirOgMeta(eventData);
+          const copy = await fetch(`${reqUrl.origin}/sortir.html?og-static=1`);
+          if (copy.ok) {
+            return new Response(ensureOgMeta(await copy.text(), meta), {
+              status: 200,
+              headers: botHeaders
+            });
+          }
+        }
+      }
+      return;
+    }
+
     // ── Halaman vendor (/vendor/:slug) ──
     if (vendorMatch) {
       const vendor = await resolveVendorBySlug(decodeURIComponent(vendorMatch[1]));
@@ -116,5 +143,15 @@ export default async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/invitation', '/invitation.html', '/vendor/:slug*', '/vendor-product', '/vendor-product.html', '/product/:id*']
+  matcher: [
+    '/invitation',
+    '/invitation.html',
+    '/vendor/:slug*',
+    '/vendor-product',
+    '/vendor-product.html',
+    '/product/:id*',
+    '/sortir',
+    '/sortir.html',
+    '/sortir/:slug*'
+  ]
 };
