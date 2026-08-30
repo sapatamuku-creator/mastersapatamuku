@@ -1073,20 +1073,31 @@
             </div>
         </div>
 
-        <!-- Nearby Bridge — HP Remote Selector (vendor-isolated, tiruan SapaTamu_AI station_server.py) -->
+        <!-- Nearby Bridge — 1 Klik Share ke HP (tanpa instal, HP remote, file tetap di PC) -->
         <div id="nearby-bridge-panel" class="card" style="margin-top: 32px; border: 1.5px solid rgba(200,150,46,0.25);">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                 <div>
-                    <h3 style="font-size: 22px; color: var(--primary);">📡 Perangkat Terdekat</h3>
-                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">HP jadi remote selector — file tetap di PC. Isolasi per vendor (hanya lihat PC milikmu).</p>
+                    <h3 style="font-size: 22px; color: var(--primary);">📡 Share ke HP Saya</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Pilih folder di PC → HP scan → pilih foto di HP, copy tetap di PC.</p>
                 </div>
-                <span style="background: rgba(16,185,129,0.1); color: var(--success); font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 10px;" id="nearby-status-badge">Belum terhubung</span>
+                <span style="background: rgba(16,185,129,0.1); color: var(--success); font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 10px;" id="nearby-status-badge">Siap</span>
             </div>
+
+            <!-- 1 KLIK PC SHARE — tanpa instal, background otomatis -->
+            <div id="pc-share-area" style="background: linear-gradient(135deg,#FFF9F5,#FFF); border: 1.5px dashed #C8962E; border-radius: 16px; padding: 18px; margin-bottom: 16px; text-align: center;">
+                <p style="font-weight: 800; font-size: 15px;">📁 1 Klik Share ke HP Saya</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Project apapun → pilih folder foto di PC, HP langsung scan — tanpa <code>pip</code></p>
+                <button onclick="pcOneClickShare()" class="btn btn-primary" style="margin-top: 12px; width: 100%; padding: 14px; font-size: 14px; font-weight: 800;">📁 Pilih Folder &amp; Buat QR</button>
+                <div id="pc-share-qr" style="display:none; margin-top: 16px;"></div>
+                <p id="pc-share-status" style="font-size: 11px; color: var(--text-muted); margin-top: 8px;"></p>
+                <p id="pc-share-fallback" style="display:none; font-size: 11px; color: #E07B7B; margin-top: 8px;">Browser ini tidak support <code>showDirectoryPicker</code> (Firefox). Gunakan <code>python sortir_bridge.py</code> — lihat panduan di bawah.</p>
+            </div>
+
             <div id="nearby-list" class="event-list" style="max-height: 260px;">
                 <div class="empty-state" style="padding: 24px;">
                     <div class="empty-icon">📡</div>
-                    <p class="empty-title">Mencari PC Bridge...</p>
-                    <p style="font-size: 12px; color: var(--text-muted);">Pastikan PC jalankan <code style="background:#FDF8F4;padding:2px 6px;border-radius:6px;">python sortir_bridge.py</code> dan HP 1 Wi-Fi dengan PC</p>
+                    <p class="empty-title">Perangkat Terdekat</p>
+                    <p style="font-size: 12px; color: var(--text-muted);">HP buka halaman ini → otomatis lihat PC-mu (vendor-isolated). Atau HP scan QR di atas.</p>
                 </div>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px;">
@@ -1096,7 +1107,7 @@
                 <button onclick="nearbyConnectManual()" class="btn btn-primary" style="min-width:110px;">Hubungkan</button>
             </div>
             <div id="nearby-qr-reader" style="display:none; margin-top:12px;"></div>
-            <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">🔒 Vendor isolation: Supabase RLS <code>vendor_id = auth.uid()</code> — vendor lain tidak bisa lihat PC-mu. Fallback LAN scan tetap butuh token QR.</p>
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 10px;">🔒 Vendor isolation: Supabase <code>sortir_bridges</code> &amp; <code>sortir_share_sessions</code> RLS <code>vendor_id = auth.uid()</code> — vendor lain tidak lihat file-mu. Fallback <code>sortir_bridge.py 192.168.1.x:8787</code> tetap ada.</p>
         </div>
 
         <!-- Local Culling & Lightroom Integration Card -->
@@ -3854,8 +3865,229 @@ window.localExportFiles = async function(){
         }catch(e){ showAlert('Gagal copy di PC', e.message,'❌'); }
         return;
     }
+    // DataChannel mode (1-klik tanpa bridge.py)
+    if(window._pcDataChannel && window._pcDataChannel.readyState==='open' && window._pcFiles){
+        const sel=[...document.querySelectorAll('#local-gallery .pin-card.selected')].map(el=>el.dataset.name);
+        if(sel.length===0) return showAlert('Pilih foto','Tap foto di HP dulu','⚠️');
+        window._pcDataChannel.send(JSON.stringify({type:'copy', files: sel}));
+        showAlert('Mengirim','Mengirim '+sel.length+' pilihan ke HP... via DataChannel','⏳');
+        return;
+    }
     if(_origLocalExport) return _origLocalExport();
 };
+
+// ── 1 KLIK SHARE KE HP — tanpa instal (File System Access + WebRTC DataChannel) ──
+let _pcDirHandle = null;
+let _pcDataChannel = null;
+let _pcFiles = [];
+window._pcDataChannel = null;
+window._pcFiles = [];
+
+// tampilkan tombol Share hanya di PC (showDirectoryPicker ada)
+document.addEventListener('DOMContentLoaded', ()=>{
+    const area=document.getElementById('pc-share-area');
+    const fallback=document.getElementById('pc-share-fallback');
+    if(!window.showDirectoryPicker){
+        if(area) area.style.opacity='0.6';
+        if(fallback) fallback.style.display='block';
+    }
+    // jika HP (mobile) sembunyikan PC area? tetap tampil tapi HP tidak pakai showDirectoryPicker — HP akan pakai Nearby list
+    if(window.innerWidth < 680 && area){
+        // di HP, sembunyikan tombol Share PC, tampilkan Nearby saja
+        // area.style.display='none';
+    }
+    // cek hash #share=SESSION_ID (HP scan QR dari PC)
+    if(location.hash.startsWith('#share=')){
+        const sid=location.hash.slice(7);
+        hpJoinShare(sid);
+    }
+});
+
+async function pcOneClickShare(){
+    const statusEl=document.getElementById('pc-share-status');
+    const qrEl=document.getElementById('pc-share-qr');
+    if(!window.showDirectoryPicker){
+        if(statusEl) statusEl.textContent='Browser tidak support — gunakan Chrome/Edge di PC atau python sortir_bridge.py';
+        return;
+    }
+    try{
+        // 1. Pilih folder (1 klik)
+        const handle = await window.showDirectoryPicker({mode:'readwrite'});
+        _pcDirHandle = handle;
+        // simpan handle ke IndexedDB agar next klik tidak minta lagi (permission persisten)
+        try{
+            const db=await new Promise((res,rej)=>{
+                const r=indexedDB.open('sortir_pc',1);
+                r.onupgradeneeded=e=>e.target.result.createObjectStore('handles');
+                r.onsuccess=e=>res(e.target.result);
+                r.onerror=rej;
+            });
+            const tx=db.transaction('handles','readwrite'); tx.objectStore('handles').put(handle,'dir'); 
+        }catch(e){}
+        if(statusEl) statusEl.textContent='Membaca '+handle.name+'...';
+        // 2. List file
+        _pcFiles=[];
+        for await(const [name, h] of handle.entries()){
+            if(h.kind==='file' && /\.(jpe?g|png|nef|cr2|arw|raf|orf|dng|tiff|webp|heic)$/i.test(name)){
+                _pcFiles.push(name);
+            }
+        }
+        if(_pcFiles.length===0){ if(statusEl) statusEl.textContent='Folder kosong — pilih folder berisi foto'; return; }
+        // 3. Buat WebRTC offer + Supabase session (vendor-isolated)
+        const sb=getSupabaseClient();
+        if(!sb){ if(statusEl) statusEl.textContent='Supabase belum login — login vendor dulu'; return; }
+        const {data:{user}} = await sb.auth.getUser();
+        if(!user){ if(statusEl) statusEl.textContent='Login vendor dulu di sortir.html'; return; }
+        const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+        const dc = pc.createDataChannel('sortir');
+        window._pcDataChannel = dc;
+        window._pcFiles = _pcFiles;
+        dc.onopen = ()=>{
+            if(statusEl) statusEl.textContent='HP terhubung — mengirim daftar '+_pcFiles.length+' foto...';
+            dc.send(JSON.stringify({type:'list', files: _pcFiles.slice(0,300).map(n=>({name:n}))}));
+            // render juga di PC sendiri
+            const gal=document.getElementById('local-gallery');
+            const panel=document.getElementById('local-export-panel');
+            if(gal) gal.style.display='flex';
+            if(panel) panel.style.display='block';
+        };
+        dc.onmessage = async (e)=>{
+            try{
+                const msg=JSON.parse(e.data);
+                if(msg.type==='select'){
+                    // HP kirim pilihan — PC copy tetap di PC via File System API
+                    const sel=msg.files||[];
+                    const destHandle = await handle.getDirectoryHandle('Selected_by_Client', {create:true});
+                    let copied=0;
+                    for(const name of sel){
+                        // wildcard: *name*  (tanpa ext)
+                        const base=name.split('.')[0];
+                        for await(const [fname, fh] of handle.entries()){
+                            if(fh.kind!=='file') continue;
+                            if(fname.includes(base) || fname===name){
+                                const file=await fh.getFile();
+                                const nh=await destHandle.getFileHandle(fname, {create:true});
+                                const w=await nh.createWritable();
+                                await w.write(file);
+                                await w.close();
+                                copied++;
+                            }
+                        }
+                    }
+                    dc.send(JSON.stringify({type:'copied', count:copied}));
+                    showAlert('Sukses','Tercopy '+copied+' file di PC ke Selected_by_Client','✅');
+                }
+            }catch(err){ console.error(err); }
+        };
+        // create offer (non-trickle: wait ice complete)
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await new Promise(res=>{
+            if(pc.iceGatheringState==='complete') res();
+            else pc.onicegatheringstatechange=()=>{ if(pc.iceGatheringState==='complete') res(); };
+            setTimeout(res, 1500);
+        });
+        // simpan ke Supabase
+        const {data, error} = await sb.from('sortir_share_sessions').insert({vendor_id: user.id, offer: pc.localDescription, status:'waiting'}).select().single();
+        if(error) throw error;
+        const sid=data.id;
+        // QR: https://sapatamu.id/sortir#share=SID
+        const qrLink = location.origin + location.pathname + '#share=' + sid;
+        qrEl.style.display='block';
+        qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrLink)}" class="mx-auto border rounded-xl" width="240" height="240"><p class="text-xs font-mono mt-2 break-all">${qrLink}</p><p class="text-xs mt-1">Scan dari HP PWA Sortir (1 Wi-Fi tidak wajib, via Supabase)</p>`;
+        if(statusEl) statusEl.textContent='QR siap — scan dari HP ('+_pcFiles.length+' foto) — menunggu HP...';
+        // poll answer
+        let tries=0;
+        const iv=setInterval(async ()=>{
+            tries++;
+            const {data: upd} = await sb.from('sortir_share_sessions').select('answer,status').eq('id', sid).single();
+            if(upd && upd.answer){
+                clearInterval(iv);
+                await pc.setRemoteDescription(upd.answer);
+                if(statusEl) statusEl.textContent='HP menjawab — menghubungkan...';
+            }
+            if(tries>60){ clearInterval(iv); if(statusEl) statusEl.textContent='Timeout — HP belum scan'; }
+        }, 1200);
+        pc.onconnectionstatechange=()=>{
+            if(pc.connectionState==='connected' && statusEl) statusEl.textContent='Terhubung P2P — HP bisa pilih foto sekarang';
+        };
+        // simpan pc untuk cleanup
+        window._pcPC = pc;
+        window._pcSessionId = sid;
+    }catch(e){
+        console.error(e);
+        const statusEl2=document.getElementById('pc-share-status');
+        if(statusEl2) statusEl2.textContent='Gagal: '+e.message;
+        showAlert('Gagal Share', e.message, '❌');
+    }
+}
+
+async function hpJoinShare(sid){
+    try{
+        const sb=getSupabaseClient();
+        if(!sb) return showAlert('Login','Login vendor dulu','⚠️');
+        const {data:{user}} = await sb.auth.getUser();
+        if(!user) return showAlert('Login','Login vendor dulu','⚠️');
+        const {data, error} = await sb.from('sortir_share_sessions').select('*').eq('id', sid).single();
+        if(error || !data) throw new Error('Sesi tidak ditemukan');
+        if(data.vendor_id !== user.id) throw new Error('Sesi bukan milik vendor-mu (isolasi)');
+        const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+        let dc=null;
+        pc.ondatachannel = (ev)=>{
+            dc=ev.channel;
+            window._hpDC = dc;
+            dc.onmessage = (e)=>{
+                const msg=JSON.parse(e.data);
+                if(msg.type==='list'){
+                    window._remoteFiles = msg.files;
+                    const gal=document.getElementById('local-gallery');
+                    const panel=document.getElementById('local-export-panel');
+                    if(gal) gal.style.display='flex';
+                    if(panel) panel.style.display='block';
+                    gal.innerHTML = msg.files.map(f=>`
+                        <div class="pin-card" data-name="${f.name}" onclick="this.classList.toggle('selected'); updateRemoteCount()">
+                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#F0E6DE;color:var(--text-muted);font-size:11px;font-weight:700;">${f.name.slice(0,18)}</div>
+                            <div class="pin-check-badge">✓</div>
+                        </div>
+                    `).join('');
+                    showAlert('Terhubung','Dapat '+msg.files.length+' foto dari PC — pilih lalu Ekspor','✅');
+                }
+                if(msg.type==='copied'){
+                    showAlert('Sukses','Tercopy '+msg.count+' file di PC','✅');
+                }
+            };
+            dc.onopen = ()=>{ showAlert('Terhubung','DataChannel siap — pilih foto','✅'); };
+        };
+        await pc.setRemoteDescription(data.offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await new Promise(res=>{
+            if(pc.iceGatheringState==='complete') res();
+            else pc.onicegatheringstatechange=()=>{ if(pc.iceGatheringState==='complete') res(); };
+            setTimeout(res, 1500);
+        });
+        await sb.from('sortir_share_sessions').update({answer: pc.localDescription, status:'connected'}).eq('id', sid);
+        // untuk Ekspor, override localExportFiles DataChannel
+        window._hpPC = pc;
+        window._hpDC = null; // akan diisi ondatachannel
+        window._isRemotePCMode = true; // reuse existing export override tapi via DataChannel
+        const origExport = window.localExportFiles;
+        window.localExportFiles = async function(){
+            const sel=[...document.querySelectorAll('#local-gallery .pin-card.selected')].map(el=>el.dataset.name);
+            if(sel.length===0) return showAlert('Pilih foto','Tap foto dulu','⚠️');
+            if(dc && dc.readyState==='open'){
+                dc.send(JSON.stringify({type:'select', files: sel}));
+                showAlert('Mengirim ke PC','Mengirim '+sel.length+' pilihan ke PC...','⏳');
+            } else if(window._hpDC && window._hpDC.readyState==='open'){
+                window._hpDC.send(JSON.stringify({type:'select', files: sel}));
+                showAlert('Mengirim ke PC','Mengirim '+sel.length+' pilihan ke PC...','⏳');
+            } else {
+                showAlert('Belum terhubung','DataChannel belum open','❌');
+            }
+        };
+        showAlert('Join','Menghubungkan ke PC...','⏳');
+    }catch(e){ showAlert('Gagal join', e.message,'❌'); }
+}
 </script>
 <script src="offline-db.js"></script>
 <script src="sync-engine.js"></script>
