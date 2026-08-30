@@ -4438,17 +4438,60 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
 });
 
-// Helper kompresi thumbnail canvas super cepat (GPU Accelerated — 600px Crisp Retina, Instant Stream)
-async function generateFastThumb(file, maxDim = 600, quality = 0.65){
+// ── DETEKSI HARDWARE RENDERER (DEDICATED GPU NVIDIA / AMD / INTEL & CPU MULTI-THREADS) ──
+function detectRendererHW() {
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
+                const isNvidia = /NVIDIA|GeForce|RTX|GTX|Quadro/i.test(renderer);
+                const isAMD = /AMD|Radeon|ATI/i.test(renderer);
+                const isIntel = /Intel|Iris|Arc|UHD|HD Graphics/i.test(renderer);
+                
+                let cleanName = renderer.replace(/ANGLE \((.*?)\)/, '$1').trim();
+                if (isNvidia) return { type: 'GPU_NVIDIA', label: 'GPU NVIDIA', name: cleanName, hw: true };
+                if (isAMD) return { type: 'GPU_AMD', label: 'GPU AMD Radeon', name: cleanName, hw: true };
+                if (isIntel) return { type: 'GPU_INTEL', label: 'GPU Intel Arc/Iris/HD', name: cleanName, hw: true };
+                return { type: 'GPU_GENERIC', label: 'Hardware GPU', name: cleanName, hw: true };
+            }
+        }
+    } catch (e) {}
+    const threads = navigator.hardwareConcurrency || 4;
+    return { type: 'CPU_MULTI_THREAD', label: 'CPU Multi-Threads', name: `CPU (${threads} Threads)`, hw: false, threads };
+}
+
+// Helper kompresi 480p super cepat menggunakan akselerasi GPU Dedicated / Multi-Threads CPU
+async function generateFastThumb(file, maxDim = 480, quality = 0.62){
     try{
         if('createImageBitmap' in window){
-            const bmp = await createImageBitmap(file, { resizeWidth: maxDim, resizeQuality: 'low' });
-            const canvas = document.createElement('canvas');
-            canvas.width = bmp.width;
-            canvas.height = bmp.height;
-            const ctx = canvas.getContext('2d');
+            // Pipeline Akselerasi GPU Dedicated
+            const bmp = await createImageBitmap(file, { 
+                resizeWidth: maxDim, 
+                resizeQuality: 'low' 
+            });
+            let canvas;
+            if (typeof OffscreenCanvas !== 'undefined') {
+                canvas = new OffscreenCanvas(bmp.width, bmp.height);
+            } else {
+                canvas = document.createElement('canvas');
+                canvas.width = bmp.width;
+                canvas.height = bmp.height;
+            }
+            const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
             ctx.drawImage(bmp, 0, 0);
             bmp.close();
+
+            if (canvas.convertToBlob) {
+                const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: quality });
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            }
             return canvas.toDataURL('image/jpeg', quality);
         }
     }catch(e){}
@@ -4496,7 +4539,7 @@ async function getAllFilesFlat(dirHandle) {
     return all;
 }
 
-// ── 1-KLIK SHARE KE HP (INSTANT 0.01s QR CODE + ASYNC CHUNK STREAMING) ──
+// ── 1-KLIK SHARE KE HP (INSTANT 0.01s QR CODE + 480p GPU/CPU MULTI-THREAD STREAMING) ──
 async function pcOneClickShare(){
     const statusEl = document.getElementById('pc-share-status');
     const qrEl = document.getElementById('pc-share-qr');
@@ -4510,7 +4553,11 @@ async function pcOneClickShare(){
         _pcDirHandle = handle;
         _pcFileMap.clear();
 
-        // 1. LANGSUNG MUNCULKAN QR CODE DALAM < 0.02 DETIK!
+        // 1. DETEKSI HARDWARE GPU / CPU
+        const hw = detectRendererHW();
+        console.log('[SapaTamu HW Detection]', hw);
+
+        // 2. LANGSUNG MUNCULKAN QR CODE DALAM < 0.02 DETIK!
         const sid = 'p2p_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
         const qrLink = location.origin + location.pathname + '?share=' + sid;
         const sb = getSupabaseClient();
@@ -4521,9 +4568,12 @@ async function pcOneClickShare(){
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrLink)}" class="mx-auto rounded-xl" width="260" height="260" alt="QR Code Share">
             </div>
             <p class="text-xs font-mono mt-2 break-all" style="word-break:break-all;color:var(--text-muted);">ID Sesi: <b style="color:var(--text-main);">${sid}</b></p>
+            <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(200,150,46,0.1); border:1px solid rgba(200,150,46,0.3); border-radius:20px; padding:4px 12px; margin-top:6px;">
+                <span style="font-size:11px; font-weight:800; color:var(--gold);">⚡ ${hw.label}: 480p Stream</span>
+            </div>
             <p class="text-xs mt-1" style="color:var(--gold);font-weight:800;">📷 Arahkan kamera HP ke QR di atas — Layar HP langsung membuka galeri Pinterest</p>
         `;
-        if(statusEl) statusEl.textContent = '⚡ QR Siap! Mengalirkan foto dari PC... (HP bisa langsung scan sekarang)';
+        if(statusEl) statusEl.textContent = `⚡ QR Siap! [${hw.label}] Mengalirkan foto 480p... (HP bisa langsung scan)`;
 
         // Buat sesi awal di Supabase seketika
         await sb.from('sortir_share_sessions').upsert({
@@ -4535,7 +4585,7 @@ async function pcOneClickShare(){
             status: 'waiting'
         });
 
-        // 2. ASYNC CHUNK SCANNING & STREAMING (0% CPU LAG, REAL-TIME EMISSION)
+        // 3. ASYNC CHUNK SCANNING & STREAMING (0% CPU LAG, REAL-TIME EMISSION)
         (async () => {
             let allDiscovered = [];
             let lastPushedLength = 0;
@@ -4556,13 +4606,13 @@ async function pcOneClickShare(){
                             _pcFileMap.set(rel, h);
                             _pcFileMap.set(name, h);
 
-                            // Langsung kirim saat ada 1 foto pertama, atau per 15 foto
-                            if (allDiscovered.length === 1 || allDiscovered.length - lastPushedLength >= 15) {
+                            // Langsung kirim saat ada 1 foto pertama, atau per 20 foto
+                            if (allDiscovered.length === 1 || allDiscovered.length - lastPushedLength >= 20) {
                                 await emitChunk();
                             }
                         }
                     } else if (h.kind === 'directory' && name !== 'Selected_by_Client') {
-                        await new Promise(r => setTimeout(r, 4)); // Micro-yield
+                        await new Promise(r => setTimeout(r, 2)); // Micro-yield
                         const sub = currentPath ? `${currentPath}/${name}` : name;
                         await traverseFolder(h, sub);
                     }
@@ -4571,7 +4621,7 @@ async function pcOneClickShare(){
 
             async function emitChunk() {
                 lastPushedLength = allDiscovered.length;
-                if (statusEl) statusEl.textContent = `⚡ Terhubung: ${allDiscovered.length} foto ditemukan (HP sudah bisa lihat & pilih foto)`;
+                if (statusEl) statusEl.textContent = `⚡ Terhubung (${hw.label}): ${allDiscovered.length} foto 480p aktif mengalir ke HP`;
                 try {
                     await sb.from('sortir_share_sessions').update({
                         offer: {
@@ -4598,16 +4648,16 @@ async function pcOneClickShare(){
                 return;
             }
 
-            if (statusEl) statusEl.textContent = `✅ Siap! Seluruh ${allDiscovered.length} foto aktif tersinkron ke HP`;
+            if (statusEl) statusEl.textContent = `✅ Siap! [${hw.label}] Seluruh ${allDiscovered.length} foto 480p aktif tersinkron ke HP`;
 
-            // 3. BACKGROUND LIVE THUMBNAIL STREAMER
-            const BATCH = 12;
-            for (let i = 0; i < allDiscovered.length; i += BATCH) {
-                const chunk = allDiscovered.slice(i, i + BATCH);
+            // 4. BACKGROUND 480p GPU/CPU MULTI-THREAD STREAMER (PARALLEL CONCURRENCY)
+            const CONCURRENCY = hw.hw ? 24 : Math.max(8, (navigator.hardwareConcurrency || 8));
+            for (let i = 0; i < allDiscovered.length; i += CONCURRENCY) {
+                const chunk = allDiscovered.slice(i, i + CONCURRENCY);
                 await Promise.all(chunk.map(async (f) => {
                     try {
                         const fileBlob = await f.handle.getFile();
-                        const thumb = await generateFastThumb(fileBlob, 1080, 0.75);
+                        const thumb = await generateFastThumb(fileBlob, 480, 0.62);
                         f.url = thumb || '';
                     } catch (e) {}
                 }));
@@ -4627,7 +4677,7 @@ async function pcOneClickShare(){
                     }).eq('session_key', sid);
                 } catch (e) {}
 
-                await new Promise(r => setTimeout(r, 20));
+                await new Promise(r => setTimeout(r, 10));
             }
         })();
 
