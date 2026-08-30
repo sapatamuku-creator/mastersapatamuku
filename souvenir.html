@@ -644,7 +644,7 @@
                     <div class="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 mb-0.5">
                         <div id="occupancy-bar" class="h-full bg-[#E07B7B] transition-all duration-500" style="width: 0%;"></div>
                     </div>
-                    <span class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight block truncate">Tamu di Gedung</span>
+                    <span id="ballroom-sub-desc" class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight block truncate">Tamu di Gedung</span>
                 </div>
             </div>
 
@@ -773,6 +773,7 @@
         let masterData = [];
         let guestMap = new Map();
         let totalSouvenirStock = 0;
+        let totalBallroomCapacity = 0;
         let isQuickClaim = true;
         let isAudioEnabled = true;
         let html5QrCode = null;
@@ -782,17 +783,16 @@
         function isGuestHadir(g) {
             if (!g) return false;
             const s = String(g.statusHadir || "").trim().toLowerCase();
-            return s === "1" || s === "true" || (g.jamDatang && g.jamDatang !== "-" && g.jamDatang !== "");
+            const jd = String(g.jamDatang || "").trim();
+            const hasValidCheckin = jd !== "" && jd !== "-" && jd !== "null" && jd !== "undefined";
+            return s === "1" || s === "true" || hasValidCheckin;
         }
 
         function isGuestClaimed(g) {
             if (!g) return false;
-            const souv = String(g.souvenir || "").trim().toLowerCase();
-            return Boolean(
-                (g.jamPulang && g.jamPulang !== "-" && g.jamPulang !== "") ||
-                souv === "ya" || souv === "1" || souv === "claimed" ||
-                g.statusSouvenir === "CLAIMED"
-            );
+            const jp = String(g.jamPulang || "").trim();
+            const hasValidCheckout = jp !== "" && jp !== "-" && jp !== "null" && jp !== "undefined";
+            return Boolean(hasValidCheckout || g.statusSouvenir === "CLAIMED");
         }
 
         // ── HERO BACKGROUND SLIDESHOW ──
@@ -1242,15 +1242,21 @@
 
         // ── UPDATE STATS & TELEMETRY ──
         function updateStats() {
-            const totalGuests = masterData.length || 1;
+            const totalGuests = masterData.length || 0;
             const totalHadir = masterData.filter(isGuestHadir).length;
             const totalClaimed = masterData.filter(isGuestClaimed).length;
             const activeInBallroom = Math.max(0, totalHadir - totalClaimed);
             const remainingStock = totalSouvenirStock > 0 ? Math.max(0, totalSouvenirStock - totalClaimed) : 0;
 
             const claimRatioPct = totalHadir > 0 ? Math.round((totalClaimed / totalHadir) * 100) : 0;
-            const stockRatioPct = totalSouvenirStock > 0 ? Math.round((remainingStock / totalSouvenirStock) * 100) : 100;
-            const occupancyRatioPct = totalHadir > 0 ? Math.round((activeInBallroom / totalHadir) * 100) : 0;
+            const stockRatioPct = totalSouvenirStock > 0 ? Math.round((remainingStock / totalSouvenirStock) * 100) : 0;
+            
+            let occupancyRatioPct = 0;
+            if (totalBallroomCapacity > 0) {
+                occupancyRatioPct = Math.min(100, Math.round((activeInBallroom / totalBallroomCapacity) * 100));
+            } else if (totalHadir > 0) {
+                occupancyRatioPct = Math.round((activeInBallroom / totalHadir) * 100);
+            }
 
             const outEl = document.getElementById('stat-souvenir-out');
             const leftEl = document.getElementById('stat-souvenir-left');
@@ -1258,16 +1264,20 @@
             const totalStockEl = document.getElementById('stat-souvenir-total');
             const souvenirRatioEl = document.getElementById('souvenir-ratio-pct');
             const souvenirSubEl = document.getElementById('souvenir-sub-desc');
+            const ballroomSubEl = document.getElementById('ballroom-sub-desc');
             const souvenirBarEl = document.getElementById('souvenir-bar');
             const stockBarEl = document.getElementById('stock-bar');
             const occupancyBarEl = document.getElementById('occupancy-bar');
 
             if (outEl) outEl.innerText = `${totalClaimed}`;
-            if (leftEl) leftEl.innerText = totalSouvenirStock > 0 ? `${remainingStock}` : `${totalClaimed}`;
+            if (leftEl) leftEl.innerText = totalSouvenirStock > 0 ? `${remainingStock}` : "-";
             if (ballroomEl) ballroomEl.innerText = `${activeInBallroom}`;
             if (totalStockEl) totalStockEl.innerText = totalSouvenirStock > 0 ? `Dari ${totalSouvenirStock} Pcs Kuota` : "Stok Belum Diatur";
             if (souvenirRatioEl) souvenirRatioEl.innerText = `${claimRatioPct}%`;
-            if (souvenirSubEl) souvenirSubEl.innerText = `${totalClaimed} dari ${totalHadir} Tamu Hadir`;
+            if (souvenirSubEl) souvenirSubEl.innerText = `${totalClaimed} dari ${totalHadir} Hadir`;
+            if (ballroomSubEl) {
+                ballroomSubEl.innerText = totalBallroomCapacity > 0 ? `${activeInBallroom} / ${totalBallroomCapacity} Pax` : "Tamu di Gedung";
+            }
             if (souvenirBarEl) souvenirBarEl.style.width = `${Math.min(100, claimRatioPct)}%`;
             if (stockBarEl) stockBarEl.style.width = `${Math.min(100, stockRatioPct)}%`;
             if (occupancyBarEl) occupancyBarEl.style.width = `${Math.min(100, occupancyRatioPct)}%`;
@@ -1309,6 +1319,15 @@
         // ── FETCH EVENT METADATA & PHOTOS ──
         async function fetchEventMetadata(ssId) {
             try {
+                // 0. Fallback cache lokal instant
+                const localLogistics = JSON.parse(localStorage.getItem('sapatamu_logistics_' + ssId) || '{}');
+                if (localLogistics.stokSouvenir !== undefined && localLogistics.stokSouvenir !== null) {
+                    totalSouvenirStock = parseInt(localLogistics.stokSouvenir, 10) || 0;
+                }
+                if (localLogistics.kapasitasBallroom !== undefined && localLogistics.kapasitasBallroom !== null) {
+                    totalBallroomCapacity = parseInt(localLogistics.kapasitasBallroom, 10) || 0;
+                }
+
                 // 1. Fetch from config_welcome
                 const cfgRes = await fetch(`${window.SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data&limit=1`, {
                     headers: { "apikey": window.SB_KEY, "Authorization": "Bearer " + window.SB_KEY }
@@ -1317,7 +1336,8 @@
                     const rows = await cfgRes.json();
                     if (rows && rows.length > 0 && rows[0].data) {
                         const d = rows[0].data;
-                        if (d.stokSouvenir) totalSouvenirStock = parseInt(d.stokSouvenir, 10) || 0;
+                        if (d.stokSouvenir !== undefined && d.stokSouvenir !== null) totalSouvenirStock = parseInt(d.stokSouvenir, 10) || 0;
+                        if (d.kapasitasBallroom !== undefined && d.kapasitasBallroom !== null) totalBallroomCapacity = parseInt(d.kapasitasBallroom, 10) || 0;
                         if (d.urlFoto) {
                             const photos = d.urlFoto.split(',').map(u => u.trim()).filter(Boolean);
                             initHeroSlideshow(photos);
@@ -1359,6 +1379,8 @@
                 }
             } catch (e) {
                 console.warn("Event metadata fetch warning:", e);
+            } finally {
+                updateStats();
             }
         }
 
