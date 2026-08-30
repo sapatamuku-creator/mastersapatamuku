@@ -151,10 +151,10 @@ def get_thumbnail(name: str = Query(...)):
     try:
         from PIL import Image
         im = Image.open(str(p))
-        im.thumbnail((450, 450))
+        im.thumbnail((1080, 1080))
         if im.mode in ("RGBA", "LA", "P"):
             im = im.convert("RGB")
-        im.save(str(cached), "JPEG", quality=75)
+        im.save(str(cached), "JPEG", quality=85)
         return FileResponse(str(cached), media_type="image/jpeg")
     except Exception as e:
         return FileResponse(str(p), media_type="image/jpeg")

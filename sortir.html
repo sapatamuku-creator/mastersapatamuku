@@ -4409,11 +4409,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
 });
 
-// Helper kompresi thumbnail canvas super cepat (GPU Accelerated via createImageBitmap)
-async function generateFastThumb(file, maxDim = 220, quality = 0.55){
+// Helper kompresi thumbnail canvas super cepat (GPU Accelerated via createImageBitmap — HD 800-1080p)
+async function generateFastThumb(file, maxDim = 1080, quality = 0.75){
     try{
         if('createImageBitmap' in window){
-            const bmp = await createImageBitmap(file, { resizeWidth: maxDim, resizeQuality: 'low' });
+            const bmp = await createImageBitmap(file, { resizeWidth: maxDim, resizeQuality: 'medium' });
             const canvas = document.createElement('canvas');
             canvas.width = bmp.width;
             canvas.height = bmp.height;
@@ -4492,9 +4492,9 @@ async function pcOneClickShare(){
         `;
         if(statusEl) statusEl.textContent = `⚡ QR Siap (${imageFiles.length} foto) — HP bisa langsung scan sekarang!`;
 
-        // 3. BACKGROUND THUMBNAIL STREAMING (GPU ACCELERATED)
+        // 3. BACKGROUND THUMBNAIL STREAMING (HD 1080p GPU ACCELERATED)
         (async () => {
-            const BATCH_SIZE = 25;
+            const BATCH_SIZE = 15;
             let currentFiles = [...initialFiles];
 
             for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
@@ -4503,7 +4503,7 @@ async function pcOneClickShare(){
                     const globalIdx = i + bIdx;
                     try {
                         const fileObj = await f.handle.getFile();
-                        const thumb = await generateFastThumb(fileObj, 220, 0.55);
+                        const thumb = await generateFastThumb(fileObj, 1080, 0.75);
                         currentFiles[globalIdx].url = thumb || '';
                     } catch (e) {}
                 }));
@@ -4520,11 +4520,11 @@ async function pcOneClickShare(){
                 } catch (e) {}
 
                 const progressCount = Math.min(i + BATCH_SIZE, imageFiles.length);
-                if (statusEl) statusEl.textContent = `Memuat thumbnail live: ${progressCount}/${imageFiles.length} foto (HP tetap bisa scan & pilih foto)`;
-                await new Promise(r => setTimeout(r, 25));
+                if (statusEl) statusEl.textContent = `Memuat foto HD live: ${progressCount}/${imageFiles.length} foto (HP tetap bisa scan & pilih foto)`;
+                await new Promise(r => setTimeout(r, 30));
             }
 
-            if (statusEl) statusEl.textContent = `✅ Siap! ${imageFiles.length} foto aktif tersinkron ke HP`;
+            if (statusEl) statusEl.textContent = `✅ Siap! ${imageFiles.length} foto HD aktif tersinkron ke HP`;
         })();
 
         // 4. Background listener on PC for selection from HP
