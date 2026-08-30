@@ -219,3 +219,66 @@ document.getElementById('wedding-date').innerText =
 - [x] Patch `welcome.html` `applyWelcomeData()` — guard undefined weddingDate
 - [x] Patch `welcome.html` — lazy GAS fallback jika rundown dari Supabase kosong
 - [x] Patch `welcome.html` — guard vendors empty array
+
+---
+
+## 10. Evaluasi UI Halaman Souvenir — Panel "📜 Riwayat Pengambilan" Butuh Scrollbar Independen (UI-UX Pro Max 3-Mode)
+
+**Tanggal Temuan:** 30 Agustus 2026  
+**Halaman:** `souvenir.html` — Pos Souvenir & Check-Out  
+**Pelapor:** Operator Usher (penggunaan real event, flow scan souvenir checkout)  
+**Referensi Skill:** `perf-ui-ux-3mode` **SSOT breakpoint 680** (Desktop ≥1024 / Tablet 680–1023 / Mobile <680) — `ui-ux-pro-max` (UX guidelines & scrollbar), `sapatamu-projects` (canon warm glass island nav). *Catatan: `AGENTS.md` masih tulis 768, tapi SSOT performa terbaru adalah 680 (`perf-ui-ux-3mode` v2) agar Redmi Pad 720px terdeteksi tablet, bukan HP.*
+
+### Temuan / Gejala di Lapangan
+
+- Daftar **📜 Riwayat Pengambilan** menampilkan seluruh tamu yang sudah `jam_pulang` terisi (arrivals-card stream). Saat event ramai (>80–150 tamu checkout), daftar memanjang melebihi tinggi viewport.
+- Saat usher **scroll untuk mencari tamu terlama** (paling bawah daftar), seluruh halaman ikut ter-scroll — **panel scanner kiri (HID Laser Gun + input barcode + scan-result-card) terdorong keluar viewport** dan tidak terlihat.
+- Usher harus scroll bolak-balik ke atas hanya untuk memastikan scanner masih `SIAP` / melihat kode yang baru discan. Menghambat throughput di antrian souvenir (pos checkout).
+
+### Akar Masalah (Audit Kode `souvenir.html:463-760`)
+
+1. **Layout tidak sticky:** `.view-desktop-grid` (`souvenir.html:464-469`) adalah `grid 7fr 5fr` dengan `align-items: start`, tapi **`.col-scanner-panel` tidak `position: sticky`**. Page scroll = scanner hilang.
+2. **Scroll tidak terisolasi:** `#recent-claims-list` (`souvenir.html:733`) memang memiliki `overflow-y-auto max-h-[460px]`, namun parent card (`.sapatamu-glass-card flex flex-col flex-grow min-h-[380px]`) tidak membatasi tinggi terhadap viewport. Di laptop 768p/1080p, `460px` masih menyisakan page-scroll; di layar besar daftar tetap mendorong tinggi body >100vh sebelum inner-scroll aktif.
+3. **Breakpoint sudah SSOT 680 (BENAR) — jangan diubah ke 768:** Media query eksisting memakai `680px` (`souvenir.html:471-508`) — **sudah sesuai SSOT `perf-ui-ux-3mode` (Desktop ≥1024 / Tablet 680–1023 / Mobile <680)** — anti-pattern terlarang adalah `@media (max-width: 767.98px)` yang akan salah mengkategorikan Redmi Pad 720px sebagai HP. `AGENTS.md` masih menulis 768, tapi SSOT performa adalah `perf-ui-ux-3mode` 680. Issue bukan di angka breakpoint, melainkan belum ada `position: sticky` + `dvh` + isolated scroll.
+4. **Scrollbar generik:** Tidak ada style `::-webkit-scrollbar` khusus — thumb tipis default browser kalah kontras di atas glass card; tidak ada `scrollbar-gutter: stable` dan `overscroll-behavior: contain` sehingga scroll chain ke body.
+5. **Mobile sudah terisolasi tapi belum viewport-aware:** Mode `<680px` memakai `mobile-segmented-control` (`souvenir.html:482-495`) yang benar (SCAN vs RECENT `tab-panel-inactive`), namun tinggi `max-h-[460px]` fixed tidak responsif terhadap `100dvh` address-bar dinamis di Android Chrome.
+
+### Dampak Operasional
+
+- **Usher kehilangan konteks scanner** saat verifikasi tamu lama → risiko double-scan / miss badge TERBAGI vs PULANG.
+- **Throughput antrian souvenir turun** (gerakan scroll ekstra, fokus input barcode terlepas).
+- Tablet pos souvenir (Redmi Pad 2 / iPad) yang menjadi device utama operator paling terdampak karena tinggi viewport terbatas saat keyboard/onscreen muncul.
+
+### Keputusan Desain — UI-UX Pro Max 3-Mode (FINAL)
+
+**Prinsip:** *Scanner selalu on-screen; Riwayat scroll di dalam card-nya sendiri (isolated scroll container + custom warm scrollbar).*
+
+| Mode | Breakpoint (SSOT `perf-ui-ux-3mode`) | Layout Grid | Scanner | 📜 Riwayat Pengambilan | Scrollbar |
+|------|------------|-------------|---------|-------------------------|-----------|
+| **Desktop** | `≥1024px` (`min-width: 1024px`) | `grid 7fr 5fr` (`max-w-6xl`) — gap 1.25rem | `position: sticky; top: 72px` (`Dynamic Island navbar 60px + 12px gap`), `align-self: start` | Card: `max-height: calc(100dvh - 88px)` `display:flex flex-direction:column`; List: `flex:1 min-height:0 overflow-y:auto` `height: auto; max-height: none` + `scrollbar-gutter: stable` | Custom warm: track `rgba(240,230,222,0.6)`, thumb gradient `gold #C8962E→#A6781D`, `width 6px / thin`, `overscroll-behavior: contain`, `scroll-behavior: smooth` |
+| **Tablet** | `680–1023px` (`min-width: 680px and max-width: 1023.98px`) — *Redmi Pad 720px masuk tablet, bukan HP* | `grid 1fr` centered `max-width: 740px` | `position: sticky` tidak perlu (single column), tapi stream capped: Card `max-height: none`; List `max-height: calc(100dvh - 280px)` `overflow-y:auto` | Thumb & track sama; `border-radius: 9999px` |
+| **Mobile** | `<680px` (`max-width: 679.98px`) | `flex column` + **Segmented Control** (iOS pill) `SCAN | RECENT` — `souvenir.html:585-592` tetap | `RECENT` panel `tab-panel-inactive` saat SCAN aktif. Ketika RECENT aktif: List `max-height: calc(100dvh - 320px)` agar tidak overlap navbar + telemetry cards | Same custom scrollbar + `scrollbar-gutter` |
+
+**Detail Token Visual (canon warm, sinkron `sapatamu-projects`):**
+- `border-radius: 16px` pada card & `9999px` pada thumb, `backdrop-filter: blur(20px)` glass tetap.
+- Thumb hover: `brightness 1.08`, active: `scale thumb` — no layout thrashing (hanya `background`).
+- `overscroll-behavior: contain` mencegah scroll chaining ke body saat sudah di ujung list (UX: scanner tidak ikut ketarik).
+- `scrollbar-gutter: stable` mencegah layout shift saat scrollbar muncul/hilang (CLS <0.1).
+
+### 5-Poin Decision Gate
+
+1. **Fungsi perubahan:** Isolasi scroll riwayat + jaga scanner tetap terlihat (sticky + independent scroll container) di 3 mode.
+2. **Dari kode sebelumnya:** `view-desktop-grid` non-sticky + `#recent-claims-list max-h-[460px] overflow-y-auto` fixed; breakpoint 680px; scrollbar browser default; tablet single-col tanpa max-dvh.
+3. **Mengarah kemana:** Desktop sticky 7:5 split; tablet centered sticky; mobile segmented tetap + dvh-aware scroll; warm custom scrollbar + overscroll-contain + gutter stable. Perubahan hanya di `souvenir.html` `<style>` + sedikit struktur card (tanpa ubah JS logika klaim).
+4. **Cabang routing terdampak:** Hanya `souvenir.html` (Pos Souvenir). Tidak menyentuh `checkin.html`/`analytics.html`/`worker.html` / `auth_guard.js` / `sync-engine.js` / backend GAS.
+5. **Risiko & trade-off jujur:**
+   - *Risiko:* `position: sticky` gagal jika ancestor memiliki `overflow: hidden` (saat ini `body overflow-x:hidden` aman, bukan `overflow:hidden`). `100dvh` belum 100% di browser lama → fallback `100vh` disediakan.
+   - *Trade-off:* Tinggi list desktop/tablet menjadi viewport-bound, bukan content-fit — di layar pendek daftar terlihat lebih pendek (perlu scroll lebih sering) tetapi scanner tetap terlihat (prioritas throughput). Tidak menambah JS, hanya CSS → tidak ada hit performa; FPS tetap 60+ karena hanya `transform`/`opacity` pada beam.
+
+### Checklist Patch 10
+
+- [x] Dokumentasi evaluasi §10 di `docs/v3.4/catatan_evaluasi.md` (SSOT `perf-ui-ux-3mode` 680)
+- [x] Patch `souvenir.html` — sticky scanner `≥1024px` + isolated scroll card (`calc(100dvh - 88px)`) + warm custom scrollbar
+- [x] Breakpoint **tetap canon SSOT** `perf-ui-ux-3mode` (Desktop ≥1024 / Tablet 680–1023 / Mobile <680) — **jangan pakai 768** agar Redmi Pad 720px tidak jadi HP
+- [x] Custom warm scrollbar (6px, gold gradient, track `rgba(240,230,222,0.6)`, `overscroll-behavior: contain`, `scrollbar-gutter: stable`)
+- [ ] Verifikasi 3 mode: desktop ≥1024, tablet 680–1023, mobile <680 (usher scroll riwayat terlama → scanner tetap on-screen)

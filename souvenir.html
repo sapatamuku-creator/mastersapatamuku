@@ -460,7 +460,21 @@
             border-radius: 6px;
         }
 
-        /* ── 3-MODE RESPONSIVE BREAKPOINTS ── */
+        /* ── 📜 RIWAYAT ISOLATED SCROLL — Warm Custom Scrollbar (UI-UX Pro Max 3-Mode) ── */
+        #recent-claims-list {
+            scrollbar-width: thin;
+            scrollbar-color: #C8962E rgba(240, 230, 222, 0.65);
+            scroll-behavior: smooth;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+        }
+        #recent-claims-list::-webkit-scrollbar { width: 6px; height: 6px; }
+        #recent-claims-list::-webkit-scrollbar-track { background: rgba(240, 230, 222, 0.65); border-radius: 9999px; }
+        #recent-claims-list::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #C8962E 0%, #A6781D 100%); border-radius: 9999px; border: 1px solid rgba(255,255,255,0.6); }
+        #recent-claims-list::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #D4A84B 0%, #B88A22 100%); }
+        #recent-claims-list::-webkit-scrollbar-thumb:active { background: #A6781D; }
+
+        /* ── 3-MODE RESPONSIVE BREAKPOINTS (SSOT perf-ui-ux-3mode: desktop ≥1024 / tablet 680–1023 / mobile <680) ── */
         .view-desktop-grid {
             display: grid;
             grid-template-columns: 7fr 5fr;
@@ -468,7 +482,35 @@
             align-items: start;
         }
 
-        /* Tablet (680px - 1023.98px) */
+        /* Desktop ≥1024px — sticky scanner, isolated stream scroll */
+        @media (min-width: 1024px) {
+            .col-scanner-panel {
+                position: sticky;
+                top: 72px;
+                align-self: start;
+                z-index: 5;
+            }
+            .col-stream-panel {
+                align-self: start;
+            }
+            .col-stream-panel > .sapatamu-glass-card {
+                display: flex;
+                flex-direction: column;
+                max-height: calc(100dvh - 88px);
+                max-height: calc(100vh - 88px); /* fallback dvh */
+                min-height: 380px;
+            }
+            #recent-claims-list {
+                flex: 1 1 auto;
+                min-height: 0;
+                max-height: none !important;
+                height: auto;
+                overflow-y: auto;
+                padding-right: 4px;
+            }
+        }
+
+        /* Tablet 680–1023px — single column centered, dvh-aware stream (SSOT: Redmi Pad 720px masuk tablet, bukan HP) */
         @media (min-width: 680px) and (max-width: 1023.98px) {
             .view-desktop-grid {
                 grid-template-columns: 1fr;
@@ -476,9 +518,17 @@
                 margin: 0 auto;
                 gap: 1.25rem;
             }
+            .col-stream-panel > .sapatamu-glass-card {
+                max-height: none;
+            }
+            #recent-claims-list {
+                max-height: calc(100dvh - 280px) !important;
+                max-height: calc(100vh - 280px) !important;
+                min-height: 220px;
+            }
         }
 
-        /* Mobile (<680px) */
+        /* Mobile <680px — segmented SCAN|RECENT, dvh-aware */
         @media (max-width: 679.98px) {
             body { padding-top: 5rem !important; }
             .nav-brand-sub { display: none; }
@@ -504,6 +554,14 @@
             .telemetry-val {
                 font-size: 1.3rem !important;
                 line-height: 1.1 !important;
+            }
+            .col-stream-panel > .sapatamu-glass-card {
+                max-height: none;
+            }
+            #recent-claims-list {
+                max-height: calc(100dvh - 320px) !important;
+                max-height: calc(100vh - 320px) !important;
+                min-height: 200px;
             }
         }
 
