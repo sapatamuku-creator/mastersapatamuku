@@ -61,13 +61,16 @@ def get_folder_files(folder_path):
         return [], 0
     p = Path(folder_path)
     image_files = []
-    for f in sorted(p.iterdir()):
-        if f.is_file() and f.suffix.lower() in IMG_EXTS:
+    # Rekursif rglob untuk mendeteksi seluruh sub-folder (parent/child)
+    for f in sorted(p.rglob("*")):
+        if f.is_file() and f.suffix.lower() in IMG_EXTS and "Selected_by_Client" not in f.parts:
             try:
                 stat = f.stat()
+                rel = f.relative_to(p).as_posix()
                 image_files.append({
-                    "id": f.name,
+                    "id": rel,
                     "name": f.name,
+                    "rel_path": rel,
                     "size": stat.st_size,
                     "ext": f.suffix.lower()
                 })
@@ -137,41 +140,39 @@ def list_photos():
 
 @app.get("/api/thumb")
 def get_thumbnail(name: str = Query(...)):
+    """Direct Stream File Asli secara Instan — Tanpa Decode & Tanpa Kompresi"""
     if not bridge_state["folder"]:
         return JSONResponse({"error": "Folder belum dipilih"}, status_code=400)
-    p = Path(bridge_state["folder"]) / name
+    root = Path(bridge_state["folder"])
+    p = root / name
     if not p.exists():
-        return JSONResponse({"error": "File tidak ada"}, status_code=404)
+        found = list(root.rglob(name))
+        if found:
+            p = found[0]
+        else:
+            return JSONResponse({"error": "File tidak ada"}, status_code=404)
     
-    key = hashlib.md5((str(p) + str(p.stat().st_mtime)).encode()).hexdigest() + ".jpg"
-    cached = THUMB_DIR / key
-    if cached.exists():
-        return FileResponse(str(cached), media_type="image/jpeg")
-    
-    try:
-        from PIL import Image
-        im = Image.open(str(p))
-        im.thumbnail((1080, 1080))
-        if im.mode in ("RGBA", "LA", "P"):
-            im = im.convert("RGB")
-        im.save(str(cached), "JPEG", quality=85)
-        return FileResponse(str(cached), media_type="image/jpeg")
-    except Exception as e:
-        return FileResponse(str(p), media_type="image/jpeg")
+    mime, _ = mimetypes.guess_type(str(p))
+    return FileResponse(str(p), media_type=mime or "image/jpeg")
 
 @app.get("/api/file")
 def get_full_file(name: str = Query(...)):
     if not bridge_state["folder"]:
         return JSONResponse({"error": "Folder belum dipilih"}, status_code=400)
-    p = Path(bridge_state["folder"]) / name
+    root = Path(bridge_state["folder"])
+    p = root / name
     if not p.exists():
-        return JSONResponse({"error": "File tidak ada"}, status_code=404)
+        found = list(root.rglob(name))
+        if found:
+            p = found[0]
+        else:
+            return JSONResponse({"error": "File tidak ada"}, status_code=404)
     mime, _ = mimetypes.guess_type(str(p))
     return FileResponse(str(p), media_type=mime or "application/octet-stream")
 
 @app.post("/api/copy")
 def copy_selection(body: dict = Body(...)):
-    """Menyalin foto JPG pilihan + file RAW pasangan ke folder Selected_by_Client"""
+    """Menyalin foto JPG pilihan + file RAW pasangan ke folder Selected_by_Client dari semua subfolder"""
     if not bridge_state["folder"]:
         return JSONResponse({"error": "Folder belum dipilih di PC"}, status_code=400)
     
@@ -185,21 +186,18 @@ def copy_selection(body: dict = Body(...)):
 
     copied_jpg = 0
     copied_raw = 0
-    all_files_in_src = list(src_dir.iterdir())
+    all_files_in_src = [f for f in src_dir.rglob("*") if f.is_file() and "Selected_by_Client" not in f.parts]
 
     for filename in files:
         base_name = Path(filename).stem
         # 1. Salin file foto utama
-        main_file = src_dir / filename
-        if main_file.exists():
-            try:
-                shutil.copy2(str(main_file), str(dest_dir / main_file.name))
-                copied_jpg += 1
-            except: pass
-        
-        # 2. Cari dan salin file RAW pasangannya
         for f in all_files_in_src:
-            if f.is_file() and f.stem == base_name and f.suffix.lower() in RAW_EXTS:
+            if f.name == filename:
+                try:
+                    shutil.copy2(str(f), str(dest_dir / f.name))
+                    copied_jpg += 1
+                except: pass
+            elif f.stem == base_name and f.suffix.lower() in RAW_EXTS:
                 try:
                     shutil.copy2(str(f), str(dest_dir / f.name))
                     copied_raw += 1
