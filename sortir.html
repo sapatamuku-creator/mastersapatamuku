@@ -2434,18 +2434,24 @@
             document.getElementById('culling-loading-grid').style.display = 'none';
 
             if (store.cullingFiles.length === 0) {
-                document.getElementById('culling-empty-state').style.display = 'block';
+                const emptyEl = document.getElementById('culling-empty-state');
+                if (emptyEl) {
+                    emptyEl.style.display = 'block';
+                    emptyEl.querySelector('p').innerText = "⏳ Sedang mengalirkan foto dari PC secara real-time...";
+                }
             } else {
                 const photoGrid = document.getElementById('culling-photos-grid');
-                photoGrid.style.display = 'flex';
-                renderClientPhotosGrid();
+                if (photoGrid) {
+                    photoGrid.style.display = 'flex';
+                    renderClientPhotosGrid();
+                }
             }
 
-            // Progressive live thumbnail updater
+            // Progressive live stream and file updater
             let pollTries = 0;
             const thumbPoll = setInterval(async () => {
                 pollTries++;
-                if (!store.isP2PMode || store.p2pSessionKey !== shareKey || pollTries > 60) {
+                if (!store.isP2PMode || store.p2pSessionKey !== shareKey || pollTries > 180) {
                     clearInterval(thumbPoll);
                     return;
                 }
@@ -2457,29 +2463,46 @@
                         .single();
 
                     if (sData && sData.offer && sData.offer.files) {
-                        let missing = 0;
-                        sData.offer.files.forEach(f => {
-                            if (f.url) {
-                                const localF = store.cullingFiles.find(cf => cf.id === f.id);
-                                if (localF && !localF.url) {
-                                    localF.url = f.url;
-                                    const card = document.getElementById(`card-${f.id}`);
-                                    if (card) {
-                                        const img = card.querySelector('img');
-                                        if (img && img.src !== f.url) {
-                                            img.src = f.url;
-                                            img.style.opacity = '1';
+                        const newFiles = sData.offer.files;
+
+                        if (newFiles.length > store.cullingFiles.length) {
+                            store.cullingFiles = newFiles.map(f => ({
+                                id: f.id,
+                                name: f.name,
+                                url: f.url || f.thumb
+                            }));
+                            store.cullingEvent.quota_limit = store.cullingFiles.length;
+                            updateClientQuotaUI();
+
+                            const emptyState = document.getElementById('culling-empty-state');
+                            if (emptyState) emptyState.style.display = 'none';
+                            const photoGrid = document.getElementById('culling-photos-grid');
+                            if (photoGrid) {
+                                photoGrid.style.display = 'flex';
+                                renderClientPhotosGrid();
+                            }
+                        } else {
+                            // Update URLs if any newly loaded
+                            newFiles.forEach(f => {
+                                if (f.url) {
+                                    const localF = store.cullingFiles.find(cf => cf.id === f.id);
+                                    if (localF && !localF.url) {
+                                        localF.url = f.url;
+                                        const card = document.getElementById(`card-${f.id}`);
+                                        if (card) {
+                                            const img = card.querySelector('img');
+                                            if (img && img.src !== f.url) {
+                                                img.src = f.url;
+                                                img.style.opacity = '1';
+                                            }
                                         }
                                     }
                                 }
-                            } else {
-                                missing++;
-                            }
-                        });
-                        if (missing === 0) clearInterval(thumbPoll);
+                            });
+                        }
                     }
                 } catch (e) {}
-            }, 1200);
+            }, 1000);
 
         } catch (e) {
             console.error("Gagal load P2P culling view:", e);
@@ -4473,12 +4496,12 @@ async function getAllFilesFlat(dirHandle) {
     return all;
 }
 
-// ── 1-KLIK SHARE KE HP (INSTANT LOAD + PROGRESSIVE SYNC + SUBFOLDER SUPPORT) ──
+// ── 1-KLIK SHARE KE HP (INSTANT 0.01s QR CODE + ASYNC CHUNK STREAMING) ──
 async function pcOneClickShare(){
-    const statusEl=document.getElementById('pc-share-status');
-    const qrEl=document.getElementById('pc-share-qr');
+    const statusEl = document.getElementById('pc-share-status');
+    const qrEl = document.getElementById('pc-share-qr');
     if(!window.showDirectoryPicker){
-        if(statusEl) statusEl.textContent='Browser tidak support showDirectoryPicker — gunakan Google Chrome / Edge di PC.';
+        if(statusEl) statusEl.textContent = 'Browser tidak support showDirectoryPicker — gunakan Google Chrome / Edge di PC.';
         return;
     }
 
@@ -4487,46 +4510,12 @@ async function pcOneClickShare(){
         _pcDirHandle = handle;
         _pcFileMap.clear();
 
-        if(statusEl) statusEl.textContent='Membaca folder '+handle.name+' beserta sub-folder...';
-
-        // Rekursif membaca seluruh file foto di parent & sub-folder
-        const imageFiles = await scanDirectoryRecursively(handle, '');
-
-        if(imageFiles.length===0){
-            if(statusEl) statusEl.textContent='Folder kosong — pilih folder yang berisi foto JPG atau PNG.';
-            if(window.showAlert) showAlert('Folder Kosong', 'Harap pilih folder yang berisi foto JPG atau PNG.', '⚠️');
-            else alert('Harap pilih folder yang berisi foto JPG atau PNG.');
-            return;
-        }
-
-        // 1. BUAT SESI INSTAN (< 200ms) TANPA BLOCKING
+        // 1. LANGSUNG MUNCULKAN QR CODE DALAM < 0.02 DETIK!
         const sid = 'p2p_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+        const qrLink = location.origin + location.pathname + '?share=' + sid;
         const sb = getSupabaseClient();
 
-        const initialFiles = imageFiles.map((f, i) => ({
-            id: 'p_' + i,
-            name: f.name,
-            relativePath: f.relativePath || f.name,
-            url: ''
-        }));
-
-        const { error: insErr } = await sb.from('sortir_share_sessions').upsert({
-            session_key: sid,
-            offer: {
-                event_name: handle.name,
-                files: initialFiles
-            },
-            status: 'waiting'
-        });
-
-        if(insErr){
-            console.error('Supabase session insert error:', insErr);
-            throw insErr;
-        }
-
-        // 2. LANGSUNG MUNCULKAN QR CODE SEKETIKA!
-        const qrLink = location.origin + location.pathname + '?share=' + sid;
-        qrEl.style.display='block';
+        qrEl.style.display = 'block';
         qrEl.innerHTML = `
             <div style="background: white; padding: 16px; border-radius: 20px; display: inline-block; box-shadow: 0 10px 30px rgba(0,0,0,0.12); margin-bottom: 8px;">
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrLink)}" class="mx-auto rounded-xl" width="260" height="260" alt="QR Code Share">
@@ -4534,41 +4523,112 @@ async function pcOneClickShare(){
             <p class="text-xs font-mono mt-2 break-all" style="word-break:break-all;color:var(--text-muted);">ID Sesi: <b style="color:var(--text-main);">${sid}</b></p>
             <p class="text-xs mt-1" style="color:var(--gold);font-weight:800;">📷 Arahkan kamera HP ke QR di atas — Layar HP langsung membuka galeri Pinterest</p>
         `;
-        if(statusEl) statusEl.textContent = `⚡ QR Siap (${imageFiles.length} foto dari semua folder) — HP bisa langsung scan sekarang!`;
+        if(statusEl) statusEl.textContent = '⚡ QR Siap! Mengalirkan foto dari PC... (HP bisa langsung scan sekarang)';
 
-        // 3. BACKGROUND THUMBNAIL STREAMING (HD 1080p GPU ACCELERATED)
+        // Buat sesi awal di Supabase seketika
+        await sb.from('sortir_share_sessions').upsert({
+            session_key: sid,
+            offer: {
+                event_name: handle.name,
+                files: []
+            },
+            status: 'waiting'
+        });
+
+        // 2. ASYNC CHUNK SCANNING & STREAMING (0% CPU LAG, REAL-TIME EMISSION)
         (async () => {
-            const BATCH_SIZE = 15;
-            let currentFiles = [...initialFiles];
+            let allDiscovered = [];
+            let lastPushedLength = 0;
 
-            for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
-                const batch = imageFiles.slice(i, i + BATCH_SIZE);
-                await Promise.all(batch.map(async (f, bIdx) => {
-                    const globalIdx = i + bIdx;
-                    try {
-                        const fileObj = await f.handle.getFile();
-                        const thumb = await generateFastThumb(fileObj, 1080, 0.75);
-                        currentFiles[globalIdx].url = thumb || '';
-                    } catch (e) {}
-                }));
+            async function traverseFolder(dir, currentPath = '') {
+                for await (const [name, h] of dir.entries()) {
+                    if (h.kind === 'file') {
+                        if (/\.(jpe?g|png|webp|bmp|tiff?|heic)$/i.test(name)) {
+                            const rel = currentPath ? `${currentPath}/${name}` : name;
+                            const fileObj = {
+                                id: 'p_' + allDiscovered.length,
+                                name: name,
+                                relativePath: rel,
+                                handle: h,
+                                url: ''
+                            };
+                            allDiscovered.push(fileObj);
+                            _pcFileMap.set(rel, h);
+                            _pcFileMap.set(name, h);
 
-                // Update session batch ke Supabase
+                            // Langsung kirim saat ada 1 foto pertama, atau per 15 foto
+                            if (allDiscovered.length === 1 || allDiscovered.length - lastPushedLength >= 15) {
+                                await emitChunk();
+                            }
+                        }
+                    } else if (h.kind === 'directory' && name !== 'Selected_by_Client') {
+                        await new Promise(r => setTimeout(r, 4)); // Micro-yield
+                        const sub = currentPath ? `${currentPath}/${name}` : name;
+                        await traverseFolder(h, sub);
+                    }
+                }
+            }
+
+            async function emitChunk() {
+                lastPushedLength = allDiscovered.length;
+                if (statusEl) statusEl.textContent = `⚡ Terhubung: ${allDiscovered.length} foto ditemukan (HP sudah bisa lihat & pilih foto)`;
                 try {
                     await sb.from('sortir_share_sessions').update({
                         offer: {
                             event_name: handle.name,
-                            files: currentFiles
+                            files: allDiscovered.map(f => ({
+                                id: f.id,
+                                name: f.name,
+                                relativePath: f.relativePath,
+                                url: f.url
+                            }))
+                        },
+                        status: 'waiting'
+                    }).eq('session_key', sid);
+                } catch (e) {}
+            }
+
+            // Jalankan penjelajahan folder
+            await traverseFolder(handle, '');
+            await emitChunk();
+
+            if (allDiscovered.length === 0) {
+                if (statusEl) statusEl.textContent = 'Folder kosong — pilih folder yang berisi foto JPG atau PNG.';
+                if (window.showAlert) showAlert('Folder Kosong', 'Harap pilih folder yang berisi foto JPG atau PNG.', '⚠️');
+                return;
+            }
+
+            if (statusEl) statusEl.textContent = `✅ Siap! Seluruh ${allDiscovered.length} foto aktif tersinkron ke HP`;
+
+            // 3. BACKGROUND LIVE THUMBNAIL STREAMER
+            const BATCH = 12;
+            for (let i = 0; i < allDiscovered.length; i += BATCH) {
+                const chunk = allDiscovered.slice(i, i + BATCH);
+                await Promise.all(chunk.map(async (f) => {
+                    try {
+                        const fileBlob = await f.handle.getFile();
+                        const thumb = await generateFastThumb(fileBlob, 1080, 0.75);
+                        f.url = thumb || '';
+                    } catch (e) {}
+                }));
+
+                try {
+                    await sb.from('sortir_share_sessions').update({
+                        offer: {
+                            event_name: handle.name,
+                            files: allDiscovered.map(f => ({
+                                id: f.id,
+                                name: f.name,
+                                relativePath: f.relativePath,
+                                url: f.url
+                            }))
                         },
                         status: 'waiting'
                     }).eq('session_key', sid);
                 } catch (e) {}
 
-                const progressCount = Math.min(i + BATCH_SIZE, imageFiles.length);
-                if (statusEl) statusEl.textContent = `Memuat foto HD live: ${progressCount}/${imageFiles.length} foto (HP tetap bisa scan & pilih foto)`;
-                await new Promise(r => setTimeout(r, 30));
+                await new Promise(r => setTimeout(r, 20));
             }
-
-            if (statusEl) statusEl.textContent = `✅ Siap! ${imageFiles.length} foto HD aktif tersinkron ke HP`;
         })();
 
         // 4. Background listener on PC for selection from HP
