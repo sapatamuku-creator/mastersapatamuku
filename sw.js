@@ -26,7 +26,8 @@ const PRECACHE_ASSETS = [
   './animations.css',
   './subdomain_resolver.js',
   './config.js',
-  './manifest.json'
+  './manifest.json',
+  './manifest-sortir.json'
 ];
 
 // ── INSTALL: Cache all static assets ──
