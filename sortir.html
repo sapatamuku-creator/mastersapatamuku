@@ -4077,7 +4077,26 @@ async function streamThumbnailsToHP(dc) {
     if (statusEl) statusEl.textContent = `P2P Aktif — ${sent} foto siap dipilih di HP`;
 }
 
-// tampilkan tombol Share hanya di PC (showDirectoryPicker ada)
+// Auto-execute hash listener on page load or hash change
+function checkUrlHashOnLoad(){
+    const hash = window.location.hash || '';
+    if(hash.startsWith('#share=')){
+        const sid = hash.slice(7).split('&')[0];
+        if(sid) hpJoinShare(sid);
+    } else if(hash.startsWith('#offer=')){
+        const b64 = decodeURIComponent(hash.slice(7).split('&')[0]);
+        if(b64) hpJoinOffer(b64);
+    }
+}
+
+if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', checkUrlHashOnLoad);
+} else {
+    checkUrlHashOnLoad();
+}
+window.addEventListener('load', checkUrlHashOnLoad);
+window.addEventListener('hashchange', checkUrlHashOnLoad);
+
 document.addEventListener('DOMContentLoaded', ()=>{
     const area=document.getElementById('pc-share-area');
     const fallback=document.getElementById('pc-share-fallback');
@@ -4085,21 +4104,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
         if(area) area.style.opacity='0.6';
         if(fallback) fallback.style.display='block';
     }
-    // cek hash #share=SID (Cloud vendor-isolated) atau #offer=BASE64 (LAN langsung tanpa login)
-    if(location.hash.startsWith('#share=')){
-        const sid=location.hash.slice(7);
-        hpJoinShare(sid);
-    } else if(location.hash.startsWith('#offer=')){
-        const b64=decodeURIComponent(location.hash.slice(7));
-        hpJoinOffer(b64);
-    }
 });
 
+// ── 1-KLIK SHARE KE HP (AUTO 1-SCAN P2P SIGNALING) ──
 async function pcOneClickShare(){
     const statusEl=document.getElementById('pc-share-status');
     const qrEl=document.getElementById('pc-share-qr');
     if(!window.showDirectoryPicker){
-        if(statusEl) statusEl.textContent='Browser tidak support — gunakan Chrome/Edge di PC atau python sortir_bridge.py';
+        if(statusEl) statusEl.textContent='Browser tidak support showDirectoryPicker — gunakan Google Chrome / Edge di PC.';
         return;
     }
     try{
@@ -4131,19 +4143,25 @@ async function pcOneClickShare(){
         }
         if(_pcFiles.length===0){ if(statusEl) statusEl.textContent='Folder kosong — pilih folder berisi foto'; return; }
 
-        // 3. Buat WebRTC PeerConnection
-        const sb=getSupabaseClient();
-        let user=null;
-        try{ const r=await sb.auth.getUser(); user=r.data.user; }catch(e){}
-        const isCloud = !!user;
-        const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-        const dc = pc.createDataChannel('sortir');
+        // 3. Generate Random Unique Session Key
+        const sid = 'p2p_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+
+        // 4. Inisialisasi WebRTC PeerConnection
+        const pc = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+            ]
+        });
+        const dc = pc.createDataChannel('sortir', { ordered: true });
         window._pcDataChannel = dc;
         window._pcFiles = _pcFiles;
         window._pcDirHandle = handle;
+        window._pcPC = pc;
 
         dc.onopen = ()=>{
-            if(statusEl) statusEl.textContent='HP terhubung — mengirim daftar '+_pcFiles.length+' foto...';
+            if(statusEl) statusEl.textContent='HP terhubung P2P — mengirim '+_pcFiles.length+' foto...';
             // Kirim daftar nama foto instan ke HP
             dc.send(JSON.stringify({
                 type:'list', 
@@ -4207,47 +4225,241 @@ async function pcOneClickShare(){
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
+
+        // Tunggu ICE gathering selesai / timeout 1.2s
         await new Promise(res=>{
             if(pc.iceGatheringState==='complete') res();
             else pc.onicegatheringstatechange=()=>{ if(pc.iceGatheringState==='complete') res(); };
-            setTimeout(res, 1500);
+            setTimeout(res, 1200);
         });
 
-        if(isCloud){
-            // MODE CLOUD — via Supabase (vendor-isolated, beda Wi-Fi bisa)
-            const {data, error} = await sb.from('sortir_share_sessions').insert({vendor_id: user.id, offer: pc.localDescription, status:'waiting'}).select().single();
-            if(error) throw error;
-            const sid=data.id;
-            const qrLink = location.origin + location.pathname + '#share=' + sid;
-            qrEl.style.display='block';
-            qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrLink)}" class="mx-auto border rounded-xl" width="240" height="240"><p class="text-xs font-mono mt-2 break-all">${qrLink}</p><p class="text-xs mt-1" style="color:var(--gold);font-weight:700;">Mode Cloud — scan dari HP PWA, file tetap di PC</p>`;
-            if(statusEl) statusEl.textContent='QR Cloud siap — scan dari HP ('+_pcFiles.length+' foto) — menunggu HP...';
-            let tries=0;
-            const iv=setInterval(async ()=>{
-                tries++;
-                const {data: upd} = await sb.from('sortir_share_sessions').select('answer,status').eq('id', sid).single();
-                if(upd && upd.answer){
-                    clearInterval(iv);
-                    await pc.setRemoteDescription(upd.answer);
-                    if(statusEl) statusEl.textContent='HP menjawab — menghubungkan P2P...';
-                }
-                if(tries>60){ clearInterval(iv); if(statusEl) statusEl.textContent='Timeout — HP belum scan'; }
-            }, 1200);
-            pc.onconnectionstatechange=()=>{
-                if(pc.connectionState==='connected' && statusEl) statusEl.textContent='Terhubung P2P — streaming thumbnail foto ke HP...';
-            };
-            window._pcPC = pc; window._pcSessionId = sid;
-        } else {
-            // MODE LAN LANGSUNG — tanpa login, tanpa Supabase, QR berisi offer base64
-            const offerB64 = btoa(JSON.stringify(pc.localDescription));
-            const qrLink = location.origin + location.pathname + '#offer=' + encodeURIComponent(offerB64);
-            qrEl.style.display='block';
-            qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrLink)}" class="mx-auto border rounded-xl" width="240" height="240"><p class="text-xs font-mono mt-2 break-all" style="word-break:break-all;">${qrLink.slice(0,80)}...</p><p class="text-xs mt-1" style="color:var(--primary);font-weight:700;">Mode LAN Langsung — scan dari HP di Wi-Fi sama</p>
-            <button onclick="pcScanAnswer()" class="btn btn-secondary" style="margin-top:12px;width:100%;">📷 Scan Jawaban HP</button><div id="pc-answer-reader" style="display:none;margin-top:8px;"></div>`;
-            if(statusEl) statusEl.textContent='QR LAN siap — scan dari HP ('+_pcFiles.length+' foto) — lalu scan jawaban HP';
-            window._pcPC = pc;
+        // 5. SETUP DUAL SIGNALING: Supabase Realtime Broadcast + Supabase Table
+        const sb = getSupabaseClient();
+        const qrLink = location.origin + location.pathname + '#share=' + sid;
+        qrEl.style.display='block';
+        qrEl.innerHTML = `
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrLink)}" class="mx-auto border rounded-xl" width="260" height="260">
+            <p class="text-xs font-mono mt-2 break-all" style="word-break:break-all;color:var(--text-muted);">${qrLink}</p>
+            <p class="text-xs mt-1" style="color:var(--gold);font-weight:800;">📷 Scan QR ini sekali dari HP — otomatis terhubung langsung</p>
+        `;
+        if(statusEl) statusEl.textContent = 'QR Siap (' + _pcFiles.length + ' foto) — Menunggu scan dari HP...';
+
+        let isAnswerSet = false;
+
+        // A. Realtime Broadcast Channel (Instan P2P Signaling)
+        if(sb){
+            try{
+                const rtChannel = sb.channel('sortir_p2p_' + sid, { config: { broadcast: { self: false } } });
+                rtChannel.on('broadcast', { event: 'answer' }, async (payload)=>{
+                    if(payload && payload.payload && payload.payload.answer && !isAnswerSet){
+                        isAnswerSet = true;
+                        console.log('[P2P] Received answer via Realtime Broadcast');
+                        if(statusEl) statusEl.textContent = 'Jawaban HP diterima (Broadcast) — Menghubungkan P2P...';
+                        await pc.setRemoteDescription(payload.payload.answer);
+                    }
+                });
+                rtChannel.on('broadcast', { event: 'request_offer' }, async ()=>{
+                    console.log('[P2P] HP requested offer via broadcast');
+                    await rtChannel.send({
+                        type: 'broadcast',
+                        event: 'offer',
+                        payload: { offer: pc.localDescription }
+                    });
+                });
+                rtChannel.subscribe();
+            }catch(e){ console.warn('Realtime channel error:', e); }
+
+            // B. Simpan ke database sortir_share_sessions
+            try{
+                await sb.from('sortir_share_sessions').upsert({
+                    session_key: sid,
+                    offer: pc.localDescription,
+                    status: 'waiting'
+                }, { onConflict: 'session_key' });
+            }catch(e){ console.warn('Supabase session insert fallback:', e); }
         }
+
+        // C. Polling fallback jika Realtime terhambat firewall
+        let tries = 0;
+        const pollIv = setInterval(async ()=>{
+            if(isAnswerSet || pc.connectionState === 'connected' || pc.signalingState === 'stable'){
+                clearInterval(pollIv);
+                return;
+            }
+            tries++;
+            if(sb){
+                try{
+                    const { data: upd } = await sb.from('sortir_share_sessions')
+                        .select('answer, status')
+                        .eq('session_key', sid)
+                        .single();
+                    if(upd && upd.answer && !isAnswerSet){
+                        isAnswerSet = true;
+                        clearInterval(pollIv);
+                        if(statusEl) statusEl.textContent = 'Jawaban HP diterima (DB) — Menghubungkan P2P...';
+                        await pc.setRemoteDescription(upd.answer);
+                    }
+                }catch(e){}
+            }
+            if(tries > 90){
+                clearInterval(pollIv);
+                if(statusEl && !isAnswerSet) statusEl.textContent = 'QR kedaluwarsa — klik tombol di atas untuk membuat QR baru.';
+            }
+        }, 800);
+
+        pc.onconnectionstatechange = ()=>{
+            if(pc.connectionState === 'connected' && statusEl){
+                statusEl.textContent = 'Terhubung P2P — streaming ' + _pcFiles.length + ' foto ke HP...';
+            }
+        };
+
     }catch(e){
+        console.error('pcOneClickShare error:', e);
+        const statusEl2=document.getElementById('pc-share-status');
+        if(statusEl2) statusEl2.textContent='Gagal: '+e.message;
+        showAlert('Gagal Share', e.message, '❌');
+    }
+}
+
+// ── HP JOIN HANDLER (AUTO 1-SCAN P2P) ──
+async function hpJoinShare(sid){
+    console.log('[HP] Joining P2P session:', sid);
+    const badge = document.getElementById('nearby-status-badge');
+    if(badge){
+        badge.textContent = 'Menghubungkan P2P...';
+        badge.style.background = 'rgba(200,150,46,0.15)';
+        badge.style.color = 'var(--gold)';
+    }
+    showAlert('Menghubungkan', 'Sedang menghubungkan P2P ke PC Anda...', '⏳');
+
+    try{
+        const sb = getSupabaseClient();
+        const pc = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+            ]
+        });
+        window._hpPC = pc;
+        window._isRemotePCMode = true;
+
+        pc.ondatachannel = (ev)=>{
+            console.log('[HP] DataChannel received from PC');
+            const dc = ev.channel;
+            window._hpDC = dc;
+            setupHpDataChannel(dc);
+        };
+
+        let offerObj = null;
+
+        // 1. Coba ambil offer dari database Supabase
+        if(sb){
+            try{
+                const { data } = await sb.from('sortir_share_sessions')
+                    .select('offer')
+                    .eq('session_key', sid)
+                    .single();
+                if(data && data.offer) offerObj = data.offer;
+            }catch(e){ console.warn('HP DB fetch offer error:', e); }
+        }
+
+        // 2. Setup Realtime Channel untuk broadcast & signaling cepat
+        let rtChannel = null;
+        if(sb){
+            try{
+                rtChannel = sb.channel('sortir_p2p_' + sid, { config: { broadcast: { self: false } } });
+                rtChannel.on('broadcast', { event: 'offer' }, async (payload)=>{
+                    if(payload && payload.payload && payload.payload.offer && !offerObj){
+                        offerObj = payload.payload.offer;
+                        await processOfferAndAnswer(offerObj, pc, sid, sb, rtChannel);
+                    }
+                });
+                rtChannel.subscribe(async (status)=>{
+                    if(status === 'SUBSCRIBED' && !offerObj){
+                        // Minta offer ke PC via Realtime
+                        await rtChannel.send({ type: 'broadcast', event: 'request_offer', payload: {} });
+                    }
+                });
+            }catch(e){}
+        }
+
+        if(offerObj){
+            await processOfferAndAnswer(offerObj, pc, sid, sb, rtChannel);
+        } else {
+            // Tunggu hingga offer tiba dari Realtime atau DB polling
+            let waited = 0;
+            const waitIv = setInterval(async ()=>{
+                waited++;
+                if(offerObj){
+                    clearInterval(waitIv);
+                    return;
+                }
+                if(sb){
+                    try{
+                        const { data } = await sb.from('sortir_share_sessions')
+                            .select('offer')
+                            .eq('session_key', sid)
+                            .single();
+                        if(data && data.offer){
+                            offerObj = data.offer;
+                            clearInterval(waitIv);
+                            await processOfferAndAnswer(offerObj, pc, sid, sb, rtChannel);
+                        }
+                    }catch(e){}
+                }
+                if(waited > 30){
+                    clearInterval(waitIv);
+                    if(!offerObj) showAlert('Timeout', 'Sesi tidak ditemukan atau PC belum siap. Pastikan QR di PC masih aktif.', '⚠️');
+                }
+            }, 600);
+        }
+
+    }catch(e){
+        console.error('hpJoinShare error:', e);
+        showAlert('Gagal Hubungkan', e.message, '❌');
+    }
+}
+
+async function processOfferAndAnswer(offerObj, pc, sid, sb, rtChannel){
+    try{
+        if(pc.signalingState !== 'stable') return;
+        await pc.setRemoteDescription(offerObj);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        // Tunggu ICE gathering selesai / timeout 1s
+        await new Promise(res=>{
+            if(pc.iceGatheringState==='complete') res();
+            else pc.onicegatheringstatechange=()=>{ if(pc.iceGatheringState==='complete') res(); };
+            setTimeout(res, 1000);
+        });
+
+        // 1. Broadcast answer ke PC
+        if(rtChannel){
+            try{
+                await rtChannel.send({
+                    type: 'broadcast',
+                    event: 'answer',
+                    payload: { answer: pc.localDescription }
+                });
+            }catch(e){}
+        }
+
+        // 2. Simpan answer ke database Supabase
+        if(sb){
+            try{
+                await sb.from('sortir_share_sessions')
+                    .update({ answer: pc.localDescription, status: 'connected' })
+                    .eq('session_key', sid);
+            }catch(e){}
+        }
+
+        showAlert('Terhubung', 'Sinyal terhubung — memuat gallery foto dari PC...', '✅');
+    }catch(e){
+        console.error('processOfferAndAnswer error:', e);
+    }
+}
         console.error(e);
         const statusEl2=document.getElementById('pc-share-status');
         if(statusEl2) statusEl2.textContent='Gagal: '+e.message;
