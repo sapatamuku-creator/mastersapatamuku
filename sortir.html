@@ -1652,7 +1652,21 @@
         const params = new URLSearchParams(window.location.search);
         const hash = window.location.hash || '';
         const eventSlug = params.get('event');
-        const shareKey = params.get('share') || params.get('p2p') || (hash.startsWith('#share=') ? hash.slice(7).split('&')[0] : null);
+        let shareKey = params.get('share') || params.get('p2p');
+
+        if (!shareKey && hash) {
+            if (hash.includes('share=')) {
+                shareKey = hash.split('share=')[1].split('&')[0];
+            } else if (hash.includes('p2p=')) {
+                shareKey = hash.split('p2p=')[1].split('&')[0];
+            } else if (hash.startsWith('#p2p_')) {
+                shareKey = hash.slice(1).split('&')[0];
+            }
+        }
+        if (shareKey) {
+            shareKey = decodeURIComponent(shareKey).replace(/^[#?]/, '').trim();
+        }
+
         const action = params.get('action');
 
         // Hide all views
@@ -1664,10 +1678,10 @@
         const headerActions = document.getElementById('header-actions');
         headerActions.innerHTML = '';
 
-        if (eventSlug) {
-            initCullingView(eventSlug);
-        } else if (shareKey) {
+        if (shareKey) {
             initP2PCullingView(shareKey);
+        } else if (eventSlug) {
+            initCullingView(eventSlug);
         } else if (action === 'owner' || action === 'admin') {
             initOwnerView();
         } else {
@@ -2458,8 +2472,10 @@
             const errEl = document.getElementById('culling-error-state');
             if (errEl) {
                 errEl.style.display = 'block';
+                const h4 = errEl.querySelector('h4');
+                if (h4) h4.innerText = 'Sesi Foto Belum Dibuat / Kadaluarsa';
                 const p = errEl.querySelector('p');
-                if (p) p.innerText = e.message || "Gagal memuat sesi foto dari PC.";
+                if (p) p.innerHTML = `Sesi <code>${shareKey}</code> tidak ditemukan di server.<br><br><b>Langkah Mudah:</b><br>1. Di PC, buka <code>sortir.html</code> dan klik <b>"📁 Pilih Folder & Buat QR"</b>.<br>2. Scan QR Code yang baru muncul di layar PC Anda.`;
             }
         }
     }
