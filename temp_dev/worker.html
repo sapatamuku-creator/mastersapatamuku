@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
   <base target="_top">
@@ -409,36 +409,46 @@
       }
     }
 
+    const printedIdsInSession = new Set();
+
     async function processItems(items) {
+      if (isProcessing) return;
       isProcessing = true;
       let printedIds = [];
       const printDelay = parseInt(document.getElementById('delayInput').value) || 1200;
+      
       for (let item of items) {
+        if (!item || !item.id) continue;
+        
+        if (printedIdsInSession.has(item.id)) {
+            continue;
+        }
+
         try {
-          log(`Cetak: ${item.nama || 'GUEST'}`);
+          fetch("https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/print_queue?id=eq." + item.id, {
+            method: "PATCH",
+            headers: {
+              "apikey": SUPABASE_KEY,
+              "Authorization": "Bearer " + SUPABASE_KEY,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ status: "DONE" })
+          }).catch(err => console.warn("Atomic print lock warning:", err));
+
+          printedIdsInSession.add(item.id);
+
+          log(`Cetak: ${item.nama || 'GUEST'} [${item.info || 'LABEL'}]`);
           await printLabel(item);
           printedIds.push(item.id);
           await new Promise(r => setTimeout(r, printDelay)); 
-        } catch (e) { log(`Gagal: ` + e.message, true); break; }
+        } catch (e) { 
+          log(`Gagal: ` + e.message, true); 
+          break; 
+        }
       }
       
       if (printedIds.length > 0) {
         try {
-          // Update status ke DONE di Supabase secara instan agar antrean langsung kosong
-          const promises = printedIds.map(id => 
-            fetch("https://llrapesaaoliyjrrrsjh.supabase.co/rest/v1/print_queue?id=eq." + id, {
-              method: "PATCH",
-              headers: {
-                "apikey": SUPABASE_KEY,
-                "Authorization": "Bearer " + SUPABASE_KEY,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({ status: "DONE" })
-            })
-          );
-          await Promise.all(promises);
-
-          // Panggil GAS di background
           fetch(SCRIPT_URL, {
             method: "POST", mode: "no-cors",
             headers: { "Content-Type": "text/plain;charset=utf-8" },

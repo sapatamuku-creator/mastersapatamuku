@@ -164,8 +164,42 @@ const SyncEngine = (() => {
     }
 
     async function syncUpdate(ssId, kode, updates) {
+        // Server-Authoritative Conflict Guard: Jangan menimpa record yang sudah final di server
+        try {
+            const checkRes = await fetch(
+                `${SB_URL}/rest/v1/tamu?ssid=eq.${encodeURIComponent(ssId)}&kode=eq.${encodeURIComponent(kode)}&select=status_hadir,jam_datang,jam_pulang,souvenir,tanda_kasih,real_hadir`,
+                { headers: SB_HEADERS }
+            );
+            if (checkRes.ok) {
+                const existingRows = await checkRes.json();
+                if (existingRows && existingRows.length > 0) {
+                    const serverRow = existingRows[0];
+                    // Jika server sudah hadir, jangan timpa status_hadir atau jam_datang yang valid
+                    if (String(serverRow.status_hadir) === "1" && String(updates.status_hadir) === "0") {
+                        delete updates.status_hadir;
+                        delete updates.jam_datang;
+                    }
+                    // Jika server sudah ada jam_pulang / souvenir claimed, jangan timpa dengan status kosong
+                    if (serverRow.jam_pulang && (!updates.jam_pulang || updates.jam_pulang === "-")) {
+                        delete updates.jam_pulang;
+                    }
+                    // Jika tanda_kasih di server sudah ada dan updates bernilai 0, jangan hapus tanda kasih server
+                    if (Number(serverRow.tanda_kasih) > 0 && (!updates.tanda_kasih || Number(updates.tanda_kasih) === 0)) {
+                        delete updates.tanda_kasih;
+                    }
+                    // Jika tidak ada update yang perlu dikirim setelah filtering, anggap selesai
+                    if (Object.keys(updates).length === 0) {
+                        console.log(`[SyncEngine] Conflict Guard: Server record already final for ${kode}. Mutation skipped.`);
+                        return;
+                    }
+                }
+            }
+        } catch (guardErr) {
+            console.warn("[SyncEngine] Conflict guard pre-check notice:", guardErr);
+        }
+
         const res = await fetch(
-            `${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&kode=eq.${kode}`,
+            `${SB_URL}/rest/v1/tamu?ssid=eq.${encodeURIComponent(ssId)}&kode=eq.${encodeURIComponent(kode)}`,
             {
                 method: 'PATCH',
                 headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
@@ -178,7 +212,7 @@ const SyncEngine = (() => {
 
     async function syncDelete(ssId, kode) {
         const res = await fetch(
-            `${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&kode=eq.${kode}`,
+            `${SB_URL}/rest/v1/tamu?ssid=eq.${encodeURIComponent(ssId)}&kode=eq.${encodeURIComponent(kode)}`,
             {
                 method: 'DELETE',
                 headers: SB_HEADERS
@@ -189,8 +223,35 @@ const SyncEngine = (() => {
     }
 
     async function syncUpdateStatus(ssId, kode, data) {
+        // Server-Authoritative Conflict Guard: Cegah blind overwrite
+        try {
+            const checkRes = await fetch(
+                `${SB_URL}/rest/v1/tamu?ssid=eq.${encodeURIComponent(ssId)}&kode=eq.${encodeURIComponent(kode)}&select=status_hadir,jam_datang,jam_pulang,souvenir,tanda_kasih`,
+                { headers: SB_HEADERS }
+            );
+            if (checkRes.ok) {
+                const existingRows = await checkRes.json();
+                if (existingRows && existingRows.length > 0) {
+                    const serverRow = existingRows[0];
+                    if (String(serverRow.status_hadir) === "1" && String(data.status_hadir) === "0") {
+                        delete data.status_hadir;
+                        delete data.jam_datang;
+                    }
+                    if (serverRow.jam_pulang && (!data.jam_pulang || data.jam_pulang === "-")) {
+                        delete data.jam_pulang;
+                    }
+                    if (Object.keys(data).length === 0) {
+                        console.log(`[SyncEngine] Conflict Guard: Status on server already final for ${kode}. Mutation skipped.`);
+                        return;
+                    }
+                }
+            }
+        } catch (guardErr) {
+            console.warn("[SyncEngine] Conflict guard notice:", guardErr);
+        }
+
         const res = await fetch(
-            `${SB_URL}/rest/v1/tamu?ssid=eq.${ssId}&kode=eq.${kode}`,
+            `${SB_URL}/rest/v1/tamu?ssid=eq.${encodeURIComponent(ssId)}&kode=eq.${encodeURIComponent(kode)}`,
             {
                 method: 'PATCH',
                 headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },

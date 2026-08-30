@@ -1,4 +1,4 @@
-﻿/**
+/**
  * printer_widget.js --- SapaTamu Bluetooth Printer Widget v1.0
  * Inject tombol printer + modal ke panel jalur di kiosk, checkin, onsite.
  * Panggil: PrinterWidget.init({ sourceId: 'CHECKIN', jalurSelectorId: 'jalur-selector', jalurKey: 'checkin_jalur_id' })
@@ -229,22 +229,36 @@
     } catch (e) { log('Fetch error: ' + e.message, true); }
   }
 
+  const printedIdsInSession = new Set();
+
   async function processItems(items) {
+    if (isProcessing) return;
     isProcessing = true;
     const delay = parseInt(document.getElementById('pw-delay')?.value) || 1200;
     const printed = [];
     for (const item of items) {
-      try { log(`Cetak: ${item.nama || 'GUEST'}`); await printLabel(item); printed.push(item.id); await new Promise(r => setTimeout(r, delay)); }
-      catch (e) { log('Gagal: ' + e.message, true); break; }
-    }
-    if (printed.length > 0) {
-      await Promise.all(printed.map(id =>
-        fetch(`${SB_URL}/rest/v1/print_queue?id=eq.${id}`, {
+      if (!item || !item.id) continue;
+      if (printedIdsInSession.has(item.id)) continue;
+
+      try {
+        fetch(`${SB_URL}/rest/v1/print_queue?id=eq.${item.id}`, {
           method: 'PATCH',
           headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'DONE' })
-        })
-      )).catch(() => { });
+        }).catch(() => { });
+
+        printedIdsInSession.add(item.id);
+
+        log(`Cetak: ${item.nama || 'GUEST'} [${item.info || 'LABEL'}]`);
+        await printLabel(item);
+        printed.push(item.id);
+        await new Promise(r => setTimeout(r, delay));
+      } catch (e) {
+        log('Gagal: ' + e.message, true);
+        break;
+      }
+    }
+    if (printed.length > 0) {
       fetch(SCRIPT_URL, {
         method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'markPrinted', printIds: printed, ssId: CURRENT_SS_ID, station: TAB_ID })

@@ -253,7 +253,7 @@ function handleMainPost(payload) {
         break;
         
       case 'saveWelcomePhotos':
-        result = saveWelcomePhotos(ssId, payload.urlFoto, payload.teks1, payload.teks2);
+        result = saveWelcomePhotos(ssId, payload.urlFoto, payload.teks1, payload.teks2, payload.kapasitasBallroom, payload.stokSouvenir);
         break;
         
       case 'addWish':
@@ -1466,6 +1466,8 @@ function getSettings(ssId, guestId = null) {
       if (t1) teksSambutan1 = t1;
       const t2 = configSheet.getRange("B8").getValue();
       if (t2) teksSambutan2 = t2;
+      const cap = configSheet.getRange("B9").getValue();
+      const st = configSheet.getRange("B10").getValue();
       
       const invSheet = ss.getSheetByName("InvConfig");
       const invRaw = invSheet ? invSheet.getRange("B1").getValue() : "";
@@ -1493,6 +1495,8 @@ function getSettings(ssId, guestId = null) {
         theme: theme,
         teksSambutan1: teksSambutan1,
         teksSambutan2: teksSambutan2,
+        kapasitasBallroom: parseInt(cap) || 0,
+        stokSouvenir: parseInt(st) || 0,
         invitationData: invitationData
       }
     };
@@ -1515,7 +1519,7 @@ function getDropdownOptions(ssId) {
   }
 }
 
-function saveWelcomePhotos(ssId, urlFoto, teks1, teks2) {
+function saveWelcomePhotos(ssId, urlFoto, teks1, teks2, kapasitas, stok) {
   try {
     const ss = getSS(ssId);
     let configSheet = ss.getSheetByName("CONFIG") || ss.getSheetByName("Config");
@@ -1523,7 +1527,7 @@ function saveWelcomePhotos(ssId, urlFoto, teks1, teks2) {
       configSheet = ss.insertSheet("CONFIG");
       configSheet.getRange("A1").setValue("URL_FOTO");
     }
-    configSheet.getRange("B1").setValue(urlFoto);
+    if (urlFoto !== undefined) configSheet.getRange("B1").setValue(urlFoto);
     
     if (teks1 !== undefined) {
       configSheet.getRange("A7").setValue("TEKS_SAMBUTAN_1");
@@ -1533,15 +1537,42 @@ function saveWelcomePhotos(ssId, urlFoto, teks1, teks2) {
       configSheet.getRange("A8").setValue("TEKS_SAMBUTAN_2");
       configSheet.getRange("B8").setValue(teks2);
     }
+    if (kapasitas !== undefined) {
+      configSheet.getRange("A9").setValue("KAPASITAS_BALLROOM");
+      configSheet.getRange("B9").setValue(parseInt(kapasitas) || 0);
+    }
+    if (stok !== undefined) {
+      configSheet.getRange("A10").setValue("STOK_SOUVENIR");
+      configSheet.getRange("B10").setValue(parseInt(stok) || 0);
+    }
     
     // Sync to Supabase config_welcome
     try {
-      mirrorWelcomeConfigToSupabase(ssId);
+      if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+        const payloadData = {
+          urlFoto: urlFoto || "",
+          teksSambutan1: teks1 || "",
+          teksSambutan2: teks2 || "",
+          kapasitasBallroom: parseInt(kapasitas) || 0,
+          stokSouvenir: parseInt(stok) || 0
+        };
+        supabaseFetch(SUPABASE_URL + "/rest/v1/config_welcome", {
+          method: "post",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates"
+          },
+          payload: JSON.stringify({ ssid: ssId, data: payloadData, updated_at: new Date().toISOString() }),
+          muteHttpExceptions: true
+        });
+      }
     } catch (err) {
       console.error("Gagal mirror welcome config ke Supabase: " + err.toString());
     }
     
-    return { status: "success", message: "Konfigurasi Welcome Sign berhasil diperbarui" };
+    return { status: "success", message: "Konfigurasi Welcome Sign & Logistik berhasil diperbarui" };
   } catch (e) { return { status: "error", message: e.toString() }; }
 }
 
@@ -2592,9 +2623,30 @@ function claimSouvenirCheckout(ssId, kodeUnik, jamPulang) {
 
     if (targetRow === -1) return { status: "error", message: "Kode tamu tidak ditemukan: " + kodeUnik };
 
-    const timeStr = jamPulang || Utilities.formatDate(new Date(), "Asia/Jakarta", "HH:mm:ss");
-    sheet.getRange(targetRow, COL_SOUVENIR).setValue("YA");
+    const timeStr = jamPulang || Utilities.formatDate(new Date(), "GMT+7", "HH:mm:ss");
+    sheet.getRange(targetRow, COL_SOUVENIR).setValue("ya");
     sheet.getRange(targetRow, COLUMN_JAM_PULANG).setValue(timeStr);
+
+    // SINKRONISASI KE SUPABASE SECARA OTOMATIS
+    try {
+      if (SUPABASE_URL && SUPABASE_URL !== "YOUR_SUPABASE_PROJECT_URL") {
+        supabaseFetch(SUPABASE_URL + "/rest/v1/tamu?ssid=eq." + ssId + "&kode=eq." + encodeURIComponent(kodeUnik), {
+          method: "patch",
+          headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Content-Type": "application/json"
+          },
+          payload: JSON.stringify({ 
+            jam_pulang: timeStr,
+            souvenir: "ya"
+          }),
+          muteHttpExceptions: true
+        });
+      }
+    } catch (e) {
+      console.error("Failed to sync souvenir checkout to Supabase: " + e.toString());
+    }
 
     return { status: "success", message: "Souvenir dan checkout berhasil dicatat", jamPulang: timeStr };
   } catch (e) {

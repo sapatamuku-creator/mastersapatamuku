@@ -787,8 +787,10 @@
 
         function isGuestClaimed(g) {
             if (!g) return false;
+            const souv = String(g.souvenir || "").trim().toLowerCase();
             return Boolean(
                 (g.jamPulang && g.jamPulang !== "-" && g.jamPulang !== "") ||
+                souv === "ya" || souv === "1" || souv === "claimed" ||
                 g.statusSouvenir === "CLAIMED"
             );
         }
@@ -1039,7 +1041,7 @@
                 return;
             }
 
-            const nowTime = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const nowTime = new Date().toLocaleTimeString('en-GB', { hour12: false });
             const alreadyClaimed = isGuestClaimed(targetGuest);
 
             if (alreadyClaimed) {
@@ -1050,6 +1052,7 @@
 
             // Optimistic Local Update
             targetGuest.jamPulang = nowTime;
+            targetGuest.souvenir = "ya";
             targetGuest.statusSouvenir = "CLAIMED";
             guestMap.set(String(targetGuest.kode).trim().toUpperCase(), targetGuest);
 
@@ -1058,9 +1061,9 @@
             renderRecentClaims();
             updateStats();
 
-            // Parallel Persistence (Supabase + GAS)
+            // Parallel Persistence (Supabase + GAS + Local IndexedDB)
             try {
-                if (window.SB_URL && window.SB_KEY) {
+                if (navigator.onLine && window.SB_URL && window.SB_KEY) {
                     fetch(`${window.SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&kode=eq.${encodeURIComponent(targetGuest.kode)}`, {
                         method: 'PATCH',
                         headers: {
@@ -1070,21 +1073,41 @@
                             "Prefer": "return=minimal"
                         },
                         body: JSON.stringify({
-                            jam_pulang: nowTime
+                            jam_pulang: nowTime,
+                            souvenir: "ya"
                         })
                     }).catch(err => console.warn("Direct Supabase patch warning:", err));
                 }
 
-                const scriptUrl = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
-                fetch(scriptUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: "claim_souvenir_checkout",
-                        ssId: CURRENT_SS_ID,
-                        kodeUnik: targetGuest.kode,
-                        jamPulang: nowTime
-                    })
-                }).catch(err => console.warn("GAS background sync warning:", err));
+                if (navigator.onLine) {
+                    const scriptUrl = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
+                    fetch(scriptUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: "claim_souvenir_checkout",
+                            ssId: CURRENT_SS_ID,
+                            kodeUnik: targetGuest.kode,
+                            jamPulang: nowTime
+                        })
+                    }).catch(err => console.warn("GAS background sync warning:", err));
+                }
+
+                // Cermin data ke IndexedDB untuk respon instan & offline buffer
+                if (window.OfflineDB && window.OfflineDB.guests) {
+                    OfflineDB.guests.saveBulk([{
+                        ...targetGuest,
+                        jam_pulang: nowTime,
+                        souvenir: "ya"
+                    }]).catch(() => {});
+
+                    if (!navigator.onLine && window.OfflineDB.syncQueue) {
+                        OfflineDB.syncQueue.add({
+                            action: 'UPDATE_STATUS',
+                            kode: targetGuest.kode,
+                            data: { jam_pulang: nowTime, souvenir: "ya" }
+                        }).catch(() => {});
+                    }
+                }
             } catch (e) {
                 console.error("Persistence error:", e);
             }
@@ -1442,5 +1465,36 @@
 
         window.onload = initPage;
     </script>
+    <script src="offline-db.js"></script>
+    <script src="sync-engine.js"></script>
+    <script>
+        (function () {
+            if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () { }); }
+            window.addEventListener('online', function () { document.body.classList.remove('is-offline'); });
+            window.addEventListener('offline', function () { document.body.classList.add('is-offline'); });
+        })();
+    </script>
+    <style>
+        .is-offline::before {
+            content: '⚠️ OFFLINE — Data tersimpan lokal';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 99999;
+            background: #FEE2E2;
+            color: #991B1B;
+            text-align: center;
+            padding: 6px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        @media(min-width:1024px) {
+            .is-offline::before {
+                display: none;
+            }
+        }
+    </style>
 </body>
 </html>
