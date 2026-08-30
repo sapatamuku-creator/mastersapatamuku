@@ -4456,17 +4456,6 @@ async function processOfferAndAnswer(offerObj, pc, sid, sb, rtChannel){
         }
 
         showAlert('Terhubung', 'Sinyal terhubung — memuat gallery foto dari PC...', '✅');
-    }catch(e){
-        console.error('processOfferAndAnswer error:', e);
-    }
-}
-        console.error(e);
-        const statusEl2=document.getElementById('pc-share-status');
-        if(statusEl2) statusEl2.textContent='Gagal: '+e.message;
-        showAlert('Gagal Share', e.message, '❌');
-    }
-}
-
 async function pcScanAnswer(){
     const wrap=document.getElementById('pc-answer-reader');
     if(!wrap){
@@ -4497,32 +4486,7 @@ async function pcScanAnswer(){
     }, ()=>{});
 }
 
-// ── SISI HP: SELECTION & REMOTE GALLERY LOGIC ──
-window.toggleRemoteSelection = function(id, name){
-    if(window._remoteSelections.has(name)){
-        window._remoteSelections.delete(name);
-    } else {
-        window._remoteSelections.add(name);
-    }
-    const card = document.getElementById('remote-card-' + id);
-    if(card) card.classList.toggle('selected', window._remoteSelections.has(name));
-    updateRemoteSelectionUI();
-    if(photoLightbox.isOpen) photoLightbox.updateHeaderUI();
-};
-
-function updateRemoteSelectionUI(){
-    const selCount = window._remoteSelections ? window._remoteSelections.size : 0;
-    const total = window._remoteFilesList ? window._remoteFilesList.length : 0;
-    const countEl = document.getElementById('local-selection-count');
-    if(countEl) countEl.innerText = `${selCount} / ${total}`;
-    const previewEl = document.getElementById('local-file-list-preview');
-    if(previewEl){
-        const names = Array.from(window._remoteSelections || []);
-        previewEl.textContent = names.length > 0 ? names.join(', ') : 'Belum ada foto yang dipilih.';
-    }
-}
-
-// ── HP JOIN HANDLER (LAN LANGSUNG) ──
+// ── HP JOIN HANDLER (LAN LANGSUNG MANUAL) ──
 async function hpJoinOffer(offerB64){
     try{
         const offer = JSON.parse(atob(offerB64));
@@ -4551,36 +4515,29 @@ async function hpJoinOffer(offerB64){
     }catch(e){ showAlert('Gagal join LAN', e.message,'❌'); }
 }
 
-// ── HP JOIN HANDLER (CLOUD SUPABASE) ──
-async function hpJoinShare(sid){
-    try{
-        const sb=getSupabaseClient();
-        if(!sb) return showAlert('Koneksi','Supabase belum siap','⚠️');
-        
-        // Ambil data sesi share
-        const {data, error} = await sb.from('sortir_share_sessions').select('*').eq('id', sid).single();
-        if(error || !data) throw new Error('Sesi tidak ditemukan atau telah kedaluwarsa');
+// ── SISI HP: SELECTION & REMOTE GALLERY LOGIC ──
+window.toggleRemoteSelection = function(id, name){
+    if(window._remoteSelections.has(name)){
+        window._remoteSelections.delete(name);
+    } else {
+        window._remoteSelections.add(name);
+    }
+    const card = document.getElementById('remote-card-' + id);
+    if(card) card.classList.toggle('selected', window._remoteSelections.has(name));
+    updateRemoteSelectionUI();
+    if(photoLightbox.isOpen) photoLightbox.updateHeaderUI();
+};
 
-        const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-        let dc=null;
-        pc.ondatachannel = (ev)=>{
-            dc=ev.channel;
-            window._hpDC = dc;
-            setupHpDataChannel(dc);
-        };
-        await pc.setRemoteDescription(data.offer);
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        await new Promise(res=>{
-            if(pc.iceGatheringState==='complete') res();
-            else pc.onicegatheringstatechange=()=>{ if(pc.iceGatheringState==='complete') res(); };
-            setTimeout(res, 1500);
-        });
-        await sb.from('sortir_share_sessions').update({answer: pc.localDescription, status:'connected'}).eq('id', sid);
-        window._hpPC = pc;
-        window._isRemotePCMode = true;
-        showAlert('Menghubungkan','Menghubungkan P2P ke PC Anda...','⏳');
-    }catch(e){ showAlert('Gagal join', e.message,'❌'); }
+function updateRemoteSelectionUI(){
+    const selCount = window._remoteSelections ? window._remoteSelections.size : 0;
+    const total = window._remoteFilesList ? window._remoteFilesList.length : 0;
+    const countEl = document.getElementById('local-selection-count');
+    if(countEl) countEl.innerText = `${selCount} / ${total}`;
+    const previewEl = document.getElementById('local-file-list-preview');
+    if(previewEl){
+        const names = Array.from(window._remoteSelections || []);
+        previewEl.textContent = names.length > 0 ? names.join(', ') : 'Belum ada foto yang dipilih.';
+    }
 }
 
 // ── SETUP HP DATACHANNEL MESSAGES & GALLERY RENDERING ──
@@ -4729,6 +4686,19 @@ async function updateVendorHeader(){
         if(btn) btn.style.display='inline-flex';
     }
 }
+
+// ── BIND SEMUA FUNCTION KE WINDOW UNTUK EVENT ONCLICK HTML ──
+window.pcOneClickShare = pcOneClickShare;
+window.pcScanAnswer = pcScanAnswer;
+window.hpJoinShare = hpJoinShare;
+window.hpJoinOffer = hpJoinOffer;
+window.openVendorLogin = openVendorLogin;
+window.closeVendorLogin = closeVendorLogin;
+window.vendorLogin = vendorLogin;
+window.vendorRegister = vendorRegister;
+window.vendorLogout = vendorLogout;
+window.updateVendorHeader = updateVendorHeader;
+
 document.addEventListener('DOMContentLoaded', updateVendorHeader);
 </script>
 <script src="offline-db.js"></script>
