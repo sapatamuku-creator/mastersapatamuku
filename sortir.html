@@ -9,6 +9,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
     <title>SapaTamu Sortir — Galeri Culling & Seleksi Foto</title>
+    <meta property="og:title" content="SapaTamu Sortir — Galeri Culling & Seleksi Foto">
+    <meta property="og:description" content="Silakan pilih foto terbaik Anda di galeri culling digital SapaTamu.">
+    <meta property="og:image" content="https://sapatamu.id/assets/icon-sortir-512.png">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" type="image/png" href="assets/icon-sortir-192.png">
     <link rel="apple-touch-icon" href="assets/icon-sortir-512.png">
     <meta name="apple-mobile-web-app-title" content="Sortir">
@@ -1616,7 +1621,16 @@
     function router() {
         const params = new URLSearchParams(window.location.search);
         const hash = window.location.hash || '';
-        const eventSlug = params.get('event');
+        let eventSlug = params.get('event') || params.get('slug') || params.get('id');
+
+        // Dukung dynamic clean pathname /sortir/:slug
+        if (!eventSlug) {
+            const pathParts = window.location.pathname.split('/sortir/');
+            if (pathParts.length > 1 && pathParts[1]) {
+                eventSlug = pathParts[1].split('/')[0].split('?')[0].trim();
+            }
+        }
+
         let shareKey = params.get('share') || params.get('p2p');
 
         if (!shareKey && hash) {
