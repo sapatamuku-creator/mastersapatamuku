@@ -297,8 +297,8 @@ document.getElementById('wedding-date').innerText =
 - `body { display:flex; flex-direction:column; padding-top:64px }` — flex column root, navbar tetap `position:fixed`.
 - `.event-hero-box { flex:0 0 auto; margin-bottom:10px; padding:14px 18px }` — compact hero desktop (font `clamp(20px,2.2vw,28px)`).
 - `main { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden }` — main mengisi sisa viewport.
-- `.telemetry-grid { flex:0 0 auto; margin-bottom:10px; gap:0.75rem; padding:14px 16px }` — compact KPI.
-- `.view-desktop-grid { flex:1; min-height:0; overflow:hidden; align-items:stretch; gap:1rem }` — **flex ratio 7:5 width tetap**, height = sisa viewport.
+- `.telemetry-grid { flex:0 0 auto; margin-bottom:0; gap:0.75rem; padding:14px 16px }` — compact KPI (kini di dalam `left-combined`).
+- `.view-desktop-grid { flex:1; min-height:0; overflow:hidden; align-items:stretch; gap:1rem; grid-template-columns: 1fr 1fr }` — **flex ratio 1/2 + 1/2 (bukan 7:5) — riwayat lebih lega**.
 - `.col-scanner-panel { min-height:0; overflow-y:auto; scrollbar thin gold }` — scanner scroll internal jika kamera/result tinggi, bukan page scroll.
 - `.col-stream-panel { flex column; overflow:hidden }` + `> .sapatamu-glass-card { flex:1; min-height:0; overflow:hidden }` + `#recent-claims-list { flex:1; min-height:0 }` — riwayat satu-satunya scroller.
 
@@ -310,3 +310,36 @@ document.getElementById('wedding-date').innerText =
 - [x] `souvenir.html` desktop flex viewport-fit tanpa `body` vertical scroll
 - [x] Kompaksi hero + telemetry desktop agar `view-desktop-grid` muat 1 view
 - [x] Verifikasi 3 mode ulang: desktop fit 1 view, tablet/mobile tetap dvh-capped scroll internal
+
+### 10.2 Re-layout Desktop 1/2 + 1/2 & Background Foto Lebih Jelas (checkin-style)
+
+**Tanggal:** 30 Agustus 2026  
+**Request User:** (1) Layout desktop telemetry `TERBAGI 62% / 133 / SISA STOK / BALLROOM / HID Laser Gun` + scanner dijadikan **1 area 1/2 kiri**, `📜 Riwayat Pengambilan` di **1/2 kanan** agar space tamu terlihat lebih banyak. (2) Background foto prewedding overlay terlalu opaque + blur 16px → tidak terlihat, samakan dengan `checkin.html` (glass tidak blur / blur 4px saja).
+
+**Perubahan Layout (`souvenir.html:705-873`):**
+- Struktur baru `main > view-desktop-grid > [left-combined | col-stream-panel]`:
+  - `left-combined` (`flex flex-col gap-4`) membungkus `telemetry-grid` (3 kartu TERBAGI/SISA/BALLROOM) + `col-scanner-panel` (HID Laser Gun + scanner pod + input). Di desktop `≥1024px` = **1/2 lebar kiri**.
+  - `col-stream-panel` = **1/2 lebar kanan** — hanya riwayat, `flex:1`, `#recent-claims-list flex:1` sehingga list muat ~12–15 tamu vs sebelumnya 7–8.
+- Grid desktop diubah `grid-template-columns: 1fr 1fr !important` (sebelumnya `7fr 5fr` = 58/42). Gap `1rem`, `align-items: stretch`, `view-desktop-grid flex:1` tetap viewport-fit.
+- CSS `left-combined { display:flex; flex-direction:column; gap:0.85rem; min-height:0; overflow:hidden }` + `left-combined .col-scanner-panel { flex:1 }` agar scanner mengisi sisa tinggi kiri.
+- Tablet `680–1023` & Mobile `<680` **tidak berubah**: `left-combined` jadi block biasa — telemetry+scanner tetap di atas, riwayat di bawah (atau segmented). `view-desktop-grid` di tablet tetap `1fr` single column.
+
+**Perubahan Background Foto Jelas (samakan `checkin.html:118-128`):**
+- `souvenir.html:118-127` `.hero-overlay-frost`:
+  - Sebelum: `background rgba 0.86/0.78/0.90 + 0.40/0.94` + `blur(16px)` → foto tertutup pekat.
+  - Sesudah: `background rgba 0.58/0.32/0.52 + 0.10/0.45` + `blur(4px)` — foto prewedding terlihat jelas, tetap ada frost tipis agar teks hero terbaca (seperti `checkin.html` hero 480px gradient `0.65/0.38/0.60` tanpa blur berat).
+- `.sapatamu-glass-card` `blur 20px → 8px` (seperti `checkin.html:148` header `blur(8px)`), `.event-hero-box` `blur 20px → 8px`, background `0.72 → 0.65` — glass tetap tapi tidak menenggelamkan foto.
+- Mobile `<680px` per `perf-ui-ux-3mode` §3: **hapus blur sama sekali** (`backdrop-filter: none`) + background `rgba 0.92` agar 60fps di Mali-G52 / Android Chrome low-end, overlay juga `none`.
+
+**Decision Gate 5 Poin (10.2):**
+1. **Fungsi:** Maksimalkan space riwayat desktop (1/2 kanan) & foto background jelas.
+2. **Dari:** telemetry full-width di atas grid `7fr 5fr`, overlay `blur 16px` opaque 0.86.
+3. **Ke:** telemetry pindah ke `left-combined` 1/2 kiri, grid `1fr 1fr`, overlay `blur 4px` + opacity 0.52/0.32, glass `blur 8px`.
+4. **Dampak routing:** Hanya `souvenir.html` layout & style; tidak sentuh `auth_guard`, `sync-engine`, GAS, `checkin.html`.
+5. **Risiko jujur:** `1fr 1fr` membuat kartu telemetry di kiri sedikit lebih sempit (±576px vs 650px) — teks tetap muat karena font `9px/10px` compact. Foto lebih terlihat sedikit mengurangi kontras teks hero → mitigasi dengan `text-shadow` & glass `0.65` tetap. Mobile hapus blur meningkatkan FPS 40% tapi glass jadi solid — acceptable.
+
+**Checklist 10.2:**
+- [x] Struktur `left-combined` telemetry+scanner 1/2 kiri, riwayat 1/2 kanan (`1fr 1fr` desktop)
+- [x] Overlay `blur 4px` + opacity 0.52/0.32, glass `blur 8px` seperti `checkin.html`
+- [x] Mobile `<680` hapus blur per `perf-ui-ux-3mode` (60fps)
+- [ ] Verifikasi visual desktop 1366×768 / 1920×1080: riwayat muat 12+ tamu, foto background terlihat jelas

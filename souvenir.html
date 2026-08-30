@@ -120,10 +120,11 @@
             inset: 0;
             z-index: 2;
             pointer-events: none;
-            background: linear-gradient(135deg, rgba(255, 249, 245, 0.86) 0%, rgba(255, 245, 238, 0.78) 45%, rgba(255, 249, 245, 0.90) 100%),
-                        linear-gradient(180deg, rgba(255, 255, 255, 0.40) 0%, rgba(255, 249, 245, 0.94) 100%);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            /* Samakan checkin.html: foto terlihat jelas, overlay tipis, blur 4px saja */
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 249, 245, 0.32) 45%, rgba(255, 255, 255, 0.52) 100%),
+                        linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 249, 245, 0.45) 100%);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
         }
 
         /* ── FLOATING PARTICLES ── */
@@ -227,15 +228,15 @@
             box-shadow: 0 2px 8px rgba(200, 150, 46, 0.35);
         }
 
-        /* ── FROSTED GLASS CARDS ── */
+        /* ── FROSTED GLASS CARDS — blur 8px (checkin header) bukan 20px, foto tetap terlihat ── */
         .sapatamu-glass-card {
             background: var(--card-glass);
             border: 1px solid var(--card-glass-border);
             border-radius: var(--radius-xl);
             padding: 22px 24px;
             box-shadow: var(--shadow-subtle);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             transition: var(--transition);
         }
         .sapatamu-glass-card:hover {
@@ -270,16 +271,16 @@
             background: var(--border-soft);
         }
 
-        /* ── HERO EVENT HEADER ── */
+        /* ── HERO EVENT HEADER — blur 8px seperti checkin.html header, foto tidak tertutup ── */
         .event-hero-box {
-            background: rgba(255, 255, 255, 0.72);
+            background: rgba(255, 255, 255, 0.65);
             border: 1px solid rgba(255, 255, 255, 0.85);
             border-radius: 24px;
             padding: 22px 18px;
             text-align: center;
             box-shadow: var(--shadow-subtle);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             margin-bottom: 18px;
             position: relative;
             z-index: 10;
@@ -512,7 +513,7 @@
             }
             .telemetry-grid {
                 flex: 0 0 auto;
-                margin-bottom: 10px !important;
+                margin-bottom: 0 !important;
                 gap: 0.75rem !important;
             }
             .telemetry-grid .sapatamu-glass-card { padding: 14px 16px !important; }
@@ -522,7 +523,18 @@
                 overflow: hidden;
                 align-items: stretch !important;
                 gap: 1rem !important;
+                grid-template-columns: 1fr 1fr !important; /* 1/2 kiri telemetry+scanner | 1/2 kanan riwayat — riwayat lebih lega */
             }
+            .left-combined {
+                display: flex;
+                flex-direction: column;
+                gap: 0.85rem;
+                min-height: 0;
+                overflow: hidden;
+                align-self: stretch;
+            }
+            .left-combined .telemetry-grid { flex: 0 0 auto; margin-bottom: 0 !important; }
+            .left-combined .col-scanner-panel { flex: 1 1 auto; min-height: 0; }
             .col-scanner-panel {
                 min-height: 0;
                 overflow-y: auto;
@@ -616,6 +628,9 @@
                 max-height: calc(100vh - 320px) !important;
                 min-height: 200px;
             }
+            /* perf-ui-ux-3mode: mobile hapus blur agar 60fps, foto tetap terlihat jelas */
+            .hero-overlay-frost { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: linear-gradient(135deg, rgba(255,255,255,0.52) 0%, rgba(255,249,245,0.28) 45%, rgba(255,255,255,0.48) 100%), linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,249,245,0.42) 100%) !important; }
+            .sapatamu-glass-card, .event-hero-box { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: rgba(255,255,255,0.92) !important; }
         }
 
         /* Toggle switch */
@@ -702,69 +717,71 @@
         </button>
     </div>
 
-    <!-- ── 4. MAIN CONTENT CONTAINER (3-Mode Grid) ── -->
+    <!-- ── 4. MAIN CONTENT CONTAINER (3-Mode Grid) — Desktop 1/2+1/2: kiri telemetry+scanner, kanan riwayat ── -->
     <main class="max-w-6xl mx-auto w-full flex-grow mb-12 relative z-10">
-
-        <!-- TELEMETRY COUNTER CARDS (Styled Like analytics.html KPI Cards) -->
-        <div class="telemetry-grid grid grid-cols-3 gap-2.5 sm:gap-4 mb-5">
-            
-            <!-- Card 1: Souvenir Keluar -->
-            <div class="sapatamu-glass-card telemetry-card flex flex-col justify-between">
-                <div class="flex items-center justify-between gap-1 mb-0.5">
-                    <span class="st-label m-0 truncate">TERBAGI</span>
-                    <span id="souvenir-ratio-pct" class="text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 shrink-0">0%</span>
-                </div>
-                <div id="stat-souvenir-out" class="telemetry-val text-xl sm:text-3xl font-black text-[#10B981] tracking-tighter leading-none my-1">
-                    <div class="skeleton-shimmer h-6 w-12"></div>
-                </div>
-                <div>
-                    <div class="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 mb-0.5">
-                        <div id="souvenir-bar" class="h-full bg-[#10B981] transition-all duration-500" style="width: 0%;"></div>
-                    </div>
-                    <span id="souvenir-sub-desc" class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight block truncate">0 dari 0 Hadir</span>
-                </div>
-            </div>
-
-            <!-- Card 2: Sisa Persediaan -->
-            <div class="sapatamu-glass-card telemetry-card flex flex-col justify-between">
-                <div class="flex items-center justify-between gap-1 mb-0.5">
-                    <span class="st-label m-0 truncate">SISA STOK</span>
-                    <span id="stock-status-pill" class="text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 shrink-0">READY</span>
-                </div>
-                <div id="stat-souvenir-left" class="telemetry-val text-xl sm:text-3xl font-black text-[#C8962E] tracking-tighter leading-none my-1">
-                    <div class="skeleton-shimmer h-6 w-12"></div>
-                </div>
-                <div>
-                    <div class="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 mb-0.5">
-                        <div id="stock-bar" class="h-full bg-[#C8962E] transition-all duration-500" style="width: 100%;"></div>
-                    </div>
-                    <span id="stat-souvenir-total" class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight truncate block">Memuat stok...</span>
-                </div>
-            </div>
-
-            <!-- Card 3: Tamu di Ballroom -->
-            <div class="sapatamu-glass-card telemetry-card flex flex-col justify-between">
-                <div class="flex items-center justify-between gap-1 mb-0.5">
-                    <span class="st-label m-0 truncate">BALLROOM</span>
-                    <span id="occupancy-status-pill" class="text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-800 shrink-0">LIVE</span>
-                </div>
-                <div id="stat-active-in-ballroom" class="telemetry-val text-xl sm:text-3xl font-black text-[#E07B7B] tracking-tighter leading-none my-1">
-                    <div class="skeleton-shimmer h-6 w-12"></div>
-                </div>
-                <div>
-                    <div class="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 mb-0.5">
-                        <div id="occupancy-bar" class="h-full bg-[#E07B7B] transition-all duration-500" style="width: 0%;"></div>
-                    </div>
-                    <span id="ballroom-sub-desc" class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight block truncate">Tamu di Gedung</span>
-                </div>
-            </div>
-
-        </div>
 
         <div class="view-desktop-grid">
 
-            <!-- ── LEFT PANEL: SCANNER CONSOLE & RESULT ── -->
-            <section id="panel-scanner" class="col-scanner-panel flex flex-col gap-4">
+            <!-- LEFT COMBINED 1/2: TELEMETRY + SCANNER (desktop 1/2 kiri — riwayat lebih lega di kanan) -->
+            <div class="left-combined flex flex-col gap-4 min-w-0">
+                <!-- TELEMETRY COUNTER CARDS (Styled Like analytics.html KPI Cards) -->
+                <div class="telemetry-grid grid grid-cols-3 gap-2.5 sm:gap-4">
+                    
+                    <!-- Card 1: Souvenir Keluar -->
+                    <div class="sapatamu-glass-card telemetry-card flex flex-col justify-between">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="st-label m-0 truncate">TERBAGI</span>
+                            <span id="souvenir-ratio-pct" class="text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 shrink-0">0%</span>
+                        </div>
+                        <div id="stat-souvenir-out" class="telemetry-val text-xl sm:text-3xl font-black text-[#10B981] tracking-tighter leading-none my-1">
+                            <div class="skeleton-shimmer h-6 w-12"></div>
+                        </div>
+                        <div>
+                            <div class="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 mb-0.5">
+                                <div id="souvenir-bar" class="h-full bg-[#10B981] transition-all duration-500" style="width: 0%;"></div>
+                            </div>
+                            <span id="souvenir-sub-desc" class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight block truncate">0 dari 0 Hadir</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Sisa Persediaan -->
+                    <div class="sapatamu-glass-card telemetry-card flex flex-col justify-between">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="st-label m-0 truncate">SISA STOK</span>
+                            <span id="stock-status-pill" class="text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 shrink-0">READY</span>
+                        </div>
+                        <div id="stat-souvenir-left" class="telemetry-val text-xl sm:text-3xl font-black text-[#C8962E] tracking-tighter leading-none my-1">
+                            <div class="skeleton-shimmer h-6 w-12"></div>
+                        </div>
+                        <div>
+                            <div class="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 mb-0.5">
+                                <div id="stock-bar" class="h-full bg-[#C8962E] transition-all duration-500" style="width: 100%;"></div>
+                            </div>
+                            <span id="stat-souvenir-total" class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight truncate block">Memuat stok...</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Tamu di Ballroom -->
+                    <div class="sapatamu-glass-card telemetry-card flex flex-col justify-between">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="st-label m-0 truncate">BALLROOM</span>
+                            <span id="occupancy-status-pill" class="text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-800 shrink-0">LIVE</span>
+                        </div>
+                        <div id="stat-active-in-ballroom" class="telemetry-val text-xl sm:text-3xl font-black text-[#E07B7B] tracking-tighter leading-none my-1">
+                            <div class="skeleton-shimmer h-6 w-12"></div>
+                        </div>
+                        <div>
+                            <div class="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 mb-0.5">
+                                <div id="occupancy-bar" class="h-full bg-[#E07B7B] transition-all duration-500" style="width: 0%;"></div>
+                            </div>
+                            <span id="ballroom-sub-desc" class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight block truncate">Tamu di Gedung</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ── SCANNER CONSOLE (kini di dalam 1/2 kiri, bawah telemetry) ── -->
+                <section id="panel-scanner" class="col-scanner-panel flex flex-col gap-4">
 
                 <!-- SCANNER CONSOLE CARD -->
                 <div class="sapatamu-glass-card flex flex-col gap-4">
@@ -824,7 +841,9 @@
                 </div>
 
             </section>
+            </div>
 
+            <!-- RIGHT PANEL 1/2: STREAM OF RECENT CLAIMS & GUEST LOGS (desktop 1/2 kanan) -->
             <!-- ── RIGHT PANEL: STREAM OF RECENT CLAIMS & GUEST LOGS ── -->
             <section id="panel-recent" class="col-stream-panel flex flex-col gap-4">
 
