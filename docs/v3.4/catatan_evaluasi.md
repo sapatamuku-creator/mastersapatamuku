@@ -127,7 +127,39 @@ Pengujian langsung telah dijalankan di browser menggunakan akun dummy (`akundemo
   - [x] Sinkronisasi pembacaan data kapasitas dan souvenir di `analytics.html` dan `souvenir.html`.
 - [x] **Sync Engine & Arsitektur Saklar Off-Grid (`sync-engine.js`, `offline-db.js`):**
   - [x] Implementasikan Server-Authoritative Conflict Guard (Conditional Patching & Pre-Check diffing) di `sync-engine.js`.
-  - [x] Cegah blind overwrite pada data server yang sudah ter-update lebih dulu.
+  - [x] Cegah blind overwrite pada data server yang sudah ter-update lebih dulu.## 8. Evaluasi Lanjutan — Logika Ballroom & Exit Gate Scan (30 Agustus 2026)
 
+### Temuan: Ketidaksinkronan Angka Ballroom antara `souvenir.html` dan `analytics.html`
 
+**Akar Masalah:**
+
+1. **`souvenir.html`** menampilkan ballroom per **kode unik** (81 kode masih di gedung).
+2. **`analytics.html`** menampilkan ballroom per **pax / orang** (125 pax masih di gedung).
+3. Perbedaan angka ini **bukan bug** — konsisten secara matematis: `81 kode × ~1.54 pax/kode ≈ 125 pax`.
+
+**Keputusan Desain (FINAL):**
+
+| Halaman | Formula Ballroom | Unit | Alasan |
+|---|---|---|---|
+| `souvenir.html` | `kode checkin − kode checkout` | Kode Unik | Operator scan per kartu/label barcode |
+| `analytics.html` | `Σ real_hadir checkin − Σ real_hadir checkout` | Pax (Orang) | Dashboard manajemen melihat jumlah orang |
+
+### Temuan: Logika Scan Exit Gate Salah (Sebelum Patch)
+
+**Bug Lama:**
+- `handleClaimByCode` selalu mem-patch `souvenir: "ya"` untuk semua tamu yang scan — padahal tamu tanpa hak souvenir seharusnya tetap bisa checkout tapi tidak dapat souvenir.
+- `analytics.html` menghitung `checkedOutPax` berdasarkan `souvenir=YA OR jam_pulang`, sehingga tamu yang memiliki flag `souvenir=ya` dari data awal dihitung sudah keluar meskipun belum scan exit.
+
+**Perbaikan (Patch `46f0cb6`):**
+- `souvenir.html` scan: `jam_pulang` selalu di-PATCH untuk **semua** tamu (exit gate), `souvenir` tidak diubah.
+- Alert hasil scan: `SOUVENIR TERBAGI ✓` (hijau) untuk tamu berhak, `CHECKOUT ✓ — TIDAK ADA SOUVENIR` (biru) untuk yang tidak berhak.
+- Riwayat: badge 🎁 TERBAGI vs 🚪 PULANG.
+- `analytics.html`: `checkedOutPax` murni dari `jam_pulang` saja; `claimedSouvenirCount` = `souvenir=YA AND jam_pulang ada`.
+
+### Checklist Tambahan
+
+- [x] Patch `souvenir.html` exit gate scan — jam_pulang untuk semua, alert dibedakan
+- [x] Patch `analytics.html` — ballroom pax berbasis jam_pulang, souvenir dipisah
+- [x] Patch `lib/guestbook-core.js` — tambah `jamPulang` ke fetchAllTamu mapping
+- [x] Patch `backend/Main.gs` — baca Kolom T (jam_pulang) di syncSheetToSupabase
 
