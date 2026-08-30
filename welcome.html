@@ -731,7 +731,9 @@
         function applyWelcomeData(data) {
             if (!data) return;
             document.getElementById('couple-name').innerHTML = sanitizeHTML(data.weddingName || "SapaTamu.Ku");
-            document.getElementById('wedding-date').innerText = data.weddingDate;
+            // Guard: jangan tampilkan "undefined" jika weddingDate belum terisi
+            const dateVal = data.weddingDate;
+            document.getElementById('wedding-date').innerText = (dateVal && dateVal !== 'undefined' && dateVal !== '-') ? dateVal : "";
             if (data.teksSambutan1) document.getElementById('welcome-teks-1').innerText = data.teksSambutan1;
             if (data.teksSambutan2) document.getElementById('welcome-teks-2').innerText = data.teksSambutan2;
             if (data.urlFoto) {
@@ -743,8 +745,9 @@
 
             const now = new Date();
             const nowVal = (now.getHours() * 100) + now.getMinutes();
+            const rundownItems = data.rundown || [];
             let rundownHtml = "";
-            (data.rundown || []).forEach((item, i, arr) => {
+            rundownItems.forEach((item, i, arr) => {
                 const startVal = convertToTimeValue(item.syncTime);
                 const nextItem = arr[i + 1];
                 const active = nextItem
@@ -756,12 +759,37 @@
                     <div class="event-name">${sanitizeHTML(item.eventName)}</div>
                 </div>`;
             });
-            document.getElementById('rundown-list').innerHTML = rundownHtml;
 
-            if (data.vendors) {
-                localVendors = data.vendors;
+            if (rundownHtml) {
+                document.getElementById('rundown-list').innerHTML = rundownHtml;
+            } else {
+                // Rundown kosong — tampilkan placeholder dan coba fetch ulang dari GAS
+                document.getElementById('rundown-list').innerHTML = `
+                    <div class="rundown-item" style="opacity:0.4">
+                        <div class="event-name" style="font-size:clamp(0.8rem,1.2vw,1rem);color:#D4AF37">Memuat rundown...</div>
+                    </div>`;
+                // Lazy fallback GAS untuk rundown — hanya jika Supabase tidak punya data
+                if (ssId) {
+                    fetch(`${SCRIPT_URL}?action=getWelcome&ssId=${ssId}&action_sub=getWelcomeData&_=${Date.now()}`)
+                        .then(r => r.ok ? r.json() : null)
+                        .then(gasData => {
+                            if (!gasData || gasData.status === 'error') return;
+                            // Merge: ambil rundown dan vendors dari GAS jika Supabase kosong
+                            const mergedData = { ...data, ...gasData };
+                            delete mergedData.status;
+                            applyWelcomeData(mergedData);
+                        })
+                        .catch(e => console.warn('Rundown GAS fallback error:', e));
+                }
             }
-            
+
+            // Vendors: hanya set jika array tidak kosong
+            if (Array.isArray(data.vendors) && data.vendors.length > 0) {
+                localVendors = data.vendors;
+            } else if (!localVendors.length) {
+                localVendors = [];
+            }
+
             startRotationLoop();
         }
 

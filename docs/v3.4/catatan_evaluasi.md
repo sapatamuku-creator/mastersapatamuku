@@ -163,3 +163,59 @@ Pengujian langsung telah dijalankan di browser menggunakan akun dummy (`akundemo
 - [x] Patch `lib/guestbook-core.js` — tambah `jamPulang` ke fetchAllTamu mapping
 - [x] Patch `backend/Main.gs` — baca Kolom T (jam_pulang) di syncSheetToSupabase
 
+---
+
+## 9. Evaluasi Bug `welcome.html` — Nama Acara "undefined" & Rundown Vendor Tidak Muncul
+
+**URL:** `https://fazafarid.sapatamu.id/welcome?ssId=...`
+**Tanggal Temuan:** 30 Agustus 2026
+
+### Bug 1: Nama Acara Menampilkan "undefined"
+
+**Gejala:** Tampilan welcome sign menampilkan:
+```
+Selamat Datang di Acara
+SapaTamu.Ku
+undefined
+```
+
+**Akar Masalah:**
+- `applyWelcomeData()` L.734: `document.getElementById('wedding-date').innerText = data.weddingDate;`
+- Jika `config_welcome.data` di Supabase belum pernah di-mirror ulang setelah ada perubahan, `weddingDate` bisa bernilai `undefined` (bukan string kosong).
+- JavaScript `undefined` saat di-assign ke `.innerText` menjadi literal string `"undefined"` di DOM.
+
+**Perbaikan (patch):**
+```js
+// SEBELUM (bug):
+document.getElementById('wedding-date').innerText = data.weddingDate;
+
+// SESUDAH (fix):
+const dateVal = data.weddingDate;
+document.getElementById('wedding-date').innerText =
+    (dateVal && dateVal !== 'undefined' && dateVal !== '-') ? dateVal : "";
+```
+
+### Bug 2: Rundown & Vendor Tidak Muncul
+
+**Gejala:** Timeline panel kosong, tidak ada rundown acara, tidak ada rotasi vendor di sisi kiri.
+
+**Akar Masalah:**
+- Data `rundown` dan `vendors` di `config_welcome.data` Supabase bisa berupa array kosong `[]` jika `mirrorWelcomeConfigToSupabase()` dipanggil sebelum sheet `Rundown` terisi, atau sheet `Rundown` belum ada.
+- `applyWelcomeData()` tidak memiliki fallback ke GAS ketika `data.rundown` adalah array kosong. Langsung `innerHTML = ""` tanpa retry.
+- `localVendors` tidak di-populate jika `data.vendors` adalah falsy atau `[]`.
+
+**Perbaikan (patch):**
+- Jika `data.rundown` kosong: tampilkan placeholder "Memuat rundown..." dan lazy-fetch dari GAS, merge hasilnya ke `applyWelcomeData(mergedData)`.
+- Guard vendors: hanya assign `localVendors = data.vendors` jika array tidak kosong.
+- `startRotationLoop()` tetap dipanggil setelah semua data di-apply.
+
+### Catatan Penting untuk Operator
+
+> **`mirrorWelcomeConfigToSupabase()` harus dijalankan ulang dari GAS setiap kali ada perubahan di sheet `Rundown` agar Supabase `config_welcome.data` sinkron.**
+> Patch ini menambahkan fallback ke GAS secara otomatis jika Supabase punya data kosong.
+
+### Checklist Tambahan
+
+- [x] Patch `welcome.html` `applyWelcomeData()` — guard undefined weddingDate
+- [x] Patch `welcome.html` — lazy GAS fallback jika rundown dari Supabase kosong
+- [x] Patch `welcome.html` — guard vendors empty array
