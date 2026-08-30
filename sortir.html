@@ -1102,17 +1102,26 @@
         <div id="nearby-bridge-panel" class="card" style="margin-top: 32px; border: 1.5px solid rgba(200,150,46,0.25);">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                 <div>
-                    <h3 style="font-size: 22px; color: var(--primary);">📡 Share ke HP Saya</h3>
-                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Pilih folder di PC → HP scan → pilih foto di HP, copy tetap di PC.</p>
+                    <h3 style="font-size: 22px; color: var(--primary);">📡 SapaTamu Local Bridge (100% LAN)</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Pilih folder di PC → HP scan QR → pilih foto di HP (Pinterest Grid) → file JPG &amp; RAW otomatis tersalin di PC.</p>
                 </div>
-                <span style="background: rgba(16,185,129,0.1); color: var(--success); font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 10px;" id="nearby-status-badge">Siap</span>
+                <span style="background: rgba(16,185,129,0.1); color: var(--success); font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 10px;" id="nearby-status-badge">100% Local LAN</span>
             </div>
 
-            <!-- 1 KLIK PC SHARE — tanpa instal, background otomatis -->
-            <div id="pc-share-area" style="background: linear-gradient(135deg,#FFF9F5,#FFF); border: 1.5px dashed #C8962E; border-radius: 16px; padding: 18px; margin-bottom: 16px; text-align: center;">
-                <p id="pc-share-title" style="font-weight: 800; font-size: 15px;">📁 1 Klik Share ke HP Saya</p>
-                <p id="pc-share-subtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Project apapun → pilih folder foto di PC, HP langsung scan — tanpa <code>pip</code></p>
-                <button id="btn-pc-one-click" onclick="pcOneClickShare()" class="btn btn-primary" style="margin-top: 12px; width: 100%; padding: 14px; font-size: 14px; font-weight: 800;">📁 Pilih Folder &amp; Buat QR</button>
+            <!-- 1 KLIK PC SHARE — Pure Local LAN Launcher -->
+            <div id="pc-share-area" style="background: linear-gradient(135deg,#FFF9F5,#FFF); border: 1.5px dashed #C8962E; border-radius: 16px; padding: 20px; margin-bottom: 16px; text-align: center;">
+                <p id="pc-share-title" style="font-weight: 800; font-size: 16px; color: var(--text-main);">⚡ SapaTamu Local Culling Launcher</p>
+                <p id="pc-share-subtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Unduh 1-Klik Launcher untuk PC Anda. Sekali klik, server lokal langsung aktif dan HP tinggal scan QR.</p>
+                
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px;">
+                    <button onclick="downloadLocalBridgeBat()" class="btn btn-primary" style="padding: 12px 24px; font-size: 13px; font-weight: 800; box-shadow: 0 4px 14px rgba(200,150,46,0.3);">
+                        📥 Unduh 1-Klik Launcher (.bat)
+                    </button>
+                    <button id="btn-pc-one-click" onclick="pcOneClickShare()" class="btn btn-secondary" style="padding: 12px 20px; font-size: 13px; font-weight: 700;">
+                        📁 Buka Folder Langsung di Browser
+                    </button>
+                </div>
+                
                 <div id="pc-share-qr" style="display:none; margin-top: 16px;"></div>
                 <p id="pc-share-status" style="font-size: 11px; color: var(--text-muted); margin-top: 8px;"></p>
                 <p id="pc-share-fallback" style="display:none; font-size: 11px; color: #E07B7B; margin-top: 8px;">Browser ini tidak support <code>showDirectoryPicker</code> (Firefox). Gunakan <code>python sortir_bridge.py</code> — lihat panduan di bawah.</p>
@@ -4193,6 +4202,54 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     // auto-restore jika pernah terhubung
     if(nearbyPC) document.getElementById('nearby-status-badge').textContent='Tersimpan: '+nearbyPC.ip;
 });
+
+// Download 1-Klik Launcher BAT untuk Vendor
+window.downloadLocalBridgeBat = function(){
+    const batContent = `@echo off
+title SapaTamu Local Culling Bridge (100% LAN)
+cls
+echo =========================================================
+echo       SAPATAMU LOCAL CULLING BRIDGE (100% PURE LAN)
+echo =========================================================
+echo  PC = Gudang File Lokal  ^|  HP = Remote Pinterest Selector
+echo =========================================================
+echo.
+
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Python tidak ditemukan di komputer ini!
+    echo Harap instal Python dari https://www.python.org/
+    pause
+    exit /b 1
+)
+
+echo [1/3] Memeriksa modul Python...
+python -c "import fastapi, uvicorn, PIL" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo       Memasang modul otomatis (fastapi, uvicorn, pillow)...
+    pip install fastapi uvicorn pillow -q
+)
+
+echo [2/3] Memeriksa engine sortir_bridge.py...
+if not exist "sortir_bridge.py" (
+    echo       Mengunduh engine sortir_bridge.py terbaru...
+    python -c "import urllib.request; urllib.request.urlretrieve('https://raw.githubusercontent.com/sapatamuku-creator/mastersapatamuku/main/sortir_bridge.py', 'sortir_bridge.py')"
+)
+
+echo [3/3] Menjalankan Server Local Bridge...
+python sortir_bridge.py
+pause`;
+
+    const blob = new Blob([batContent], { type: 'application/x-bat' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Buka_Sortir_Local_Bridge.bat';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showAlert('Download Berhasil 📥', 'File Buka_Sortir_Local_Bridge.bat berhasil diunduh. Double-click file tersebut di PC Anda untuk langsung menjalankan bridge lokal!', '✅');
+};
+
 // override localExportFiles jika remote mode: kirim ke PC bukan ke FileSystem API
 const _origLocalExport = window.localExportFiles;
 window.localExportFiles = async function(){
