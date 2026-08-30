@@ -4209,6 +4209,18 @@ async function pcOneClickShare(){
             try{
                 const msg=JSON.parse(e.data);
 
+                // HP meminta list foto saat DataChannel terbuka
+                if(msg.type === 'request_list'){
+                    if(dc.readyState === 'open'){
+                        dc.send(JSON.stringify({
+                            type:'list', 
+                            count: _pcFiles.length,
+                            files: _pcFiles.slice(0,500).map((n, idx)=>({ id: 'pc_' + idx, name: n }))
+                        }));
+                        streamThumbnailsToHP(dc);
+                    }
+                }
+
                 // Permintaan preview resolusi tinggi untuk Lightbox di HP
                 if(msg.type === 'get_preview'){
                     const fh = _pcFileMap.get(msg.name);
@@ -4661,7 +4673,10 @@ function setupHpDataChannel(dc){
     };
 
     dc.onopen = ()=>{ 
-        showAlert('DataChannel Aktif', 'Terhubung P2P dengan PC — siap memilih foto', '✅'); 
+        showAlert('DataChannel Aktif', 'Terhubung P2P dengan PC — memuat foto...', '✅'); 
+        try {
+            dc.send(JSON.stringify({ type: 'request_list' }));
+        } catch(e){}
     };
 
     // Override tombol Ekspor di HP agar mengirim instruksi copy ke PC
