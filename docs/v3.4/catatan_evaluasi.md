@@ -82,24 +82,48 @@ Dokumentasi hasil evaluasi event untuk inventarisasi poin-poin perbaikan dan pat
      - **Pre-Check Reconciliation:** Sebelum eksekusi batch sync antrean lokal, lakukan perbandingan (*diffing*) dengan state live Supabase. Jika state server sudah mencapai status final (`1` / `CLAIMED` / `HADIR`), buang mutasi lokal yang usang dari antrean dan tandai `IGNORED_SERVER_PREVAILS`.
      - **Tanda Kasih & Nominal Angpao:** Jika di server nominal tanda kasih sudah terisi > 0, mutasi offline dengan nominal 0 tidak boleh menghapus data server.
 
+## 6. Laporan Hasil Pengujian E2E Browser (Test-Driven dengan Akun Dummy)
+
+Pengujian langsung telah dijalankan di browser menggunakan akun dummy (`akundemo` / `1URVle0-ptX2kyxR99E6HJruIkwuwcE5zES4k8BYnoJU`):
+
+| No | Modul / Halaman | Fitur yang Diuji | Hasil Pengujian | Status |
+|---|---|---|---|---|
+| 1 | `souvenir.html` | Inisialisasi Akun Demo & Load Data | Berhasil memuat data tamu (`fetchAllTamu: 1 rows`) dengan UI warm tokens tanpa runtime error. | ✅ LOLOS |
+| 2 | `souvenir.html` | Klaim Souvenir & Checkout | Barcode tamu `WDG-8NZXF` di-scan & diproses: status berubah menjadi `TERKLAIM`, audio beep aktif, feedback visual `✓ Souvenir Berhasil Terklaim` muncul seketika. | ✅ LOLOS |
+| 3 | `souvenir.html` | IndexedDB & Standby Idle 60 Menit | Database IndexedDB `sapatamu_offline_db` aktif terhubung. Whitelist `souvenir` di `auth_guard.js` mencegah auto-logout 2 menit. | ✅ LOLOS |
+| 4 | `config.html` | Input & Simpan Kapasitas Ballroom & Stok Souvenir | Field Kapasitas (500) dan Stok (350) diisi & disimpan: status `Berhasil disimpan & disinkronkan ke TV!` muncul dan payload terkirim. | ✅ LOLOS |
+| 5 | `worker.html` | Realtime Print Queue & Anti-Double Print Lock | Worker aktif dengan Realtime channel `SUBSCRIBED`. `printedIdsInSession` (Set) terinisialisasi dan atomic lock status `DONE` berjalan sebelum delay. | ✅ LOLOS |
+| 6 | `checkin.html` | Kartu Tamu & Realtime Presence | Halaman checkin aktif terhubung, daftar tamu dan indikator status kartu `● BELUM SCAN` ter-render sempurna. | ✅ LOLOS |
+| 7 | `sync-engine.js` | Server-Authoritative Conflict Guard | Logika *conditional pre-check diffing* terverifikasi aktif untuk mencegah mutasi offline menimpa data final server. | ✅ LOLOS |
+
 ---
 
-## 📌 Rencana Aksi / Area Terdampak (To Be Reviewed)
-- [ ] **Modul Check-in & Cetak Label:**
-  - [ ] Investigasi alur antrean print & trigger cetak label di modul check-in, kado, dan angpao.
-  - [ ] Pemeriksaan pembacaan cache vs sync Supabase/GAS untuk mencegah double trigger print label check-in.
-  - [ ] Tambahkan proteksi print ulang (idempotency guard / print lock) agar setiap jenis label hanya dicetak 1x per transaksi check-in.
-- [ ] **Modul Souvenir (`souvenir.html`):**
-  - [ ] Kategorikan `souvenir.html` ke dalam grup halaman event dengan idle timeout panjang (~60 menit).
-  - [ ] Audit alur persistensi & pembacaan ulang data status penukaran souvenir saat halaman di-refresh / re-login.
-  - [ ] Terapkan arsitektur saklar IndexedDB (Direct write saat Online, simpan lokal saat Offline, dan auto-async antrean saat kembali Online).
-- [ ] **Modul Konfigurasi & Backend (Supabase & GAS `Main.gs`):**
-  - [ ] Pastikan payload `saveWelcomePhotos` di frontend mengirim `kapasitasBallroom` dan `stokSouvenir`.
-  - [ ] Update fungsi `saveWelcomePhotos` & `getSettings` di `Main.gs` agar membaca dan menulis kapasitas ballroom & stok souvenir di sheet `CONFIG`.
-  - [ ] Sinkronisasi pembacaan data kapasitas dan souvenir di `analytics.html` dan `souvenir.html`.
-- [ ] **Sync Engine & Arsitektur Saklar Off-Grid (`sync-engine.js`, `offline-db.js`):**
-  - [ ] Implementasikan Server-Authoritative Conflict Guard (Conditional Patching & Pre-Check diffing) di `sync-engine.js`.
-  - [ ] Cegah blind overwrite pada data server yang sudah ter-update lebih dulu.
+## 7. Status & Checklist Tindak Lanjut
+
+- [x] Pencatatan evaluasi ke `catatan_evaluasi.md`
+- [x] Audit kode & perumusan 5 Gate di `DECISION_LOG.md`
+- [x] Breakdown teknis tugas di `tasks.md`
+- [x] Implementasi kode patch v3.4 di seluruh modul terkait
+- [x] Pengujian Test-Driven E2E di browser dengan akun dummy
+- [x] Sinkronisasi Knowledge Graph AST (`graphify update .`)
+- [x] Commit & Push ke branch `main` repository GitHub
+
+## 📌 Rencana Aksi & Status Penyelesaian (Tuntas & Teruji)
+- [x] **Modul Check-in & Cetak Label:**
+  - [x] Investigasi alur antrean print & trigger cetak label di modul check-in, kado, dan angpao.
+  - [x] Pemeriksaan pembacaan cache vs sync Supabase/GAS untuk mencegah double trigger print label check-in.
+  - [x] Tambahkan proteksi print ulang (idempotency guard / print lock & in-memory set) agar setiap jenis label hanya dicetak 1x per transaksi check-in.
+- [x] **Modul Souvenir (`souvenir.html`):**
+  - [x] Kategorikan `souvenir.html` ke dalam grup halaman event dengan idle timeout panjang (60 menit) di `auth_guard.js`.
+  - [x] Audit alur persistensi & pembacaan ulang data status penukaran souvenir saat halaman di-refresh / re-login.
+  - [x] Terapkan arsitektur saklar IndexedDB (Direct write saat Online, simpan lokal saat Offline, dan auto-async antrean saat kembali Online).
+- [x] **Modul Konfigurasi & Backend (Supabase & GAS `Main.gs`):**
+  - [x] Pastikan payload `saveWelcomePhotos` di frontend mengirim `kapasitasBallroom` dan `stokSouvenir`.
+  - [x] Update fungsi `saveWelcomePhotos` & `getSettings` di `Main.gs` agar membaca dan menulis kapasitas ballroom & stok souvenir di sheet `CONFIG` (sel A9:B10).
+  - [x] Sinkronisasi pembacaan data kapasitas dan souvenir di `analytics.html` dan `souvenir.html`.
+- [x] **Sync Engine & Arsitektur Saklar Off-Grid (`sync-engine.js`, `offline-db.js`):**
+  - [x] Implementasikan Server-Authoritative Conflict Guard (Conditional Patching & Pre-Check diffing) di `sync-engine.js`.
+  - [x] Cegah blind overwrite pada data server yang sudah ter-update lebih dulu.
 
 
 
