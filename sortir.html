@@ -4585,99 +4585,97 @@ async function pcOneClickShare(){
             status: 'waiting'
         });
 
-        // 3. ASYNC CHUNK SCANNING & STREAMING (0% CPU LAG, REAL-TIME EMISSION)
+        // 3. PARALLEL NON-BLOCKING GPU STREAMING PIPELINE
         (async () => {
             let allDiscovered = [];
-            let lastPushedLength = 0;
+            let isScanningDone = false;
+            let isSyncingDB = false;
+            let lastPushedCount = 0;
 
-            async function traverseFolder(dir, currentPath = '') {
+            // Worker Queue GPU Paralel (24 concurrent GPU threads)
+            let gpuIdx = 0;
+            const CONCURRENCY = hw.hw ? 24 : Math.max(8, (navigator.hardwareConcurrency || 8));
+
+            async function gpuWorker() {
+                while (gpuIdx < allDiscovered.length || !isScanningDone) {
+                    if (gpuIdx < allDiscovered.length) {
+                        const f = allDiscovered[gpuIdx++];
+                        if (f && !f.url) {
+                            try {
+                                const fileBlob = await f.handle.getFile();
+                                const thumb = await generateFastThumb(fileBlob, 480, 0.60);
+                                f.url = thumb || '';
+                            } catch (e) {}
+                        }
+                    } else {
+                        await new Promise(r => setTimeout(r, 8));
+                    }
+                }
+            }
+
+            // Launch GPU workers in parallel
+            for (let c = 0; c < CONCURRENCY; c++) {
+                gpuWorker();
+            }
+
+            // Throttled Background DB Sync (kirim setiap 250ms tanpa menghambat scanner)
+            const syncTimer = setInterval(async () => {
+                if (allDiscovered.length > 0 && !isSyncingDB) {
+                    isSyncingDB = true;
+                    if (statusEl) statusEl.textContent = `⚡ [${hw.label}] Mengalirkan ${allDiscovered.length} foto 480p ke HP...`;
+                    try {
+                        await sb.from('sortir_share_sessions').update({
+                            offer: {
+                                event_name: handle.name,
+                                files: allDiscovered.map(f => ({
+                                    id: f.id,
+                                    name: f.name,
+                                    relativePath: f.relativePath,
+                                    url: f.url
+                                }))
+                            },
+                            status: 'waiting'
+                        }).eq('session_key', sid);
+                    } catch (e) {}
+                    isSyncingDB = false;
+                }
+
+                if (isScanningDone && allDiscovered.length > 0 && allDiscovered.every(f => f.url)) {
+                    clearInterval(syncTimer);
+                    if (statusEl) statusEl.textContent = `✅ [${hw.label}] Seluruh ${allDiscovered.length} foto 480p aktif tersinkron ke HP`;
+                }
+            }, 300);
+
+            // Fast Directory Traversal (Pure Memory Speed, 0% Network Wait)
+            async function traverseFast(dir, currentPath = '') {
                 for await (const [name, h] of dir.entries()) {
                     if (h.kind === 'file') {
                         if (/\.(jpe?g|png|webp|bmp|tiff?|heic)$/i.test(name)) {
                             const rel = currentPath ? `${currentPath}/${name}` : name;
-                            const fileObj = {
+                            allDiscovered.push({
                                 id: 'p_' + allDiscovered.length,
                                 name: name,
                                 relativePath: rel,
                                 handle: h,
                                 url: ''
-                            };
-                            allDiscovered.push(fileObj);
+                            });
                             _pcFileMap.set(rel, h);
                             _pcFileMap.set(name, h);
-
-                            // Langsung kirim saat ada 1 foto pertama, atau per 20 foto
-                            if (allDiscovered.length === 1 || allDiscovered.length - lastPushedLength >= 20) {
-                                await emitChunk();
-                            }
                         }
                     } else if (h.kind === 'directory' && name !== 'Selected_by_Client') {
-                        await new Promise(r => setTimeout(r, 2)); // Micro-yield
                         const sub = currentPath ? `${currentPath}/${name}` : name;
-                        await traverseFolder(h, sub);
+                        await traverseFast(h, sub);
                     }
                 }
             }
 
-            async function emitChunk() {
-                lastPushedLength = allDiscovered.length;
-                if (statusEl) statusEl.textContent = `⚡ Terhubung (${hw.label}): ${allDiscovered.length} foto 480p aktif mengalir ke HP`;
-                try {
-                    await sb.from('sortir_share_sessions').update({
-                        offer: {
-                            event_name: handle.name,
-                            files: allDiscovered.map(f => ({
-                                id: f.id,
-                                name: f.name,
-                                relativePath: f.relativePath,
-                                url: f.url
-                            }))
-                        },
-                        status: 'waiting'
-                    }).eq('session_key', sid);
-                } catch (e) {}
-            }
-
-            // Jalankan penjelajahan folder
-            await traverseFolder(handle, '');
-            await emitChunk();
+            await traverseFast(handle, '');
+            isScanningDone = true;
 
             if (allDiscovered.length === 0) {
+                clearInterval(syncTimer);
                 if (statusEl) statusEl.textContent = 'Folder kosong — pilih folder yang berisi foto JPG atau PNG.';
                 if (window.showAlert) showAlert('Folder Kosong', 'Harap pilih folder yang berisi foto JPG atau PNG.', '⚠️');
-                return;
-            }
-
-            if (statusEl) statusEl.textContent = `✅ Siap! [${hw.label}] Seluruh ${allDiscovered.length} foto 480p aktif tersinkron ke HP`;
-
-            // 4. BACKGROUND 480p GPU/CPU MULTI-THREAD STREAMER (PARALLEL CONCURRENCY)
-            const CONCURRENCY = hw.hw ? 24 : Math.max(8, (navigator.hardwareConcurrency || 8));
-            for (let i = 0; i < allDiscovered.length; i += CONCURRENCY) {
-                const chunk = allDiscovered.slice(i, i + CONCURRENCY);
-                await Promise.all(chunk.map(async (f) => {
-                    try {
-                        const fileBlob = await f.handle.getFile();
-                        const thumb = await generateFastThumb(fileBlob, 480, 0.62);
-                        f.url = thumb || '';
-                    } catch (e) {}
-                }));
-
-                try {
-                    await sb.from('sortir_share_sessions').update({
-                        offer: {
-                            event_name: handle.name,
-                            files: allDiscovered.map(f => ({
-                                id: f.id,
-                                name: f.name,
-                                relativePath: f.relativePath,
-                                url: f.url
-                            }))
-                        },
-                        status: 'waiting'
-                    }).eq('session_key', sid);
-                } catch (e) {}
-
-                await new Promise(r => setTimeout(r, 10));
             }
         })();
 
