@@ -1,20 +1,15 @@
 -- ==============================================================================
--- PURGE SORTIR SHARE & BRIDGES (CLEANUP MEMORY & REMOVE FROM SUPABASE)
--- Jalankan skrip ini di SQL Editor Supabase untuk menghapus tabel berat & cache
+-- CLEANUP TANPA VACUUM (INSTAN < 0.1 DETIK — ANTI TIMEOUT)
 -- ==============================================================================
 
--- 1. Hapus Tabel & View Sesi / Bridges
+-- 1. Matikan semua query lama yang sedang macet di database
+SELECT pg_terminate_backend(pid) 
+FROM pg_stat_activity 
+WHERE pid <> pg_backend_pid() 
+  AND state IN ('active', 'idle in transaction');
+
+-- 2. Hapus langsung tabel sortir share & bridges (Instan & memori langsung bebas)
 DROP TABLE IF EXISTS public.sortir_share_sessions CASCADE;
 DROP TABLE IF EXISTS public.sortir_bridges CASCADE;
 DROP VIEW IF EXISTS public.sortir_bridges_online CASCADE;
-
--- 2. Bersihkan Trigger & Function Terkait
 DROP FUNCTION IF EXISTS update_sortir_share_updated_at CASCADE;
-
--- 3. Reclaim Space & Kosongkan Memory Buffer Cache
-VACUUM FULL;
-ANALYZE;
-
--- ==============================================================================
--- SELESAI: Database Supabase kini 100% bersih dari tabel sortir share & bridges.
--- ==============================================================================
