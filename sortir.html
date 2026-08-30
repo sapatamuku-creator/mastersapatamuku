@@ -1648,7 +1648,9 @@
     // SPA Router
     function router() {
         const params = new URLSearchParams(window.location.search);
+        const hash = window.location.hash || '';
         const eventSlug = params.get('event');
+        const shareKey = params.get('share') || params.get('p2p') || (hash.startsWith('#share=') ? hash.slice(7).split('&')[0] : null);
         const action = params.get('action');
 
         // Hide all views
@@ -1662,6 +1664,8 @@
 
         if (eventSlug) {
             initCullingView(eventSlug);
+        } else if (shareKey) {
+            initP2PCullingView(shareKey);
         } else if (action === 'owner' || action === 'admin') {
             initOwnerView();
         } else {
@@ -2316,6 +2320,95 @@
         }
     }
 
+    // ----------------------------------------------------
+    // P2P LOCAL SHARE CULLING VIEW (HP Mode via QR)
+    // ----------------------------------------------------
+    async function initP2PCullingView(shareKey) {
+        document.getElementById('view-dashboard').style.display = 'none';
+        document.getElementById('view-owner').style.display = 'none';
+        document.getElementById('view-culling').style.display = 'block';
+
+        document.getElementById('culling-loading-grid').style.display = 'grid';
+        document.getElementById('culling-photos-grid').style.display = 'none';
+        document.getElementById('culling-empty-state').style.display = 'none';
+        document.getElementById('culling-error-state').style.display = 'none';
+
+        store.isP2PMode = true;
+        store.p2pSessionKey = shareKey;
+        store.clientSearch = '';
+        store.clientFilter = 'all';
+        store.cullingSelections = new Set();
+
+        const searchInput = document.getElementById('client-search-input');
+        if (searchInput) searchInput.value = '';
+        document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+        const tabAll = document.getElementById('tab-filter-all');
+        if (tabAll) tabAll.classList.add('active');
+
+        try {
+            const { data, error } = await supabase
+                .from('sortir_share_sessions')
+                .select('offer, answer')
+                .eq('session_key', shareKey)
+                .single();
+
+            if (error || !data || !data.offer) {
+                throw new Error("Sesi share tidak ditemukan atau telah ditutup di PC.");
+            }
+
+            const offer = data.offer;
+            const eventName = offer.event_name || 'Folder PC';
+            const files = offer.files || [];
+
+            store.cullingEvent = {
+                id: shareKey,
+                event_name: eventName,
+                quota_limit: files.length,
+                whatsapp_admin: ''
+            };
+
+            const titleEl = document.getElementById('client-event-title');
+            if (titleEl) titleEl.innerText = `📂 ${eventName}`;
+            const descEl = document.getElementById('client-event-desc');
+            if (descEl) descEl.innerText = `Centang foto pilihan Anda dari PC. Pilihan tersinkron langsung ke komputer di jaringan yang sama.`;
+
+            store.cullingFiles = files.map(f => ({
+                id: f.id,
+                name: f.name,
+                url: f.url || f.thumb
+            }));
+
+            // Restore previous selections if any
+            if (data.answer && data.answer.selected && Array.isArray(data.answer.selected)) {
+                const selSet = new Set(data.answer.selected);
+                store.cullingFiles.forEach(f => {
+                    if (selSet.has(f.name)) store.cullingSelections.add(f.id);
+                });
+            }
+
+            updateClientQuotaUI();
+
+            document.getElementById('culling-loading-grid').style.display = 'none';
+
+            if (store.cullingFiles.length === 0) {
+                document.getElementById('culling-empty-state').style.display = 'block';
+            } else {
+                const photoGrid = document.getElementById('culling-photos-grid');
+                photoGrid.style.display = 'flex';
+                renderClientPhotosGrid();
+            }
+        } catch (e) {
+            console.error("Gagal load P2P culling view:", e);
+            document.getElementById('culling-loading-grid').style.display = 'none';
+            const errEl = document.getElementById('culling-error-state');
+            if (errEl) {
+                errEl.style.display = 'block';
+                const p = errEl.querySelector('p');
+                if (p) p.innerText = e.message || "Gagal memuat sesi foto dari PC.";
+            }
+        }
+    }
+
     function updateClientQuotaUI() {
         const count = store.cullingSelections.size;
         const limit = store.cullingEvent ? store.cullingEvent.quota_limit : 0;
@@ -2385,6 +2478,9 @@
         },
 
         getImgUrlForFile(file) {
+            if (file && file.url) {
+                return file.url;
+            }
             if (this.isLocal) {
                 return file.url;
             }
@@ -2957,9 +3053,9 @@
             pin.id = `card-${file.id}`;
 
             // Endpoint resmi drive.google.com/thumbnail yang menyajikan binary JPEG langsung (bebas 302 redirect & net::ERR_FAILED CORB Chromium)
-            const primaryUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
-            const altUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=s800`;
-            const altUrl2 = `https://drive.google.com/uc?export=view&id=${file.id}`;
+            const primaryUrl = file.url || `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+            const altUrl = file.url || `https://drive.google.com/thumbnail?id=${file.id}&sz=s800`;
+            const altUrl2 = file.url || `https://drive.google.com/uc?export=view&id=${file.id}`;
 
             pin.innerHTML = `
                 <img src="${primaryUrl}" 
@@ -2977,13 +3073,11 @@
         });
     }
 
-
-
     window.toggleClientSelection = async function(id, name) {
         const isSelected = store.cullingSelections.has(id);
 
         if (!isSelected) {
-            if (store.cullingSelections.size >= store.cullingEvent.quota_limit) {
+            if (!store.isP2PMode && store.cullingSelections.size >= (store.cullingEvent?.quota_limit || 99999)) {
                 showAlert("Limit Kuota Penuh", `Batas maksimal pilihan Anda untuk event ini adalah ${store.cullingEvent.quota_limit} foto. Silakan hapus pilihan pada foto lain terlebih dahulu.`, "⚠️");
                 return;
             }
@@ -3006,19 +3100,34 @@
         }
 
         // Sync to Supabase
-        const isNowSelected = store.cullingSelections.has(id);
-        try {
-            await supabase
-                .from('sortir_selections')
-                .upsert({
-                    event_id: store.cullingEvent.id,
-                    photo_id: id,
-                    photo_name: name,
-                    is_selected: isNowSelected,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'event_id,photo_id' });
-        } catch (e) {
-            console.error("Gagal sinkronisasi data seleksi:", e);
+        if (store.isP2PMode) {
+            const selectedNames = [];
+            store.cullingFiles.forEach(f => {
+                if (store.cullingSelections.has(f.id)) selectedNames.push(f.name);
+            });
+            try {
+                await supabase
+                    .from('sortir_share_sessions')
+                    .update({
+                        answer: { selected: selectedNames, updated_at: new Date().toISOString() }
+                    })
+                    .eq('session_key', store.p2pSessionKey);
+            } catch (e) {}
+        } else if (store.cullingEvent && store.cullingEvent.id) {
+            const isNowSelected = store.cullingSelections.has(id);
+            try {
+                await supabase
+                    .from('sortir_selections')
+                    .upsert({
+                        event_id: store.cullingEvent.id,
+                        photo_id: id,
+                        photo_name: name,
+                        is_selected: isNowSelected,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'event_id,photo_id' });
+            } catch (e) {
+                console.error("Gagal sinkronisasi data seleksi:", e);
+            }
         }
 
         // If filtered view, refresh grid
@@ -3039,19 +3148,37 @@
         renderClientPhotosGrid();
     };
 
-    window.submitClientSelection = function() {
+    window.submitClientSelection = async function() {
         if (store.cullingSelections.size === 0) {
             showAlert("Belum Ada Pilihan", "Anda belum memilih satu foto pun.", "📷");
             return;
         }
 
-        // Compile selections names
         const selectedNames = [];
         store.cullingFiles.forEach(f => {
             if (store.cullingSelections.has(f.id)) {
                 selectedNames.push(f.name);
             }
         });
+
+        if (store.isP2PMode) {
+            showAlert("Menyimpan Pilihan...", "Sedang mengirim pilihan foto ke PC...", "⏳");
+            try {
+                const { error } = await supabase
+                    .from('sortir_share_sessions')
+                    .update({
+                        answer: { selected: selectedNames, updated_at: new Date().toISOString() },
+                        status: 'submitted'
+                    })
+                    .eq('session_key', store.p2pSessionKey);
+
+                if (error) throw error;
+                showAlert("Berhasil Terkirim! 🎉", `Pilihan ${selectedNames.length} foto telah terkirim ke PC. Foto-foto asli sedang disalin ke folder Selected_by_Client di komputer fotografer.`, "✅");
+            } catch (e) {
+                showAlert("Gagal Kirim", e.message, "❌");
+            }
+            return;
+        }
 
         const fileListText = selectedNames.map((name, idx) => `${idx + 1}. ${name}`).join('\n');
         const message = `Halo Kak! Saya telah selesai menyortir foto untuk event *${store.cullingEvent.event_name}*.\n\nBerikut daftar foto pilihan saya (*${store.cullingSelections.size} / ${store.cullingEvent.quota_limit}*):\n\n${fileListText}\n\nTerima kasih!`;
@@ -3901,11 +4028,10 @@ async function nearbyScanQR(){
         try{ await window._nearbyScanner.stop(); }catch(e){}
         wrap.style.display='none';
         
-        // 1. Cek format 1-Klik Share P2P (#share=SID)
-        if(txt.includes('#share=')){
-            const sid = txt.split('#share=')[1].split('&')[0];
-            window.location.hash = '#share=' + sid;
-            hpJoinShare(sid);
+        // 1. Cek format 1-Klik Share P2P (?share=SID atau #share=SID)
+        if(txt.includes('share=')){
+            const sid = txt.split('share=')[1].split('&')[0].replace(/^[#?]/, '');
+            window.location.href = window.location.origin + window.location.pathname + '?share=' + sid;
             return;
         }
         // 2. Cek format LAN Direct (#offer=BASE64)
@@ -4138,7 +4264,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
 });
 
-// ── 1-KLIK SHARE KE HP (AUTO 1-SCAN P2P SIGNALING) ──
+// ── 1-KLIK SHARE KE HP (PINTEREST GRID SYNC) ──
 async function pcOneClickShare(){
     const statusEl=document.getElementById('pc-share-status');
     const qrEl=document.getElementById('pc-share-qr');
@@ -4146,221 +4272,129 @@ async function pcOneClickShare(){
         if(statusEl) statusEl.textContent='Browser tidak support showDirectoryPicker — gunakan Google Chrome / Edge di PC.';
         return;
     }
+
     try{
-        // 1. Pilih folder di PC (1 klik)
         const handle = await window.showDirectoryPicker({mode:'readwrite'});
         _pcDirHandle = handle;
         _pcFileMap.clear();
 
-        // simpan handle ke IndexedDB agar next klik tidak minta lagi
-        try{
-            const db=await new Promise((res,rej)=>{
-                const r=indexedDB.open('sortir_pc',1);
-                r.onupgradeneeded=e=>e.target.result.createObjectStore('handles');
-                r.onsuccess=e=>res(e.target.result);
-                r.onerror=rej;
-            });
-            const tx=db.transaction('handles','readwrite'); tx.objectStore('handles').put(handle,'dir'); 
-        }catch(e){}
+        if(statusEl) statusEl.textContent='Membaca folder '+handle.name+'...';
 
-        if(statusEl) statusEl.textContent='Membaca file di '+handle.name+'...';
-
-        // 2. List file foto
-        _pcFiles=[];
+        const imageFiles = [];
         for await(const [name, h] of handle.entries()){
-            if(h.kind==='file' && /\.(jpe?g|png|nef|cr2|arw|raf|orf|dng|tiff|webp|heic)$/i.test(name)){
-                _pcFiles.push(name);
+            if(h.kind==='file' && /\.(jpe?g|png|webp)$/i.test(name)){
+                imageFiles.push({ name, handle: h });
                 _pcFileMap.set(name, h);
             }
         }
-        if(_pcFiles.length===0){ if(statusEl) statusEl.textContent='Folder kosong — pilih folder berisi foto'; return; }
 
-        // 3. Generate Random Unique Session Key
-        const sid = 'p2p_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+        if(imageFiles.length===0){
+            if(statusEl) statusEl.textContent='Folder kosong — pilih folder yang berisi foto JPG atau PNG.';
+            showAlert('Folder Kosong', 'Harap pilih folder yang berisi foto JPG atau PNG.', '⚠️');
+            return;
+        }
 
-        // 4. Inisialisasi WebRTC PeerConnection
-        const pc = new RTCPeerConnection({
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' }
-            ]
-        });
-        const dc = pc.createDataChannel('sortir', { ordered: true });
-        window._pcDataChannel = dc;
-        window._pcFiles = _pcFiles;
-        window._pcDirHandle = handle;
-        window._pcPC = pc;
+        if(statusEl) statusEl.textContent=`Membuat thumbnail (${imageFiles.length} foto)...`;
+        showProgressModal('Menyiapkan Foto untuk HP...', `Membuat thumbnail instan dari folder "${handle.name}"`);
 
-        dc.onopen = ()=>{
-            if(statusEl) statusEl.textContent='HP terhubung P2P — mengirim '+_pcFiles.length+' foto...';
-            // Kirim daftar nama foto instan ke HP
-            dc.send(JSON.stringify({
-                type:'list', 
-                count: _pcFiles.length,
-                files: _pcFiles.slice(0,500).map((n, idx)=>({ id: 'pc_' + idx, name: n }))
-            }));
-
-            // Mulai streaming thumbnail secara progresif
-            streamThumbnailsToHP(dc);
-        };
-
-        dc.onmessage = async (e)=>{
+        const thumbsList = [];
+        for(let i = 0; i < imageFiles.length; i++){
+            const f = imageFiles[i];
             try{
-                const msg=JSON.parse(e.data);
+                const fileObj = await f.handle.getFile();
+                const thumbData = await generateCanvasThumb(fileObj, 240, 0.55);
+                thumbsList.push({
+                    id: 'p_' + i,
+                    name: f.name,
+                    url: thumbData
+                });
+            }catch(err){
+                thumbsList.push({ id: 'p_' + i, name: f.name, url: '' });
+            }
+            updateProgressModal(i + 1, imageFiles.length, `Memproses ${f.name}`);
+        }
 
-                // HP meminta list foto saat DataChannel terbuka
-                if(msg.type === 'request_list'){
-                    if(dc.readyState === 'open'){
-                        dc.send(JSON.stringify({
-                            type:'list', 
-                            count: _pcFiles.length,
-                            files: _pcFiles.slice(0,500).map((n, idx)=>({ id: 'pc_' + idx, name: n }))
-                        }));
-                        streamThumbnailsToHP(dc);
-                    }
-                }
+        closeProgressModal();
 
-                // Permintaan preview resolusi tinggi untuk Lightbox di HP
-                if(msg.type === 'get_preview'){
-                    const fh = _pcFileMap.get(msg.name);
-                    if(fh && dc.readyState === 'open'){
-                        try{
-                            const file = await fh.getFile();
-                            const preview = await generateCanvasThumb(file, 960, 0.75);
-                            if(preview && dc.readyState === 'open'){
-                                dc.send(JSON.stringify({ type:'preview', id: msg.id, name: msg.name, data: preview }));
-                            }
-                        }catch(err){}
-                    }
-                }
+        const sid = 'p2p_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+        const sb = getSupabaseClient();
 
-                // Permintaan ekspor file terpilih di PC
-                if(msg.type==='select'){
-                    const sel=msg.files||[];
-                    const destHandle = await handle.getDirectoryHandle('Selected_by_Client', {create:true});
-                    let copied=0;
-                    let paired=0;
-                    const RAW_EXTS = new Set(['arw','cr2','cr3','nef','dng','raf','rw2','orf','raw']);
+        if(statusEl) statusEl.textContent='Mengunggah sesi share ke server...';
 
-                    for(const name of sel){
-                        const base=name.split('.').slice(0,-1).join('.');
-                        for await(const [fname, fh] of handle.entries()){
-                            if(fh.kind!=='file') continue;
-                            const fBase = fname.split('.').slice(0,-1).join('.');
-                            const fExt = fname.split('.').pop().toLowerCase();
-
-                            if(fname === name || (fBase === base && RAW_EXTS.has(fExt))){
-                                const file=await fh.getFile();
-                                const nh=await destHandle.getFileHandle(fname, {create:true});
-                                const w=await nh.createWritable();
-                                await w.write(file);
-                                await w.close();
-                                copied++;
-                                if(fname !== name) paired++;
-                            }
-                        }
-                    }
-                    dc.send(JSON.stringify({type:'copied', count:copied, paired: paired}));
-                    showAlert('Ekspor Sukses', `Tercopy ${copied} file di PC ke folder Selected_by_Client (${paired > 0 ? paired + ' file RAW pasangan' : ''})`, '✅');
-                }
-            }catch(err){ console.error('DataChannel msg error:', err); }
-        };
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        // Tunggu ICE gathering selesai / timeout 1.2s
-        await new Promise(res=>{
-            if(pc.iceGatheringState==='complete') res();
-            else pc.onicegatheringstatechange=()=>{ if(pc.iceGatheringState==='complete') res(); };
-            setTimeout(res, 1200);
+        const { error: insErr } = await sb.from('sortir_share_sessions').upsert({
+            session_key: sid,
+            offer: {
+                event_name: handle.name,
+                files: thumbsList
+            },
+            status: 'ready'
         });
 
-        // 5. SETUP DUAL SIGNALING: Supabase Realtime Broadcast + Supabase Table
-        const sb = getSupabaseClient();
-        const qrLink = location.origin + location.pathname + '#share=' + sid;
+        if(insErr) throw insErr;
+
+        const qrLink = location.origin + location.pathname + '?share=' + sid;
         qrEl.style.display='block';
         qrEl.innerHTML = `
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrLink)}" class="mx-auto border rounded-xl" width="260" height="260">
             <p class="text-xs font-mono mt-2 break-all" style="word-break:break-all;color:var(--text-muted);">${qrLink}</p>
-            <p class="text-xs mt-1" style="color:var(--gold);font-weight:800;">📷 Scan QR ini sekali dari HP — otomatis terhubung langsung</p>
+            <p class="text-xs mt-1" style="color:var(--gold);font-weight:800;">📷 Scan QR ini dari HP — Layar HP langsung membuka galeri Pinterest untuk checklist foto</p>
         `;
-        if(statusEl) statusEl.textContent = 'QR Siap (' + _pcFiles.length + ' foto) — Menunggu scan dari HP...';
+        if(statusEl) statusEl.textContent = `QR Siap (${thumbsList.length} foto) — Menunggu scan dari HP...`;
 
-        let isAnswerSet = false;
+        // Background listener on PC for selection from HP
+        let lastHandledCount = 0;
+        const RAW_EXTS = new Set(['arw','cr2','cr3','nef','dng','raf','rw2','orf','raw']);
 
-        // A. Realtime Broadcast Channel (Instan P2P Signaling)
-        if(sb){
-            try{
-                const rtChannel = sb.channel('sortir_p2p_' + sid, { config: { broadcast: { self: false } } });
-                rtChannel.on('broadcast', { event: 'answer' }, async (payload)=>{
-                    if(payload && payload.payload && payload.payload.answer && !isAnswerSet){
-                        isAnswerSet = true;
-                        console.log('[P2P] Received answer via Realtime Broadcast');
-                        if(statusEl) statusEl.textContent = 'Jawaban HP diterima (Broadcast) — Menghubungkan P2P...';
-                        await pc.setRemoteDescription(payload.payload.answer);
-                    }
-                });
-                rtChannel.on('broadcast', { event: 'request_offer' }, async ()=>{
-                    console.log('[P2P] HP requested offer via broadcast');
-                    await rtChannel.send({
-                        type: 'broadcast',
-                        event: 'offer',
-                        payload: { offer: pc.localDescription }
-                    });
-                });
-                rtChannel.subscribe();
-            }catch(e){ console.warn('Realtime channel error:', e); }
-
-            // B. Simpan ke database sortir_share_sessions
-            try{
-                await sb.from('sortir_share_sessions').upsert({
-                    session_key: sid,
-                    offer: pc.localDescription,
-                    status: 'waiting'
-                }, { onConflict: 'session_key' });
-            }catch(e){ console.warn('Supabase session insert fallback:', e); }
-        }
-
-        // C. Polling fallback jika Realtime terhambat firewall
-        let tries = 0;
         const pollIv = setInterval(async ()=>{
-            if(isAnswerSet || pc.connectionState === 'connected' || pc.signalingState === 'stable'){
-                clearInterval(pollIv);
-                return;
-            }
-            tries++;
-            if(sb){
-                try{
-                    const { data: upd } = await sb.from('sortir_share_sessions')
-                        .select('answer, status')
-                        .eq('session_key', sid)
-                        .single();
-                    if(upd && upd.answer && !isAnswerSet){
-                        isAnswerSet = true;
-                        clearInterval(pollIv);
-                        if(statusEl) statusEl.textContent = 'Jawaban HP diterima (DB) — Menghubungkan P2P...';
-                        await pc.setRemoteDescription(upd.answer);
-                    }
-                }catch(e){}
-            }
-            if(tries > 90){
-                clearInterval(pollIv);
-                if(statusEl && !isAnswerSet) statusEl.textContent = 'QR kedaluwarsa — klik tombol di atas untuk membuat QR baru.';
-            }
-        }, 800);
+            try{
+                const { data: session } = await sb
+                    .from('sortir_share_sessions')
+                    .select('answer, status')
+                    .eq('session_key', sid)
+                    .single();
 
-        pc.onconnectionstatechange = ()=>{
-            if(pc.connectionState === 'connected' && statusEl){
-                statusEl.textContent = 'Terhubung P2P — streaming ' + _pcFiles.length + ' foto ke HP...';
-            }
-        };
+                if(session && session.answer && session.answer.selected){
+                    const sel = session.answer.selected;
+                    if(statusEl) statusEl.textContent = `HP Terhubung — ${sel.length} foto sedang dipilih di HP`;
+
+                    if(session.status === 'submitted' && sel.length > 0 && sel.length !== lastHandledCount){
+                        lastHandledCount = sel.length;
+                        if(statusEl) statusEl.textContent = `Menyalin ${sel.length} foto pilihan ke folder PC...`;
+
+                        const destHandle = await handle.getDirectoryHandle('Selected_by_Client', {create:true});
+                        let copied = 0;
+                        let paired = 0;
+
+                        for(const name of sel){
+                            const base = name.split('.').slice(0,-1).join('.');
+                            for await(const [fname, fh] of handle.entries()){
+                                if(fh.kind!=='file') continue;
+                                const fBase = fname.split('.').slice(0,-1).join('.');
+                                const fExt = fname.split('.').pop().toLowerCase();
+
+                                if(fname === name || (fBase === base && RAW_EXTS.has(fExt))){
+                                    const file = await fh.getFile();
+                                    const nh = await destHandle.getFileHandle(fname, {create:true});
+                                    const w = await nh.createWritable();
+                                    await w.write(file);
+                                    await w.close();
+                                    copied++;
+                                    if(fname !== name) paired++;
+                                }
+                            }
+                        }
+
+                        showAlert('Pilihan Klien Tersalin! 🎉', `Tercopy ${copied} file di folder PC "Selected_by_Client" ${paired > 0 ? `(${paired} file RAW pasangan)` : ''}`, '✅');
+                        if(statusEl) statusEl.textContent = `✅ Selesai! ${copied} file berhasil disalin ke Selected_by_Client`;
+                    }
+                }
+            }catch(e){}
+        }, 1500);
 
     }catch(e){
         console.error('pcOneClickShare error:', e);
-        const statusEl2=document.getElementById('pc-share-status');
-        if(statusEl2) statusEl2.textContent='Gagal: '+e.message;
+        closeProgressModal();
+        if(statusEl) statusEl.textContent = 'Gagal: ' + e.message;
         showAlert('Gagal Share', e.message, '❌');
     }
 }
