@@ -1630,6 +1630,8 @@
 <script src="config.js"></script>
 <script type="module">
     const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+    window._supabase = supabase;
+    window.getSupabaseClient = () => window._supabase || (window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null);
 
     // Global Store State
     const store = {
@@ -2346,17 +2348,29 @@
         if (tabAll) tabAll.classList.add('active');
 
         try {
-            const { data, error } = await supabase
-                .from('sortir_share_sessions')
-                .select('offer, answer')
-                .eq('session_key', shareKey)
-                .single();
+            const sb = window._supabase || (window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null);
+            if (!sb) throw new Error("Supabase client belum siap.");
 
-            if (error || !data || !data.offer) {
+            let sessionData = null;
+            for (let attempt = 0; attempt < 4; attempt++) {
+                const { data, error } = await sb
+                    .from('sortir_share_sessions')
+                    .select('offer, answer')
+                    .eq('session_key', shareKey)
+                    .single();
+
+                if (data && data.offer) {
+                    sessionData = data;
+                    break;
+                }
+                if (attempt < 3) await new Promise(r => setTimeout(r, 600));
+            }
+
+            if (!sessionData || !sessionData.offer) {
                 throw new Error("Sesi share tidak ditemukan atau telah ditutup di PC.");
             }
 
-            const offer = data.offer;
+            const offer = sessionData.offer;
             const eventName = offer.event_name || 'Folder PC';
             const files = offer.files || [];
 
@@ -4200,6 +4214,11 @@ window._pcFiles = [];
 window._remoteThumbCache = new Map();
 window._remoteSelections = new Set();
 window._remoteFilesList = [];
+
+// Helper Supabase Client
+function getSupabaseClient() {
+    return window.getSupabaseClient ? window.getSupabaseClient() : (window._supabase || (window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null));
+}
 
 // Helper kompresi thumbnail canvas di PC (~280px, JPEG 0.65, ~8KB - 12KB)
 async function generateCanvasThumb(file, maxDim = 280, quality = 0.65) {
