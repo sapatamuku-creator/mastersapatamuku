@@ -2,8 +2,8 @@
    SERVICE WORKER — SapaTamu PWA Offline Mode
    ═══════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'sapatamu-pwa-v16';
-const CACHE_VERSION = '5.2.0';
+const CACHE_NAME = 'sapatamu-pwa-v17';
+const CACHE_VERSION = '5.3.0';
 
 // Files to cache on install (lokal saja — CDN tidak di-cache untuk hindari supply chain risk)
 const PRECACHE_ASSETS = [

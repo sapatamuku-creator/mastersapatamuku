@@ -1718,11 +1718,17 @@
 
     // Helper alerts
     function showAlert(title, message, icon = "✨") {
-        document.getElementById('alert-modal-title').innerText = title;
-        document.getElementById('alert-modal-msg').innerText = message;
-        document.getElementById('alert-modal-icon').innerText = icon;
-        document.getElementById('alert-modal').style.display = 'flex';
+        const tEl = document.getElementById('alert-modal-title');
+        const mEl = document.getElementById('alert-modal-msg');
+        const iEl = document.getElementById('alert-modal-icon');
+        const modal = document.getElementById('alert-modal');
+        if (tEl) tEl.innerText = title;
+        if (mEl) mEl.innerText = message;
+        if (iEl) iEl.innerText = icon;
+        if (modal) modal.style.display = 'flex';
+        else alert(`${icon} ${title}\n\n${message}`);
     }
+    window.showAlert = showAlert;
 
     window.closeAlertModal = function() {
         document.getElementById('alert-modal').style.display = 'none';
@@ -4426,7 +4432,48 @@ async function generateFastThumb(file, maxDim = 1080, quality = 0.75){
     return generateCanvasThumb(file, maxDim, quality);
 }
 
-// ── 1-KLIK SHARE KE HP (INSTANT LOAD + PROGRESSIVE SYNC) ──
+// Helper recursive subfolder scanner untuk membaca semua parent/child folder secara otomatis
+async function scanDirectoryRecursively(dirHandle, currentPath = '') {
+    const files = [];
+    for await (const [name, h] of dirHandle.entries()) {
+        if (h.kind === 'file') {
+            if (/\.(jpe?g|png|webp|bmp|tiff?|heic)$/i.test(name)) {
+                const relativePath = currentPath ? `${currentPath}/${name}` : name;
+                files.push({
+                    name: name,
+                    relativePath: relativePath,
+                    handle: h,
+                    parentHandle: dirHandle
+                });
+                _pcFileMap.set(relativePath, h);
+                _pcFileMap.set(name, h);
+            }
+        } else if (h.kind === 'directory') {
+            if (name !== 'Selected_by_Client') {
+                const subPath = currentPath ? `${currentPath}/${name}` : name;
+                const subFiles = await scanDirectoryRecursively(h, subPath);
+                files.push(...subFiles);
+            }
+        }
+    }
+    return files;
+}
+
+// Helper rekursif untuk mengambil semua file di folder dan seluruh subfoldernya saat ekspor
+async function getAllFilesFlat(dirHandle) {
+    const all = [];
+    for await (const [name, h] of dirHandle.entries()) {
+        if (h.kind === 'file') {
+            all.push({ name, handle: h });
+        } else if (h.kind === 'directory' && name !== 'Selected_by_Client') {
+            const sub = await getAllFilesFlat(h);
+            all.push(...sub);
+        }
+    }
+    return all;
+}
+
+// ── 1-KLIK SHARE KE HP (INSTANT LOAD + PROGRESSIVE SYNC + SUBFOLDER SUPPORT) ──
 async function pcOneClickShare(){
     const statusEl=document.getElementById('pc-share-status');
     const qrEl=document.getElementById('pc-share-qr');
@@ -4440,19 +4487,15 @@ async function pcOneClickShare(){
         _pcDirHandle = handle;
         _pcFileMap.clear();
 
-        if(statusEl) statusEl.textContent='Membaca folder '+handle.name+'...';
+        if(statusEl) statusEl.textContent='Membaca folder '+handle.name+' beserta sub-folder...';
 
-        const imageFiles = [];
-        for await(const [name, h] of handle.entries()){
-            if(h.kind==='file' && /\.(jpe?g|png|webp)$/i.test(name)){
-                imageFiles.push({ name, handle: h });
-                _pcFileMap.set(name, h);
-            }
-        }
+        // Rekursif membaca seluruh file foto di parent & sub-folder
+        const imageFiles = await scanDirectoryRecursively(handle, '');
 
         if(imageFiles.length===0){
             if(statusEl) statusEl.textContent='Folder kosong — pilih folder yang berisi foto JPG atau PNG.';
-            showAlert('Folder Kosong', 'Harap pilih folder yang berisi foto JPG atau PNG.', '⚠️');
+            if(window.showAlert) showAlert('Folder Kosong', 'Harap pilih folder yang berisi foto JPG atau PNG.', '⚠️');
+            else alert('Harap pilih folder yang berisi foto JPG atau PNG.');
             return;
         }
 
@@ -4463,6 +4506,7 @@ async function pcOneClickShare(){
         const initialFiles = imageFiles.map((f, i) => ({
             id: 'p_' + i,
             name: f.name,
+            relativePath: f.relativePath || f.name,
             url: ''
         }));
 
@@ -4490,7 +4534,7 @@ async function pcOneClickShare(){
             <p class="text-xs font-mono mt-2 break-all" style="word-break:break-all;color:var(--text-muted);">ID Sesi: <b style="color:var(--text-main);">${sid}</b></p>
             <p class="text-xs mt-1" style="color:var(--gold);font-weight:800;">📷 Arahkan kamera HP ke QR di atas — Layar HP langsung membuka galeri Pinterest</p>
         `;
-        if(statusEl) statusEl.textContent = `⚡ QR Siap (${imageFiles.length} foto) — HP bisa langsung scan sekarang!`;
+        if(statusEl) statusEl.textContent = `⚡ QR Siap (${imageFiles.length} foto dari semua folder) — HP bisa langsung scan sekarang!`;
 
         // 3. BACKGROUND THUMBNAIL STREAMING (HD 1080p GPU ACCELERATED)
         (async () => {
@@ -4529,7 +4573,7 @@ async function pcOneClickShare(){
 
         // 4. Background listener on PC for selection from HP
         let lastHandledCount = 0;
-        const RAW_EXTS = new Set(['arw','cr2','cr3','nef','dng','raf','rw2','orf','raw']);
+        const RAW_EXTS = new Set(['arw','cr2','cr3','nef','dng','raf','rw2','orf','raw','tiff','tif']);
 
         const pollIv = setInterval(async ()=>{
             try{
@@ -4548,33 +4592,38 @@ async function pcOneClickShare(){
                         if(statusEl) statusEl.textContent = `Menyalin ${sel.length} foto pilihan ke folder PC...`;
 
                         const destHandle = await handle.getDirectoryHandle('Selected_by_Client', {create:true});
+                        const allFilesFlat = await getAllFilesFlat(handle);
                         let copied = 0;
                         let paired = 0;
 
                         for(const name of sel){
                             const base = name.split('.').slice(0,-1).join('.');
-                            for await(const [fname, fh] of handle.entries()){
-                                if(fh.kind!=='file') continue;
+                            for(const fItem of allFilesFlat){
+                                const fname = fItem.name;
                                 const fBase = fname.split('.').slice(0,-1).join('.');
                                 const fExt = fname.split('.').pop().toLowerCase();
 
                                 if(fname === name || (fBase === base && RAW_EXTS.has(fExt))){
-                                    const file = await fh.getFile();
-                                    const nh = await destHandle.getFileHandle(fname, {create:true});
-                                    const w = await nh.createWritable();
-                                    await w.write(file);
-                                    await w.close();
-                                    copied++;
-                                    if(fname !== name) paired++;
+                                    try {
+                                        const file = await fItem.handle.getFile();
+                                        const nh = await destHandle.getFileHandle(fname, {create:true});
+                                        const w = await nh.createWritable();
+                                        await w.write(file);
+                                        await w.close();
+                                        copied++;
+                                        if(fname !== name) paired++;
+                                    } catch(err) {}
                                 }
                             }
                         }
 
-                        showAlert('Pilihan Klien Tersalin! 🎉', `Tercopy ${copied} file di folder PC "Selected_by_Client" ${paired > 0 ? `(${paired} file RAW pasangan)` : ''}`, '✅');
+                        if(window.showAlert) showAlert('Pilihan Klien Tersalin! 🎉', `Tercopy ${copied} file di folder PC "Selected_by_Client" ${paired > 0 ? `(${paired} file RAW pasangan)` : ''}`, '✅');
                         if(statusEl) statusEl.textContent = `✅ Selesai! ${copied} file berhasil disalin ke Selected_by_Client`;
                     }
                 }
-            }catch(e){}
+            }catch(e){
+                console.warn('PC poll selection err:', e);
+            }
         }, 1500);
 
     }catch(e){
