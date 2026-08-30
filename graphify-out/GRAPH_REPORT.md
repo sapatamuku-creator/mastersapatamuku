@@ -1,16 +1,16 @@
 # Graph Report - mastersapatamuku  (2026-08-30)
 
 ## Corpus Check
-- 185 files · ~1,011,395 words
+- 185 files · ~1,012,645 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1759 nodes · 1803 edges · 175 communities (146 shown, 29 thin omitted)
+- 1761 nodes · 1805 edges · 172 communities (143 shown, 29 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `45119dd7`
+- Built from commit: `b653889c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -151,11 +151,8 @@
 - Decision Log — SapaTamu v3.2 (Guestbook Frontend)
 - Decision Log — SapaTamu v3.3 (Area Marketplace)
 - TASKS — Formulir Tamu Reference Build
-- ai-website-cloner/package.json
 - 🛡️ Rencana Gate & Detail Keputusan (5-Point Format)
-- keywords
 - 📋 Daftar Evaluasi & Temuan Event
-- scripts
 - 📋 Task List & Status
 - diagnose_sync.js
 - add_jam_pulang_column.sql
@@ -187,7 +184,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (175 total, 29 thin omitted)
+## Communities (172 total, 29 thin omitted)
 
 ### Community 0 - "Project Dependencies & Package Config"
 Cohesion: 0.07
@@ -438,8 +435,8 @@ Cohesion: 0.12
 Nodes (17): H10. httpOnly Cookies, H11. Remove Password from URL, H12. Server-Side OTP, H13. Fix RLS — tamu, print_queue, welcome_queue, H14. Fix RLS — sortir_events, sortir_selections, H15. Fix RLS — terminated_sessions, H16. Commit package-lock.json, H1. Gate Demo Mode (+9 more)
 
 ### Community 109 - "ai-website-cloner/package.json"
-Cohesion: 0.12
-Nodes (17): devDependencies, eslint, eslint-config-next, tailwindcss, @tailwindcss/postcss, @types/node, @types/react, @types/react-dom (+9 more)
+Cohesion: 0.04
+Nodes (47): author, bugs, url, description, devDependencies, eslint, eslint-config-next, tailwindcss (+39 more)
 
 ### Community 110 - "Clone Website"
 Cohesion: 0.06
@@ -621,25 +618,13 @@ Nodes (5): Backlog Area Sekitar Marketplace, Pendukung Non-Halaman, Peta Halaman
 Cohesion: 0.25
 Nodes (7): Fase 1 — Fondasi & Alur Inti, Fase 2 — Import Excel, Fase 3 — Duplicate Manager, Fase 4 — Sync Sheet UI, Fase 5 — Hero Dinamis & Navigasi, Fase 6 — Tools & Polish, TASKS — Formulir Tamu Reference Build
 
-### Community 166 - "ai-website-cloner/package.json"
-Cohesion: 0.13
-Nodes (14): author, bugs, url, description, engines, node, homepage, license (+6 more)
-
 ### Community 167 - "🛡️ Rencana Gate & Detail Keputusan (5-Point Format)"
 Cohesion: 0.20
 Nodes (9): Decision Log — SapaTamu v3.4 (Evaluasi Event 27 Agustus & Patching), GATE-01: Perbaikan Duplikasi Cetak Label Check-in (Anti-Double Print & Immediate Lock), GATE-02: Patch Halaman Souvenir (`souvenir.html`, `auth_guard.js`, `Main.gs`) & Saklar Off-Grid IndexedDB, GATE-03: Pemetaan & Standarisasi Field Kapasitas Ballroom & Stok Souvenir, GATE-04: Standarisasi Universal Saklar Off-Grid untuk Seluruh Halaman Operasional (60 Menit), GATE-05: Hirarki Status Deduplikasi Data & Proteksi Anti-Overwrite (Server-Authoritative Conflict Guard), 🛡️ Rencana Gate & Detail Keputusan (5-Point Format), 📊 Ringkasan Audit & Analisis Masalah (+1 more)
 
-### Community 168 - "keywords"
-Cohesion: 0.22
-Nodes (9): keywords, ai, claude-code, nextjs, reverse-engineering, shadcn-ui, tailwindcss, template (+1 more)
-
 ### Community 169 - "📋 Daftar Evaluasi & Temuan Event"
-Cohesion: 0.22
-Nodes (8): 1. Bug Duplikasi Cetak Label Check-in (Tercetak 2x Saat Centang Kado & Angpao), 2. Evaluasi Halaman Souvenir (`souvenir.html` - Scan Penukaran Souvenir), 3. Pemetaan & Audit Penyimpanan Field Kapasitas Ballroom dan Stok Souvenir, 4. Standarisasi Universal: Metode Saklar Off-Grid untuk Seluruh Halaman Operasional (Idle 60 Menit), 5. Hirarki Status Deduplikasi Data & Proteksi Anti-Overwrite (Server-Authoritative Conflict Guard), Catatan Evaluasi & Persiapan Patch v3.4, 📋 Daftar Evaluasi & Temuan Event, 📌 Rencana Aksi / Area Terdampak (To Be Reviewed)
-
-### Community 170 - "scripts"
-Cohesion: 0.29
-Nodes (7): scripts, build, check, dev, lint, start, typecheck
+Cohesion: 0.18
+Nodes (10): 1. Bug Duplikasi Cetak Label Check-in (Tercetak 2x Saat Centang Kado & Angpao), 2. Evaluasi Halaman Souvenir (`souvenir.html` - Scan Penukaran Souvenir), 3. Pemetaan & Audit Penyimpanan Field Kapasitas Ballroom dan Stok Souvenir, 4. Standarisasi Universal: Metode Saklar Off-Grid untuk Seluruh Halaman Operasional (Idle 60 Menit), 5. Hirarki Status Deduplikasi Data & Proteksi Anti-Overwrite (Server-Authoritative Conflict Guard), 6. Laporan Hasil Pengujian E2E Browser (Test-Driven dengan Akun Dummy), 7. Status & Checklist Tindak Lanjut, Catatan Evaluasi & Persiapan Patch v3.4 (+2 more)
 
 ### Community 171 - "📋 Task List & Status"
 Cohesion: 0.29
@@ -650,7 +635,7 @@ Cohesion: 0.83
 Nodes (3): fetchAllTamuSupabase(), fetchSheetData(), run()
 
 ## Knowledge Gaps
-- **1118 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1113 more)
+- **1120 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1115 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **29 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -659,15 +644,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `dependencies` connect `dependencies` to `ai-website-cloner/package.json`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
-- **Why does `devDependencies` connect `ai-website-cloner/package.json` to `ai-website-cloner/package.json`?**
-  _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1118 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1120 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
   _Cohesion score 0.07142857142857142 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: Get Email Handler` be split into smaller, more focused modules?**
   _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._
 - **Should `AGENT.md — SapaTamu Project Agent Operating System` be split into smaller, more focused modules?**
   _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
+- **Should `HIGH — Temuan Detail` be split into smaller, more focused modules?**
+  _Cohesion score 0.0425531914893617 - nodes in this community are weakly interconnected._
