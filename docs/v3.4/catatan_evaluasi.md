@@ -35,6 +35,10 @@ Dokumentasi hasil evaluasi event untuk inventarisasi poin-poin perbaikan dan pat
     - **Kondisi Online:** Frontend beroperasi langsung (*direct switch*) ke Supabase / Spreadsheet. Data cache IndexedDB hanya difungsikan sebagai cadangan/salinan data lokal, bukan sebagai jalur perantara sync yang mencampur data live.
     - **Kondisi Offline (Internet Lost):** Saklar otomatis beralih ke lokal; update status souvenir disimpan ke antrean IndexedDB lokal browser.
     - **Kondisi Kembali Online:** Sistem melakukan auto-async terhadap antrean perubahan lokal ke Supabase/Spreadsheet hingga tersinkronisasi penuh.
+- **Audit Logika Status Klaim vs Hak Souvenir (Perbaikan v3.4):**
+  - *Temuan:* Nilai kolom `souvenir` di database berisi `"ya"` / `"tidak"` yang merepresentasikan **Hak Mendapatkan Souvenir** saat pendaftaran tamu, bukan status checkout.
+  - *Perbaikan:* Status `isGuestClaimed` murni didasarkan pada keberadaan jam keluar valid (`jamPulang !== "-"` dan `jamPulang !== ""`) atau state `statusSouvenir === "CLAIMED"`.
+  - *Kapasitas Ballroom & Stok:* Sinkronisasi variabel `totalBallroomCapacity` dari `config_welcome.data.kapasitasBallroom` & `localStorage` langsung terhubung ke kartu KPI Ballroom (`#ballroom-sub-desc`).
 
 ### 3. Pemetaan & Audit Penyimpanan Field Kapasitas Ballroom dan Stok Souvenir
 - **Konteks:** Menjawab kebutuhan verifikasi data dari halaman Config / Profile ke halaman Souvenir dan Analytics.
