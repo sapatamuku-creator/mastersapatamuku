@@ -1110,9 +1110,9 @@
 
             <!-- 1 KLIK PC SHARE — tanpa instal, background otomatis -->
             <div id="pc-share-area" style="background: linear-gradient(135deg,#FFF9F5,#FFF); border: 1.5px dashed #C8962E; border-radius: 16px; padding: 18px; margin-bottom: 16px; text-align: center;">
-                <p style="font-weight: 800; font-size: 15px;">📁 1 Klik Share ke HP Saya</p>
-                <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Project apapun → pilih folder foto di PC, HP langsung scan — tanpa <code>pip</code></p>
-                <button onclick="pcOneClickShare()" class="btn btn-primary" style="margin-top: 12px; width: 100%; padding: 14px; font-size: 14px; font-weight: 800;">📁 Pilih Folder &amp; Buat QR</button>
+                <p id="pc-share-title" style="font-weight: 800; font-size: 15px;">📁 1 Klik Share ke HP Saya</p>
+                <p id="pc-share-subtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Project apapun → pilih folder foto di PC, HP langsung scan — tanpa <code>pip</code></p>
+                <button id="btn-pc-one-click" onclick="pcOneClickShare()" class="btn btn-primary" style="margin-top: 12px; width: 100%; padding: 14px; font-size: 14px; font-weight: 800;">📁 Pilih Folder &amp; Buat QR</button>
                 <div id="pc-share-qr" style="display:none; margin-top: 16px;"></div>
                 <p id="pc-share-status" style="font-size: 11px; color: var(--text-muted); margin-top: 8px;"></p>
                 <p id="pc-share-fallback" style="display:none; font-size: 11px; color: #E07B7B; margin-top: 8px;">Browser ini tidak support <code>showDirectoryPicker</code> (Firefox). Gunakan <code>python sortir_bridge.py</code> — lihat panduan di bawah.</p>
@@ -3868,12 +3868,9 @@ async function nearbyScanLAN(){
     if(hits.length===0 && bridges.length===0) showAlert('Tidak ketemu','Tidak ada PC Bridge di '+base+'0/24. Cek firewall & 1 Wi-Fi','📡');
 }
 
-async function nearbyConnect(ip,port,name){
-    const token = prompt('Token QR (opsional, kosongkan jika LAN):', '');
-    // simpan
+async function nearbyConnect(ip,port,name,token=''){
     nearbyPC = {ip, port, name, token: token||''};
     localStorage.setItem('sortir_pc_bridge', JSON.stringify(nearbyPC));
-    // test fetch list
     try{
         const r=await fetch(`http://${ip}:${port}/api/ping`);
         if(!r.ok) throw new Error('ping gagal');
@@ -3893,23 +3890,46 @@ function nearbyConnectManual(){
 async function nearbyScanQR(){
     const wrap=document.getElementById('nearby-qr-reader');
     wrap.style.display='block';
-    wrap.innerHTML='<div id=\"qr-reader-nearby\" style=\"width:100%;max-width:320px;margin:0 auto;\"></div><button onclick=\"document.getElementById(\'nearby-qr-reader\').style.display=\'none\'\" class=\"btn btn-secondary\" style=\"margin-top:8px;width:100%\">Tutup</button>';
-    // load html5-qrcode jika belum
+    wrap.innerHTML='<div id="qr-reader-nearby" style="width:100%;max-width:320px;margin:0 auto;"></div><button onclick="stopNearbyQR()" class="btn btn-secondary" style="margin-top:8px;width:100%">Tutup Kamera</button>';
     if(!window.Html5Qrcode){
         await new Promise((res,rej)=>{
             const s=document.createElement('script'); s.src='https://unpkg.com/html5-qrcode'; s.onload=res; s.onerror=rej; document.head.appendChild(s);
         });
     }
-    const qr=new Html5Qrcode('qr-reader-nearby');
-    qr.start({facingMode:'environment'}, {fps:10, qrbox:220}, async txt=>{
-        try{ await qr.stop(); }catch(e){}
+    window._nearbyScanner = new Html5Qrcode('qr-reader-nearby');
+    window._nearbyScanner.start({facingMode:'environment'}, {fps:10, qrbox:220}, async txt=>{
+        try{ await window._nearbyScanner.stop(); }catch(e){}
         wrap.style.display='none';
-        // parse http://192.168.1.10:8787#token
+        
+        // 1. Cek format 1-Klik Share P2P (#share=SID)
+        if(txt.includes('#share=')){
+            const sid = txt.split('#share=')[1].split('&')[0];
+            window.location.hash = '#share=' + sid;
+            hpJoinShare(sid);
+            return;
+        }
+        // 2. Cek format LAN Direct (#offer=BASE64)
+        if(txt.includes('#offer=')){
+            const b64 = decodeURIComponent(txt.split('#offer=')[1].split('&')[0]);
+            window.location.hash = '#offer=' + encodeURIComponent(b64);
+            hpJoinOffer(b64);
+            return;
+        }
+        // 3. Cek format Python Bridge (http://192.168.x.x:8787#token)
         try{
             const u=new URL(txt);
-            nearbyConnect(u.hostname, parseInt(u.port||'8787'), 'QR');
-        }catch(e){ showAlert('QR','Isi QR: '+txt,'📷'); }
+            const token = u.hash ? u.hash.slice(1) : '';
+            nearbyConnect(u.hostname, parseInt(u.port||'8787'), 'QR', token);
+        }catch(e){ showAlert('QR Scan','QR terdeteksi: '+txt,'📷'); }
     }, ()=>{});
+}
+
+function stopNearbyQR(){
+    if(window._nearbyScanner){
+        try{ window._nearbyScanner.stop(); }catch(e){}
+    }
+    const wrap=document.getElementById('nearby-qr-reader');
+    if(wrap) wrap.style.display='none';
 }
 
 async function nearbyLoadFromPC(){
@@ -4100,9 +4120,21 @@ window.addEventListener('hashchange', checkUrlHashOnLoad);
 document.addEventListener('DOMContentLoaded', ()=>{
     const area=document.getElementById('pc-share-area');
     const fallback=document.getElementById('pc-share-fallback');
-    if(!window.showDirectoryPicker){
-        if(area) area.style.opacity='0.6';
-        if(fallback) fallback.style.display='block';
+    const btn=document.getElementById('btn-pc-one-click');
+    const sub=document.getElementById('pc-share-subtitle');
+    
+    // Deteksi jika dibuka dari HP / Mobile (tidak support showDirectoryPicker)
+    if(!window.showDirectoryPicker || isMobileDevice()){
+        if(btn){
+            btn.innerHTML = '📷 Buka Kamera &amp; Scan QR di Layar PC';
+            btn.style.background = 'linear-gradient(135deg, #C8962E, #E07B7B)';
+            btn.onclick = (e) => {
+                e.preventDefault();
+                nearbyScanQR();
+            };
+        }
+        if(sub) sub.textContent = 'Arahkan kamera HP ke QR Code di layar PC untuk melihat foto langsung.';
+        if(fallback) fallback.style.display='none';
     }
 });
 
@@ -4692,7 +4724,10 @@ async function updateVendorHeader(){
     }
 }
 
-// ── BIND SEMUA FUNCTION KE WINDOW UNTUK EVENT ONCLICK HTML ──
+window.nearbyScanLAN = nearbyScanLAN;
+window.nearbyScanQR = nearbyScanQR;
+window.nearbyConnectManual = nearbyConnectManual;
+window.stopNearbyQR = stopNearbyQR;
 window.pcOneClickShare = pcOneClickShare;
 window.pcScanAnswer = pcScanAnswer;
 window.hpJoinShare = hpJoinShare;
