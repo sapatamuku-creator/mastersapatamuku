@@ -159,6 +159,15 @@
 - [x] Penyelarasan badge status (`👑 PRO Aktif`), nama studio, tombol `Perpanjang`, dan tombol `Keluar` agar tersusun anggun dalam 1 baris tanpa memicu horizontal scrolling.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 18 — Penempatan Nama Vendor di Pojok Kanan Atas & Fix Bug Scroll Hijack (GATE-20)
+- [x] Header mobile 2-baris yang elegan: Baris 1 menempatkan Logo di kiri atas dan **Nama Studio Vendor di pojok kanan atas** secara dominan (`max-width: 160px`), Baris 2 menempatkan Badge PRO, Tombol Perpanjang, dan Tombol Keluar di kanan bawah.
+- [x] Penyesuaian offset sticky nav bar di mobile menjadi `top: 68px` agar terkunci melayang presisi di bawah header 2-baris tanpa tumpang tindih.
+- [x] Perbaikan Bug Scroll Hijack: Mengganti `item.scrollIntoView()` dengan scrolling horizontal internal `navInner.scrollTo({ left })`, serta menonaktifkan auto-start Tour Guide untuk vendor yang sudah login sehingga scrolling ke bawah bebas hambatan (0 scroll hijacking).
+- *File:* `sortir.html`
+
+
 
 
 

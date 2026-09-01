@@ -1253,7 +1253,7 @@
                 flex-wrap: wrap !important;
                 justify-content: space-between !important;
                 align-items: center !important;
-                gap: 6px !important;
+                gap: 6px 10px !important;
                 width: 100% !important;
             }
             .logo-group {
@@ -1274,26 +1274,34 @@
             #vendor-auth-area {
                 display: flex !important;
                 align-items: center !important;
-                gap: 4px !important;
                 flex-shrink: 1 !important;
                 min-width: 0 !important;
             }
             #vendor-user-info {
                 display: flex !important;
-                align-items: center !important;
+                flex-direction: column !important;
+                align-items: flex-end !important;
                 gap: 4px !important;
-                flex-wrap: nowrap !important;
+                width: auto !important;
             }
             #vendor-user-name {
-                display: inline-block !important;
-                max-width: 85px !important;
+                display: block !important;
+                font-size: 12px !important;
+                font-weight: 800 !important;
+                color: var(--text-main) !important;
+                max-width: 160px !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
                 white-space: nowrap !important;
-                font-size: 11px !important;
-                font-weight: 700 !important;
-                color: var(--text-main) !important;
-                vertical-align: middle !important;
+                text-align: right !important;
+                line-height: 1.2 !important;
+            }
+            .vendor-header-actions-group {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: flex-end !important;
+                gap: 4px !important;
+                flex-wrap: nowrap !important;
             }
             #vendor-status-badge {
                 font-size: 9.5px !important;
@@ -1313,7 +1321,7 @@
                 white-space: nowrap !important;
             }
             .sortir-quick-nav-bar {
-                top: 52px !important;
+                top: 68px !important;
                 padding: 8px 0 !important;
                 margin-bottom: 16px !important;
                 width: 100% !important;
@@ -1412,10 +1420,12 @@
                 <!-- Populated dynamically by updateVendorHeaderUI() -->
                 <button id="vendor-login-btn" onclick="openVendorAuthModal('login')" class="btn btn-secondary" style="padding:8px 16px; font-size:12px;">Masuk / Daftar Vendor</button>
                 <div id="vendor-user-info" style="display:none; align-items:center; gap:8px; font-size:12px;">
-                    <span id="vendor-status-badge" class="vendor-header-badge" style="background:#E8F5E9; color:#2E7D32; font-weight:800; font-size:11px; padding:4px 10px; border-radius:20px;">Free: 10/10</span>
                     <span id="vendor-user-name" style="color:var(--text-main); font-weight:700; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
-                    <button id="vendor-upgrade-btn" onclick="openSortirPaywallModal()" class="btn btn-primary" style="padding:6px 12px; font-size:11px; background:var(--gold); border:none;">👑 Upgrade PRO</button>
-                    <button onclick="handleVendorLogout()" class="btn btn-secondary" style="padding:6px 10px; font-size:11px;">Keluar</button>
+                    <div class="vendor-header-actions-group" style="display:flex; align-items:center; gap:6px;">
+                        <span id="vendor-status-badge" class="vendor-header-badge" style="background:#E8F5E9; color:#2E7D32; font-weight:800; font-size:11px; padding:4px 10px; border-radius:20px;">Free: 10/10</span>
+                        <button id="vendor-upgrade-btn" onclick="openSortirPaywallModal()" class="btn btn-primary" style="padding:6px 12px; font-size:11px; background:var(--gold); border:none;">👑 Upgrade PRO</button>
+                        <button onclick="handleVendorLogout()" class="btn btn-secondary" style="padding:6px 10px; font-size:11px;">Keluar</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3168,17 +3178,17 @@
         renderMyEventsList();
         initSortirScrollspy();
 
-        // Auto-scroll ke section Penerjemah Indeks Manual jika pengunjung belum login (Free-First experience)
+        // Auto-scroll ke section Penerjemah Indeks Manual HANYA untuk pengunjung anonim/logout
         const vAuth = getVendorAuth();
         if (!vAuth) {
             setTimeout(() => {
                 window.jumpToSection('manual-translator-section');
             }, 350);
-        }
 
-        // Auto-check Sortir Tour Guide for new visitors
-        if (typeof checkSortirTourAutoStart === 'function') {
-            setTimeout(checkSortirTourAutoStart, 800);
+            // Auto-check Sortir Tour Guide HANYA untuk pengunjung anonim baru
+            if (typeof checkSortirTourAutoStart === 'function') {
+                setTimeout(checkSortirTourAutoStart, 800);
+            }
         }
     }
 
@@ -3203,12 +3213,16 @@
             behavior: 'smooth'
         });
 
-        // Update active nav button
+        // Update active nav button without triggering vertical window scroll
+        const navInner = document.querySelector('.sortir-quick-nav-inner');
         document.querySelectorAll('.snav-item').forEach(btn => btn.classList.remove('active'));
         const targetBtn = document.querySelector(`.snav-item[onclick*="${sectionId}"]`);
         if (targetBtn) {
             targetBtn.classList.add('active');
-            targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            if (navInner) {
+                const targetScrollLeft = targetBtn.offsetLeft - (navInner.clientWidth / 2) + (targetBtn.clientWidth / 2);
+                navInner.scrollTo({ left: Math.max(0, targetScrollLeft), behavior: 'smooth' });
+            }
         }
 
         // Micro pulse highlight on target
@@ -3219,6 +3233,7 @@
     function initSortirScrollspy() {
         const sectionIds = ['manual-translator-section', 'local-culling-section', 'create-event-section', 'my-events-section'];
         const navItems = document.querySelectorAll('.snav-item');
+        const navInner = document.querySelector('.sortir-quick-nav-inner');
         if (!navItems.length) return;
 
         const observer = new IntersectionObserver((entries) => {
@@ -3230,14 +3245,19 @@
                         if (onClickAttr.includes(sid)) {
                             navItems.forEach(i => i.classList.remove('active'));
                             item.classList.add('active');
-                            item.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                            
+                            // Horizontal scroll ONLY inside the navbar pill container (never touch window scroll!)
+                            if (navInner) {
+                                const targetScrollLeft = item.offsetLeft - (navInner.clientWidth / 2) + (item.clientWidth / 2);
+                                navInner.scrollTo({ left: Math.max(0, targetScrollLeft), behavior: 'smooth' });
+                            }
                         }
                     });
                 }
             });
         }, {
             root: null,
-            rootMargin: '-15% 0px -60% 0px',
+            rootMargin: '-20% 0px -50% 0px',
             threshold: 0.05
         });
 
