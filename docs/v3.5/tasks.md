@@ -175,6 +175,15 @@
 - [x] Migrasi 100% dialog browser bawaan (`alert()`, `confirm()`) menjadi **Custom SapaTamu Toast (`#sortir-toast`)** dan **Custom Confirmation Modal (`#confirm-modal`)** dengan animasi mulus dan desain premium seragam.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 20 — Format Slug Event Culling dengan Identitas Vendor (GATE-23)
+- [x] Struktur pembuatan slug event otomatis mengikutsertakan nama vendor dalam format natural reading: `{nama-event}-by-{nama-vendor}-{random-hash}`.
+- [x] Contoh URL: `https://sapatamu.id/sortir?event=16-agustus-2026-file-edit-prewedding-nadyfa-by-knowhere-studio-v4dil`.
+- [x] Memperkuat branding studio pada link preview WhatsApp/Email saat link culling dibagikan ke klien.
+- *File:* `sortir.html`
+
+
 
 
 

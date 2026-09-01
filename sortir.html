@@ -3604,10 +3604,15 @@
             wa = '62' + wa.substring(1);
         }
 
-        // Generate unique slug
-        const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').trim('-');
+        // Generate unique slug with format: {nama-event}-by-{nama-vendor}-{randomString}
+        const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        const vendorCleanName = (v.vendor_name || 'vendor')
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
         const randomString = Math.random().toString(36).substring(2, 7);
-        const slug = `${cleanName}-${randomString}`;
+        const slug = `${cleanName}-by-${vendorCleanName}-${randomString}`;
 
         // 3. Call Supabase RPC create_sortir_event_with_quota
         const { data: rpcData, error: rpcError } = await supabase.rpc('create_sortir_event_with_quota', {
