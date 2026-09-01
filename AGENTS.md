@@ -30,4 +30,11 @@ Rules:
   2. Wajib auto-sync/pasang di **Global IDE** (`C:\Users\KNOWHERE STUDIO\.gemini\config\skills\`) agar langsung tersedia di semua workspace.
   3. Catat di `skills-lock.json` dan `AGENT.md`.
 
+## Vercel & Supabase Free Tier Architecture Policy
+
+- Proyek ini berjalan di **Vercel Free Tier (Hobby)** dan **Supabase Free Tier**.
+- **Limit Vercel Serverless Function**: Maksimal 12 file endpoint API di direktori `/api`.
+- **Aturan Konsolidasi Monolith**: Seluruh modul domain backend (seperti Marketplace di `api/mp.js` dan Sortir di `api/sortir.js`) wajib dikonsolidasikan ke dalam 1 file dispatcher per domain menggunakan query param `action` / `endpoint` (`/api/sortir?action=...` atau rewrite `/api/sortir/:path*`), DILARANG memecah menjadi banyak file `.js` terpisah di `/api` agar tidak melampaui limit Vercel Free Tier.
+
+
 
