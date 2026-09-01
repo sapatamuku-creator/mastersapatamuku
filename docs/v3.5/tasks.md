@@ -124,6 +124,17 @@
 - [x] Update fungsi deteksi `isMobileDevice()` dan tour positioning menjadi `window.innerWidth < 680`.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 14 — Marketplace Category Pill Chips & Sticky Lock On Scroll (GATE-15)
+- [x] Menerapkan visual kapsul lonjong bulat (`border-radius: 50px`) identik dengan filter kategori Marketplace Knowhere Studio (*Semua (12) | Engagement (4) | Prewedding (3)*).
+- [x] Active pill: Solid terracotta (`var(--primary, #E07B7B)`), teks putih, bayangan lembut (`box-shadow: 0 2px 10px rgba(224,123,123,0.35)`).
+- [x] Inactive pill: Solid white surface (`#FFFFFF`), teks `#4A3F35`, border tipis `1px solid var(--border)`.
+- [x] Sticky Locking On Scroll: Navigasi terkunci melayang di bagian atas layar saat di-scroll ke bawah dengan backdrop glassmorphism (`rgba(255,249,245,0.96)` + `backdrop-filter: blur(16px)`).
+- [x] Header mobile ramping 1-baris (`flex-direction: row; justify-content: space-between`) sehingga offset sticky terkunci presisi di `top: 52px` pada ponsel.
+- *File:* `sortir.html`
+
+
 
 
 

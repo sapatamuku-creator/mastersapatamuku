@@ -1,16 +1,16 @@
 # Graph Report - mastersapatamuku  (2026-09-01)
 
 ## Corpus Check
-- 189 files · ~1,039,974 words
+- 189 files · ~1,040,156 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1878 nodes · 1954 edges · 177 communities (149 shown, 28 thin omitted)
+- 1879 nodes · 1955 edges · 177 communities (149 shown, 28 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b6d3d793`
+- Built from commit: `62486eb4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -174,7 +174,7 @@
 6. `AI Website Cloner Template` - 15 edges
 7. `AI Website Cloner Template 中文版` - 15 edges
 8. `LOW TASKS (14)` - 15 edges
-9. `📋 Task List & Status` - 14 edges
+9. `📋 Task List & Status` - 15 edges
 10. `PHASE3.5-DESIGN — OAuth2 Client & Dashboard Pengantin` - 14 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -300,7 +300,7 @@ Nodes (15): L10. Remove console.log leak, L11. Remove hardcoded ssId/username, L
 
 ### Community 33 - "Vercel API: Sortir Session Handler"
 Cohesion: 0.12
-Nodes (15): 📋 Task List & Status, Tasks & Roadmap — SapaTamu Sortir v3.5 (SaaS Hybrid Access & Subscription), [x] Task 10 — Interactive Page Tour Guide (Free-First Onboarding) (GATE-10), [x] Task 11 — Section Quick Navigator Bar (Pill Jump Menu & 100% FREE Spotlight) (GATE-11), [x] Task 12 — Penyelarasan Desain Tab Navigasi Standar Marketplace SapaTamu (GATE-12), [x] Task 13 — Standarisasi Rasio Breakpoint 3-Mode SapaTamu (<680px Mobile), [x] Task 1 — Skema Database Supabase & Migrasi Relasi Vendor, [x] Task 2 — Backend Autentikasi & Email OTP Service (+7 more)
+Nodes (16): 📋 Task List & Status, Tasks & Roadmap — SapaTamu Sortir v3.5 (SaaS Hybrid Access & Subscription), [x] Task 10 — Interactive Page Tour Guide (Free-First Onboarding) (GATE-10), [x] Task 11 — Section Quick Navigator Bar (Pill Jump Menu & 100% FREE Spotlight) (GATE-11), [x] Task 12 — Penyelarasan Desain Tab Navigasi Standar Marketplace SapaTamu (GATE-12), [x] Task 13 — Standarisasi Rasio Breakpoint 3-Mode SapaTamu (<680px Mobile), [x] Task 14 — Marketplace Category Pill Chips & Sticky Lock On Scroll (GATE-15), [x] Task 1 — Skema Database Supabase & Migrasi Relasi Vendor (+8 more)
 
 ### Community 43 - "Subdomain Resolution Utility"
 Cohesion: 0.60
@@ -679,7 +679,7 @@ Cohesion: 0.29
 Nodes (7): scripts, build, check, dev, lint, start, typecheck
 
 ## Knowledge Gaps
-- **1185 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1180 more)
+- **1186 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1181 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -693,7 +693,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1185 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1186 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: List Drive Files` be split into smaller, more focused modules?**
