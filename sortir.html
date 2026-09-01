@@ -1911,6 +1911,8 @@
         }
 
         const action = params.get('action');
+        const pathname = window.location.pathname.toLowerCase();
+        const isOwnerRoute = action === 'owner' || action === 'admin' || pathname === '/sortir-owner' || pathname.endsWith('/sortir-owner') || pathname.endsWith('sortir-owner.html');
 
         // Hide all views
         document.getElementById('view-dashboard').style.display = 'none';
@@ -1919,14 +1921,14 @@
 
         // Clear dynamic headers
         const headerActions = document.getElementById('header-actions');
-        headerActions.innerHTML = '';
+        if (headerActions) headerActions.innerHTML = '';
 
         if (shareKey) {
             initP2PCullingView(shareKey);
-        } else if (eventSlug) {
-            initCullingView(eventSlug);
-        } else if (action === 'owner' || action === 'admin') {
+        } else if (isOwnerRoute) {
             initOwnerView();
+        } else if (eventSlug && eventSlug !== 'owner') {
+            initCullingView(eventSlug);
         } else {
             initDashboardView();
         }
@@ -2531,18 +2533,9 @@
 
         updateVendorHeaderUI();
 
-        // Setup dashboard header buttons
+        // Dashboard header actions (owner button removed, accessible via direct slug /sortir-owner)
         const headerActions = document.getElementById('header-actions');
-        const isOwnerAuth = sessionStorage.getItem('sortir_owner_auth') === 'true';
-        headerActions.innerHTML = isOwnerAuth ? `
-            <a href="?action=owner" class="btn btn-secondary" onclick="event.preventDefault(); window.history.pushState({}, '', '?action=owner'); router();" style="border-color:var(--gold);color:var(--gold);">
-                👑 Admin Panel
-            </a>
-        ` : `
-            <a href="?action=owner" class="btn btn-secondary" onclick="event.preventDefault(); window.history.pushState({}, '', '?action=owner'); router();" style="font-size:12px;opacity:0.8;">
-                🛡️ Owner
-            </a>
-        `;
+        if (headerActions) headerActions.innerHTML = '';
 
         const v = getVendorAuth();
 

@@ -97,7 +97,21 @@
 4. **Cabang Routing Terdampak**: `vercel.json` rewrites (`/api/sortir/:path*`), `sortir.html` fetch calls.
 5. **Risiko & Trade-off Jujur**:
    - *Risiko*: File `api/sortir.js` menjadi lebih panjang.
-   - *Mitigasi*: Menjaga struktur kode modular dengan helper functions terisolasi dan handler dispatcher bersih.
+### GATE-05: Penghapusan Tombol Navigasi Owner & Dukungan Direct URL Slug `/sortir-owner`
+- **Timestamp Decision**: `2026-09-01T10:22:35+07:00`
+- **Status**: `APPROVED & IMPLEMENTED`
+1. **Fungsi Perubahan**: 
+   Menghapus tombol navigasi *`🛡️ Owner`* dari header navbar dashboard sortir agar UI vendor bersih, dan mengalihkan akses super-admin / owner sepenuhnya melalui direct URL slug `https://sapatamu.id/sortir-owner`.
+2. **Dari Kode Sebelumnya**: 
+   Fungsi `initDashboardView()` menyuntikkan elemen tombol link `🛡️ Owner` ke dalam `#header-actions`.
+3. **Mengarah Kemana**: 
+   - `#header-actions` pada dashboard dikosongkan.
+   - Router di `sortir.html` mendeteksi pathname `/sortir-owner` secara otomatis dan memanggil `initOwnerView()`.
+   - `vercel.json` menambahkan rewrite `{ "source": "/sortir-owner", "destination": "/api/sortir-view?action=owner" }`.
+4. **Cabang Routing Terdampak**: Navbar header `/sortir`, URL `/sortir-owner`, query `?action=owner`.
+5. **Risiko & Trade-off Jujur**:
+   - *Risiko*: Rendah. Owner mengakses panel via bookmark/URL langsung.
+   - *Mitigasi*: Modal gate passcode owner tetap terpasang dengan proteksi penuh.
 
 ---
 
@@ -113,6 +127,8 @@
 | 6 | `2026-09-01 10:07:44` | Sinkronisasi Knowledge Graph via Graphify | `graphify-out/` | `7fbb0d5` |
 | 7 | `2026-09-01 10:11:34` | **Uji E2E Berhasil**: Registrasi & OTP `opick8c@gmail.com` | `sortir_vendors`, `sortir_otps` | *Verified* |
 | 8 | `2026-09-01 10:12:38` | **Uji E2E Berhasil**: Buat Event & Pengurangan Kuota (10 $\rightarrow$ 9) | `sortir_events`, RPC Atomic | *Verified* |
+| 9 | `2026-09-01 10:18:42` | Fix Null Safety Guard `renderNearbyList` | `sortir.html` | `a9ae614` |
+| 10 | `2026-09-01 10:23:00` | **GATE-05**: Hapus Navigasi Owner Header & Direct Slug `/sortir-owner` | `sortir.html`, `vercel.json`, `DECISION_LOG.md` | *Pending Commit* |
 
 ---
 
