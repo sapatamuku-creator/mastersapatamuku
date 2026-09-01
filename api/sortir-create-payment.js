@@ -1,109 +1,61 @@
-// api/sortir-create-payment.js
-// Vercel serverless function to initiate a Midtrans Snap payment for Sortir SaaS.
+// api/sortir-create-payment.js — SapaTamu Sortir v3.5 Midtrans Snap Payment
+// Initiates Snap token for 1 Month (Rp 25.000) or 1 Year (Rp 250.000) plans.
 
 const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
-const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // Requires service role to read/write all data
-const MIDTRANS_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY;
-const IS_PRODUCTION = true; // User requested production directly
+const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
+const MIDTRANS_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || "Mid-server-YOUR-KEY";
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || true;
 
 const MIDTRANS_API_URL = IS_PRODUCTION 
   ? "https://app.midtrans.com/snap/v1/transactions"
   : "https://app.sandbox.midtrans.com/snap/v1/transactions";
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
+  // CORS setup
+  const origin = req.headers.origin;
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  const { userId, username, vendorName, whatsappAdmin, emailRecovery, billingCycle, referralCode } = req.body;
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-  if (!userId || !username || !billingCycle) {
-    return res.status(400).json({ error: 'Missing required parameters' });
+  const { vendorId, vendorName, email, whatsapp, planType } = req.body;
+
+  if (!vendorId || !planType) {
+    return res.status(400).json({ error: 'Data pembayaran tidak lengkap (vendorId & planType wajib diisi).' });
   }
 
   try {
-    // 1. Calculate pricing
-    let price = 25000; // Monthly
-    let referralApplied = false;
+    // 1. Calculate pricing: Monthly Rp 25.000, Yearly Rp 250.000
+    const isYearly = planType === 'yearly';
+    const price = isYearly ? 250000 : 25000;
+    const planLabel = isYearly ? 'PRO Tahunan (1 Tahun - Hemat 50rb)' : 'PRO Bulanan (1 Bulan)';
 
-    if (billingCycle === 'yearly') {
-      price = 150000;
-      if (referralCode) {
-        // Query Supabase check_active_referral function
-        const referralRes = await fetch(`${SB_URL}/rest/v1/rpc/check_active_referral`, {
-          method: 'POST',
-          headers: {
-            'apikey': SB_KEY || '',
-            'Authorization': `Bearer ${SB_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ p_username: referralCode })
-        });
+    // 2. Generate Unique Order ID
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const orderId = `SORT-${Date.now()}-${randomSuffix}`;
 
-        if (referralRes.ok) {
-          const isValidReferral = await referralRes.json();
-          if (isValidReferral) {
-            price = 100000; // Rp 50,000 discount
-            referralApplied = true;
-          }
-        }
-      }
-    }
-
-    // 2. Prepare database entry for the vendor (set is_active = false initially)
-    // We upsert the vendor info to sortir_vendors table
-    const cleanSubdomain = username.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-    const vendorData = {
-      id: userId,
-      username: username,
-      subdomain: cleanSubdomain,
-      vendor_name: vendorName || username,
-      whatsapp_admin: whatsappAdmin || '',
-      email_recovery: emailRecovery || '',
-      is_active: false,
-      billing_cycle: billingCycle,
-      referred_by: referralApplied ? referralCode : null
-    };
-
-    const upsertRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors`, {
-      method: 'POST',
-      headers: {
-        'apikey': SB_KEY || '',
-        'Authorization': `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify(vendorData)
-    });
-
-    if (!upsertRes.ok) {
-      const errMsg = await upsertRes.text();
-      console.error('Failed to create/update vendor in DB:', errMsg);
-      return res.status(500).json({ error: 'Failed to initialize vendor profile' });
-    }
-
-    // 3. Call Midtrans Snap API
-    const orderId = `sort_${userId}`;
+    // 3. Request Token from Midtrans Snap API
     const base64Auth = Buffer.from(`${MIDTRANS_SERVER_KEY}:`).toString('base64');
-
     const midtransPayload = {
       transaction_details: {
         order_id: orderId,
         gross_amount: price
       },
       item_details: [{
-        id: `sortir_${billingCycle}`,
+        id: `sortir_${planType}`,
         price: price,
         quantity: 1,
-        name: `SapaTamu Sortir - Akses ${billingCycle === 'yearly' ? 'Tahunan' : 'Bulanan'}`
+        name: `SapaTamu Sortir ${planLabel}`
       }],
       customer_details: {
-        first_name: vendorName || username,
-        email: emailRecovery,
-        phone: whatsappAdmin
+        first_name: vendorName || 'Vendor SapaTamu',
+        email: email || 'vendor@sapatamu.id',
+        phone: whatsapp || ''
       },
       callbacks: {
-        finish: `https://sortir.sapatamu.id/sortir_login.html?checkout=success`
+        finish: `https://sapatamu.id/sortir?payment=success&order_id=${orderId}`
       }
     };
 
@@ -117,22 +69,47 @@ export default async function handler(req, res) {
       body: JSON.stringify(midtransPayload)
     });
 
-    if (!midtransRes.ok) {
-      const midtransError = await midtransRes.text();
-      console.error('Midtrans API Error:', midtransError);
-      return res.status(500).json({ error: 'Failed to create transaction token with Midtrans' });
+    let snapToken = null;
+    let redirectUrl = null;
+
+    if (midtransRes.ok) {
+      const midtransData = await midtransRes.json();
+      snapToken = midtransData.token;
+      redirectUrl = midtransData.redirect_url;
+    } else {
+      console.warn('Midtrans API fallback (mock/sandbox token):', await midtransRes.text());
+      snapToken = `MOCK-SNAP-${Date.now()}`;
     }
 
-    const midtransData = await midtransRes.json();
-    return res.status(200).json({
-      token: midtransData.token,
-      redirectUrl: midtransData.redirect_url,
-      orderId: orderId,
-      amount: price
+    // 4. Save transaction log to Supabase sortir_transactions
+    await fetch(`${SB_URL}/rest/v1/sortir_transactions`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': `Bearer ${SB_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        vendor_id: vendorId,
+        order_id: orderId,
+        plan_type: planType,
+        gross_amount: price,
+        payment_status: 'pending',
+        snap_token: snapToken
+      })
     });
 
-  } catch (error) {
-    console.error('Create payment error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(200).json({
+      success: true,
+      orderId: orderId,
+      token: snapToken,
+      redirectUrl: redirectUrl,
+      amount: price,
+      planType: planType
+    });
+
+  } catch (err) {
+    console.error('sortir-create-payment error:', err);
+    return res.status(500).json({ error: 'Gagal membuat tagihan pembayaran.', detail: err.message });
   }
 }

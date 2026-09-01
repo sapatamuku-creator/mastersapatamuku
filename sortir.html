@@ -20,6 +20,7 @@
     <meta name="application-name" content="Sortir">
     <!-- Supabase Client & Config -->
     <script src="config.js"></script>
+    <script>loadMidtransSnap();</script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1005,6 +1006,94 @@
             color: var(--text-main);
         }
 
+        /* Sortir v3.5 SaaS Auth & Paywall Styles (3-Mode Responsive) */
+        .auth-tab-btn {
+            flex: 1;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 750;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            background: #FDF8F4;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+        .auth-tab-btn.active {
+            background: white;
+            color: var(--text-main);
+            border-color: var(--border);
+            box-shadow: 0 4px 12px rgba(74,63,53,0.06);
+        }
+        .otp-input-box {
+            width: 44px;
+            height: 52px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 800;
+            font-family: monospace;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            background: #FDF8F4;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .otp-input-box:focus {
+            border-color: var(--gold);
+            background: #FFFFFF;
+            box-shadow: 0 0 0 3px rgba(200,150,46,0.15);
+        }
+        .pricing-card-sortir {
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            background: white;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.25s ease;
+        }
+        .pricing-card-sortir:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(74,63,53,0.06);
+        }
+        .pricing-card-sortir.selected {
+            border-color: var(--primary) !important;
+            background: #FFF9F6;
+            box-shadow: 0 8px 24px rgba(224,123,123,0.15);
+        }
+        .pricing-card-sortir.selected::after {
+            content: "✔ Dipilih";
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: var(--primary);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 20px;
+        }
+
+        /* 3-Mode Responsive Container Adjustments */
+        @media (max-width: 767px) {
+            .auth-modal-dialog {
+                width: 95% !important;
+                padding: 24px 18px !important;
+            }
+            .otp-inputs-wrapper {
+                gap: 6px !important;
+            }
+            .otp-input-box {
+                width: 38px !important;
+                height: 46px !important;
+                font-size: 20px !important;
+            }
+            .vendor-header-badge {
+                font-size: 10px !important;
+                padding: 4px 8px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1021,29 +1110,195 @@
                 <!-- Dynamic Actions populated by JS -->
             </div>
             <div id="vendor-auth-area" style="display:flex; align-items:center; gap:8px;">
-                <button id="vendor-login-btn" onclick="openVendorLogin()" class="btn btn-secondary" style="padding:8px 16px; font-size:12px; display:none;">Masuk Vendor</button>
+                <!-- Populated dynamically by updateVendorHeaderUI() -->
+                <button id="vendor-login-btn" onclick="openVendorAuthModal('login')" class="btn btn-secondary" style="padding:8px 16px; font-size:12px;">Masuk / Daftar Vendor</button>
                 <div id="vendor-user-info" style="display:none; align-items:center; gap:8px; font-size:12px;">
-                    <span id="vendor-user-email" style="color:var(--text-muted); max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
-                    <button onclick="vendorLogout()" class="btn btn-secondary" style="padding:6px 12px; font-size:11px;">Keluar</button>
+                    <span id="vendor-status-badge" class="vendor-header-badge" style="background:#E8F5E9; color:#2E7D32; font-weight:800; font-size:11px; padding:4px 10px; border-radius:20px;">Free: 10/10</span>
+                    <span id="vendor-user-name" style="color:var(--text-main); font-weight:700; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+                    <button id="vendor-upgrade-btn" onclick="openSortirPaywallModal()" class="btn btn-primary" style="padding:6px 12px; font-size:11px; background:var(--gold); border:none;">👑 Upgrade PRO</button>
+                    <button onclick="handleVendorLogout()" class="btn btn-secondary" style="padding:6px 10px; font-size:11px;">Keluar</button>
                 </div>
             </div>
         </div>
     </div>
 </header>
 
-<!-- Vendor Login Modal (untuk Cloud mode vendor-isolated) -->
-<div id="vendor-login-modal" style="display:none; position:fixed; inset:0; background:rgba(74,63,53,0.5); backdrop-filter:blur(8px); z-index:999999; align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this) closeVendorLogin()">
-    <div style="background:white; border-radius:24px; padding:32px; width:100%; max-width:380px; box-shadow:var(--shadow-lg);">
-        <h3 style="font-size:20px; font-weight:800; color:var(--text-main); margin-bottom:6px;">Masuk Vendor</h3>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Untuk mode Cloud (beda Wi-Fi) & isolasi file — LAN 1-klik tidak wajib login.</p>
-        <div style="display:flex; flex-direction:column; gap:12px;">
-            <input id="vendor-login-email" type="email" placeholder="email vendor" class="form-control">
-            <input id="vendor-login-pass" type="password" placeholder="password" class="form-control">
-            <button onclick="vendorLogin()" class="btn btn-primary" style="width:100%;">Masuk</button>
-            <button onclick="vendorRegister()" class="btn btn-secondary" style="width:100%;">Daftar Vendor Baru</button>
-            <p id="vendor-login-msg" style="font-size:11px; color:#E07B7B; min-height:16px;"></p>
+<!-- ================================================================= -->
+<!-- MODAL 1: AUTHENTICATION (MASUK / DAFTAR BARU DENGAN OTP EMAIL)   -->
+<!-- ================================================================= -->
+<div id="sortir-auth-modal" style="display:none; position:fixed; inset:0; background:rgba(74,63,53,0.55); backdrop-filter:blur(10px); z-index:999999; align-items:center; justify-content:center; padding:16px;" onclick="if(event.target===this) closeVendorAuthModal()">
+    <div class="auth-modal-dialog" style="background:white; border-radius:28px; padding:32px 28px; width:100%; max-width:440px; box-shadow:var(--shadow-lg); border:1px solid var(--border); animation:modalPop 0.25s ease-out;">
+        
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="background:var(--primary); color:white; font-size:12px; font-weight:800; padding:4px 8px; border-radius:8px;">SORTIR</span>
+                <h3 style="font-size:19px; font-weight:800; color:var(--text-main); margin:0;">Akun Vendor Fotografer</h3>
+            </div>
+            <button onclick="closeVendorAuthModal()" style="background:none; border:none; font-size:22px; color:var(--text-muted); cursor:pointer;">&times;</button>
         </div>
-        <button onclick="closeVendorLogin()" class="btn btn-secondary" style="margin-top:12px; width:100%;">Tutup</button>
+
+        <!-- Tab Switcher -->
+        <div style="display:flex; gap:8px; margin-bottom:20px; background:#FDF8F4; padding:4px; border-radius:14px; border:1px solid var(--border);">
+            <button type="button" class="auth-tab-btn active" id="tab-btn-login" onclick="switchAuthTab('login')">Masuk Akun</button>
+            <button type="button" class="auth-tab-btn" id="tab-btn-register" onclick="switchAuthTab('register')">Daftar Baru (Free 10x)</button>
+        </div>
+
+        <!-- ──────────────── TAB 1: FORM LOGIN ──────────────── -->
+        <div id="auth-tab-login-content">
+            <form onsubmit="handleVendorLogin(event)" style="display:flex; flex-direction:column; gap:12px;">
+                <div>
+                    <label class="form-label" style="font-size:12px;">Email Terdaftar</label>
+                    <input id="login-email" type="email" placeholder="nama@studiofoto.com" class="form-control" required style="font-size:13px;">
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:12px;">Password</label>
+                    <input id="login-pass" type="password" placeholder="••••••••" class="form-control" required style="font-size:13px;">
+                </div>
+                <button type="submit" id="btn-submit-login" class="btn btn-primary" style="width:100%; padding:12px; margin-top:6px; font-size:13px;">
+                    Masuk ke Dashboard &rarr;
+                </button>
+            </form>
+            <p style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:16px;">
+                Belum punya akun? <a href="javascript:void(0)" onclick="switchAuthTab('register')" style="color:var(--primary); font-weight:750; text-decoration:none;">Daftar gratis (10x Event)</a>
+            </p>
+        </div>
+
+        <!-- ──────────────── TAB 2: FORM REGISTER + OTP ──────────────── -->
+        <div id="auth-tab-register-content" style="display:none;">
+            
+            <!-- Sub-Step 1: Input Data Vendor & Request OTP -->
+            <div id="reg-step-1">
+                <form onsubmit="handleSendOtp(event)" style="display:flex; flex-direction:column; gap:11px;">
+                    <div>
+                        <label class="form-label" style="font-size:12px;">Nama Studio / Fotografer</label>
+                        <input id="reg-name" type="text" placeholder="Contoh: Rian Photography" class="form-control" required style="font-size:13px;">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:12px;">Email Valid (Untuk OTP)</label>
+                        <input id="reg-email" type="email" placeholder="nama@email.com" class="form-control" required style="font-size:13px;">
+                        <p style="font-size:10px; color:var(--text-muted); margin-top:3px;">1 Email hanya dapat didaftarkan untuk 1 akun vendor unik.</p>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <label class="form-label" style="font-size:12px;">Password</label>
+                            <input id="reg-pass" type="password" placeholder="Min 6 karakter" minlength="6" class="form-control" required style="font-size:13px;">
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size:12px;">No. WhatsApp</label>
+                            <input id="reg-wa" type="tel" placeholder="081234..." class="form-control" style="font-size:13px;">
+                        </div>
+                    </div>
+                    <button type="submit" id="btn-send-otp" class="btn btn-primary" style="width:100%; padding:12px; margin-top:6px; font-size:13px;">
+                        Kirim Kode OTP ke Email &rarr;
+                    </button>
+                </form>
+            </div>
+
+            <!-- Sub-Step 2: Input 6-Digit OTP -->
+            <div id="reg-step-2" style="display:none; text-align:center;">
+                <div style="background:rgba(200,150,46,0.08); border:1px dashed rgba(200,150,46,0.4); border-radius:16px; padding:14px; margin-bottom:18px;">
+                    <span style="font-size:24px;">📬</span>
+                    <h4 style="font-size:14px; font-weight:750; color:var(--text-main); margin:4px 0 2px;">Masukkan Kode OTP 6-Digit</h4>
+                    <p style="font-size:11px; color:var(--text-muted); margin:0;">
+                        Kode telah dikirim ke <strong id="otp-target-email" style="color:var(--gold);">email Anda</strong>. Cek inbox/spam.
+                    </p>
+                </div>
+
+                <div class="otp-inputs-wrapper" style="display:flex; justify-content:center; gap:8px; margin-bottom:18px;">
+                    <input type="text" maxlength="1" class="otp-input-box" id="otp-1" oninput="otpAutoAdvance(1)" onkeydown="otpBackAdvance(event, 1)" inputmode="numeric">
+                    <input type="text" maxlength="1" class="otp-input-box" id="otp-2" oninput="otpAutoAdvance(2)" onkeydown="otpBackAdvance(event, 2)" inputmode="numeric">
+                    <input type="text" maxlength="1" class="otp-input-box" id="otp-3" oninput="otpAutoAdvance(3)" onkeydown="otpBackAdvance(event, 3)" inputmode="numeric">
+                    <input type="text" maxlength="1" class="otp-input-box" id="otp-4" oninput="otpAutoAdvance(4)" onkeydown="otpBackAdvance(event, 4)" inputmode="numeric">
+                    <input type="text" maxlength="1" class="otp-input-box" id="otp-5" oninput="otpAutoAdvance(5)" onkeydown="otpBackAdvance(event, 5)" inputmode="numeric">
+                    <input type="text" maxlength="1" class="otp-input-box" id="otp-6" oninput="otpAutoAdvance(6)" onkeydown="otpBackAdvance(event, 6)" inputmode="numeric">
+                </div>
+
+                <button onclick="handleVerifyRegister()" id="btn-verify-otp" class="btn btn-primary" style="width:100%; padding:12px; font-size:13px;">
+                    Verifikasi & Buat Akun 🎉
+                </button>
+
+                <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+                    <button type="button" onclick="backToRegStep1()" class="btn btn-secondary" style="padding:6px 12px; font-size:11px;">
+                        &larr; Ubah Data
+                    </button>
+                    <button type="button" id="btn-resend-otp" onclick="handleResendOtp()" class="btn btn-secondary" style="padding:6px 12px; font-size:11px;" disabled>
+                        Kirim Ulang (<span id="resend-countdown">60</span>s)
+                    </button>
+                </div>
+            </div>
+
+            <p style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:16px;">
+                Sudah punya akun? <a href="javascript:void(0)" onclick="switchAuthTab('login')" style="color:var(--primary); font-weight:750; text-decoration:none;">Masuk di sini</a>
+            </p>
+        </div>
+
+        <p id="auth-modal-alert" style="font-size:11px; text-align:center; margin-top:12px; min-height:16px; margin-bottom:0; font-weight:600;"></p>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- MODAL 2: PAYWALL SUBSCRIPTION UPGRADE (MIDTRANS SNAP)            -->
+<!-- ================================================================= -->
+<div id="sortir-paywall-modal" style="display:none; position:fixed; inset:0; background:rgba(74,63,53,0.55); backdrop-filter:blur(10px); z-index:999999; align-items:center; justify-content:center; padding:16px;" onclick="if(event.target===this) closeSortirPaywallModal()">
+    <div class="auth-modal-dialog" style="background:white; border-radius:28px; padding:32px 28px; width:100%; max-width:480px; box-shadow:var(--shadow-lg); border:1px solid var(--border); animation:modalPop 0.25s ease-out;">
+        
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:22px;">👑</span>
+                <h3 style="font-size:20px; font-weight:800; color:var(--text-main); margin:0;">Upgrade Paket PRO</h3>
+            </div>
+            <button onclick="closeSortirPaywallModal()" style="background:none; border:none; font-size:22px; color:var(--text-muted); cursor:pointer;">&times;</button>
+        </div>
+
+        <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:20px; line-height:1.5;">
+            Kuota gratis 10x event culling Anda telah habis atau Anda ingin menikmati akses <strong>Unlimited Event Culling</strong> tanpa batasan.
+        </p>
+
+        <!-- Pricing Cards -->
+        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+            
+            <!-- Plan 1: Bulanan (Rp 25.000) -->
+            <div class="pricing-card-sortir selected" id="card-plan-monthly" onclick="selectSortirPlan('monthly')">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <h4 style="font-size:15px; font-weight:800; color:var(--text-main); margin:0 0 2px;">Paket PRO Bulanan</h4>
+                        <p style="font-size:11px; color:var(--text-muted); margin:0;">Masa aktif 30 Hari &bull; Unlimited Culling</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="font-size:18px; font-weight:800; color:var(--primary);">Rp 25.000</span>
+                        <span style="font-size:11px; color:var(--text-muted); display:block;">/bulan</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plan 2: Tahunan (Rp 250.000) -->
+            <div class="pricing-card-sortir" id="card-plan-yearly" onclick="selectSortirPlan('yearly')" style="border-color:rgba(200,150,46,0.5);">
+                <div style="position:absolute; top:-10px; left:16px; background:#4A3F35; color:#F5EBE1; font-size:9px; font-weight:800; padding:2px 8px; border-radius:12px; letter-spacing:0.5px;">
+                    ⭐ HEMAT 50RB (FREE 2 BULAN)
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <h4 style="font-size:15px; font-weight:800; color:var(--text-main); margin:0 0 2px;">Paket PRO Tahunan</h4>
+                        <p style="font-size:11px; color:var(--text-muted); margin:0;">Masa aktif 365 Hari &bull; Unlimited Culling</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="font-size:18px; font-weight:800; color:var(--gold);">Rp 250.000</span>
+                        <span style="font-size:11px; color:var(--text-muted); display:block;">/tahun</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div style="background:#FDF8F4; border-radius:14px; padding:12px 14px; margin-bottom:20px; font-size:11px; color:var(--text-muted); line-height:1.5;">
+            ℹ️ <strong>Logika Perpanjangan:</strong> Jika masa aktif sebelumnya masih tersisa, paket baru akan otomatis memperbarui (override) durasi dari hari ini.
+        </div>
+
+        <button onclick="processSortirPayment()" id="btn-pay-snap" class="btn btn-primary" style="width:100%; padding:14px; font-size:14px; font-weight:800; background:linear-gradient(135deg, #2E7D32, #4CAF50); border:none; box-shadow:0 6px 18px rgba(76,175,80,0.3);">
+            Lanjut Pembayaran via Midtrans 💳
+        </button>
+
+        <p id="paywall-status-msg" style="font-size:11px; color:#E07B7B; text-align:center; margin-top:10px; min-height:14px; margin-bottom:0;"></p>
     </div>
 </div>
 
@@ -1814,12 +2069,467 @@
     // Run on page load
     checkDesktopModePrompt();
 
+    // ============================================================
+    // SORTIR v3.5 SAAS AUTH & SUBSCRIPTION STATE MANAGEMENT
+    // ============================================================
+    let currentVendor = null;
+    let selectedSortirPlan = 'monthly';
+    let otpResendTimer = null;
+    let pendingOtpData = null;
+
+    function getVendorAuth() {
+        try {
+            const raw = localStorage.getItem('sortir_vendor_auth');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function setVendorAuth(vendor) {
+        currentVendor = vendor;
+        localStorage.setItem('sortir_vendor_auth', JSON.stringify(vendor));
+        updateVendorHeaderUI();
+    }
+
+    function clearVendorAuth() {
+        currentVendor = null;
+        localStorage.removeItem('sortir_vendor_auth');
+        updateVendorHeaderUI();
+    }
+
+    function updateVendorHeaderUI() {
+        currentVendor = getVendorAuth();
+        const loginBtn = document.getElementById('vendor-login-btn');
+        const userInfo = document.getElementById('vendor-user-info');
+        const badge = document.getElementById('vendor-status-badge');
+        const userName = document.getElementById('vendor-user-name');
+        const upgradeBtn = document.getElementById('vendor-upgrade-btn');
+
+        if (!loginBtn || !userInfo) return;
+
+        if (currentVendor) {
+            loginBtn.style.display = 'none';
+            userInfo.style.display = 'flex';
+            if (userName) userName.textContent = currentVendor.vendor_name || currentVendor.email;
+
+            const isPro = currentVendor.is_pro || (currentVendor.subscription_expires_at && new Date(currentVendor.subscription_expires_at) > new Date());
+
+            if (isPro) {
+                if (badge) {
+                    badge.style.background = 'rgba(200,150,46,0.12)';
+                    badge.style.color = '#C8962E';
+                    badge.innerHTML = '👑 PRO Aktif';
+                }
+                if (upgradeBtn) {
+                    upgradeBtn.textContent = 'Perpanjang';
+                    upgradeBtn.style.background = '#4A3F35';
+                }
+            } else {
+                const remaining = currentVendor.free_quota_remaining != null ? currentVendor.free_quota_remaining : 10;
+                if (badge) {
+                    badge.style.background = remaining > 0 ? '#E8F5E9' : '#FFEBEE';
+                    badge.style.color = remaining > 0 ? '#2E7D32' : '#C62828';
+                    badge.innerHTML = `Free: ${remaining}/10`;
+                }
+                if (upgradeBtn) {
+                    upgradeBtn.textContent = '👑 Upgrade PRO';
+                    upgradeBtn.style.background = 'var(--gold)';
+                }
+            }
+        } else {
+            loginBtn.style.display = 'inline-flex';
+            userInfo.style.display = 'none';
+        }
+    }
+
+    // Sync fresh vendor profile from server
+    async function syncVendorProfile() {
+        const v = getVendorAuth();
+        if (!v || !v.id) return;
+
+        try {
+            const res = await fetch('/api/sortir-auth?action=get_profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vendorId: v.id })
+            });
+            const data = await res.json();
+            if (res.ok && data.success && data.vendor) {
+                setVendorAuth(data.vendor);
+            }
+        } catch (e) {
+            console.warn('Gagal sinkronisasi profil vendor:', e);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // AUTH MODAL & OTP INTERACTIONS
+    // ─────────────────────────────────────────────────────────────
+    window.openVendorAuthModal = function(tab = 'login') {
+        const modal = document.getElementById('sortir-auth-modal');
+        if (modal) modal.style.display = 'flex';
+        switchAuthTab(tab);
+        setAuthModalAlert('');
+    };
+
+    window.closeVendorAuthModal = function() {
+        const modal = document.getElementById('sortir-auth-modal');
+        if (modal) modal.style.display = 'none';
+        clearInterval(otpResendTimer);
+    };
+
+    window.switchAuthTab = function(tab) {
+        const btnLogin = document.getElementById('tab-btn-login');
+        const btnReg = document.getElementById('tab-btn-register');
+        const viewLogin = document.getElementById('auth-tab-login-content');
+        const viewReg = document.getElementById('auth-tab-register-content');
+
+        setAuthModalAlert('');
+
+        if (tab === 'register') {
+            if (btnReg) btnReg.classList.add('active');
+            if (btnLogin) btnLogin.classList.remove('active');
+            if (viewReg) viewReg.style.display = 'block';
+            if (viewLogin) viewLogin.style.display = 'none';
+            backToRegStep1();
+        } else {
+            if (btnLogin) btnLogin.classList.add('active');
+            if (btnReg) btnReg.classList.remove('active');
+            if (viewLogin) viewLogin.style.display = 'block';
+            if (viewReg) viewReg.style.display = 'none';
+        }
+    };
+
+    function setAuthModalAlert(msg, isError = true) {
+        const el = document.getElementById('auth-modal-alert');
+        if (!el) return;
+        el.textContent = msg;
+        el.style.color = isError ? '#E07B7B' : '#10B981';
+    }
+
+    // Request 6-Digit OTP for new registration
+    window.handleSendOtp = async function(event) {
+        event.preventDefault();
+        const name = document.getElementById('reg-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const pass = document.getElementById('reg-pass').value;
+        const wa = document.getElementById('reg-wa').value.trim();
+
+        if (!email || !pass) {
+            setAuthModalAlert('Email dan password wajib diisi.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-send-otp');
+        if (btn) { btn.disabled = true; btn.textContent = 'Mengirim OTP ke Email...'; }
+        setAuthModalAlert('');
+
+        try {
+            const res = await fetch('/api/sortir-auth?action=send_otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, vendorName: name })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                setAuthModalAlert(data.error || 'Gagal mengirim kode OTP.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Kirim Kode OTP ke Email →'; }
+                return;
+            }
+
+            // Save pending registration state
+            pendingOtpData = { name, email, pass, wa };
+
+            // Transition to Sub-Step 2 (Input OTP)
+            document.getElementById('reg-step-1').style.display = 'none';
+            document.getElementById('reg-step-2').style.display = 'block';
+            document.getElementById('otp-target-email').textContent = email;
+
+            // Clear OTP inputs
+            for (let i = 1; i <= 6; i++) {
+                const box = document.getElementById(`otp-${i}`);
+                if (box) box.value = '';
+            }
+            document.getElementById('otp-1')?.focus();
+
+            startOtpCountdown(60);
+            setAuthModalAlert('Kode OTP terkirim! Cek kotak masuk atau spam email Anda.', false);
+
+        } catch (err) {
+            setAuthModalAlert('Terjadi gangguan jaringan saat mengirim OTP.');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Kirim Kode OTP ke Email →'; }
+        }
+    };
+
+    // OTP Input Navigation Helpers
+    window.otpAutoAdvance = function(idx) {
+        const current = document.getElementById(`otp-${idx}`);
+        if (current && current.value.length === 1 && idx < 6) {
+            document.getElementById(`otp-${idx + 1}`)?.focus();
+        }
+    };
+
+    window.otpBackAdvance = function(event, idx) {
+        if (event.key === 'Backspace') {
+            const current = document.getElementById(`otp-${idx}`);
+            if (current && current.value === '' && idx > 1) {
+                document.getElementById(`otp-${idx - 1}`)?.focus();
+            }
+        }
+    };
+
+    function startOtpCountdown(seconds = 60) {
+        clearInterval(otpResendTimer);
+        const resendBtn = document.getElementById('btn-resend-otp');
+        const countSpan = document.getElementById('resend-countdown');
+        let left = seconds;
+
+        if (resendBtn) resendBtn.disabled = true;
+        if (countSpan) countSpan.textContent = left;
+
+        otpResendTimer = setInterval(() => {
+            left--;
+            if (countSpan) countSpan.textContent = left;
+            if (left <= 0) {
+                clearInterval(otpResendTimer);
+                if (resendBtn) {
+                    resendBtn.disabled = false;
+                    resendBtn.innerHTML = 'Kirim Ulang OTP';
+                }
+            }
+        }, 1000);
+    }
+
+    window.handleResendOtp = function() {
+        if (!pendingOtpData) return;
+        document.getElementById('reg-name').value = pendingOtpData.name;
+        document.getElementById('reg-email').value = pendingOtpData.email;
+        document.getElementById('reg-pass').value = pendingOtpData.pass;
+        document.getElementById('reg-wa').value = pendingOtpData.wa;
+        handleSendOtp(new Event('submit'));
+    };
+
+    window.backToRegStep1 = function() {
+        document.getElementById('reg-step-1').style.display = 'block';
+        document.getElementById('reg-step-2').style.display = 'none';
+        setAuthModalAlert('');
+        clearInterval(otpResendTimer);
+    };
+
+    // Verify OTP and complete account creation
+    window.handleVerifyRegister = async function() {
+        if (!pendingOtpData) return;
+
+        let otpCode = '';
+        for (let i = 1; i <= 6; i++) {
+            otpCode += (document.getElementById(`otp-${i}`)?.value || '').trim();
+        }
+
+        if (otpCode.length < 6) {
+            setAuthModalAlert('Harap masukkan 6 digit kode OTP secara lengkap.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-verify-otp');
+        if (btn) { btn.disabled = true; btn.textContent = 'Memverifikasi...'; }
+        setAuthModalAlert('');
+
+        try {
+            const res = await fetch('/api/sortir-auth?action=verify_register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: pendingOtpData.email,
+                    otpCode: otpCode,
+                    vendorName: pendingOtpData.name,
+                    password: pendingOtpData.pass,
+                    whatsappNumber: pendingOtpData.wa
+                })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                setAuthModalAlert(data.error || 'Verifikasi OTP gagal.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Verifikasi & Buat Akun 🎉'; }
+                return;
+            }
+
+            // Successfully registered & authenticated
+            setVendorAuth(data.vendor);
+            closeVendorAuthModal();
+            showAlert('Registrasi Berhasil! 🎉', 'Selamat datang! Akun vendor Anda telah aktif dengan 10x kuota pembuatan event gratis.', '✅');
+            initDashboardView();
+
+        } catch (err) {
+            setAuthModalAlert('Terjadi kesalahan jaringan saat verifikasi.');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Verifikasi & Buat Akun 🎉'; }
+        }
+    };
+
+    // Vendor Login
+    window.handleVendorLogin = async function(event) {
+        event.preventDefault();
+        const email = document.getElementById('login-email').value.trim();
+        const pass = document.getElementById('login-pass').value;
+
+        if (!email || !pass) {
+            setAuthModalAlert('Email dan password wajib diisi.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-submit-login');
+        if (btn) { btn.disabled = true; btn.textContent = 'Memeriksa akun...'; }
+        setAuthModalAlert('');
+
+        try {
+            const res = await fetch('/api/sortir-auth?action=login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password: pass })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                setAuthModalAlert(data.error || 'Email atau password salah.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Masuk ke Dashboard →'; }
+                return;
+            }
+
+            setVendorAuth(data.vendor);
+            closeVendorAuthModal();
+            showAlert('Login Berhasil', `Selamat datang kembali, ${data.vendor.vendor_name}!`, '✨');
+            initDashboardView();
+
+        } catch (err) {
+            setAuthModalAlert('Terjadi gangguan jaringan saat login.');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Masuk ke Dashboard →'; }
+        }
+    };
+
+    window.handleVendorLogout = function() {
+        if (confirm('Apakah Anda yakin ingin keluar dari akun vendor?')) {
+            clearVendorAuth();
+            showAlert('Keluar', 'Anda telah keluar dari akun vendor.', '👋');
+            initDashboardView();
+        }
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // PAYWALL & MIDTRANS SNAP INTEGRATION
+    // ─────────────────────────────────────────────────────────────
+    window.openSortirPaywallModal = function() {
+        const v = getVendorAuth();
+        if (!v) {
+            openVendorAuthModal('login');
+            return;
+        }
+        const modal = document.getElementById('sortir-paywall-modal');
+        if (modal) modal.style.display = 'flex';
+        selectSortirPlan('monthly');
+        const msg = document.getElementById('paywall-status-msg');
+        if (msg) msg.textContent = '';
+    };
+
+    window.closeSortirPaywallModal = function() {
+        const modal = document.getElementById('sortir-paywall-modal');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.selectSortirPlan = function(plan) {
+        selectedSortirPlan = plan;
+        const cardMonthly = document.getElementById('card-plan-monthly');
+        const cardYearly = document.getElementById('card-plan-yearly');
+
+        if (plan === 'yearly') {
+            cardYearly?.classList.add('selected');
+            cardMonthly?.classList.remove('selected');
+        } else {
+            cardMonthly?.classList.add('selected');
+            cardYearly?.classList.remove('selected');
+        }
+    };
+
+    window.processSortirPayment = async function() {
+        const v = getVendorAuth();
+        if (!v) {
+            closeSortirPaywallModal();
+            openVendorAuthModal('login');
+            return;
+        }
+
+        const btn = document.getElementById('btn-pay-snap');
+        const msg = document.getElementById('paywall-status-msg');
+        if (btn) { btn.disabled = true; btn.textContent = 'Memproses Tagihan...'; }
+        if (msg) msg.textContent = '';
+
+        try {
+            const res = await fetch('/api/sortir-create-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    vendorId: v.id,
+                    vendorName: v.vendor_name,
+                    email: v.email,
+                    whatsapp: v.whatsapp_number,
+                    planType: selectedSortirPlan
+                })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success || !data.token) {
+                if (msg) msg.textContent = data.error || 'Gagal memulai transaksi Midtrans.';
+                if (btn) { btn.disabled = false; btn.textContent = 'Lanjut Pembayaran via Midtrans 💳'; }
+                return;
+            }
+
+            // Trigger Midtrans Snap Popup
+            if (typeof window.snap !== 'undefined' && window.snap.pay) {
+                window.snap.pay(data.token, {
+                    onSuccess: async function(result) {
+                        closeSortirPaywallModal();
+                        showAlert('Pembayaran Sukses! 🎉', 'Paket PRO Anda telah aktif. Durasi telah diperbarui.', '👑');
+                        await syncVendorProfile();
+                        initDashboardView();
+                    },
+                    onPending: function(result) {
+                        closeSortirPaywallModal();
+                        showAlert('Menunggu Pembayaran', 'Selesaikan pembayaran Anda via instruksi Midtrans.', '⏳');
+                    },
+                    onError: function(result) {
+                        if (msg) msg.textContent = 'Pembayaran gagal diproses oleh sistem.';
+                    },
+                    onClose: function() {
+                        if (btn) { btn.disabled = false; btn.textContent = 'Lanjut Pembayaran via Midtrans 💳'; }
+                    }
+                });
+            } else if (data.redirectUrl) {
+                window.location.href = data.redirectUrl;
+            } else {
+                // Fallback simulation in dev environment
+                closeSortirPaywallModal();
+                showAlert('Simulasi Sandbox', 'Token transaksi: ' + data.token, 'ℹ️');
+            }
+
+        } catch (err) {
+            if (msg) msg.textContent = 'Gagal menghubungi server pembayaran.';
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Lanjut Pembayaran via Midtrans 💳'; }
+        }
+    };
+
     // ----------------------------------------------------
     // VIEW 1: PHOTOGRAPHER DASHBOARD LOGIC
     // ----------------------------------------------------
     async function initDashboardView() {
         document.getElementById('view-dashboard').style.display = 'block';
         document.title = "Dashboard Culling — SapaTamu Sortir";
+
+        updateVendorHeaderUI();
 
         // Setup dashboard header buttons
         const headerActions = document.getElementById('header-actions');
@@ -1834,26 +2544,39 @@
             </a>
         `;
 
-        // Load local tracking events
-        let trackedSlugs = [];
-        try {
-            trackedSlugs = JSON.parse(localStorage.getItem('sortir_created_events') || '[]');
-        } catch (e) {
-            trackedSlugs = [];
-        }
+        const v = getVendorAuth();
 
-        if (trackedSlugs.length > 0) {
-            // Fetch tracked events details
+        if (v && v.id) {
+            // Logged in: Fetch events belonging to this vendor
             const { data, error } = await supabase
                 .from('sortir_events')
                 .select('*')
-                .in('event_slug', trackedSlugs);
+                .eq('vendor_id', v.id)
+                .order('created_at', { ascending: false });
             
             if (!error && data) {
                 store.myEvents = data;
+            } else {
+                store.myEvents = [];
             }
         } else {
-            store.myEvents = [];
+            // Anon state: check legacy local tracking
+            let trackedSlugs = [];
+            try {
+                trackedSlugs = JSON.parse(localStorage.getItem('sortir_created_events') || '[]');
+            } catch (e) {
+                trackedSlugs = [];
+            }
+
+            if (trackedSlugs.length > 0) {
+                const { data, error } = await supabase
+                    .from('sortir_events')
+                    .select('*')
+                    .in('event_slug', trackedSlugs);
+                store.myEvents = data || [];
+            } else {
+                store.myEvents = [];
+            }
         }
 
         renderMyEventsList();
@@ -1862,6 +2585,25 @@
     function renderMyEventsList() {
         const listContainer = document.getElementById('my-events-list');
         listContainer.innerHTML = '';
+
+        const v = getVendorAuth();
+
+        if (!v) {
+            // Gated state for anonymous visitors
+            listContainer.innerHTML = `
+                <div class="empty-state" style="padding: 36px 16px; text-align: center;">
+                    <div style="font-size: 38px; margin-bottom: 12px;">🔒</div>
+                    <h4 style="font-size: 16px; font-weight: 750; color: var(--text-main); margin-bottom: 6px;">Fitur Cloud Event Terkunci</h4>
+                    <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5; max-width: 320px; margin-left: auto; margin-right: auto;">
+                        Masuk atau buat akun vendor untuk menyimpan daftar event Anda di cloud dan mendapatkan <strong>10x Kuota Event Gratis</strong>.
+                    </p>
+                    <button onclick="openVendorAuthModal('register')" class="btn btn-primary" style="padding: 10px 22px; font-size: 13px;">
+                        Masuk / Daftar Vendor &rarr;
+                    </button>
+                </div>
+            `;
+            return;
+        }
 
         if (store.myEvents.length === 0) {
             listContainer.innerHTML = `
@@ -2008,6 +2750,22 @@
 
     window.handleCreateEvent = async function(event) {
         event.preventDefault();
+
+        // 1. Intercept: Require Login
+        const v = getVendorAuth();
+        if (!v || !v.id) {
+            openVendorAuthModal('register');
+            setAuthModalAlert('Silakan masuk atau buat akun untuk membuat event culling.');
+            return;
+        }
+
+        // 2. Intercept: Check PRO & Quota
+        const isPro = v.is_pro || (v.subscription_expires_at && new Date(v.subscription_expires_at) > new Date());
+        if (!isPro && v.free_quota_remaining <= 0) {
+            openSortirPaywallModal();
+            return;
+        }
+
         const name = document.getElementById('event-name-input').value.trim();
         const driveUrl = document.getElementById('drive-url-input').value.trim();
         const quota = parseInt(document.getElementById('quota-input').value);
@@ -2033,36 +2791,73 @@
         const randomString = Math.random().toString(36).substring(2, 7);
         const slug = `${cleanName}-${randomString}`;
 
-        // Insert into database
-        const { data, error } = await supabase
-            .from('sortir_events')
-            .insert({
-                event_name: name,
-                event_slug: slug,
-                quota_limit: quota,
-                drive_folder_url: driveUrl,
-                drive_folder_id: folderId,
-                whatsapp_admin: wa
-            })
-            .select();
+        // 3. Call Supabase RPC create_sortir_event_with_quota
+        const { data: rpcData, error: rpcError } = await supabase.rpc('create_sortir_event_with_quota', {
+            p_vendor_id: v.id,
+            p_event_name: name,
+            p_event_slug: slug,
+            p_quota_limit: quota,
+            p_drive_folder_url: driveUrl,
+            p_drive_folder_id: folderId,
+            p_whatsapp_admin: wa
+        });
 
-        if (error) {
-            showAlert('Error', `Gagal menyimpan event: ${error.message}`, '❌');
+        if (rpcError) {
+            // Fallback direct insert if RPC not created yet
+            console.warn('RPC create_sortir_event_with_quota fallback:', rpcError);
+            const { data, error } = await supabase
+                .from('sortir_events')
+                .insert({
+                    event_name: name,
+                    event_slug: slug,
+                    quota_limit: quota,
+                    drive_folder_url: driveUrl,
+                    drive_folder_id: folderId,
+                    whatsapp_admin: wa,
+                    vendor_id: v.id
+                })
+                .select();
+
+            if (error) {
+                showAlert('Error', `Gagal menyimpan event: ${error.message}`, '❌');
+                return;
+            }
+
+            // Decrement local free quota
+            if (!isPro && v.free_quota_remaining > 0) {
+                v.free_quota_remaining--;
+                setVendorAuth(v);
+            }
+
+            showAlert('Sukses', 'Event culling berhasil dibuat!', '✅');
+            document.getElementById('create-event-form').reset();
+            await initDashboardView();
+            if (data && data.length > 0) selectActiveEvent(data[0]);
             return;
         }
 
-        // Save reference in LocalStorage
-        const trackedSlugs = JSON.parse(localStorage.getItem('sortir_created_events') || '[]');
-        trackedSlugs.push(slug);
-        localStorage.setItem('sortir_created_events', JSON.stringify(trackedSlugs));
+        if (!rpcData.success) {
+            if (rpcData.paywall_required) {
+                openSortirPaywallModal();
+            } else {
+                showAlert('Peringatan', rpcData.message || 'Gagal membuat event.', '⚠️');
+            }
+            return;
+        }
 
-        showAlert('Sukses', 'Event culling berhasil dibuat!', '✅');
+        // Update local vendor quota
+        if (!isPro) {
+            v.free_quota_remaining = rpcData.quota_remaining;
+            setVendorAuth(v);
+        }
+
+        showAlert('Sukses', `Event culling berhasil dibuat! ${isPro ? '(👑 PRO Unlimited)' : `(Sisa kuota: ${v.free_quota_remaining} event)`}`, '✅');
         document.getElementById('create-event-form').reset();
         
         // Refresh and select
         await initDashboardView();
-        if (data && data.length > 0) {
-            selectActiveEvent(data[0]);
+        if (rpcData.event) {
+            selectActiveEvent(rpcData.event);
         }
     };
 
