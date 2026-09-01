@@ -175,6 +175,55 @@ async function sendReminderEmail(email, vendorName, daysLeft, expiresAtFormatted
   }
 }
 
+// Helper: Send Reset Password Email
+async function sendResetPasswordEmail(email, vendorName, resetUrl) {
+  const htmlBody = `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; background: #FFF9F5; border: 1px solid #F0E6DE; border-radius: 20px; color: #4A3F35;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h2 style="color: #C8962E; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">SapaTamu Sortir</h2>
+        <p style="color: #8C7560; font-size: 13px; margin: 4px 0 0 0;">Pengaturan Ulang Kata Sandi Akun</p>
+      </div>
+      <div style="background: #FFFFFF; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(74,63,53,0.06); text-align: center;">
+        <p style="font-size: 14px; margin-top: 0; color: #4A3F35;">Halo <strong>${vendorName || 'Fotografer'}</strong>,</p>
+        <p style="font-size: 13px; color: #8C7560; line-height: 1.6;">
+          Kami menerima permintaan untuk mengatur ulang kata sandi akun SapaTamu Sortir Anda. Klik tombol di bawah ini untuk membuat kata sandi baru:
+        </p>
+        <div style="margin: 28px 0 20px;">
+          <a href="${resetUrl}" style="background: linear-gradient(135deg, #E07B7B, #C8962E); color: white; padding: 14px 28px; border-radius: 30px; text-decoration: none; font-weight: 800; font-size: 14px; display: inline-block; box-shadow: 0 6px 18px rgba(224,123,123,0.3);">
+            Atur Ulang Kata Sandi 🔐
+          </a>
+        </div>
+        <p style="font-size: 12px; color: #A89584; margin-bottom: 0; line-height: 1.5;">
+          ⏱️ Tautan ini aman dan hanya berlaku selama <strong>15 menit</strong>.<br>
+          Jika Anda tidak meminta perubahan kata sandi, silakan abaikan email ini.
+        </p>
+      </div>
+      <p style="text-align: center; font-size: 11px; color: #B0A090; margin-top: 24px;">
+        &copy; ${new Date().getFullYear()} SapaTamu.id — All rights reserved.
+      </p>
+    </div>
+  `;
+
+  try {
+    const gasPayload = {
+      action: 'sendCustomEmail',
+      recipient: email,
+      subject: `[SapaTamu Sortir] Permintaan Reset Kata Sandi Akun`,
+      htmlBody: htmlBody
+    };
+
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(gasPayload)
+    });
+    return res.ok;
+  } catch (err) {
+    console.error('Failed to send reset email via GAS mailer:', err);
+    return false;
+  }
+}
+
 // Drive helpers for recursive folder listing
 async function driveList(q, pageToken = null) {
   const fields = 'nextPageToken,files(id,name,mimeType,parents,thumbnailLink)';
@@ -273,6 +322,119 @@ export default async function handler(req, res) {
         success: true,
         message: `Kode OTP 6-digit telah dikirim ke ${cleanEmail}. Silakan periksa email Anda.`,
         email: cleanEmail
+      });
+    }
+
+    // 1b. ACTION: FORGOT PASSWORD (REQUEST RESET LINK VIA EMAIL)
+    if (action === 'forgot_password') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+      const { email } = req.body;
+      const cleanEmail = (email || '').toLowerCase().trim();
+
+      if (!cleanEmail) return res.status(400).json({ error: 'Email wajib diisi.' });
+
+      // Check vendor exists
+      const checkRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors?email=eq.${encodeURIComponent(cleanEmail)}&select=*`, {
+        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+      });
+      const existing = await checkRes.json();
+      if (!existing || existing.length === 0) {
+        return res.status(404).json({ error: 'Email tidak terdaftar sebagai vendor fotografer.' });
+      }
+
+      const vendor = existing[0];
+      const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+      // Store token in sortir_otps (valid for 15 minutes)
+      await fetch(`${SB_URL}/rest/v1/sortir_otps`, {
+        method: 'POST',
+        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ email: cleanEmail, otp_code: resetToken, expires_at: expiresAt, is_used: false })
+      });
+
+      const resetUrl = `https://sapatamu.id/sortir?action=reset_password&token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
+      await sendResetPasswordEmail(cleanEmail, vendor.vendor_name, resetUrl);
+
+      // Audit log
+      await logSortirActivity(vendor.id, 'AUTH_FORGOT_PASSWORD_REQUEST', 'EMAIL', cleanEmail, 'SUCCESS');
+
+      return res.status(200).json({
+        success: true,
+        message: 'Tautan reset kata sandi telah dikirim ke email Anda. Silakan periksa kotak masuk atau spam (berlaku 15 menit).',
+        email: cleanEmail
+      });
+    }
+
+    // 1c. ACTION: VERIFY RESET PASSWORD (SAVE NEW PASSWORD WITH PREVIOUS CHECK)
+    if (action === 'verify_reset_password') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+      const { email, token, newPassword } = req.body;
+      const cleanEmail = (email || '').toLowerCase().trim();
+      const cleanToken = (token || '').trim();
+
+      if (!cleanEmail || !cleanToken || !newPassword) {
+        return res.status(400).json({ error: 'Data reset password tidak lengkap.' });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'Password baru minimal 6 karakter.' });
+      }
+
+      // Check token in sortir_otps
+      const nowIso = new Date().toISOString();
+      const otpRes = await fetch(`${SB_URL}/rest/v1/sortir_otps?email=eq.${encodeURIComponent(cleanEmail)}&otp_code=eq.${encodeURIComponent(cleanToken)}&is_used=eq.false&expires_at=gt.${nowIso}&order=created_at.desc&limit=1`, {
+        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+      });
+      const validTokens = await otpRes.json();
+
+      if (!validTokens || validTokens.length === 0) {
+        return res.status(400).json({ error: 'Tautan reset password tidak valid atau telah kadaluarsa (berlaku 15 menit). Silakan minta tautan baru.' });
+      }
+
+      // Fetch current vendor
+      const vRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors?email=eq.${encodeURIComponent(cleanEmail)}&select=*`, {
+        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+      });
+      const vendors = await vRes.json();
+      if (!vendors || vendors.length === 0) {
+        return res.status(404).json({ error: 'Akun vendor tidak ditemukan.' });
+      }
+
+      const vendor = vendors[0];
+      const newPwdHash = hashPassword(newPassword);
+
+      // FORBID USING PREVIOUS PASSWORD
+      if (vendor.password_hash && vendor.password_hash === newPwdHash) {
+        return res.status(400).json({ error: 'Password baru tidak boleh sama dengan password sebelumnya. Silakan gunakan password yang berbeda.' });
+      }
+
+      // Update password hash
+      const updateRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors?id=eq.${vendor.id}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password_hash: newPwdHash,
+          updated_at: nowIso
+        })
+      });
+
+      if (!updateRes.ok) {
+        return res.status(500).json({ error: 'Gagal memperbarui password akun.' });
+      }
+
+      // Invalidate token
+      await fetch(`${SB_URL}/rest/v1/sortir_otps?id=eq.${validTokens[0].id}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_used: true })
+      });
+
+      // Audit log
+      await logSortirActivity(vendor.id, 'AUTH_RESET_PASSWORD_SUCCESS', 'SYSTEM', cleanEmail, 'SUCCESS');
+
+      return res.status(200).json({
+        success: true,
+        message: 'Kata sandi Anda berhasil diperbarui! Silakan masuk kembali menggunakan kata sandi baru Anda.'
       });
     }
 

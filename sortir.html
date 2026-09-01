@@ -1153,7 +1153,10 @@
                     <input id="login-email" type="email" placeholder="nama@studiofoto.com" class="form-control" required style="font-size:13px;">
                 </div>
                 <div>
-                    <label class="form-label" style="font-size:12px;">Password</label>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label class="form-label" style="font-size:12px; margin-bottom:0;">Password</label>
+                        <a href="javascript:void(0)" onclick="switchAuthTab('forgot')" style="font-size:11px; color:var(--primary); font-weight:750; text-decoration:none;">Lupa password?</a>
+                    </div>
                     <input id="login-pass" type="password" placeholder="••••••••" class="form-control" required style="font-size:13px;">
                 </div>
                 <button type="submit" id="btn-submit-login" class="btn btn-primary" style="width:100%; padding:12px; margin-top:6px; font-size:13px;">
@@ -1249,6 +1252,59 @@
             <p style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:16px;">
                 Sudah punya akun? <a href="javascript:void(0)" onclick="switchAuthTab('login')" style="color:var(--primary); font-weight:750; text-decoration:none;">Masuk di sini</a>
             </p>
+        </div>
+
+        <!-- ──────────────── TAB 3: FORM LUPA PASSWORD ──────────────── -->
+        <div id="auth-tab-forgot-content" style="display:none;">
+            <div style="text-align:center; margin-bottom:16px;">
+                <span style="font-size:26px;">🔑</span>
+                <h4 style="font-size:15px; font-weight:800; color:var(--text-main); margin:4px 0 2px;">Reset Kata Sandi</h4>
+                <p style="font-size:11.5px; color:var(--text-muted); margin:0;">
+                    Masukkan email terdaftar Anda. Kami akan mengirimkan tautan aman untuk mengatur ulang kata sandi.
+                </p>
+            </div>
+            <form onsubmit="handleForgotPassword(event)" style="display:flex; flex-direction:column; gap:12px;">
+                <div>
+                    <label class="form-label" style="font-size:12px;">Email Terdaftar</label>
+                    <input id="forgot-email" type="email" placeholder="nama@studiofoto.com" class="form-control" required style="font-size:13px;">
+                </div>
+                <button type="submit" id="btn-send-forgot" class="btn btn-primary" style="width:100%; padding:12px; margin-top:4px; font-size:13px;">
+                    Kirim Tautan Reset Password ✉️
+                </button>
+            </form>
+            <p style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:16px;">
+                <a href="javascript:void(0)" onclick="switchAuthTab('login')" style="color:var(--text-main); font-weight:750; text-decoration:none;">&larr; Kembali ke Halaman Masuk</a>
+            </p>
+        </div>
+
+        <!-- ──────────────── TAB 4: FORM RESET PASSWORD (DARI EMAIL LINK) ──────────────── -->
+        <div id="auth-tab-reset-content" style="display:none;">
+            <div style="text-align:center; margin-bottom:16px;">
+                <span style="font-size:26px;">🔐</span>
+                <h4 style="font-size:15px; font-weight:800; color:var(--text-main); margin:4px 0 2px;">Buat Kata Sandi Baru</h4>
+                <p style="font-size:11.5px; color:var(--text-muted); margin:0;">
+                    Silakan masukkan kata sandi baru Anda (<strong style="color:var(--primary);">dilarang menggunakan password sebelumnya</strong>).
+                </p>
+            </div>
+            <form onsubmit="handleResetPassword(event)" style="display:flex; flex-direction:column; gap:12px;">
+                <input type="hidden" id="reset-token">
+                <input type="hidden" id="reset-email">
+                <div>
+                    <label class="form-label" style="font-size:12px;">Email Akun</label>
+                    <input id="reset-display-email" type="text" class="form-control" readonly style="font-size:13px; background:#FDF8F4; color:var(--text-muted);">
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:12px;">Password Baru</label>
+                    <input id="reset-new-pass" type="password" placeholder="Min 6 karakter" minlength="6" class="form-control" required style="font-size:13px;">
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:12px;">Konfirmasi Password Baru</label>
+                    <input id="reset-confirm-pass" type="password" placeholder="Ulangi password baru" minlength="6" class="form-control" required style="font-size:13px;">
+                </div>
+                <button type="submit" id="btn-submit-reset" class="btn btn-primary" style="width:100%; padding:12px; margin-top:4px; font-size:13px;">
+                    Simpan Kata Sandi Baru 🔒
+                </button>
+            </form>
         </div>
 
         <p id="auth-modal-alert" style="font-size:11px; text-align:center; margin-top:12px; min-height:16px; margin-bottom:0; font-weight:600;"></p>
@@ -1962,6 +2018,21 @@
         } else {
             initDashboardView();
         }
+
+        // Detect action=reset_password from email link
+        if (action === 'reset_password') {
+            const tokenParam = params.get('token');
+            const emailParam = params.get('email');
+            if (tokenParam && emailParam) {
+                openVendorAuthModal('reset');
+                const tEl = document.getElementById('reset-token');
+                const eEl = document.getElementById('reset-email');
+                const dEl = document.getElementById('reset-display-email');
+                if (tEl) tEl.value = tokenParam;
+                if (eEl) eEl.value = decodeURIComponent(emailParam);
+                if (dEl) dEl.value = decodeURIComponent(emailParam);
+            }
+        }
     }
 
     // Initialize SPA
@@ -2214,22 +2285,141 @@
     window.switchAuthTab = function(tab) {
         const btnLogin = document.getElementById('tab-btn-login');
         const btnReg = document.getElementById('tab-btn-register');
+        const tabSwitcher = document.getElementById('tab-btn-login')?.parentElement;
         const viewLogin = document.getElementById('auth-tab-login-content');
         const viewReg = document.getElementById('auth-tab-register-content');
+        const viewForgot = document.getElementById('auth-tab-forgot-content');
+        const viewReset = document.getElementById('auth-tab-reset-content');
 
         setAuthModalAlert('');
+
+        if (viewLogin) viewLogin.style.display = 'none';
+        if (viewReg) viewReg.style.display = 'none';
+        if (viewForgot) viewForgot.style.display = 'none';
+        if (viewReset) viewReset.style.display = 'none';
+
+        if (tabSwitcher) {
+            tabSwitcher.style.display = (tab === 'forgot' || tab === 'reset') ? 'none' : 'flex';
+        }
 
         if (tab === 'register') {
             if (btnReg) btnReg.classList.add('active');
             if (btnLogin) btnLogin.classList.remove('active');
             if (viewReg) viewReg.style.display = 'block';
-            if (viewLogin) viewLogin.style.display = 'none';
             backToRegStep1();
+        } else if (tab === 'forgot') {
+            if (viewForgot) viewForgot.style.display = 'block';
+        } else if (tab === 'reset') {
+            if (viewReset) viewReset.style.display = 'block';
         } else {
             if (btnLogin) btnLogin.classList.add('active');
             if (btnReg) btnReg.classList.remove('active');
             if (viewLogin) viewLogin.style.display = 'block';
-            if (viewReg) viewReg.style.display = 'none';
+        }
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // FORGOT & RESET PASSWORD HANDLERS
+    // ─────────────────────────────────────────────────────────────
+    window.handleForgotPassword = async function(event) {
+        event.preventDefault();
+        const email = document.getElementById('forgot-email').value.trim();
+        const btn = document.getElementById('btn-send-forgot');
+
+        if (!email) {
+            setAuthModalAlert('Email wajib diisi.');
+            return;
+        }
+
+        if (btn) { btn.disabled = true; btn.textContent = 'Mengirim Tautan Reset...'; }
+        setAuthModalAlert('');
+
+        try {
+            const res = await fetch('/api/sortir?action=forgot_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                setAuthModalAlert(data.error || 'Gagal mengirim email reset password.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Kirim Tautan Reset Password ✉️'; }
+                return;
+            }
+
+            setAuthModalAlert(data.message || 'Tautan reset telah dikirim ke email Anda. Cek inbox/spam.', false);
+            if (btn) { btn.disabled = true; btn.textContent = 'Tautan Terkirim ✓'; }
+
+        } catch (e) {
+            setAuthModalAlert('Gagal menghubungi server.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Kirim Tautan Reset Password ✉️'; }
+        }
+    };
+
+    window.handleResetPassword = async function(event) {
+        event.preventDefault();
+        const email = document.getElementById('reset-email').value.trim();
+        const token = document.getElementById('reset-token').value.trim();
+        const newPass = document.getElementById('reset-new-pass').value;
+        const confirmPass = document.getElementById('reset-confirm-pass').value;
+        const btn = document.getElementById('btn-submit-reset');
+
+        if (!newPass || !confirmPass) {
+            setAuthModalAlert('Password baru dan konfirmasi wajib diisi.');
+            return;
+        }
+        if (newPass.length < 6) {
+            setAuthModalAlert('Password baru minimal 6 karakter.');
+            return;
+        }
+        if (newPass !== confirmPass) {
+            setAuthModalAlert('Konfirmasi password tidak cocok dengan password baru.');
+            return;
+        }
+
+        if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan Password...'; }
+        setAuthModalAlert('');
+
+        try {
+            const res = await fetch('/api/sortir?action=verify_reset_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, token, newPassword: newPass })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                setAuthModalAlert(data.error || 'Gagal mengatur ulang password.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Simpan Kata Sandi Baru 🔒'; }
+                return;
+            }
+
+            // SUCCESS MODAL & REDIRECT TO LOGIN
+            closeVendorAuthModal();
+            showAlert(
+                'Password Berhasil Diubah! 🎉',
+                'Kata sandi akun Anda telah berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda.',
+                '🔐'
+            );
+
+            // Clean URL query params without reloading
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            // Reopen auth modal on login tab with email prefilled
+            setTimeout(() => {
+                openVendorAuthModal('login');
+                const loginEmail = document.getElementById('login-email');
+                if (loginEmail) loginEmail.value = email;
+                const loginPass = document.getElementById('login-pass');
+                if (loginPass) { loginPass.value = ''; loginPass.focus(); }
+            }, 600);
+
+        } catch (e) {
+            setAuthModalAlert('Terjadi kesalahan koneksi.');
+            if (btn) { btn.disabled = false; btn.textContent = 'Simpan Kata Sandi Baru 🔒'; }
         }
     };
 

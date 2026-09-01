@@ -35,7 +35,7 @@ CREATE INDEX idx_sortir_vendors_sub_exp ON public.sortir_vendors(subscription_ex
 CREATE TABLE public.sortir_otps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL,
-    otp_code VARCHAR(6) NOT NULL,
+    otp_code VARCHAR(255) NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     is_used BOOLEAN DEFAULT FALSE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL

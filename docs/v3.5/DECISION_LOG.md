@@ -148,6 +148,22 @@
 
 ---
 
+### GATE-08: Alur Lupa Password, Email Link Reset, Validasi Anti-Reuse & Modal Sukses
+- **Timestamp Decision**: `2026-09-01T12:11:19+07:00`
+- **Status**: `APPROVED & IMPLEMENTED`
+1. **Fungsi Perubahan**: 
+   Menambahkan fitur pemulihan kata sandi lengkap: tombol "Lupa password?" di login modal, pengiriman link reset 15 menit ke email, validasi bahwa password baru dilarang sama dengan password lama, dan popup modal sukses yang mengarahkan kembali ke form login.
+2. **Dari Kode Sebelumnya**: 
+   Modal login belum memiliki opsi lupa password, dan backend belum memiliki handler reset token dan perbandingan hash password lama.
+3. **Mengarah Kemana**: 
+   - UI `sortir.html` memiliki view Lupa Password dan view Reset Password (otomatis terbuka saat membuka tautan email `?action=reset_password&token=...`).
+   - Backend `api/sortir.js` menangani `action=forgot_password` dan `action=verify_reset_password` dengan validasi ketat anti-reuse password.
+   - Modal sukses muncul memberi konfirmasi sebelum otomatis membuka tab login dengan email terisi.
+4. **Cabang Routing Terdampak**: Form login `sortir.html`, route `?action=reset_password`, endpoint `api/sortir.js`.
+5. **Risiko & Trade-off Jujur**: Token berlaku 15 menit untuk keamanan standar OWASP.
+
+---
+
 ## ⏱️ 3. Audit Log & Timeline Eksekusi Teknis
 
 | No | Timestamp (WIB) | Aktivitas / Milestone | Target File / Komponen | Git Commit |
@@ -164,18 +180,25 @@
 | 10 | `2026-09-01 10:23:00` | **GATE-05**: Hapus Navigasi Owner Header & Direct Slug `/sortir-owner` | `sortir.html`, `vercel.json`, `DECISION_LOG.md` | `1df3a96` |
 | 11 | `2026-09-01 10:33:00` | **GATE-06**: Aligment Badge Dipilih & Pembersihan Copy Midtrans | `sortir.html` | `ec5bdaa` |
 | 12 | `2026-09-01 10:41:00` | Auto-Sync Profil Live & Fallback Check Payment | `sortir.html`, `api/sortir.js` | `f493dc9` |
-| 13 | `2026-09-01 11:22:00` | **GATE-07**: Dropdown Kode Negara, Sanitasi WA Fonnte, Reminder H-7 & Tabel `sortir_logs` | `sortir.html`, `api/sortir.js`, `sql/` | *Pending Commit* |
+| 13 | `2026-09-01 11:22:00` | **GATE-07**: Dropdown Kode Negara, Sanitasi WA Fonnte, Reminder H-7 & Tabel `sortir_logs` | `sortir.html`, `api/sortir.js`, `sql/` | `b170c05` |
+| 14 | `2026-09-01 12:15:00` | **GATE-08**: Fitur Lupa Password, Email Link Reset, Anti-Reuse Password & Success Modal | `sortir.html`, `api/sortir.js`, `sql/` | *Pending Commit* |
 
 ---
 
 ## 🧪 4. Bukti Verifikasi Pengujian (E2E Test Output)
 
-### Test Case: Akun Vendor `Knowhere Studio`
+### Test Case 1: Akun Vendor `Knowhere Studio`
 - **Email**: `opick8c@gmail.com`
 - **Vendor ID**: `21c16abd-7f83-46e9-b034-23c14140700c`
 - **Generated OTP**: `229686` (Status: `is_used = true` di database).
-- **Password Hash**: Salted SHA-256 (`cb115171...`).
 - **Initial Quota**: `10` (Free Tier).
 - **Post-Create Event Quota**: `9` (Atomic RPC verification sukses).
-- **Event ID**: `c74e1003-4625-4b7c-b23e-01bba62bf4f5` (*Prewedding Nadyfa & Dimas - Knowhere Studio*).
 - **Aktivasi PRO**: Sukses di-upgrade ke `monthly` (Aktif s.d 1 Oktober 2026).
+
+### Test Case 2: Flow Lupa & Reset Password (GATE-08)
+- **Request Reset**: Token `401636` dikirim ke email `opick8c@gmail.com`.
+- **Anti-Reuse Test**: Submit password lama `qwerty123` $\rightarrow$ **Ditolak HTTP 400** (*Password baru tidak boleh sama dengan password sebelumnya*).
+- **New Password Test**: Submit password baru `qwerty12345` $\rightarrow$ **Sukses HTTP 200** & token di-mark `is_used = true`.
+- **Old Password Login**: Ditolak HTTP 401.
+- **New Password Login**: Sukses HTTP 200.
+- **Restored**: Password dikembalikan ke `qwerty123` & verifikasi sukses.
