@@ -167,6 +167,15 @@
 - [x] Perbaikan Bug Scroll Hijack: Mengganti `item.scrollIntoView()` dengan scrolling horizontal internal `navInner.scrollTo({ left })`, serta menonaktifkan auto-start Tour Guide untuk vendor yang sudah login sehingga scrolling ke bawah bebas hambatan (0 scroll hijacking).
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 19 — Tombol Copy URL Klien Atas-Bawah & Migrasi Custom SapaTamu Alert/Toast/Confirm (GATE-21 & GATE-22)
+- [x] Penambahan tombol `📋 Salin URL Klien` pada setiap kartu di **Daftar Event Saya** dalam susunan vertikal (atas-bawah) berdampingan dengan tombol `Buka Panel →`.
+- [x] Salin link culling instan 1-klik ke clipboard vendor lengkap dengan visual feedback *"✓ Tersalin!"* dan toast notifikasi.
+- [x] Migrasi 100% dialog browser bawaan (`alert()`, `confirm()`) menjadi **Custom SapaTamu Toast (`#sortir-toast`)** dan **Custom Confirmation Modal (`#confirm-modal`)** dengan animasi mulus dan desain premium seragam.
+- *File:* `sortir.html`
+
+
 
 
 

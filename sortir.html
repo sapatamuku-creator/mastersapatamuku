@@ -2174,6 +2174,22 @@
     </div>
 </div>
 
+<!-- Custom confirmation modal (Ganti confirm browser) -->
+<div id="confirm-modal" class="notification-modal" style="display:none;">
+    <div class="notification-content" style="max-width: 420px; text-align: center; border-radius: 24px; padding: 32px 24px;">
+        <div id="confirm-modal-icon" style="font-size: 38px; margin-bottom: 12px;">❓</div>
+        <h3 id="confirm-modal-title" style="font-size: 19px; font-weight: 800; margin-bottom: 8px; color: var(--text-main);">Konfirmasi</h3>
+        <div id="confirm-modal-msg" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6;"></div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="confirm-modal-cancel-btn" onclick="closeConfirmModal(false)" class="btn btn-secondary" style="flex: 1; padding: 12px 16px;">Batal</button>
+            <button id="confirm-modal-ok-btn" onclick="closeConfirmModal(true)" class="btn btn-primary" style="flex: 1; padding: 12px 16px; background: var(--primary);">Lanjut</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom floating toast notification -->
+<div id="sortir-toast" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:9999999; background:rgba(30,27,24,0.92); color:#FFFFFF; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:12px 22px; border-radius:50px; font-size:13px; font-weight:700; box-shadow:0 10px 30px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events:none; white-space:nowrap; max-width:90vw; text-overflow:ellipsis; overflow:hidden;"></div>
+
 <!-- Realtime Progress Loading Modal (live-progress-ux) -->
 <div id="progress-modal" class="notification-modal" style="display: none; z-index: 9999999; padding: 20px;">
     <div class="notification-content" style="max-width: 440px; border-radius: 28px; padding: 36px 30px; text-align: center; box-shadow: 0 25px 50px -12px rgba(74, 63, 53, 0.22); border: 1px solid var(--border);">
@@ -2394,6 +2410,73 @@
         }
     });
 
+    // Custom SapaTamu Toast Helper
+    window.showToast = function(msg, type = 'green') {
+        let toast = document.getElementById('sortir-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'sortir-toast';
+            toast.style.cssText = "display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:9999999; background:rgba(30,27,24,0.92); color:#FFFFFF; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:12px 22px; border-radius:50px; font-size:13px; font-weight:700; box-shadow:0 10px 30px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events:none; white-space:nowrap; max-width:90vw; text-overflow:ellipsis; overflow:hidden;";
+            document.body.appendChild(toast);
+        }
+        const icons = { green: '✅', red: '❌', gold: '⚠️', info: 'ℹ️' };
+        const borderColors = { green: 'rgba(46, 125, 50, 0.5)', red: 'rgba(224, 123, 123, 0.6)', gold: 'rgba(200, 150, 46, 0.6)', info: 'rgba(224, 123, 123, 0.4)' };
+
+        toast.innerHTML = `<span style="margin-right:6px;">${icons[type] || '✨'}</span> ${msg}`;
+        toast.style.borderColor = borderColors[type] || 'rgba(255,255,255,0.2)';
+        toast.style.display = 'block';
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(12px)';
+            setTimeout(() => { toast.style.display = 'none'; }, 300);
+        }, 3200);
+    };
+
+    // Custom SapaTamu Confirmation Modal (Promise-based, ganti confirm browser)
+    let activeConfirmResolve = null;
+    window.showConfirm = function(title, message, options = {}) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('confirm-modal');
+            const tEl = document.getElementById('confirm-modal-title');
+            const mEl = document.getElementById('confirm-modal-msg');
+            const iEl = document.getElementById('confirm-modal-icon');
+            const okBtn = document.getElementById('confirm-modal-ok-btn');
+            const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+
+            if (tEl) tEl.innerText = title;
+            if (mEl) mEl.innerHTML = message;
+            if (iEl) iEl.innerText = options.icon || '❓';
+            if (okBtn) {
+                okBtn.innerText = options.confirmText || 'Lanjut';
+                if (options.isDanger) {
+                    okBtn.style.background = '#E07B7B';
+                    okBtn.style.color = '#FFFFFF';
+                } else {
+                    okBtn.style.background = 'var(--primary)';
+                    okBtn.style.color = '#FFFFFF';
+                }
+            }
+            if (cancelBtn) cancelBtn.innerText = options.cancelText || 'Batal';
+
+            activeConfirmResolve = resolve;
+            if (modal) modal.style.display = 'flex';
+            else resolve(true);
+        });
+    };
+
+    window.closeConfirmModal = function(result) {
+        const modal = document.getElementById('confirm-modal');
+        if (modal) modal.style.display = 'none';
+        if (activeConfirmResolve) {
+            activeConfirmResolve(result);
+            activeConfirmResolve = null;
+        }
+    };
+
     // Helper alerts
     function showAlert(title, message, icon = "✨") {
         const tEl = document.getElementById('alert-modal-title');
@@ -2404,7 +2487,7 @@
         if (mEl) mEl.innerText = message;
         if (iEl) iEl.innerText = icon;
         if (modal) modal.style.display = 'flex';
-        else alert(`${icon} ${title}\n\n${message}`);
+        else window.showToast(`${icon} ${title}: ${message}`, 'info');
     }
     window.showAlert = showAlert;
 
@@ -3005,10 +3088,15 @@
         }
     };
 
-    window.handleVendorLogout = function() {
-        if (confirm('Apakah Anda yakin ingin keluar dari akun vendor?')) {
+    window.handleVendorLogout = async function() {
+        const confirmed = await window.showConfirm(
+            'Keluar Akun Vendor',
+            'Apakah Anda yakin ingin keluar dari akun vendor SapaTamu Sortir?',
+            { confirmText: 'Ya, Keluar', cancelText: 'Batal', icon: '🚪' }
+        );
+        if (confirmed) {
             clearVendorAuth();
-            showAlert('Keluar', 'Anda telah keluar dari akun vendor.', '👋');
+            window.showToast('Anda telah keluar dari akun vendor.', 'info');
             initDashboardView();
         }
     };
@@ -3310,18 +3398,60 @@
             item.style.alignItems = 'center';
             item.style.gap = '12px';
             item.innerHTML = `
-                <div style="flex: 1; min-width: 0;">
-                    <h4 style="font-size: 15px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${evt.event_name}</h4>
+                <div style="flex: 1; min-width: 0;" onclick="selectActiveEventBySlug('${evt.event_slug}')">
+                    <h4 style="font-size: 15px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;">${evt.event_name}</h4>
                     <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Slug: ?event=${evt.event_slug}</p>
                 </div>
-                <button class="btn ${isActive ? 'btn-primary' : 'btn-secondary'}" style="padding: 6px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; flex-shrink: 0; pointer-events: none;">
-                    ${isActive ? 'Sedang Aktif ✓' : 'Buka Panel →'}
-                </button>
+                <div style="display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-items: stretch;">
+                    <button onclick="copyEventClientUrl('${evt.event_slug}', event)" class="btn btn-secondary btn-copy-url" style="padding: 5px 12px; font-size: 11px; font-weight: 700; border-radius: 8px; white-space: nowrap; border-color: rgba(224, 123, 123, 0.4); color: var(--primary); background: #FFF5F5;">
+                        📋 Salin URL Klien
+                    </button>
+                    <button onclick="selectActiveEventBySlug('${evt.event_slug}')" class="btn ${isActive ? 'btn-primary' : 'btn-secondary'}" style="padding: 5px 12px; font-size: 11px; font-weight: 700; border-radius: 8px; white-space: nowrap;">
+                        ${isActive ? 'Sedang Aktif ✓' : 'Buka Panel →'}
+                    </button>
+                </div>
             `;
-            item.addEventListener('click', () => selectActiveEvent(evt));
             listContainer.appendChild(item);
         });
     }
+
+    window.copyEventClientUrl = function(slug, e) {
+        if (e) e.stopPropagation();
+        const url = `${window.location.origin}${window.location.pathname}?event=${encodeURIComponent(slug)}`;
+        
+        const finishCopy = () => {
+            window.showToast('Tautan event klien berhasil disalin ke clipboard! 📋', 'green');
+            if (e && e.currentTarget) {
+                const btn = e.currentTarget;
+                const oldText = btn.innerHTML;
+                btn.innerHTML = '✓ Tersalin!';
+                btn.style.background = '#E8F5E9';
+                btn.style.color = '#2E7D32';
+                btn.style.borderColor = 'rgba(46, 125, 50, 0.4)';
+                setTimeout(() => {
+                    btn.innerHTML = oldText;
+                    btn.style.background = '#FFF5F5';
+                    btn.style.color = 'var(--primary)';
+                    btn.style.borderColor = 'rgba(224, 123, 123, 0.4)';
+                }, 1600);
+            }
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(finishCopy).catch(() => {
+                fallbackCopyText(url);
+                finishCopy();
+            });
+        } else {
+            fallbackCopyText(url);
+            finishCopy();
+        }
+    };
+
+    window.selectActiveEventBySlug = function(slug) {
+        const found = store.myEvents.find(e => e.event_slug === slug);
+        if (found) selectActiveEvent(found);
+    };
 
     async function selectActiveEvent(evt) {
         store.activeEvent = evt;
@@ -3397,19 +3527,22 @@
     window.copySelectionsText = function() {
         const text = document.getElementById('active-selections-text').innerText;
         if (text === 'Belum ada pilihan foto dari klien.' || !text) {
-            showAlert('Peringatan', 'Tidak ada daftar indeks foto untuk disalin.', '⚠️');
+            window.showToast('Tidak ada daftar indeks foto untuk disalin.', 'gold');
             return;
         }
         navigator.clipboard.writeText(text)
-            .then(() => showAlert('Sukses', 'Daftar indeks foto terpilih berhasil disalin ke clipboard!', '✅'))
-            .catch(() => showAlert('Error', 'Gagal menyalin teks.', '❌'));
+            .then(() => window.showToast('Daftar indeks foto terpilih berhasil disalin ke clipboard! 📋', 'green'))
+            .catch(() => window.showToast('Gagal menyalin teks ke clipboard.', 'red'));
     };
 
     window.deleteActiveEvent = async function() {
         if (!store.activeEvent) return;
-        if (!confirm(`Apakah Anda yakin ingin menghapus event "${store.activeEvent.event_name}" dari sistem? Tindakan ini tidak dapat dibatalkan.`)) {
-            return;
-        }
+        const confirmed = await window.showConfirm(
+            'Hapus Event Culling',
+            `Apakah Anda yakin ingin menghapus event <b>"${store.activeEvent.event_name}"</b> dari sistem?<br><span style="color:#E07B7B;font-size:12px;margin-top:6px;display:block;">Tindakan ini permanen dan tidak dapat dibatalkan.</span>`,
+            { confirmText: 'Ya, Hapus', cancelText: 'Batal', isDanger: true, icon: '🗑️' }
+        );
+        if (!confirmed) return;
 
         const { error } = await supabase
             .from('sortir_events')
@@ -3426,7 +3559,7 @@
         tracked = tracked.filter(slug => slug !== store.activeEvent.event_slug);
         localStorage.setItem('sortir_created_events', JSON.stringify(tracked));
 
-        showAlert('Sukses', 'Event berhasil dihapus!', '✅');
+        window.showToast('Event berhasil dihapus dari sistem! 🗑️', 'green');
         
         store.activeEvent = null;
         document.getElementById('active-event-card').style.display = 'none';
@@ -4740,9 +4873,12 @@
     };
 
     window.deleteEventByAdmin = async function(id, name) {
-        if (!confirm(`ADMIN: Apakah Anda yakin ingin menghapus event "${name}" dari seluruh database?`)) {
-            return;
-        }
+        const confirmed = await window.showConfirm(
+            'Super Admin: Hapus Event',
+            `Apakah Anda yakin ingin menghapus event <b>"${name}"</b> dari seluruh database?`,
+            { confirmText: 'Hapus Permanen', cancelText: 'Batal', isDanger: true, icon: '⚠️' }
+        );
+        if (!confirmed) return;
 
         const { error } = await supabase
             .from('sortir_events')
@@ -4754,7 +4890,7 @@
             return;
         }
 
-        showAlert('Sukses', 'Event berhasil didelete dari sistem!', '✅');
+        window.showToast('Event berhasil dihapus dari database oleh Admin! 🗑️', 'green');
         initOwnerView();
     };
 
