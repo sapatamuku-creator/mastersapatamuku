@@ -235,6 +235,14 @@
 - [x] Mengubah struktur layout culling klien: Judul & deskripsi event scroll secara natural, sedangkan bilah aksi (Boks Kuota `0/8` + Tombol `Kirim Hasil Sortir` + Tab Pencarian/Filter) menjadi *sticky compact bar* (~55px) yang ramping dan menghemat 85% layar HP untuk preview foto.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 28 — Fix Mobile Header Auth State Visibility (GATE-31)
+- [x] Menghapus deklarasi `display: flex !important` pada selector `#vendor-user-info` di CSS mobile `@media (max-width: 679.98px)`.
+- [x] Memulihkan kontrol visibilitas JavaScript saat logout/login sehingga tombol `[Masuk / Daftar Vendor]` dan bilah aksi vendor (`Free: 10/10`, `Upgrade PRO`, `Keluar`) tidak lagi muncul bersamaan di HP saat belum login.
+- *File:* `sortir.html`
+
+
 
 
 
