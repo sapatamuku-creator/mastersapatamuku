@@ -1,16 +1,16 @@
 # Graph Report - mastersapatamuku  (2026-09-01)
 
 ## Corpus Check
-- 189 files · ~1,033,974 words
+- 189 files · ~1,035,730 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1866 nodes · 1938 edges · 174 communities (146 shown, 28 thin omitted)
+- 1869 nodes · 1942 edges · 174 communities (146 shown, 28 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b170c057`
+- Built from commit: `b12751a3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -288,8 +288,8 @@ Cohesion: 0.20
 Nodes (9): 1. PEMETAAN FILE & PERAN DALAM SISTEM, 2. DIAGRAM KERANGKA & ALUR ROUTING, 3. AUDIT JALUR A: PURE LOCAL LAN BRIDGE (`sortir_bridge.py`), 4. AUDIT JALUR B: WEB BROWSER HYBRID (`sortir.html`), 5. KESIMPULAN AUDIT & SOLUSI TERBAIK, Alur Eksekusi & Titik Bottleneck:, 📑 DOKUMEN AUDIT ARSITEKTUR & ROUTING KERANGKA, Endpoint Routing & Cara Kerja: (+1 more)
 
 ### Community 31 - "Vercel API: Create Payment Handler"
-Cohesion: 0.13
-Nodes (14): 📊 1. Latar Belakang & Analisis Kebutuhan, 🛡️ 2. Format Decision Gate (5-Point Standard SapaTamu), ⏱️ 3. Audit Log & Timeline Eksekusi Teknis, 🧪 4. Bukti Verifikasi Pengujian (E2E Test Output), Decision Log — SapaTamu v3.5 (Sortir SaaS, Hybrid Access & Subscription), GATE-01: Pemisahan Akses Halaman `/sortir` (Public Free vs Gated Auth), GATE-02: Registrasi Vendor dengan OTP Email (1-Email-1-Akun Unik), GATE-03: Paywall Subscription, Kuota Free Tier 10x & Override Reset (+6 more)
+Cohesion: 0.12
+Nodes (16): 📊 1. Latar Belakang & Analisis Kebutuhan, 🛡️ 2. Format Decision Gate (5-Point Standard SapaTamu), ⏱️ 3. Audit Log & Timeline Eksekusi Teknis, 🧪 4. Bukti Verifikasi Pengujian (E2E Test Output), Decision Log — SapaTamu v3.5 (Sortir SaaS, Hybrid Access & Subscription), GATE-01: Pemisahan Akses Halaman `/sortir` (Public Free vs Gated Auth), GATE-02: Registrasi Vendor dengan OTP Email (1-Email-1-Akun Unik), GATE-03: Paywall Subscription, Kuota Free Tier 10x & Override Reset (+8 more)
 
 ### Community 32 - "Vercel API: Get Email Handler"
 Cohesion: 0.13
@@ -644,8 +644,8 @@ Cohesion: 0.25
 Nodes (7): Fase 1 — Fondasi & Alur Inti, Fase 2 — Import Excel, Fase 3 — Duplicate Manager, Fase 4 — Sync Sheet UI, Fase 5 — Hero Dinamis & Navigasi, Fase 6 — Tools & Polish, TASKS — Formulir Tamu Reference Build
 
 ### Community 166 - "sortir.js"
-Cohesion: 0.40
-Nodes (9): collectFiles(), driveList(), formatWhatsappNumber(), handler(), hashPassword(), logSortirActivity(), sendFonnteWA(), sendOtpEmail() (+1 more)
+Cohesion: 0.36
+Nodes (10): collectFiles(), driveList(), formatWhatsappNumber(), handler(), hashPassword(), logSortirActivity(), sendFonnteWA(), sendOtpEmail() (+2 more)
 
 ### Community 167 - "🛡️ Rencana Gate & Detail Keputusan (5-Point Format)"
 Cohesion: 0.14
@@ -664,7 +664,7 @@ Cohesion: 0.83
 Nodes (3): fetchAllTamuSupabase(), fetchSheetData(), run()
 
 ## Knowledge Gaps
-- **1175 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1170 more)
+- **1177 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1172 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -673,15 +673,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `dependencies` connect `dependencies` to `ai-website-cloner/package.json`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
+- **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
+  _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1175 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1177 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: List Drive Files` be split into smaller, more focused modules?**
   _Cohesion score 0.12857142857142856 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: Create Payment Handler` be split into smaller, more focused modules?**
-  _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11764705882352941 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: Get Email Handler` be split into smaller, more focused modules?**
   _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._
-- **Should `AGENT.md — SapaTamu Project Agent Operating System` be split into smaller, more focused modules?**
-  _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
