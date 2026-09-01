@@ -1,16 +1,16 @@
 # Graph Report - mastersapatamuku  (2026-09-01)
 
 ## Corpus Check
-- 189 files · ~1,039,890 words
+- 189 files · ~1,039,974 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1877 nodes · 1953 edges · 177 communities (149 shown, 28 thin omitted)
+- 1878 nodes · 1954 edges · 177 communities (149 shown, 28 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1ab0fa5a`
+- Built from commit: `b6d3d793`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -174,8 +174,8 @@
 6. `AI Website Cloner Template` - 15 edges
 7. `AI Website Cloner Template 中文版` - 15 edges
 8. `LOW TASKS (14)` - 15 edges
-9. `PHASE3.5-DESIGN — OAuth2 Client & Dashboard Pengantin` - 14 edges
-10. `handler()` - 13 edges
+9. `📋 Task List & Status` - 14 edges
+10. `PHASE3.5-DESIGN — OAuth2 Client & Dashboard Pengantin` - 14 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `handler()` --calls--> `buildSortirOgMeta()`  [EXTRACTED]
@@ -299,8 +299,8 @@ Cohesion: 0.13
 Nodes (15): L10. Remove console.log leak, L11. Remove hardcoded ssId/username, L12. Integrity verification for skills, L13. Review AGENTS.md commands, L14. Audit AGENT.md sensitive info, L1. Remove site verification token, L2. SRI for external scripts, L3. SRI for CDN (+7 more)
 
 ### Community 33 - "Vercel API: Sortir Session Handler"
-Cohesion: 0.13
-Nodes (14): 📋 Task List & Status, Tasks & Roadmap — SapaTamu Sortir v3.5 (SaaS Hybrid Access & Subscription), [x] Task 10 — Interactive Page Tour Guide (Free-First Onboarding) (GATE-10), [x] Task 11 — Section Quick Navigator Bar (Pill Jump Menu & 100% FREE Spotlight) (GATE-11), [x] Task 12 — Penyelarasan Desain Tab Navigasi Standar Marketplace SapaTamu (GATE-12), [x] Task 1 — Skema Database Supabase & Migrasi Relasi Vendor, [x] Task 2 — Backend Autentikasi & Email OTP Service, [x] Task 3 — Interseptasi UI/UX & Pembagian Zona Fitur di `/sortir` (+6 more)
+Cohesion: 0.12
+Nodes (15): 📋 Task List & Status, Tasks & Roadmap — SapaTamu Sortir v3.5 (SaaS Hybrid Access & Subscription), [x] Task 10 — Interactive Page Tour Guide (Free-First Onboarding) (GATE-10), [x] Task 11 — Section Quick Navigator Bar (Pill Jump Menu & 100% FREE Spotlight) (GATE-11), [x] Task 12 — Penyelarasan Desain Tab Navigasi Standar Marketplace SapaTamu (GATE-12), [x] Task 13 — Standarisasi Rasio Breakpoint 3-Mode SapaTamu (<680px Mobile), [x] Task 1 — Skema Database Supabase & Migrasi Relasi Vendor, [x] Task 2 — Backend Autentikasi & Email OTP Service (+7 more)
 
 ### Community 43 - "Subdomain Resolution Utility"
 Cohesion: 0.60
@@ -679,7 +679,7 @@ Cohesion: 0.29
 Nodes (7): scripts, build, check, dev, lint, start, typecheck
 
 ## Knowledge Gaps
-- **1184 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1179 more)
+- **1185 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1180 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -693,7 +693,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1184 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1185 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: List Drive Files` be split into smaller, more focused modules?**

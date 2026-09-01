@@ -116,6 +116,15 @@
 - [x] Hemat ruang vertikal dan memberikan kesan clean, terstruktur, dan elegan khas SapaTamu.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 13 — Standarisasi Rasio Breakpoint 3-Mode SapaTamu (<680px Mobile)
+- [x] Menyelaraskan seluruh media queries dan logika JavaScript deteksi layar di `sortir.html` dengan standar SapaTamu (Desktop $\ge 1024$px, Tablet 680–1023px, Mobile $< 680$px / `max-width: 679.98px`).
+- [x] Penyesuaian layout `.dashboard-grid` (1-kolom di tablet/mobile), `.header-content` (vertikal di mobile), modal dialog, lightbox container, dan modul Page Tour Guide.
+- [x] Update fungsi deteksi `isMobileDevice()` dan tour positioning menjadi `window.innerWidth < 680`.
+- *File:* `sortir.html`
+
+
 
 
 
