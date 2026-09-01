@@ -213,6 +213,15 @@
 - [x] Menambahkan fungsi `jumpToSection()` dan *smooth autofocus* pada active event card saat dipilih.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 25 — Fluid Full-Width Responsive Container Layout (GATE-28)
+- [x] Melepaskan batasan kaku `.container` `max-width: 1200px` menjadi layout **Fluid Full-Width 100%** adaptif di seluruh breakpoint desktop, tablet, dan mobile.
+- [x] Mengoptimalkan gutter padding proporsional: `48px` untuk layar ultra-wide (≥1600px), `36px` untuk desktop standar (≥1024px), `24px` untuk tablet (680px-1023px), dan `16px` untuk mobile (<680px).
+- [x] Menghilangkan ruang kosong (blank margin ~360px) di sisi kiri dan kanan pada monitor desktop/laptop beresolusi 1080p, 1440p, dan 2K.
+- *File:* `sortir.html`
+
+
 
 
 
