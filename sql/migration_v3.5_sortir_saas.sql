@@ -3,11 +3,16 @@
 -- URL Proyek: https://supabase.com/dashboard/project/llrapesaaoliyjrrrsjh/editor
 -- ==============================================================================
 -- Jalankan seluruh script SQL ini di Supabase SQL Editor.
--- Script ini aman dijalankan (idempotent menggunakan IF NOT EXISTS / IF EXISTS).
+-- Script ini membersihkan tabel lama jika ada, dan membuat skema baru v3.5 secara bersih.
 -- ==============================================================================
 
+-- 0. BERSIHKAN STRUKTUR LAMA (JIKA PERNAH ADA VERSI LEGACY)
+DROP TABLE IF EXISTS public.sortir_otps CASCADE;
+DROP TABLE IF EXISTS public.sortir_transactions CASCADE;
+DROP TABLE IF EXISTS public.sortir_vendors CASCADE;
+
 -- 1. TABEL UTAMA VENDOR (AKUN FOTOGRAFER / VENDOR)
-CREATE TABLE IF NOT EXISTS public.sortir_vendors (
+CREATE TABLE public.sortir_vendors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -22,11 +27,11 @@ CREATE TABLE IF NOT EXISTS public.sortir_vendors (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_sortir_vendors_email ON public.sortir_vendors(email);
-CREATE INDEX IF NOT EXISTS idx_sortir_vendors_sub_exp ON public.sortir_vendors(subscription_expires_at);
+CREATE INDEX idx_sortir_vendors_email ON public.sortir_vendors(email);
+CREATE INDEX idx_sortir_vendors_sub_exp ON public.sortir_vendors(subscription_expires_at);
 
 -- 2. TABEL KODE VERIFIKASI OTP EMAIL (1 EMAIL 1 AKUN)
-CREATE TABLE IF NOT EXISTS public.sortir_otps (
+CREATE TABLE public.sortir_otps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL,
     otp_code VARCHAR(6) NOT NULL,
@@ -35,16 +40,16 @@ CREATE TABLE IF NOT EXISTS public.sortir_otps (
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_sortir_otps_email_code ON public.sortir_otps(email, otp_code, is_used);
+CREATE INDEX idx_sortir_otps_email_code ON public.sortir_otps(email, otp_code, is_used);
 
--- 3. TAMBAHKAN RELASI VENDOR_ID PADA TABEL EVENT CULLING
+-- 3. TAMBAHKAN RELASI VENDOR_ID PADA TABEL EVENT CULLING (JIKA BELUM ADA)
 ALTER TABLE public.sortir_events 
 ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES public.sortir_vendors(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_sortir_events_vendor_id ON public.sortir_events(vendor_id);
 
 -- 4. TABEL RIWAYAT TRANSAKSI / MIDTRANS SUBSCRIPTION
-CREATE TABLE IF NOT EXISTS public.sortir_transactions (
+CREATE TABLE public.sortir_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_id UUID REFERENCES public.sortir_vendors(id) ON DELETE CASCADE,
     order_id VARCHAR(100) UNIQUE NOT NULL,
@@ -58,15 +63,14 @@ CREATE TABLE IF NOT EXISTS public.sortir_transactions (
     settled_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_sortir_transactions_vendor ON public.sortir_transactions(vendor_id);
-CREATE INDEX IF NOT EXISTS idx_sortir_transactions_order ON public.sortir_transactions(order_id);
+CREATE INDEX idx_sortir_transactions_vendor ON public.sortir_transactions(vendor_id);
+CREATE INDEX idx_sortir_transactions_order ON public.sortir_transactions(order_id);
 
 -- 5. ROW LEVEL SECURITY (RLS) POLICIES
 ALTER TABLE public.sortir_vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sortir_otps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sortir_transactions ENABLE ROW LEVEL SECURITY;
 
--- Policy sortir_vendors: Public select/insert/update untuk autentikasi
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'sortir_vendors' AND policyname = 'Allow public operations for sortir_vendors') THEN
