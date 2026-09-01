@@ -1,16 +1,16 @@
-# Graph Report - mastersapatamuku  (2026-08-30)
+# Graph Report - mastersapatamuku  (2026-09-01)
 
 ## Corpus Check
-- 185 files · ~1,012,645 words
+- 189 files · ~1,031,403 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1761 nodes · 1805 edges · 172 communities (143 shown, 29 thin omitted)
+- 1854 nodes · 1920 edges · 174 communities (146 shown, 28 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b653889c`
+- Built from commit: `fa1acb1d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -44,7 +44,10 @@
 - Daftar Form Injection Patch
 - PostgreSQL Schema: Sortir Table Definitions
 - Vercel Routing & Redirect Configurations
+- Vercel API: Sortir Admin Handler
+- Vercel API: Create Payment Handler
 - Vercel API: Get Email Handler
+- Vercel API: Sortir Session Handler
 - Formulir Cleanup Script
 - Form Logic Patcher
 - PostgreSQL Migration: Add Subdomain to Tamu
@@ -91,6 +94,7 @@
 - 06_transactions.sql
 - sw.js
 - AGENTS.md
+- sortir-drive-img.js
 - offline-db.js
 - 01_categories.sql
 - sync-engine.js
@@ -151,6 +155,7 @@
 - Decision Log — SapaTamu v3.2 (Guestbook Frontend)
 - Decision Log — SapaTamu v3.3 (Area Marketplace)
 - TASKS — Formulir Tamu Reference Build
+- sortir.js
 - 🛡️ Rencana Gate & Detail Keputusan (5-Point Format)
 - 📋 Daftar Evaluasi & Temuan Event
 - 📋 Task List & Status
@@ -170,25 +175,25 @@
 10. `handler()` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `handler()` --calls--> `buildSortirOgMeta()`  [EXTRACTED]
+  api/sortir-view.js → lib/og-shared.js
+- `handler()` --calls--> `ensureOgMeta()`  [EXTRACTED]
+  api/sortir-view.js → lib/og-shared.js
+- `handler()` --calls--> `resolveSortirEventBySlug()`  [EXTRACTED]
+  api/sortir-view.js → lib/og-shared.js
 - `handler()` --calls--> `buildOgMeta()`  [EXTRACTED]
   api/undangan.js → lib/og-shared.js
 - `handler()` --calls--> `injectOgMeta()`  [EXTRACTED]
   api/undangan.js → lib/og-shared.js
-- `handler()` --calls--> `resolveWeddingData()`  [EXTRACTED]
-  api/undangan.js → lib/og-shared.js
-- `middleware()` --calls--> `resolveWeddingData()`  [EXTRACTED]
-  middleware.js → lib/og-shared.js
-- `middleware()` --calls--> `buildOgMeta()`  [EXTRACTED]
-  middleware.js → lib/og-shared.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (172 total, 29 thin omitted)
+## Communities (174 total, 28 thin omitted)
 
 ### Community 0 - "Project Dependencies & Package Config"
 Cohesion: 0.07
-Nodes (27): @omniroute/opencode-plugin, antigravity.ide.project, engine, plugins, dependencies, pdf.js-extract, pdf-parse, playwright (+19 more)
+Nodes (29): @omniroute/opencode-plugin, antigravity.ide.project, engine, plugins, dependencies, pdf.js-extract, pdf-parse, playwright (+21 more)
 
 ### Community 1 - "Authentication Guard & Session Management"
 Cohesion: 0.18
@@ -255,12 +260,12 @@ Cohesion: 0.40
 Nodes (3): { chromium }, pagesToCapture, path
 
 ### Community 18 - "Vercel API: List Drive Files"
-Cohesion: 0.83
-Nodes (3): collectFiles(), driveList(), handler()
+Cohesion: 0.13
+Nodes (17): Request, browse_folder(), copy_selection(), culling_view(), get_folder_files(), get_status(), get_thumbnail(), host_controller_view() (+9 more)
 
 ### Community 19 - "Vercel API: Undangan Loader"
-Cohesion: 0.19
-Nodes (22): fs, handler(), path, buildOgMeta(), buildProductOgMeta(), buildVendorOgMeta(), cleanMeta(), DAYS (+14 more)
+Cohesion: 0.17
+Nodes (27): fs, handler(), path, fs, handler(), path, buildOgMeta(), buildProductOgMeta() (+19 more)
 
 ### Community 20 - "Regex Content Extraction Script"
 Cohesion: 0.50
@@ -270,13 +275,29 @@ Nodes (3): fs, matches, s
 Cohesion: 0.50
 Nodes (3): fs, path, toFix
 
+### Community 25 - "Vercel API: Payment Webhook Handler"
+Cohesion: 0.17
+Nodes (11): 1. 🏗️ Arsitektur Pembagian Tingkat Akses (Tiering), 2.1 Diagram Alur Registrasi OTP, 2. 🔐 Alur Registrasi & Autentikasi dengan OTP Email, 3.1 Skema Paket & Harga, 3.2 Logika Override Durasi & Perpanjangan, 3. 💳 Model Monetisasi & Kuota Berlangganan (Subscription), 4. 🗄️ Skema Database Supabase (PostgreSQL), 5. 🎯 Alur Interseptasi UI/UX (User Flow) (+3 more)
+
 ### Community 28 - "Vercel Routing & Redirect Configurations"
 Cohesion: 0.40
 Nodes (4): cleanUrls, headers, outputDirectory, rewrites
 
+### Community 30 - "Vercel API: Sortir Admin Handler"
+Cohesion: 0.20
+Nodes (9): 1. PEMETAAN FILE & PERAN DALAM SISTEM, 2. DIAGRAM KERANGKA & ALUR ROUTING, 3. AUDIT JALUR A: PURE LOCAL LAN BRIDGE (`sortir_bridge.py`), 4. AUDIT JALUR B: WEB BROWSER HYBRID (`sortir.html`), 5. KESIMPULAN AUDIT & SOLUSI TERBAIK, Alur Eksekusi & Titik Bottleneck:, 📑 DOKUMEN AUDIT ARSITEKTUR & ROUTING KERANGKA, Endpoint Routing & Cara Kerja: (+1 more)
+
+### Community 31 - "Vercel API: Create Payment Handler"
+Cohesion: 0.25
+Nodes (7): 📊 1. Latar Belakang & Analisis Kebutuhan, 🛡️ 2. Format Decision Gate (5-Point Standard SapaTamu), Decision Log — SapaTamu v3.5 (Sortir SaaS, Hybrid Access & Subscription), GATE-01: Pemisahan Akses Halaman `/sortir` (Public Free vs Gated Auth), GATE-02: Registrasi Vendor dengan OTP Email (1-Email-1-Akun Unik), GATE-03: Paywall Subscription, Kuota Free Tier 10x & Override Reset, Masalah & Peluang
+
 ### Community 32 - "Vercel API: Get Email Handler"
 Cohesion: 0.13
 Nodes (15): L10. Remove console.log leak, L11. Remove hardcoded ssId/username, L12. Integrity verification for skills, L13. Review AGENTS.md commands, L14. Audit AGENT.md sensitive info, L1. Remove site verification token, L2. SRI for external scripts, L3. SRI for CDN (+7 more)
+
+### Community 33 - "Vercel API: Sortir Session Handler"
+Cohesion: 0.25
+Nodes (7): 📋 Task List & Status, Tasks & Roadmap — SapaTamu Sortir v3.5 (SaaS Hybrid Access & Subscription), [x] Task 1 — Skema Database Supabase & Migrasi Relasi Vendor, [x] Task 2 — Backend Autentikasi & Email OTP Service, [x] Task 3 — Interseptasi UI/UX & Pembagian Zona Fitur di `/sortir`, [x] Task 4 — Manajemen Kuota 10x Free Tier & Paywall Subscription, [x] Task 5 — Pengujian Responsif 3-Mode & Verifikasi Lapangan
 
 ### Community 43 - "Subdomain Resolution Utility"
 Cohesion: 0.60
@@ -304,7 +325,7 @@ Nodes (35): CATEGORY_UUID_MAP, DEFAULT_CATEGORIES, ensureCategoryInDB(), findAut
 
 ### Community 63 - "manifest.json"
 Cohesion: 0.12
-Nodes (15): background_color, categories, description, dir, display, icons, lang, name (+7 more)
+Nodes (16): background_color, categories, description, dir, display, icons, id, lang (+8 more)
 
 ### Community 64 - "LOW TASKS (14)"
 Cohesion: 0.06
@@ -411,8 +432,12 @@ Cohesion: 0.83
 Nodes (3): mp_reviews, mp_sync_vendor_rating(), trg_mp_reviews_sync_rating
 
 ### Community 95 - "AGENTS.md"
-Cohesion: 0.40
-Nodes (4): Decision Gate, graphify, Skill Installation Dual-Sync Policy, UI/UX & Responsive Rules
+Cohesion: 0.33
+Nodes (5): Decision Gate, graphify, Skill Installation Dual-Sync Policy, UI/UX & Responsive Rules, Vercel & Supabase Free Tier Architecture Policy
+
+### Community 97 - "sortir-drive-img.js"
+Cohesion: 0.38
+Nodes (5): public.create_sortir_event_with_quota(), public.sortir_events, public.sortir_otps, public.sortir_transactions, public.sortir_vendors
 
 ### Community 102 - "HIGH TASKS (16)"
 Cohesion: 0.08
@@ -618,13 +643,17 @@ Nodes (5): Backlog Area Sekitar Marketplace, Pendukung Non-Halaman, Peta Halaman
 Cohesion: 0.25
 Nodes (7): Fase 1 — Fondasi & Alur Inti, Fase 2 — Import Excel, Fase 3 — Duplicate Manager, Fase 4 — Sync Sheet UI, Fase 5 — Hero Dinamis & Navigasi, Fase 6 — Tools & Polish, TASKS — Formulir Tamu Reference Build
 
+### Community 166 - "sortir.js"
+Cohesion: 0.60
+Nodes (5): collectFiles(), driveList(), handler(), hashPassword(), sendOtpEmail()
+
 ### Community 167 - "🛡️ Rencana Gate & Detail Keputusan (5-Point Format)"
-Cohesion: 0.20
-Nodes (9): Decision Log — SapaTamu v3.4 (Evaluasi Event 27 Agustus & Patching), GATE-01: Perbaikan Duplikasi Cetak Label Check-in (Anti-Double Print & Immediate Lock), GATE-02: Patch Halaman Souvenir (`souvenir.html`, `auth_guard.js`, `Main.gs`) & Saklar Off-Grid IndexedDB, GATE-03: Pemetaan & Standarisasi Field Kapasitas Ballroom & Stok Souvenir, GATE-04: Standarisasi Universal Saklar Off-Grid untuk Seluruh Halaman Operasional (60 Menit), GATE-05: Hirarki Status Deduplikasi Data & Proteksi Anti-Overwrite (Server-Authoritative Conflict Guard), 🛡️ Rencana Gate & Detail Keputusan (5-Point Format), 📊 Ringkasan Audit & Analisis Masalah (+1 more)
+Cohesion: 0.14
+Nodes (13): Decision Log — SapaTamu v3.4 (Evaluasi Event 27 Agustus & Patching), GATE-01: Perbaikan Duplikasi Cetak Label Check-in (Anti-Double Print & Immediate Lock), GATE-02: Patch Halaman Souvenir (`souvenir.html`, `auth_guard.js`, `Main.gs`) & Saklar Off-Grid IndexedDB, GATE-03: Pemetaan & Standarisasi Field Kapasitas Ballroom & Stok Souvenir, GATE-04: Standarisasi Universal Saklar Off-Grid untuk Seluruh Halaman Operasional (60 Menit), GATE-05: Hirarki Status Deduplikasi Data & Proteksi Anti-Overwrite (Server-Authoritative Conflict Guard), GATE-06: Perbaikan Kolom T (jam_pulang) Tidak Terbaca dari Spreadsheet ke Supabase, GATE-07: Logika Exit Gate Scan — Pisah Hak Souvenir vs Status Checkout (+5 more)
 
 ### Community 169 - "📋 Daftar Evaluasi & Temuan Event"
-Cohesion: 0.18
-Nodes (10): 1. Bug Duplikasi Cetak Label Check-in (Tercetak 2x Saat Centang Kado & Angpao), 2. Evaluasi Halaman Souvenir (`souvenir.html` - Scan Penukaran Souvenir), 3. Pemetaan & Audit Penyimpanan Field Kapasitas Ballroom dan Stok Souvenir, 4. Standarisasi Universal: Metode Saklar Off-Grid untuk Seluruh Halaman Operasional (Idle 60 Menit), 5. Hirarki Status Deduplikasi Data & Proteksi Anti-Overwrite (Server-Authoritative Conflict Guard), 6. Laporan Hasil Pengujian E2E Browser (Test-Driven dengan Akun Dummy), 7. Status & Checklist Tindak Lanjut, Catatan Evaluasi & Persiapan Patch v3.4 (+2 more)
+Cohesion: 0.06
+Nodes (31): 10.1 Follow-up — Desktop Masih Ada Page Vertical Scroll (Fix Flex Ratio Viewport-Fit), 10.2 Re-layout Desktop 1/2 + 1/2 & Background Foto Lebih Jelas (checkin-style), 10. Evaluasi UI Halaman Souvenir — Panel "📜 Riwayat Pengambilan" Butuh Scrollbar Independen (UI-UX Pro Max 3-Mode), 11. Evaluasi & Perbaikan `sortir.html` — P2P Thumbnail Streaming 1-Klik Share ke HP & Super Posisi Owner Gate, 1. Bug Duplikasi Cetak Label Check-in (Tercetak 2x Saat Centang Kado & Angpao), 1. Masalah Foto Tidak Muncul di PWA HP pada Mode 1-Klik Share ke HP, 2. Evaluasi Halaman Souvenir (`souvenir.html` - Scan Penukaran Souvenir), 2. Pengamanan Super Posisi Admin Panel (`?action=owner`) (+23 more)
 
 ### Community 171 - "📋 Task List & Status"
 Cohesion: 0.29
@@ -635,21 +664,21 @@ Cohesion: 0.83
 Nodes (3): fetchAllTamuSupabase(), fetchSheetData(), run()
 
 ## Knowledge Gaps
-- **1120 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1115 more)
+- **1169 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1164 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **29 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `dependencies` connect `dependencies` to `ai-website-cloner/package.json`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
-- **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
-  _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1120 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1169 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
-  _Cohesion score 0.07142857142857142 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
+- **Should `Vercel API: List Drive Files` be split into smaller, more focused modules?**
+  _Cohesion score 0.12857142857142856 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: Get Email Handler` be split into smaller, more focused modules?**
   _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._
 - **Should `AGENT.md — SapaTamu Project Agent Operating System` be split into smaller, more focused modules?**
