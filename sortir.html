@@ -1077,8 +1077,133 @@
             box-shadow: 0 2px 8px rgba(224,123,123,0.35);
         }
 
+        /* ============================================================ */
+        /* SECTION QUICK NAVIGATOR BAR (PILL JUMP MENU)                */
+        /* ============================================================ */
+        .sortir-quick-nav-bar {
+            position: sticky;
+            top: 60px;
+            z-index: 95;
+            background: rgba(255, 249, 245, 0.94);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 0;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 16px rgba(74, 63, 53, 0.03);
+            transition: all 0.25s ease;
+        }
+        .sortir-quick-nav-inner {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 2px 4px;
+        }
+        .sortir-quick-nav-inner::-webkit-scrollbar {
+            display: none;
+        }
+        .snav-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 15px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 750;
+            color: var(--text-muted);
+            background: #FFFFFF;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            flex-shrink: 0;
+            user-select: none;
+        }
+        .snav-item:hover {
+            border-color: var(--gold);
+            color: var(--text-main);
+            transform: translateY(-1px);
+        }
+        .snav-item:active {
+            transform: scale(0.97);
+        }
+        .snav-item.active {
+            background: #4A3F35;
+            color: #F5EBE1;
+            border-color: #4A3F35;
+            box-shadow: 0 4px 12px rgba(74,63,53,0.15);
+        }
+        .snav-item.active .snav-badge-free {
+            background: #2E7D32;
+            color: #FFFFFF;
+        }
+        .snav-item.active .snav-badge-neutral {
+            background: rgba(255,255,255,0.2);
+            color: #FFFFFF;
+        }
+        .snav-item.active .snav-badge-gold {
+            background: var(--gold);
+            color: #FFFFFF;
+        }
+        .snav-highlight {
+            border-color: rgba(46, 125, 50, 0.45);
+            background: #F8FCF8;
+        }
+        .snav-badge {
+            font-size: 9.5px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 10px;
+            letter-spacing: 0.3px;
+        }
+        .snav-badge-free {
+            background: #E8F5E9;
+            color: #2E7D32;
+            border: 1px solid rgba(46, 125, 50, 0.2);
+        }
+        .snav-badge-neutral {
+            background: #F3F4F6;
+            color: #4B5563;
+        }
+        .snav-badge-gold {
+            background: rgba(200, 150, 46, 0.12);
+            color: #C8962E;
+        }
+        .snav-badge-pro {
+            background: linear-gradient(135deg, #C8962E, #E07B7B);
+            color: #FFFFFF;
+        }
+        .snav-btn-pro {
+            background: #FFF9F5;
+            border-color: rgba(200, 150, 46, 0.4);
+        }
+
+        /* Micro-pulsing highlight when jumped to */
+        @keyframes sectionPulseRing {
+            0% { box-shadow: 0 0 0 0 rgba(200, 150, 46, 0.5); }
+            70% { box-shadow: 0 0 0 14px rgba(200, 150, 46, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(200, 150, 46, 0); }
+        }
+        .section-pulse-highlight {
+            animation: sectionPulseRing 1.4s ease-out;
+            border-color: var(--gold) !important;
+        }
+
         /* 3-Mode Responsive Container Adjustments */
         @media (max-width: 767px) {
+            .sortir-quick-nav-bar {
+                top: 56px;
+                padding: 6px 0;
+                margin-bottom: 18px;
+            }
+            .snav-item {
+                padding: 6px 11px;
+                font-size: 11.5px;
+                gap: 5px;
+            }
             .auth-modal-dialog {
                 width: 95% !important;
                 padding: 24px 18px !important;
@@ -1382,13 +1507,47 @@
 
     <!-- ================= VIEW 1: PHOTOGRAPHER DASHBOARD ================= -->
     <div id="view-dashboard" style="display: none;">
-        <h2 style="font-size: 32px; margin-bottom: 8px;">Culling Dashboard</h2>
-        <p style="color: var(--text-muted); margin-bottom: 32px;">Buat tautan pemilihan foto untuk klien Anda tanpa ribet.</p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+            <div>
+                <h2 style="font-size: 32px; margin-bottom: 6px;">Culling Dashboard</h2>
+                <p style="color: var(--text-muted); margin-bottom: 0;">Pilih alur kerja culling foto yang Anda butuhkan di bawah ini.</p>
+            </div>
+        </div>
+
+        <!-- Section Quick Navigator (Sticky Subnav) -->
+        <div id="sortir-quick-nav" class="sortir-quick-nav-bar">
+            <div class="sortir-quick-nav-inner">
+                <button class="snav-item snav-highlight active" onclick="jumpToSection('manual-translator-section')">
+                    <span class="snav-icon">📋</span>
+                    <span class="snav-label">1. Penerjemah Indeks</span>
+                    <span class="snav-badge snav-badge-free">100% FREE</span>
+                </button>
+                <button class="snav-item" onclick="jumpToSection('local-culling-section')">
+                    <span class="snav-icon">⚡</span>
+                    <span class="snav-label">2. Local Culling</span>
+                    <span class="snav-badge snav-badge-neutral">OFFLINE PC</span>
+                </button>
+                <button class="snav-item" onclick="jumpToSection('create-event-section')">
+                    <span class="snav-icon">🌐</span>
+                    <span class="snav-label">3. Buat Galeri Online</span>
+                    <span class="snav-badge snav-badge-gold">FREE 10x</span>
+                </button>
+                <button class="snav-item" onclick="jumpToSection('my-events-section')">
+                    <span class="snav-icon">📁</span>
+                    <span class="snav-label">4. Daftar Event Saya</span>
+                </button>
+                <button class="snav-item snav-btn-pro" onclick="openSortirPaywallModal()">
+                    <span class="snav-icon">👑</span>
+                    <span class="snav-label">5. Upgrade PRO</span>
+                    <span class="snav-badge snav-badge-pro">UNLIMITED</span>
+                </button>
+            </div>
+        </div>
 
         <div class="dashboard-grid">
             <!-- Event Generator Form -->
             <div>
-                <div class="card">
+                <div class="card" id="create-event-section">
                     <h3 style="font-size: 22px; margin-bottom: 20px; color: var(--primary);">Buat Tautan Event Baru</h3>
                     
                     <form id="create-event-form" onsubmit="handleCreateEvent(event)">
@@ -1423,7 +1582,7 @@
 
             <!-- Events List & Management -->
             <div>
-                <div class="card" style="min-height: 480px; display: flex; flex-direction: column;">
+                <div class="card" id="my-events-section" style="min-height: 480px; display: flex; flex-direction: column;">
                     <h3 style="font-size: 22px; margin-bottom: 20px; color: var(--text-main);">Daftar Event Saya</h3>
                     
                     <div id="my-events-list" class="event-list" style="flex: 1;">
@@ -2835,11 +2994,69 @@
         }
 
         renderMyEventsList();
+        initSortirScrollspy();
 
         // Auto-check Sortir Tour Guide for new visitors
         if (typeof checkSortirTourAutoStart === 'function') {
             setTimeout(checkSortirTourAutoStart, 600);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // SECTION QUICK NAVIGATOR & SCROLLSPY (GATE-11)
+    // ─────────────────────────────────────────────────────────────
+    window.jumpToSection = function(sectionId) {
+        const el = document.getElementById(sectionId);
+        if (!el) return;
+
+        const navBar = document.getElementById('sortir-quick-nav');
+        const navOffset = (navBar ? navBar.offsetHeight : 44) + 65;
+        const rect = el.getBoundingClientRect();
+        const targetY = window.pageYOffset + rect.top - navOffset;
+
+        window.scrollTo({
+            top: Math.max(0, targetY),
+            behavior: 'smooth'
+        });
+
+        // Update active nav button
+        document.querySelectorAll('.snav-item').forEach(btn => btn.classList.remove('active'));
+        const targetBtn = document.querySelector(`.snav-item[onclick*="${sectionId}"]`);
+        if (targetBtn) targetBtn.classList.add('active');
+
+        // Micro pulse highlight on target
+        el.classList.add('section-pulse-highlight');
+        setTimeout(() => el.classList.remove('section-pulse-highlight'), 1500);
+    };
+
+    function initSortirScrollspy() {
+        const sectionIds = ['manual-translator-section', 'local-culling-section', 'create-event-section', 'my-events-section'];
+        const navItems = document.querySelectorAll('.snav-item');
+        if (!navItems.length) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const sid = entry.target.id;
+                    navItems.forEach(item => {
+                        const onClickAttr = item.getAttribute('onclick') || '';
+                        if (onClickAttr.includes(sid)) {
+                            navItems.forEach(i => i.classList.remove('active'));
+                            item.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }, {
+            root: null,
+            rootMargin: '-15% 0px -60% 0px',
+            threshold: 0.05
+        });
+
+        sectionIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) observer.observe(el);
+        });
     }
 
     function renderMyEventsList() {

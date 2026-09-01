@@ -96,4 +96,16 @@
 - [x] Responsivitas 3-mode (Desktop, Tablet, Mobile) dengan auto-scroll halus ke elemen target.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 11 — Section Quick Navigator Bar (Pill Jump Menu & 100% FREE Spotlight) (GATE-11)
+- [x] Menambahkan Sticky Section Navigation Bar (`#sortir-quick-nav`) di bawah header dengan visual glassmorphism (`backdrop-filter: blur(14px)`).
+- [x] Menempatkan **1. Penerjemah Indeks** dengan badge `100% FREE` (#2E7D32) di posisi nomor satu sebagai flagship value proposition.
+- [x] Menambahkan navigasi jump: 2. Local Culling (Offline PC), 3. Buat Galeri Online (Free 10x), 4. Daftar Event Saya, dan 5. Upgrade PRO.
+- [x] Fitur Smooth Scroll Jump dengan offset dinamis (`jumpToSection`) dan micro-pulsing highlight ring pada card tujuan.
+- [x] Scrollspy otomatis menggunakan `IntersectionObserver` (`initSortirScrollspy`) untuk menandai tab yang sedang aktif saat pengguna melakukan scroll.
+- [x] Responsif 3-mode (Desktop, Tablet touch-scroll, Mobile compact chips).
+- *File:* `sortir.html`
+
+
 
