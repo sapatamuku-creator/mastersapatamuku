@@ -228,6 +228,14 @@
 - [x] Menambahkan class `.culling-sticky-bar` dengan offset responsif (`top: 72px` desktop, `top: 52px` mobile) dan `backdrop-filter: blur(16px)` untuk bilah kuota foto & tab filter pencarian.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 27 — Mobile Sticky Lock Fix & Sleek Compact Bar Layout (GATE-30)
+- [x] Menghilangkan `overflow-x: hidden !important` pada media query mobile (`@media (max-width: 679.98px)`) dan menggantinya dengan `overflow-x: clip !important`, menjamin sticky locking aktif 100% di HP.
+- [x] Mengubah struktur layout culling klien: Judul & deskripsi event scroll secara natural, sedangkan bilah aksi (Boks Kuota `0/8` + Tombol `Kirim Hasil Sortir` + Tab Pencarian/Filter) menjadi *sticky compact bar* (~55px) yang ramping dan menghemat 85% layar HP untuk preview foto.
+- *File:* `sortir.html`
+
+
 
 
 
