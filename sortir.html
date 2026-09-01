@@ -1065,14 +1065,16 @@
         .pricing-card-sortir.selected::after {
             content: "✔ Dipilih";
             position: absolute;
-            top: 14px;
-            right: 14px;
+            top: -10px;
+            right: 16px;
             background: var(--primary);
             color: white;
             font-size: 10px;
             font-weight: 800;
-            padding: 3px 8px;
+            padding: 2px 9px;
             border-radius: 20px;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(224,123,123,0.35);
         }
 
         /* 3-Mode Responsive Container Adjustments */
@@ -1290,12 +1292,12 @@
 
         </div>
 
-        <div style="background:#FDF8F4; border-radius:14px; padding:12px 14px; margin-bottom:20px; font-size:11px; color:var(--text-muted); line-height:1.5;">
-            ℹ️ <strong>Logika Perpanjangan:</strong> Jika masa aktif sebelumnya masih tersisa, paket baru akan otomatis memperbarui (override) durasi dari hari ini.
+        <div style="background:#FDF8F4; border-radius:14px; padding:12px 14px; margin-bottom:20px; font-size:11.5px; color:var(--text-muted); line-height:1.5; border:1px solid rgba(200,150,46,0.15);">
+            ℹ️ <strong>Catatan:</strong> Jika paket diperpanjang saat masa aktif masih ada, durasi baru akan aktif terhitung mulai hari ini.
         </div>
 
         <button onclick="processSortirPayment()" id="btn-pay-snap" class="btn btn-primary" style="width:100%; padding:14px; font-size:14px; font-weight:800; background:linear-gradient(135deg, #2E7D32, #4CAF50); border:none; box-shadow:0 6px 18px rgba(76,175,80,0.3);">
-            Lanjut Pembayaran via Midtrans 💳
+            Lanjut Pembayaran 💳
         </button>
 
         <p id="paywall-status-msg" style="font-size:11px; color:#E07B7B; text-align:center; margin-top:10px; min-height:14px; margin-bottom:0;"></p>
@@ -2484,8 +2486,8 @@
             const data = await res.json();
 
             if (!res.ok || !data.success || !data.token) {
-                if (msg) msg.textContent = data.error || 'Gagal memulai transaksi Midtrans.';
-                if (btn) { btn.disabled = false; btn.textContent = 'Lanjut Pembayaran via Midtrans 💳'; }
+                if (msg) msg.textContent = data.error || 'Gagal memulai transaksi pembayaran.';
+                if (btn) { btn.disabled = false; btn.textContent = 'Lanjut Pembayaran 💳'; }
                 return;
             }
 
@@ -2500,13 +2502,13 @@
                     },
                     onPending: function(result) {
                         closeSortirPaywallModal();
-                        showAlert('Menunggu Pembayaran', 'Selesaikan pembayaran Anda via instruksi Midtrans.', '⏳');
+                        showAlert('Menunggu Pembayaran', 'Selesaikan pembayaran Anda sesuai instruksi pada layar.', '⏳');
                     },
                     onError: function(result) {
                         if (msg) msg.textContent = 'Pembayaran gagal diproses oleh sistem.';
                     },
                     onClose: function() {
-                        if (btn) { btn.disabled = false; btn.textContent = 'Lanjut Pembayaran via Midtrans 💳'; }
+                        if (btn) { btn.disabled = false; btn.textContent = 'Lanjut Pembayaran 💳'; }
                     }
                 });
             } else if (data.redirectUrl) {
@@ -2520,7 +2522,7 @@
         } catch (err) {
             if (msg) msg.textContent = 'Gagal menghubungi server pembayaran.';
         } finally {
-            if (btn) { btn.disabled = false; btn.textContent = 'Lanjut Pembayaran via Midtrans 💳'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Lanjut Pembayaran 💳'; }
         }
     };
 
