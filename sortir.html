@@ -1755,6 +1755,23 @@
                             </div>
                         </div>
 
+                        <div class="form-group">
+                            <label class="form-label">Batas Waktu Pemilihan Foto (Auto-Lock)</label>
+                            <div style="display: flex; gap: 8px;">
+                                <select id="expiry-duration-select" class="form-control" style="font-size: 13px; font-weight: 600; cursor: pointer;" onchange="toggleCustomExpiryInput(this.value)">
+                                    <option value="14" selected>⏳ 14 Hari (Standar Rekomendasi)</option>
+                                    <option value="7">⚡ 7 Hari (Fast-Track Cepat)</option>
+                                    <option value="30">📅 30 Hari (1 Bulan Penuh)</option>
+                                    <option value="custom">🗓️ Pilih Tanggal Kustom...</option>
+                                    <option value="0">♾️ Tanpa Batas Waktu (Selamanya)</option>
+                                </select>
+                                <input type="date" id="expiry-custom-date" class="form-control" style="display: none; width: 155px; font-size: 13px;">
+                            </div>
+                            <p style="font-size: 11px; color: var(--text-muted); margin-top: 5px; margin-bottom: 0;">
+                                Setelah batas waktu habis, galeri klien otomatis terkunci (read-only) agar jadwal editing studio tidak molor.
+                            </p>
+                        </div>
+
                         <button type="submit" class="btn btn-primary" style="width: 100%; padding: 14px; margin-top: 10px;">
                             Buat Event Culling
                         </button>
@@ -1830,14 +1847,18 @@
 
         <!-- Active Event Details (Appears when an event is selected) -->
         <div id="active-event-card" class="card" style="display: none; margin-top: 32px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 24px; flex-wrap: wrap;">
                 <div>
-                    <h3 id="active-event-title" style="font-size: 26px; color: var(--text-main);">Nama Event</h3>
-                    <p id="active-event-meta" style="color: var(--text-muted); font-size: 13px; margin-top: 4px;"></p>
+                    <h3 id="active-event-title" style="font-size: 26px; color: var(--text-main); margin-bottom: 4px;">Nama Event</h3>
+                    <p id="active-event-meta" style="color: var(--text-muted); font-size: 13px; margin-top: 4px; margin-bottom: 6px;"></p>
+                    <div id="active-event-expiry-badge" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; margin-top: 4px;"></div>
                 </div>
-                <div style="display: flex; gap: 12px;">
-                    <a id="active-event-client-link" href="#" target="_blank" class="btn btn-secondary">Buka Halaman Klien ↗</a>
-                    <button onclick="deleteActiveEvent()" class="btn btn-secondary" style="color: #E07B7B; border-color: rgba(224, 123, 123, 0.3);">Hapus Event</button>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button id="btn-toggle-lock-event" onclick="toggleActiveEventLock()" class="btn btn-secondary" style="padding: 8px 14px; font-size: 12px; font-weight: 700;">🔒 Kunci Event</button>
+                    <button onclick="extendActiveEventExpiry(7)" class="btn btn-secondary" style="padding: 8px 14px; font-size: 12px; font-weight: 700;">📅 +7 Hari</button>
+                    <button onclick="remindClientViaWa()" class="btn btn-secondary" style="padding: 8px 14px; font-size: 12px; font-weight: 700; color: #2E7D32; border-color: rgba(46, 125, 50, 0.4); background: #F4FBF4;">📲 Ingatkan WA</button>
+                    <a id="active-event-client-link" href="#" target="_blank" class="btn btn-primary" style="padding: 8px 14px; font-size: 12px; font-weight: 700;">Buka Link Klien ↗</a>
+                    <button onclick="deleteActiveEvent()" class="btn btn-secondary" style="color: #E07B7B; border-color: rgba(224, 123, 123, 0.3); padding: 8px 14px; font-size: 12px;">Hapus</button>
                 </div>
             </div>
 
@@ -2035,8 +2056,11 @@
         <div style="position: sticky; top: 60px; z-index: 50; background: rgba(255,249,245,0.96); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); padding: 16px 0; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(74, 63, 53, 0.03);">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 14px;">
                 <div>
-                    <h2 id="client-event-title" style="font-size: 28px; font-weight: 700;">Event Culling</h2>
-                    <p id="client-event-desc" style="color: var(--text-muted); font-size: 13px; margin-top: 2px;">Pilihlah foto-foto terbaik Anda di bawah ini.</p>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <h2 id="client-event-title" style="font-size: 28px; font-weight: 700; margin: 0;">Event Culling</h2>
+                        <span id="client-expiry-pill" style="display: none; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 12px; background: #FFF9F5; border: 1px solid var(--border); color: var(--text-main);"></span>
+                    </div>
+                    <p id="client-event-desc" style="color: var(--text-muted); font-size: 13px; margin-top: 2px; margin-bottom: 0;">Pilihlah foto-foto terbaik Anda di bawah ini.</p>
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 16px;">
@@ -2044,10 +2068,21 @@
                         <div style="font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Foto Terpilih</div>
                         <div id="client-quota-counter" style="font-size: 18px; font-weight: 800; color: var(--primary);">0 / 0</div>
                     </div>
-                    <button onclick="submitClientSelection()" class="btn btn-primary" style="padding: 14px 24px;">
+                    <button id="btn-client-submit" onclick="submitClientSelection()" class="btn btn-primary" style="padding: 14px 24px;">
                         Kirim Hasil Sortir
                     </button>
                 </div>
+            </div>
+
+            <!-- Locked Notice Banner (Only shown if locked / expired) -->
+            <div id="client-event-locked-banner" style="display: none; background: #FFF5F5; border: 1px solid rgba(224,123,123,0.4); border-radius: 14px; padding: 12px 18px; margin-bottom: 14px; color: #C53030; font-size: 12.5px; font-weight: 700; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">🔒</span>
+                    <span>Waktu Pemilihan Foto Telah Ditutup oleh Studio (Mode Read-Only).</span>
+                </div>
+                <a id="client-contact-wa-btn" href="#" target="_blank" class="btn btn-secondary" style="padding: 6px 14px; font-size: 11.5px; border-color: rgba(224,123,123,0.5); color: #C53030; background: #FFFFFF; text-decoration: none;">
+                    Hubungi Studio via WhatsApp 📲
+                </a>
             </div>
 
             <!-- Sticky Filter Container (Cari nama foto + Tab Semua/Terpilih/Belum Terpilih) -->
@@ -3565,7 +3600,108 @@
                 }
             })
             .subscribe();
+
+        updateActiveEventExpiryUI();
     }
+
+    window.toggleCustomExpiryInput = function(val) {
+        const customInput = document.getElementById('expiry-custom-date');
+        if (!customInput) return;
+        if (val === 'custom') {
+            customInput.style.display = 'block';
+            if (!customInput.value) {
+                const defDate = new Date();
+                defDate.setDate(defDate.getDate() + 14);
+                customInput.value = defDate.toISOString().split('T')[0];
+            }
+        } else {
+            customInput.style.display = 'none';
+        }
+    };
+
+    function updateActiveEventExpiryUI() {
+        if (!store.activeEvent) return;
+        const badge = document.getElementById('active-event-expiry-badge');
+        const lockBtn = document.getElementById('btn-toggle-lock-event');
+        if (!badge) return;
+
+        const isLocked = Boolean(store.activeEvent.is_locked);
+        const expiresAt = store.activeEvent.expires_at ? new Date(store.activeEvent.expires_at) : null;
+        const isExpired = expiresAt && new Date() > expiresAt;
+
+        if (lockBtn) {
+            if (isLocked) {
+                lockBtn.innerHTML = '🔓 Buka Kunci';
+                lockBtn.style.color = '#2E7D32';
+                lockBtn.style.borderColor = 'rgba(46, 125, 50, 0.4)';
+                lockBtn.style.background = '#F4FBF4';
+            } else {
+                lockBtn.innerHTML = '🔒 Kunci Event';
+                lockBtn.style.color = 'var(--text-main)';
+                lockBtn.style.borderColor = 'var(--border)';
+                lockBtn.style.background = '#FFFFFF';
+            }
+        }
+
+        if (isLocked) {
+            badge.innerHTML = `<span style="background:#FFF5F5; color:#C53030; border:1px solid rgba(224,123,123,0.4); padding:3px 10px; border-radius:12px;">🔒 Terkunci Manual (Klien Read-Only)</span>`;
+        } else if (isExpired) {
+            badge.innerHTML = `<span style="background:#FFF5F5; color:#C53030; border:1px solid rgba(224,123,123,0.4); padding:3px 10px; border-radius:12px;">🔴 Batas Waktu Habis (${expiresAt.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})})</span>`;
+        } else if (expiresAt) {
+            const diffMs = expiresAt - new Date();
+            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            badge.innerHTML = `<span style="background:#F4FBF4; color:#2E7D32; border:1px solid rgba(46,125,50,0.3); padding:3px 10px; border-radius:12px;">🟢 Aktif (Sisa ${diffDays} Hari • s.d. ${expiresAt.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})})</span>`;
+        } else {
+            badge.innerHTML = `<span style="background:#FFF9F5; color:var(--text-muted); border:1px solid var(--border); padding:3px 10px; border-radius:12px;">♾️ Tanpa Batas Waktu</span>`;
+        }
+    }
+
+    window.toggleActiveEventLock = async function() {
+        if (!store.activeEvent) return;
+        const newLockState = !Boolean(store.activeEvent.is_locked);
+        
+        try {
+            await supabase
+                .from('sortir_events')
+                .update({ is_locked: newLockState })
+                .eq('id', store.activeEvent.id);
+        } catch(e) {}
+
+        store.activeEvent.is_locked = newLockState;
+        updateActiveEventExpiryUI();
+        window.showToast(newLockState ? 'Event berhasil dikunci 🔒 (Klien read-only)' : 'Event berhasil dibuka kuncinya 🔓', 'green');
+    };
+
+    window.extendActiveEventExpiry = async function(days = 7) {
+        if (!store.activeEvent) return;
+        let baseDate = new Date();
+        if (store.activeEvent.expires_at && new Date(store.activeEvent.expires_at) > new Date()) {
+            baseDate = new Date(store.activeEvent.expires_at);
+        }
+        baseDate.setDate(baseDate.getDate() + days);
+        baseDate.setHours(23, 59, 59, 999);
+        const newExpiry = baseDate.toISOString();
+
+        try {
+            await supabase
+                .from('sortir_events')
+                .update({ expires_at: newExpiry, is_locked: false })
+                .eq('id', store.activeEvent.id);
+        } catch(e) {}
+
+        store.activeEvent.expires_at = newExpiry;
+        store.activeEvent.is_locked = false;
+        updateActiveEventExpiryUI();
+        window.showToast(`Batas sortir berhasil diperpanjang +${days} hari! 📅`, 'green');
+    };
+
+    window.remindClientViaWa = function() {
+        if (!store.activeEvent) return;
+        const clientUrl = `${window.location.origin}${window.location.pathname}?event=${store.activeEvent.event_slug}`;
+        const expiryText = store.activeEvent.expires_at ? ` (Batas waktu: ${new Date(store.activeEvent.expires_at).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})})` : '';
+        const msg = encodeURIComponent(`Halo Kak! Berikut tautan sortir foto untuk event *${store.activeEvent.event_name}*${expiryText}:\n\n🔗 ${clientUrl}\n\nSilakan pilih foto terbaiknya sebelum batas waktu selesai ya. Terima kasih! 🙏✨`);
+        window.open(`https://wa.me/?text=${msg}`, '_blank');
+    };
 
     function updateActiveSelectionsUI() {
         if (!store.activeEvent) return;
@@ -3653,6 +3789,22 @@
         const quota = parseInt(document.getElementById('quota-input').value);
         let wa = document.getElementById('wa-input').value.trim();
 
+        // Expiry calculation
+        const expiryDuration = document.getElementById('expiry-duration-select')?.value || '14';
+        let expiresAt = null;
+        if (expiryDuration === 'custom') {
+            const customDateVal = document.getElementById('expiry-custom-date')?.value;
+            if (customDateVal) {
+                expiresAt = new Date(customDateVal + 'T23:59:59').toISOString();
+            }
+        } else if (parseInt(expiryDuration) > 0) {
+            const days = parseInt(expiryDuration);
+            const exp = new Date();
+            exp.setDate(exp.getDate() + days);
+            exp.setHours(23, 59, 59, 999);
+            expiresAt = exp.toISOString();
+        }
+
         // Validate Google Drive Folder ID
         const folderIdRegex = /[-\w]{25,}/;
         const match = driveUrl.match(folderIdRegex);
@@ -3708,7 +3860,8 @@
             p_quota_limit: quota,
             p_drive_folder_url: driveUrl,
             p_drive_folder_id: folderId,
-            p_whatsapp_admin: wa
+            p_whatsapp_admin: wa,
+            p_expires_at: expiresAt
         });
 
         if (rpcError) {
@@ -3723,7 +3876,9 @@
                     drive_folder_url: driveUrl,
                     drive_folder_id: folderId,
                     whatsapp_admin: wa,
-                    vendor_id: v.id
+                    vendor_id: v.id,
+                    expires_at: expiresAt,
+                    is_locked: false
                 })
                 .select();
 
@@ -4007,6 +4162,60 @@
         document.title = `Pilih Foto: ${event.event_name} — SapaTamu Sortir`;
         document.getElementById('client-event-title').innerText = event.event_name;
         document.getElementById('client-event-desc').innerText = `Silakan centang hingga maksimal ${event.quota_limit} foto pilihan terbaik Anda. Pilihan tersimpan secara otomatis.`;
+
+        // Check Lock & Expiry State
+        const isLocked = Boolean(event.is_locked);
+        const expiresAt = event.expires_at ? new Date(event.expires_at) : null;
+        const isExpired = expiresAt && new Date() > expiresAt;
+        const isClosed = isLocked || isExpired;
+
+        const expiryPill = document.getElementById('client-expiry-pill');
+        const lockedBanner = document.getElementById('client-event-locked-banner');
+        const waContactBtn = document.getElementById('client-contact-wa-btn');
+
+        if (waContactBtn && event.whatsapp_admin) {
+            const cleanWa = String(event.whatsapp_admin).replace(/[^\d]/g, '');
+            const waMsg = encodeURIComponent(`Halo Studio ${event.event_name}, saya ingin meminta perpanjangan waktu pemilihan foto.`);
+            waContactBtn.href = `https://wa.me/${cleanWa}?text=${waMsg}`;
+        }
+
+        if (isClosed) {
+            if (lockedBanner) lockedBanner.style.display = 'flex';
+            if (expiryPill) {
+                expiryPill.style.display = 'inline-block';
+                expiryPill.style.background = '#FFF5F5';
+                expiryPill.style.color = '#C53030';
+                expiryPill.style.borderColor = 'rgba(224,123,123,0.4)';
+                expiryPill.innerText = isLocked ? '🔒 Terkunci' : '🔴 Batas Waktu Habis';
+            }
+            const submitBtn = document.getElementById('btn-client-submit');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.innerText = 'Sortir Ditutup 🔒';
+            }
+        } else {
+            if (lockedBanner) lockedBanner.style.display = 'none';
+            if (expiryPill) {
+                if (expiresAt) {
+                    const diffMs = expiresAt - new Date();
+                    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                    expiryPill.style.display = 'inline-block';
+                    expiryPill.style.background = '#FFF9F5';
+                    expiryPill.style.color = 'var(--text-main)';
+                    expiryPill.style.borderColor = 'var(--border)';
+                    expiryPill.innerText = `⏳ Sisa ${diffDays} Hari`;
+                } else {
+                    expiryPill.style.display = 'none';
+                }
+            }
+            const submitBtn = document.getElementById('btn-client-submit');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.innerText = 'Kirim Hasil Sortir';
+            }
+        }
 
         // Fetch current selections
         const { data: currentSels } = await supabase
@@ -4757,6 +4966,15 @@
     }
 
     window.toggleClientSelection = async function(id, name) {
+        // Check Lock & Expiry
+        const isLocked = Boolean(store.cullingEvent?.is_locked);
+        const expiresAt = store.cullingEvent?.expires_at ? new Date(store.cullingEvent.expires_at) : null;
+        const isExpired = expiresAt && new Date() > expiresAt;
+        if (!store.isP2PMode && (isLocked || isExpired)) {
+            window.showToast('Waktu pemilihan foto telah ditutup oleh studio (Mode Read-Only).', 'gold');
+            return;
+        }
+
         const isSelected = store.cullingSelections.has(id);
 
         if (!isSelected) {

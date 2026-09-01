@@ -197,6 +197,15 @@
 - [x] Batch fetching jumlah seleksi klien (`0 / 8`) saat dashboard pertama kali dibuka dan live-updating via Supabase Real-Time saat klien mencentang/membatalkan foto.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 23 — Event Expiry & Auto-Lock Batas Waktu Sortir Foto (GATE-26)
+- [x] Form Buat Event dilengkapi pilihan batas waktu: `14 Hari (Standar)`, `7 Hari (Cepat)`, `30 Hari (1 Bulan)`, `Pilih Tanggal Kustom 📅`, dan `Tanpa Batas Waktu`.
+- [x] Panel Kontrol Event Vendor memiliki status visual expiry/lock, tombol `🔒 Kunci Event / 🔓 Buka Kunci` instan, tombol `📅 +7 Hari` perpanjang otomatis, dan tombol `📲 Ingatkan WA` ramah klien.
+- [x] Tampilan Klien (*Client Culling View*) dilengkapi *countdown badge* sisa waktu, serta proteksi otomatis mode *Read-Only* + banner pemberitahuan santun dan tombol WhatsApp studio jika waktu sortir telah selesai/dikunci.
+- *File:* `sortir.html`
+
+
 
 
 
