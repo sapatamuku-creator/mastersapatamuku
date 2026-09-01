@@ -131,8 +131,18 @@
 - [x] Active pill: Solid terracotta (`var(--primary, #E07B7B)`), teks putih, bayangan lembut (`box-shadow: 0 2px 10px rgba(224,123,123,0.35)`).
 - [x] Inactive pill: Solid white surface (`#FFFFFF`), teks `#4A3F35`, border tipis `1px solid var(--border)`.
 - [x] Sticky Locking On Scroll: Navigasi terkunci melayang di bagian atas layar saat di-scroll ke bawah dengan backdrop glassmorphism (`rgba(255,249,245,0.96)` + `backdrop-filter: blur(16px)`).
-- [x] Header mobile ramping 1-baris (`flex-direction: row; justify-content: space-between`) sehingga offset sticky terkunci presisi di `top: 52px` pada ponsel.
+- [x] Header mobile ramping 1-baris (`flex-direction: row; justify-content: space-between`) sehingga offset sticky terkunci presisi di `top: 58px` pada ponsel.
 - *File:* `sortir.html`
+
+---
+
+### [x] Task 15 — Perbaikan Offset Sticky Anti-Terpotong & Auto-Scroll Non-Login (GATE-16)
+- [x] Perbaikan nilai `top: 60px` (desktop) dan `top: 58px` (mobile) dengan `padding: 10px 0` dan `z-index: 99` pada `.sortir-quick-nav-bar` sehingga kapsul pill tampil 100% utuh tanpa terpotong di bawah header.
+- [x] Logika Auto-Scroll Kondisional: Jika user dalam keadaan **Logout / Tamu Anonim** (`!getVendorAuth()`), halaman otomatis *smooth scroll* langsung ke section **📋 1. Penerjemah Indeks Manual (100% Free)**.
+- [x] Jika user dalam keadaan **Login (Vendor Terdaftar)**, auto-scroll dinonaktifkan agar vendor langsung mengelola event di bagian atas.
+- [x] Sinkronisasi offset dinamis pada fungsi `jumpToSection` berdasarkan tinggi aktual header + navbar.
+- *File:* `sortir.html`
+
 
 
 

@@ -1097,13 +1097,13 @@
         /* ============================================================ */
         .sortir-quick-nav-bar {
             position: sticky;
-            top: 58px;
-            z-index: 95;
+            top: 60px;
+            z-index: 99;
             background: rgba(255, 249, 245, 0.96);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border);
-            padding: 8px 0;
+            padding: 10px 0;
             margin-bottom: 24px;
             box-shadow: 0 4px 16px rgba(74, 63, 53, 0.04);
             transition: all 0.25s ease;
@@ -1124,7 +1124,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 6px 16px;
+            padding: 7px 16px;
             font-size: 13px;
             font-weight: 600;
             white-space: nowrap;
@@ -1217,12 +1217,12 @@
         }
         @media (max-width: 679.98px) {
             .sortir-quick-nav-bar {
-                top: 52px;
-                padding: 6px 0;
+                top: 58px;
+                padding: 8px 0;
                 margin-bottom: 16px;
             }
             .snav-item {
-                padding: 5px 12px;
+                padding: 6px 13px;
                 font-size: 11.5px;
                 gap: 5px;
             }
@@ -3018,9 +3018,17 @@
         renderMyEventsList();
         initSortirScrollspy();
 
+        // Auto-scroll ke section Penerjemah Indeks Manual jika pengunjung belum login (Free-First experience)
+        const vAuth = getVendorAuth();
+        if (!vAuth) {
+            setTimeout(() => {
+                window.jumpToSection('manual-translator-section');
+            }, 350);
+        }
+
         // Auto-check Sortir Tour Guide for new visitors
         if (typeof checkSortirTourAutoStart === 'function') {
-            setTimeout(checkSortirTourAutoStart, 600);
+            setTimeout(checkSortirTourAutoStart, 800);
         }
     }
 
@@ -3032,7 +3040,11 @@
         if (!el) return;
 
         const navBar = document.getElementById('sortir-quick-nav');
-        const navOffset = (navBar ? navBar.offsetHeight : 44) + 65;
+        const headerEl = document.querySelector('header');
+        const headerHeight = headerEl ? headerEl.offsetHeight : 56;
+        const navHeight = navBar ? navBar.offsetHeight : 44;
+        const navOffset = headerHeight + navHeight + 14;
+
         const rect = el.getBoundingClientRect();
         const targetY = window.pageYOffset + rect.top - navOffset;
 
