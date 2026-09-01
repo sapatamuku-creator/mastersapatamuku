@@ -107,5 +107,15 @@
 - [x] Responsif 3-mode (Desktop, Tablet touch-scroll, Mobile compact chips).
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 12 — Penyelarasan Desain Tab Navigasi Standar Marketplace SapaTamu (GATE-12)
+- [x] Mengubah tampilan sticky section navigator menjadi model **Underline Segmented Tabs** persis seperti di halaman Marketplace Vendor (`/vendor/knowhere-studio`).
+- [x] Indikator aktif underline tebal terracotta (`border-bottom: 3px solid var(--primary)`) dengan teks `#D86B6B` / `#E07B7B` dan background card `#FFFFFF`.
+- [x] Integrasi auto-centering scroll (`scrollIntoView`) untuk tab aktif pada mode layar smartphone/mobile.
+- [x] Hemat ruang vertikal dan memberikan kesan clean, terstruktur, dan elegan khas SapaTamu.
+- *File:* `sortir.html`
+
+
 
 
