@@ -143,6 +143,16 @@
 - [x] Sinkronisasi offset dinamis pada fungsi `jumpToSection` berdasarkan tinggi aktual header + navbar.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 16 — Penyelarasan Lebar Seragam Seluruh Section & Eliminasi Total Horizontal Scroll (GATE-18)
+- [x] Penyelarasan lebar seluruh kartu section (`#create-event-section`, `#my-events-section`, `#local-culling-section`, `#manual-translator-section`) menjadi 100% sejajar presisi di dalam container dengan padding seragam `20px 16px` dan radius `20px` di mobile.
+- [x] Header mobile ultra-kompak (`overflow: hidden; max-width: 100vw`): Nama vendor disembunyikan dari bar utama saat login, tombol dipadatkan, menghilangkan sumber utama pelebaran header >375px.
+- [x] Perlindungan overflow global (`html, body { overflow-x: hidden; width: 100%; max-width: 100vw; }`) dan form grid 1-kolom di mobile.
+- [x] Eliminasi penuh horizontal scrolling (0 horizontal scroll) pada seluruh mode perangkat (teruji di iPhone SE 375px).
+- *File:* `sortir.html`
+
+
 
 
 
