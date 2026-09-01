@@ -205,6 +205,15 @@
 - [x] Tampilan Klien (*Client Culling View*) dilengkapi *countdown badge* sisa waktu, serta proteksi otomatis mode *Read-Only* + banner pemberitahuan santun dan tombol WhatsApp studio jika waktu sortir telah selesai/dikunci.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 24 — Penukaran Urutan Section Active Event Card & Local Culling (GATE-27)
+- [x] Menukar posisi layout section pada Dashboard Vendor: **Active Event Card** kini berada tepat di bawah grid form Buat Event & Daftar Event Saya.
+- [x] Section **Local Culling & Lightroom** dipindahkan ke posisi setelah Active Event Card, sehingga alur kerja vendor saat memilih event langsung terfokus ke hasil seleksi & ekspor instan tanpa perlu men-scroll melewati dropzone lokal.
+- [x] Menambahkan fungsi `jumpToSection()` dan *smooth autofocus* pada active event card saat dipilih.
+- *File:* `sortir.html`
+
+
 
 
 
