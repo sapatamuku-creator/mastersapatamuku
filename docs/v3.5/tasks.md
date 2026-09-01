@@ -178,10 +178,18 @@
 ---
 
 ### [x] Task 20 — Format Slug Event Culling dengan Identitas Vendor (GATE-23)
-- [x] Struktur pembuatan slug event otomatis mengikutsertakan nama vendor dalam format natural reading: `{nama-event}-by-{nama-vendor}-{random-hash}`.
-- [x] Contoh URL: `https://sapatamu.id/sortir?event=16-agustus-2026-file-edit-prewedding-nadyfa-by-knowhere-studio-v4dil`.
+- [x] Struktur pembuatan slug event otomatis mengikutsertakan nama vendor dalam format natural reading: `{nama-event}-by-{nama-vendor}`.
 - [x] Memperkuat branding studio pada link preview WhatsApp/Email saat link culling dibagikan ke klien.
 - *File:* `sortir.html`
+
+---
+
+### [x] Task 21 — Clean Event Slug 100% Tanpa Random Hash & Smart Collision (GATE-24)
+- [x] Penghapusan total seluruh *random hash* acak pada pembentukan URL event culling.
+- [x] URL Bersih & Mewah: `https://sapatamu.id/sortir?event=16-agustus-2026-file-edit-prewedding-nadyfa-by-knowhere-studio`.
+- [x] Fitur *Smart Duplicate Resolution*: Otomatis menambahkan counter `-2`, `-3` (ala WordPress) hanya jika vendor yang sama membuat nama event yang identik, menjaga URL tetap rapi dan bebas karakter aneh.
+- *File:* `sortir.html`
+
 
 
 
