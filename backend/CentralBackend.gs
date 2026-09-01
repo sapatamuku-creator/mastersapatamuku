@@ -184,6 +184,7 @@ function handleCentralPost(request) {
     case 'setupWishesWatcher': return createResponse({ status: "success", message: setupWishesWatcherTrigger() });
     case 'checkSlot': return handleCheckSlot(request);
     case 'getClientProfile': return handleGetClientProfile(request);
+    case 'sendCustomEmail': return handleSendCustomEmail(request);
     case 'cleanDemoData': return createResponse({ status: "success", message: cleanDemoData30Days() });
     default: return createResponse({ status: "error", message: "Action tidak dikenali" });
   }
@@ -772,15 +773,12 @@ function handleSendOTP(data) {
         <p style="color: #9ca3af; font-size: 12px; text-align: center;">Email ini dihasilkan secara otomatis. Mohon tidak membalas email ini.</p>
       </div>`;
 
-      GmailApp.sendEmail(
-        data.email, 
-        "Kode Verifikasi OTP SapaTamu.ku", 
-        `Kode OTP Anda adalah: ${otp}. Jangan bagikan kode ini kepada siapapun.`, 
-        {
-          name: "SapaTamu Security",
-          htmlBody: emailHtml
-        }
-      );
+      MailApp.sendEmail({
+        to: data.email,
+        subject: "Kode Verifikasi OTP SapaTamu.ku",
+        htmlBody: emailHtml,
+        name: "SapaTamu Security"
+      });
       return createResponse({ status: "success", message: "OTP terkirim via Email" });
     } else {
       // Default to WA
@@ -796,6 +794,31 @@ function handleSendOTP(data) {
     }
   } catch (e) {
     return createResponse({ status: "error", message: "Terjadi error OTP: " + e.toString() });
+  }
+}
+
+// ── CUSTOM EMAIL SENDER (Menggunakan MailApp dari akun sapatamuku@gmail.com) ──
+function handleSendCustomEmail(data) {
+  try {
+    const recipient = data.recipient || data.email;
+    const subject = data.subject || "Notifikasi SapaTamu.id";
+    const htmlBody = data.htmlBody || data.message || "Pemberitahuan dari SapaTamu.id";
+    const senderName = data.senderName || "SapaTamu Security";
+
+    if (!recipient) {
+      return createResponse({ status: "error", message: "Alamat email penerima wajib diisi" });
+    }
+
+    MailApp.sendEmail({
+      to: recipient,
+      subject: subject,
+      htmlBody: htmlBody,
+      name: senderName
+    });
+
+    return createResponse({ status: "success", message: "Email berhasil dikirim ke " + recipient });
+  } catch (e) {
+    return createResponse({ status: "error", message: "Gagal kirim email: " + e.toString() });
   }
 }
 

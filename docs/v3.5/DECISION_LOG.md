@@ -144,11 +144,7 @@
 4. **Cabang Routing Terdampak**: Form registrasi, API `send_otp`, `verify_register`, `run_reminder_cron`, `get_sortir_logs`.
 5. **Risiko & Trade-off Jujur**:
    - *Risiko*: Device Fonnte terputus/habis kuota.
-   - *Mitigasi*: Multi-channel fallback (dikirim ke WA & Email sekaligus) dan tercatat di `sortir_logs`.
-
----
-
-### GATE-08: Alur Lupa Password, Email Link Reset, Validasi Anti-Reuse & Modal Sukses
+   - *Mitigasi*: Multi-channel fallback (dikirim ke WA & Email sekal### GATE-08: Alur Lupa Password, Email Link Reset, Validasi Anti-Reuse & Modal Sukses
 - **Timestamp Decision**: `2026-09-01T12:11:19+07:00`
 - **Status**: `APPROVED & IMPLEMENTED`
 1. **Fungsi Perubahan**: 
@@ -161,6 +157,24 @@
    - Modal sukses muncul memberi konfirmasi sebelum otomatis membuka tab login dengan email terisi.
 4. **Cabang Routing Terdampak**: Form login `sortir.html`, route `?action=reset_password`, endpoint `api/sortir.js`.
 5. **Risiko & Trade-off Jujur**: Token berlaku 15 menit untuk keamanan standar OWASP.
+
+---
+
+### GATE-09: Notifikasi Bukti Pembayaran & Konfirmasi Aktivasi Paket PRO (Email & WhatsApp)
+- **Timestamp Decision**: `2026-09-01T14:38:33+07:00`
+- **Status**: `APPROVED & IMPLEMENTED`
+1. **Fungsi Perubahan**: 
+   Mengirimkan tanda terima sah dan konfirmasi aktivasi paket secara otomatis via Email (Template HTML tema SapaTamu) dan WhatsApp (Fonnte) saat pembayaran Midtrans berhasil diselesaikan (`settlement`/`capture`). Informasi memuat rincian paket, durasi masa aktif, no. invoice, dan tombol dashboard.
+2. **Dari Kode Sebelumnya**: 
+   Webhook Midtrans dan verifikasi pembayaran hanya mengaktifkan status di database tanpa mengirimkan email/WA tanda terima ke vendor.
+3. **Mengarah Kemana**: 
+   - Helper `sendPaymentSuccessNotification` di `api/sortir.js`.
+   - Terintegrasi otomatis pada `payment_webhook` dan `check_payment`.
+   - Logging audit trail ke tabel `sortir_logs` dengan aksi `PAYMENT_SUCCESS_NOTIFICATION`.
+4. **Cabang Routing Terdampak**: `api/sortir.js` (`action=payment_webhook` & `action=check_payment`).
+5. **Risiko & Trade-off Jujur**:
+   - *Risiko*: Notifikasi ganda jika webhook dan client check terpanggil serentak.
+   - *Mitigasi*: Idempotent guard berbasis status `wasPending` pada transaksi.
 
 ---
 
@@ -181,11 +195,12 @@
 | 11 | `2026-09-01 10:33:00` | **GATE-06**: Aligment Badge Dipilih & Pembersihan Copy Midtrans | `sortir.html` | `ec5bdaa` |
 | 12 | `2026-09-01 10:41:00` | Auto-Sync Profil Live & Fallback Check Payment | `sortir.html`, `api/sortir.js` | `f493dc9` |
 | 13 | `2026-09-01 11:22:00` | **GATE-07**: Dropdown Kode Negara, Sanitasi WA Fonnte, Reminder H-7 & Tabel `sortir_logs` | `sortir.html`, `api/sortir.js`, `sql/` | `b170c05` |
-| 14 | `2026-09-01 12:15:00` | **GATE-08**: Fitur Lupa Password, Email Link Reset, Anti-Reuse Password & Success Modal | `sortir.html`, `api/sortir.js`, `sql/` | *Pending Commit* |
+| 14 | `2026-09-01 12:15:00` | **GATE-08**: Fitur Lupa Password, Email Link Reset, Anti-Reuse Password & Success Modal | `sortir.html`, `api/sortir.js`, `sql/` | `b12751a` |
+| 15 | `2026-09-01 14:40:00` | **GATE-09**: Notifikasi Struk Pembayaran & Aktivasi Paket PRO (Email & WA) | `api/sortir.js`, `backend/`, `DECISION_LOG.md` | *Pending Commit* |
 
 ---
 
-## ðŸ§ª 4. Bukti Verifikasi Pengujian (E2E Test Output)
+## ðŸ§ª 4. Bukti Verifikasi Pengujian (E2E Test Output)Ÿ§ª 4. Bukti Verifikasi Pengujian (E2E Test Output)
 
 ### Test Case 1: Akun Vendor `Knowhere Studio`
 - **Email**: `opick8c@gmail.com`

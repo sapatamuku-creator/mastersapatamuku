@@ -1564,7 +1564,7 @@
 
         <!-- Manual Index Translator Card -->
         <!-- Manual Index Translator — 2-Step Wizard -->
-        <div class="card" style="margin-top: 32px;">
+        <div class="card" id="manual-translator-section" style="margin-top: 32px;">
             <h3 style="font-size: 22px; margin-bottom: 4px; color: var(--primary);">📋 Penerjemah Indeks Manual</h3>
             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">
                 Dua langkah cepat: ekstrak daftar foto dari teks WhatsApp / Email &rarr; ekspor instan langsung di browser atau unduh script portabel.
@@ -2835,6 +2835,11 @@
         }
 
         renderMyEventsList();
+
+        // Auto-check Sortir Tour Guide for new visitors
+        if (typeof checkSortirTourAutoStart === 'function') {
+            setTimeout(checkSortirTourAutoStart, 600);
+        }
     }
 
     function renderMyEventsList() {
@@ -5445,6 +5450,517 @@ window.vendorLogin = typeof vendorLogin !== 'undefined' ? vendorLogin : function
 window.vendorRegister = typeof vendorRegister !== 'undefined' ? vendorRegister : function(){};
 window.vendorLogout = typeof vendorLogout !== 'undefined' ? vendorLogout : function(){};
 window.updateVendorHeader = typeof updateVendorHeader !== 'undefined' ? updateVendorHeader : function(){};
+
+/* ═══════════════════════════════════════════════════════════
+   PAGE TOUR GUIDE — SapaTamu Sortir (Interactive Onboarding)
+   ═══════════════════════════════════════════════════════════ */
+(function() {
+    const TOUR_STORAGE_KEY = 'sapatamu_sortir_tour_dismissed';
+    let currentStep = 0;
+    let isTourActive = false;
+
+    // ── Tour Steps Definition (Free First -> Pro / Cloud) ──
+    const TOUR_STEPS = [
+        {
+            target: '#manual-translator-section',
+            title: '1/5 — 📋 Penerjemah Indeks Manual (100% Free)',
+            text: 'Fitur ini <b>100% GRATIS tanpa perlu login atau kuota</b>. Anda dapat langsung menerjemahkan daftar nama foto dari chat WhatsApp atau email klien menjadi file foto yang siap disalin.',
+            position: 'top',
+            highlightPadding: 12,
+            action: 'highlight'
+        },
+        {
+            target: '#manual-index-textarea',
+            title: '2/5 — Tempel Teks Klien & Ekspor Instan',
+            text: 'Cukup tempelkan teks daftar foto dari klien ke kolom ini, klik <b>"Proses Daftar Foto"</b>, lalu salin berkas foto secara instan menggunakan fitur <b>⚡ Ekspor Instan via Browser</b> atau unduh script portabel.',
+            position: 'bottom',
+            highlightPadding: 8,
+            action: 'focus'
+        },
+        {
+            target: '#local-culling-section',
+            title: '3/5 — ⚡ Local Culling & Lightroom (Offline)',
+            text: 'Ingin sortir ribuan foto di PC tanpa koneksi internet? Buka folder foto langsung di sini, pilih foto dengan cepat, lalu ekspor teks filter langsung ke <b>Adobe Lightroom Classic</b>.',
+            position: 'top',
+            highlightPadding: 12,
+            action: 'highlight'
+        },
+        {
+            target: '#create-event-form',
+            title: '4/5 — 🌐 Buat Galeri Online untuk Klien',
+            text: 'Kirim link culling foto ke klien! Masukkan link folder Google Drive publik dan kuota foto. Klien bisa memilih foto langsung dari smartphone mereka tanpa install aplikasi.',
+            position: 'right',
+            highlightPadding: 10,
+            action: 'highlight'
+        },
+        {
+            target: '#my-events-list',
+            title: '5/5 — 👑 Daftar Event & Upgrade PRO',
+            text: 'Pantau hasil pilihan foto klien secara real-time. Setiap vendor terdaftar mendapatkan <b>10x Kuota Event Gratis</b>, dan Anda dapat upgrade ke <b>Paket PRO</b> untuk event unlimited tanpa batas kuota!',
+            position: 'left',
+            highlightPadding: 10,
+            action: 'highlight'
+        }
+    ];
+
+    // ── Inject Tour CSS ──
+    function injectTourStyles() {
+        if (document.getElementById('sortir-tour-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'sortir-tour-styles';
+        style.textContent = `
+            /* TOUR OVERLAY */
+            #sortir-tour-overlay {
+                position: fixed; inset: 0;
+                background: rgba(15, 23, 42, 0.55);
+                z-index: 2147483640;
+                opacity: 0;
+                transition: opacity 0.35s ease;
+                pointer-events: none;
+            }
+            #sortir-tour-overlay.active { opacity: 1; pointer-events: auto; }
+
+            /* SPOTLIGHT CUTOUT */
+            #sortir-tour-spotlight {
+                position: fixed;
+                border: 2.5px solid var(--gold, #C8962E);
+                border-radius: 16px;
+                box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.55);
+                z-index: 2147483641;
+                pointer-events: none;
+                opacity: 0;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            #sortir-tour-spotlight.active { opacity: 1; }
+
+            /* TOOLTIP CARD */
+            #sortir-tour-tooltip {
+                position: fixed;
+                z-index: 2147483642;
+                background: #FFFFFF;
+                border-radius: 22px;
+                padding: 24px 26px 20px;
+                max-width: 380px;
+                min-width: 290px;
+                box-shadow: 0 25px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.04);
+                opacity: 0;
+                transform: translateY(8px) scale(0.97);
+                transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+                pointer-events: none;
+                font-family: inherit;
+            }
+            #sortir-tour-tooltip.active {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                pointer-events: auto;
+            }
+            #sortir-tour-tooltip .tour-title {
+                font-size: 16px;
+                font-weight: 800;
+                color: var(--text-main, #4A3F35);
+                margin-bottom: 8px;
+                line-height: 1.35;
+            }
+            #sortir-tour-tooltip .tour-text {
+                font-size: 12.5px;
+                font-weight: 500;
+                color: var(--text-muted, #8C7560);
+                line-height: 1.6;
+                margin-bottom: 16px;
+            }
+            #sortir-tour-tooltip .tour-text b { color: var(--text-main, #4A3F35); font-weight: 750; }
+            
+            /* Checkbox "Jangan tampilkan lagi" */
+            .tour-dontshow {
+                display: flex; align-items: center; gap: 8px;
+                margin-bottom: 14px; padding-top: 10px;
+                border-top: 1px solid #F3F4F6;
+                cursor: pointer; user-select: none;
+            }
+            .tour-dontshow input[type="checkbox"] {
+                width: 15px; height: 15px; cursor: pointer;
+                accent-color: var(--gold, #C8962E); flex-shrink: 0;
+            }
+            .tour-dontshow span {
+                font-size: 11px; font-weight: 600; color: #9CA3AF;
+            }
+
+            #sortir-tour-tooltip .tour-footer {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            #sortir-tour-tooltip .tour-dots {
+                display: flex;
+                gap: 5px;
+            }
+            #sortir-tour-tooltip .tour-dot {
+                width: 7px; height: 7px;
+                border-radius: 50%;
+                background: #E5E7EB;
+                transition: all 0.3s ease;
+            }
+            #sortir-tour-tooltip .tour-dot.active {
+                background: var(--gold, #C8962E);
+                width: 20px;
+                border-radius: 10px;
+            }
+            #sortir-tour-tooltip .tour-dot.done {
+                background: #D1D5DB;
+            }
+            #sortir-tour-tooltip .tour-btns {
+                display: flex;
+                gap: 6px;
+            }
+            #sortir-tour-tooltip .tour-btn {
+                padding: 9px 15px;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 800;
+                cursor: pointer;
+                border: none;
+                transition: all 0.2s ease;
+                letter-spacing: 0.2px;
+            }
+            #sortir-tour-tooltip .tour-btn:active { transform: scale(0.96); }
+            .tour-btn-skip {
+                background: transparent;
+                color: #9CA3AF;
+                padding: 9px 10px !important;
+            }
+            .tour-btn-skip:hover { color: #6B7280; }
+            .tour-btn-prev {
+                background: #F3F4F6;
+                color: #4B5563;
+            }
+            .tour-btn-prev:hover { background: #E5E7EB; }
+            .tour-btn-next {
+                background: var(--gold, #C8962E);
+                color: #fff;
+                box-shadow: 0 4px 14px rgba(200, 150, 46, 0.3);
+            }
+            .tour-btn-next:hover { filter: brightness(0.95); }
+            .tour-btn-done {
+                background: #10B981;
+                color: #fff;
+                box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+            }
+
+            /* FLOATING TRIGGER BUTTON */
+            #sortir-tour-trigger-btn {
+                position: fixed;
+                bottom: 24px;
+                left: 24px;
+                z-index: 2147483639;
+                height: 44px;
+                padding: 0 16px 0 12px;
+                border-radius: 22px;
+                background: linear-gradient(135deg, #4A3F35, #2C241E);
+                color: #F5EBE1;
+                border: 1px solid rgba(200,150,46,0.4);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+                font-weight: 750;
+                box-shadow: 0 8px 24px rgba(74, 63, 53, 0.25);
+                transition: all 0.25s ease;
+                user-select: none;
+            }
+            #sortir-tour-trigger-btn:hover {
+                transform: translateY(-2px);
+                background: linear-gradient(135deg, #C8962E, #A0741B);
+                color: #FFFFFF;
+                box-shadow: 0 12px 30px rgba(200, 150, 46, 0.35);
+                border-color: transparent;
+            }
+            #sortir-tour-trigger-btn:active { transform: scale(0.96); }
+            #sortir-tour-trigger-btn .tour-btn-icon {
+                font-size: 16px;
+                display: inline-block;
+                animation: tourIconWiggle 2.5s infinite;
+            }
+            @keyframes tourIconWiggle {
+                0%, 100% { transform: rotate(0deg); }
+                10%, 30% { transform: rotate(-12deg); }
+                20%, 40% { transform: rotate(12deg); }
+                50% { transform: rotate(0deg); }
+            }
+
+            /* RESPONSIVE 3-MODE ADAPTATION */
+            @media (max-width: 767.98px) {
+                #sortir-tour-trigger-btn {
+                    bottom: 18px;
+                    left: 18px;
+                    padding: 0 14px 0 10px;
+                    height: 40px;
+                    font-size: 11.5px;
+                }
+                #sortir-tour-tooltip {
+                    position: fixed !important;
+                    bottom: 16px !important;
+                    left: 16px !important;
+                    right: 16px !important;
+                    top: auto !important;
+                    max-width: calc(100% - 32px) !important;
+                    min-width: 0 !important;
+                    border-radius: 20px !important;
+                    padding: 20px 20px 16px !important;
+                    box-shadow: 0 15px 45px rgba(0,0,0,0.3) !important;
+                }
+                #sortir-tour-tooltip .tour-title { font-size: 15px; }
+                #sortir-tour-tooltip .tour-text { font-size: 12px; margin-bottom: 12px; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // ── Build DOM Elements ──
+    function createTourElements() {
+        injectTourStyles();
+
+        if (!document.getElementById('sortir-tour-overlay')) {
+            const overlay = document.createElement('div');
+            overlay.id = 'sortir-tour-overlay';
+            overlay.addEventListener('click', () => {
+                if (isTourActive) finishSortirTour(false);
+            });
+            document.body.appendChild(overlay);
+        }
+
+        if (!document.getElementById('sortir-tour-spotlight')) {
+            const spotlight = document.createElement('div');
+            spotlight.id = 'sortir-tour-spotlight';
+            document.body.appendChild(spotlight);
+        }
+
+        if (!document.getElementById('sortir-tour-tooltip')) {
+            const tooltip = document.createElement('div');
+            tooltip.id = 'sortir-tour-tooltip';
+            tooltip.innerHTML = `
+                <div class="tour-title" id="sortir-tour-title"></div>
+                <div class="tour-text" id="sortir-tour-text"></div>
+                <label class="tour-dontshow">
+                    <input type="checkbox" id="sortir-tour-cb" onchange="window.toggleSortirTourDismiss(this.checked)">
+                    <span>Jangan tampilkan ini kedepannya</span>
+                </label>
+                <div class="tour-footer">
+                    <div class="tour-dots" id="sortir-tour-dots"></div>
+                    <div class="tour-btns" id="sortir-tour-btns"></div>
+                </div>
+            `;
+            document.body.appendChild(tooltip);
+        }
+
+        if (!document.getElementById('sortir-tour-trigger-btn')) {
+            const btn = document.createElement('button');
+            btn.id = 'sortir-tour-trigger-btn';
+            btn.innerHTML = `<span class="tour-btn-icon">💡</span><span>Panduan Sortir</span>`;
+            btn.title = "Buka Panduan Interaktif SapaTamu Sortir";
+            btn.onclick = () => window.startSortirTour(0);
+            document.body.appendChild(btn);
+        }
+    }
+
+    // ── Render Specific Tour Step ──
+    function renderStep(index) {
+        if (index < 0 || index >= TOUR_STEPS.length) return;
+        currentStep = index;
+        const step = TOUR_STEPS[index];
+        const targetEl = document.querySelector(step.target);
+
+        if (!targetEl) {
+            // Target not in DOM, advance to next
+            if (index < TOUR_STEPS.length - 1) renderStep(index + 1);
+            else finishSortirTour(true);
+            return;
+        }
+
+        const overlay = document.getElementById('sortir-tour-overlay');
+        const spotlight = document.getElementById('sortir-tour-spotlight');
+        const tooltip = document.getElementById('sortir-tour-tooltip');
+        const titleEl = document.getElementById('sortir-tour-title');
+        const textEl = document.getElementById('sortir-tour-text');
+        const dotsEl = document.getElementById('sortir-tour-dots');
+        const btnsEl = document.getElementById('sortir-tour-btns');
+        const cbEl = document.getElementById('sortir-tour-cb');
+
+        overlay?.classList.add('active');
+        spotlight?.classList.add('active');
+        tooltip?.classList.add('active');
+
+        if (titleEl) titleEl.innerHTML = step.title;
+        if (textEl) textEl.innerHTML = step.text;
+        if (cbEl) cbEl.checked = localStorage.getItem(TOUR_STORAGE_KEY) === 'true';
+
+        // Render Dots
+        if (dotsEl) {
+            dotsEl.innerHTML = TOUR_STEPS.map((_, i) => {
+                let cls = 'tour-dot';
+                if (i === index) cls += ' active';
+                else if (i < index) cls += ' done';
+                return `<div class="${cls}"></div>`;
+            }).join('');
+        }
+
+        // Render Buttons
+        const isFirst = index === 0;
+        const isLast = index === TOUR_STEPS.length - 1;
+
+        if (btnsEl) {
+            let btnsHTML = '';
+            btnsHTML += `<button class="tour-btn tour-btn-skip" onclick="window.skipSortirTour()">Lewati</button>`;
+            if (!isFirst) {
+                btnsHTML += `<button class="tour-btn tour-btn-prev" onclick="window.prevSortirTourStep()">&larr; Kembali</button>`;
+            }
+            if (isLast) {
+                btnsHTML += `<button class="tour-btn tour-btn-done" onclick="window.finishSortirTour(true)">Selesai 🎉</button>`;
+            } else {
+                btnsHTML += `<button class="tour-btn tour-btn-next" onclick="window.nextSortirTourStep()">Lanjut &rarr;</button>`;
+            }
+            btnsEl.innerHTML = btnsHTML;
+        }
+
+        // Scroll to target smoothly
+        const pad = step.highlightPadding || 10;
+        const rect = targetEl.getBoundingClientRect();
+        const absoluteTop = window.scrollY + rect.top;
+        const isMobile = window.innerWidth < 768;
+
+        // Position Spotlight
+        function updatePositions() {
+            const r = targetEl.getBoundingClientRect();
+            if (spotlight) {
+                spotlight.style.top = `${Math.max(0, r.top - pad)}px`;
+                spotlight.style.left = `${Math.max(0, r.left - pad)}px`;
+                spotlight.style.width = `${r.width + pad * 2}px`;
+                spotlight.style.height = `${r.height + pad * 2}px`;
+            }
+
+            // Desktop Tooltip Placement
+            if (tooltip && !isMobile) {
+                const ttRect = tooltip.getBoundingClientRect();
+                const ttW = ttRect.width || 340;
+                const ttH = ttRect.height || 180;
+                const gap = 16;
+                let ttTop = 0;
+                let ttLeft = 0;
+
+                const pos = step.position || 'bottom';
+
+                if (pos === 'top') {
+                    ttTop = r.top - pad - ttH - gap;
+                    ttLeft = r.left + (r.width / 2) - (ttW / 2);
+                } else if (pos === 'bottom') {
+                    ttTop = r.bottom + pad + gap;
+                    ttLeft = r.left + (r.width / 2) - (ttW / 2);
+                } else if (pos === 'left') {
+                    ttTop = r.top + (r.height / 2) - (ttH / 2);
+                    ttLeft = r.left - pad - ttW - gap;
+                } else if (pos === 'right') {
+                    ttTop = r.top + (r.height / 2) - (ttH / 2);
+                    ttLeft = r.right + pad + gap;
+                }
+
+                // Clamping to screen viewport
+                const margin = 20;
+                if (ttLeft < margin) ttLeft = margin;
+                if (ttLeft + ttW > window.innerWidth - margin) ttLeft = window.innerWidth - ttW - margin;
+                if (ttTop < margin) ttTop = margin;
+                if (ttTop + ttH > window.innerHeight - margin) ttTop = window.innerHeight - ttH - margin;
+
+                tooltip.style.top = `${ttTop}px`;
+                tooltip.style.left = `${ttLeft}px`;
+            }
+        }
+
+        // Scroll alignment
+        const scrollTargetY = isMobile
+            ? Math.max(0, absoluteTop - 80)
+            : Math.max(0, absoluteTop - (window.innerHeight / 3));
+
+        window.scrollTo({ top: scrollTargetY, behavior: 'smooth' });
+
+        setTimeout(updatePositions, 200);
+        setTimeout(updatePositions, 450);
+
+        if (step.action === 'focus' && typeof targetEl.focus === 'function') {
+            try { targetEl.focus(); } catch (e) {}
+        }
+    }
+
+    // ── Public API on window ──
+    window.startSortirTour = function(startIndex = 0) {
+        createTourElements();
+        isTourActive = true;
+        renderStep(startIndex);
+    };
+
+    window.nextSortirTourStep = function() {
+        if (currentStep < TOUR_STEPS.length - 1) {
+            renderStep(currentStep + 1);
+        } else {
+            finishSortirTour(true);
+        }
+    };
+
+    window.prevSortirTourStep = function() {
+        if (currentStep > 0) {
+            renderStep(currentStep - 1);
+        }
+    };
+
+    window.skipSortirTour = function() {
+        finishSortirTour(false);
+    };
+
+    window.finishSortirTour = function(markDismissed = true) {
+        isTourActive = false;
+        const overlay = document.getElementById('sortir-tour-overlay');
+        const spotlight = document.getElementById('sortir-tour-spotlight');
+        const tooltip = document.getElementById('sortir-tour-tooltip');
+
+        overlay?.classList.remove('active');
+        spotlight?.classList.remove('active');
+        tooltip?.classList.remove('active');
+
+        const cbEl = document.getElementById('sortir-tour-cb');
+        if (cbEl && cbEl.checked) {
+            localStorage.setItem(TOUR_STORAGE_KEY, 'true');
+        } else if (markDismissed) {
+            localStorage.setItem(TOUR_STORAGE_KEY, 'true');
+        }
+    };
+
+    window.toggleSortirTourDismiss = function(isChecked) {
+        localStorage.setItem(TOUR_STORAGE_KEY, isChecked ? 'true' : 'false');
+    };
+
+    window.checkSortirTourAutoStart = function() {
+        const isDismissed = localStorage.getItem(TOUR_STORAGE_KEY) === 'true';
+        const dashboard = document.getElementById('view-dashboard');
+        if (!isDismissed && dashboard && dashboard.style.display !== 'none') {
+            window.startSortirTour(0);
+        } else {
+            createTourElements(); // Ensure trigger button is present
+        }
+    };
+
+    // Keyboard Navigation
+    window.addEventListener('keydown', (e) => {
+        if (!isTourActive) return;
+        if (e.key === 'Escape') finishSortirTour(false);
+        else if (e.key === 'ArrowRight' || e.key === 'Enter') window.nextSortirTourStep();
+        else if (e.key === 'ArrowLeft') window.prevSortirTourStep();
+    });
+
+    // Resize recalculation
+    window.addEventListener('resize', () => {
+        if (isTourActive) renderStep(currentStep);
+    });
+})();
 
 document.addEventListener('DOMContentLoaded', updateVendorHeader);
 </script>

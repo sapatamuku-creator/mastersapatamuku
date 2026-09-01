@@ -1,16 +1,16 @@
 # Graph Report - mastersapatamuku  (2026-09-01)
 
 ## Corpus Check
-- 189 files · ~1,036,014 words
+- 189 files · ~1,039,065 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1869 nodes · 1942 edges · 174 communities (146 shown, 28 thin omitted)
+- 1875 nodes · 1951 edges · 177 communities (149 shown, 28 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `aafa6c98`
+- Built from commit: `10a8aafd`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -158,9 +158,12 @@
 - sortir.js
 - 🛡️ Rencana Gate & Detail Keputusan (5-Point Format)
 - 📋 Daftar Evaluasi & Temuan Event
+- ai-website-cloner/package.json
 - 📋 Task List & Status
 - diagnose_sync.js
 - add_jam_pulang_column.sql
+- keywords
+- scripts
 
 ## God Nodes (most connected - your core abstractions)
 1. `handler()` - 30 edges
@@ -189,7 +192,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (174 total, 28 thin omitted)
+## Communities (177 total, 28 thin omitted)
 
 ### Community 0 - "Project Dependencies & Package Config"
 Cohesion: 0.07
@@ -289,15 +292,15 @@ Nodes (9): 1. PEMETAAN FILE & PERAN DALAM SISTEM, 2. DIAGRAM KERANGKA & ALUR ROU
 
 ### Community 31 - "Vercel API: Create Payment Handler"
 Cohesion: 0.12
-Nodes (16): 📊 1. Latar Belakang & Analisis Kebutuhan, 🛡️ 2. Format Decision Gate (5-Point Standard SapaTamu), ⏱️ 3. Audit Log & Timeline Eksekusi Teknis, 🧪 4. Bukti Verifikasi Pengujian (E2E Test Output), Decision Log — SapaTamu v3.5 (Sortir SaaS, Hybrid Access & Subscription), GATE-01: Pemisahan Akses Halaman `/sortir` (Public Free vs Gated Auth), GATE-02: Registrasi Vendor dengan OTP Email (1-Email-1-Akun Unik), GATE-03: Paywall Subscription, Kuota Free Tier 10x & Override Reset (+8 more)
+Nodes (16): 📊 1. Latar Belakang & Analisis Kebutuhan, 🛡️ 2. Format Decision Gate (5-Point Standard SapaTamu), ⏱️ 3. Audit Log & Timeline Eksekusi Teknis, 🧪 4. Bukti Verifikasi Pengujian (E2E Test Output)��� 4. Bukti Verifikasi Pengujian (E2E Test Output), Decision Log — SapaTamu v3.5 (Sortir SaaS, Hybrid Access & Subscription), GATE-01: Pemisahan Akses Halaman `/sortir` (Public Free vs Gated Auth), GATE-02: Registrasi Vendor dengan OTP Email (1-Email-1-Akun Unik), GATE-03: Paywall Subscription, Kuota Free Tier 10x & Override Reset (+8 more)
 
 ### Community 32 - "Vercel API: Get Email Handler"
 Cohesion: 0.13
 Nodes (15): L10. Remove console.log leak, L11. Remove hardcoded ssId/username, L12. Integrity verification for skills, L13. Review AGENTS.md commands, L14. Audit AGENT.md sensitive info, L1. Remove site verification token, L2. SRI for external scripts, L3. SRI for CDN (+7 more)
 
 ### Community 33 - "Vercel API: Sortir Session Handler"
-Cohesion: 0.25
-Nodes (7): 📋 Task List & Status, Tasks & Roadmap — SapaTamu Sortir v3.5 (SaaS Hybrid Access & Subscription), [x] Task 1 — Skema Database Supabase & Migrasi Relasi Vendor, [x] Task 2 — Backend Autentikasi & Email OTP Service, [x] Task 3 — Interseptasi UI/UX & Pembagian Zona Fitur di `/sortir`, [x] Task 4 — Manajemen Kuota 10x Free Tier & Paywall Subscription, [x] Task 5 — Pengujian Responsif 3-Mode & Verifikasi Lapangan
+Cohesion: 0.15
+Nodes (12): 📋 Task List & Status, Tasks & Roadmap — SapaTamu Sortir v3.5 (SaaS Hybrid Access & Subscription), [x] Task 10 — Interactive Page Tour Guide (Free-First Onboarding) (GATE-10), [x] Task 1 — Skema Database Supabase & Migrasi Relasi Vendor, [x] Task 2 — Backend Autentikasi & Email OTP Service, [x] Task 3 — Interseptasi UI/UX & Pembagian Zona Fitur di `/sortir`, [x] Task 4 — Manajemen Kuota 10x Free Tier & Paywall Subscription, [x] Task 5 — Pengujian Responsif 3-Mode & Verifikasi Lapangan (+4 more)
 
 ### Community 43 - "Subdomain Resolution Utility"
 Cohesion: 0.60
@@ -460,8 +463,8 @@ Cohesion: 0.12
 Nodes (17): H10. httpOnly Cookies, H11. Remove Password from URL, H12. Server-Side OTP, H13. Fix RLS — tamu, print_queue, welcome_queue, H14. Fix RLS — sortir_events, sortir_selections, H15. Fix RLS — terminated_sessions, H16. Commit package-lock.json, H1. Gate Demo Mode (+9 more)
 
 ### Community 109 - "ai-website-cloner/package.json"
-Cohesion: 0.04
-Nodes (47): author, bugs, url, description, devDependencies, eslint, eslint-config-next, tailwindcss (+39 more)
+Cohesion: 0.12
+Nodes (17): devDependencies, eslint, eslint-config-next, tailwindcss, @tailwindcss/postcss, @types/node, @types/react, @types/react-dom (+9 more)
 
 ### Community 110 - "Clone Website"
 Cohesion: 0.06
@@ -645,7 +648,7 @@ Nodes (7): Fase 1 — Fondasi & Alur Inti, Fase 2 — Import Excel, Fase 3 — D
 
 ### Community 166 - "sortir.js"
 Cohesion: 0.36
-Nodes (10): collectFiles(), driveList(), formatWhatsappNumber(), handler(), hashPassword(), logSortirActivity(), sendFonnteWA(), sendOtpEmail() (+2 more)
+Nodes (11): collectFiles(), driveList(), formatWhatsappNumber(), handler(), hashPassword(), logSortirActivity(), sendFonnteWA(), sendOtpEmail() (+3 more)
 
 ### Community 167 - "🛡️ Rencana Gate & Detail Keputusan (5-Point Format)"
 Cohesion: 0.14
@@ -655,6 +658,10 @@ Nodes (13): Decision Log — SapaTamu v3.4 (Evaluasi Event 27 Agustus & Patching
 Cohesion: 0.06
 Nodes (31): 10.1 Follow-up — Desktop Masih Ada Page Vertical Scroll (Fix Flex Ratio Viewport-Fit), 10.2 Re-layout Desktop 1/2 + 1/2 & Background Foto Lebih Jelas (checkin-style), 10. Evaluasi UI Halaman Souvenir — Panel "📜 Riwayat Pengambilan" Butuh Scrollbar Independen (UI-UX Pro Max 3-Mode), 11. Evaluasi & Perbaikan `sortir.html` — P2P Thumbnail Streaming 1-Klik Share ke HP & Super Posisi Owner Gate, 1. Bug Duplikasi Cetak Label Check-in (Tercetak 2x Saat Centang Kado & Angpao), 1. Masalah Foto Tidak Muncul di PWA HP pada Mode 1-Klik Share ke HP, 2. Evaluasi Halaman Souvenir (`souvenir.html` - Scan Penukaran Souvenir), 2. Pengamanan Super Posisi Admin Panel (`?action=owner`) (+23 more)
 
+### Community 170 - "ai-website-cloner/package.json"
+Cohesion: 0.13
+Nodes (14): author, bugs, url, description, engines, node, homepage, license (+6 more)
+
 ### Community 171 - "📋 Task List & Status"
 Cohesion: 0.29
 Nodes (6): 📋 Task List & Status, Tasks & Work Breakdown — SapaTamu v3.4 (Evaluasi Event Patching), [x] Task 1 — Anti Double-Print Label Check-in (GATE-01), [x] Task 2 — Perbaikan Halaman Souvenir & Standby 60 Menit (GATE-02), [x] Task 3 — Standardisasi Field Kapasitas Ballroom & Stok Souvenir (GATE-03), [x] Task 4 — Universal Saklar Off-Grid & Server-Authoritative Conflict Guard (GATE-04 & GATE-05)
@@ -663,8 +670,16 @@ Nodes (6): 📋 Task List & Status, Tasks & Work Breakdown — SapaTamu v3.4 (Ev
 Cohesion: 0.83
 Nodes (3): fetchAllTamuSupabase(), fetchSheetData(), run()
 
+### Community 175 - "keywords"
+Cohesion: 0.22
+Nodes (9): keywords, ai, claude-code, nextjs, reverse-engineering, shadcn-ui, tailwindcss, template (+1 more)
+
+### Community 176 - "scripts"
+Cohesion: 0.29
+Nodes (7): scripts, build, check, dev, lint, start, typecheck
+
 ## Knowledge Gaps
-- **1177 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1172 more)
+- **1182 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1177 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -673,15 +688,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `dependencies` connect `dependencies` to `ai-website-cloner/package.json`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
+- **Why does `devDependencies` connect `ai-website-cloner/package.json` to `ai-website-cloner/package.json`?**
+  _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1177 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1182 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: List Drive Files` be split into smaller, more focused modules?**
   _Cohesion score 0.12857142857142856 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: Create Payment Handler` be split into smaller, more focused modules?**
   _Cohesion score 0.11764705882352941 - nodes in this community are weakly interconnected._
-- **Should `Vercel API: Get Email Handler` be split into smaller, more focused modules?**
-  _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._

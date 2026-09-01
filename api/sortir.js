@@ -224,6 +224,133 @@ async function sendResetPasswordEmail(email, vendorName, resetUrl) {
   }
 }
 
+// Helper: Send Payment Success Receipt & Activation Notification (Email & WhatsApp)
+async function sendPaymentSuccessNotification(vendor, planType, grossAmount, orderId, expiresAt) {
+  if (!vendor || !orderId) return;
+
+  // 0. Idempotent Guard: Cek apakah notifikasi untuk orderId ini sudah pernah tercatat di sortir_logs
+  try {
+    const checkLogRes = await fetch(`${SB_URL}/rest/v1/sortir_logs?action_type=eq.PAYMENT_SUCCESS_NOTIFICATION&target=eq.${encodeURIComponent(vendor.email)}&order=created_at.desc&limit=10`, {
+      headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+    });
+    const existingLogs = await checkLogRes.json();
+    if (existingLogs && Array.isArray(existingLogs) && existingLogs.some(l => l.details && l.details.order_id === orderId)) {
+      console.log(`[Notification Guard] Notifikasi struk order ${orderId} sudah pernah terkirim, lewati.`);
+      return;
+    }
+  } catch (e) {
+    console.warn('[Notification Guard] Gagal cek riwayat log:', e.message);
+  }
+
+  const isYearly = planType === 'yearly';
+  const planName = isYearly ? 'SapaTamu Sortir PRO — Paket Tahunan (1 Tahun)' : 'SapaTamu Sortir PRO — Paket Bulanan (1 Bulan)';
+  const priceFormatted = `Rp ${Number(grossAmount || (isYearly ? 250000 : 25000)).toLocaleString('id-ID')}`;
+  
+  let formattedExpiry = '-';
+  try {
+    const expDate = new Date(expiresAt);
+    formattedExpiry = expDate.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Asia/Jakarta'
+    });
+  } catch (e) {
+    formattedExpiry = String(expiresAt);
+  }
+
+  const htmlBody = `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 32px 24px; background: #FFF9F5; border: 1px solid #F0E6DE; border-radius: 20px; color: #4A3F35;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h2 style="color: #C8962E; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">👑 SapaTamu Sortir PRO</h2>
+        <p style="color: #8C7560; font-size: 13px; margin: 4px 0 0 0;">Bukti Pembayaran & Aktivasi Layanan</p>
+      </div>
+
+      <div style="background: #FFFFFF; border-radius: 16px; padding: 26px; box-shadow: 0 4px 16px rgba(74,63,53,0.06);">
+        <div style="background: #E8F5E9; border: 1px solid #C8E6C9; border-radius: 12px; padding: 14px; text-align: center; margin-bottom: 20px;">
+          <span style="font-size: 20px;">🎉</span>
+          <h3 style="color: #2E7D32; font-size: 16px; font-weight: 800; margin: 4px 0 2px;">Pembayaran Berhasil Diterima!</h3>
+          <p style="color: #388E3C; font-size: 12px; margin: 0;">Paket PRO Anda telah aktif secara otomatis.</p>
+        </div>
+
+        <p style="font-size: 14px; margin-top: 0; color: #4A3F35;">Halo <strong>${vendor.vendor_name || 'Fotografer'}</strong>,</p>
+        <p style="font-size: 13px; color: #8C7560; line-height: 1.6; margin-bottom: 20px;">
+          Terima kasih telah mempercayakan alur culling dan seleksi foto klien Anda kepada SapaTamu Sortir. Berikut adalah rincian transaksi & masa aktif paket Anda:
+        </p>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 24px; background: #FDF8F4; border-radius: 10px; overflow: hidden;">
+          <tbody>
+            <tr style="border-bottom: 1px solid #F0E6DE;">
+              <td style="padding: 10px 14px; color: #8C7560; font-weight: 600;">No. Invoice</td>
+              <td style="padding: 10px 14px; color: #4A3F35; font-weight: 700; text-align: right; font-family: monospace;">${orderId}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #F0E6DE;">
+              <td style="padding: 10px 14px; color: #8C7560; font-weight: 600;">Paket Langganan</td>
+              <td style="padding: 10px 14px; color: #C8962E; font-weight: 700; text-align: right;">${planName}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #F0E6DE;">
+              <td style="padding: 10px 14px; color: #8C7560; font-weight: 600;">Total Pembayaran</td>
+              <td style="padding: 10px 14px; color: #4A3F35; font-weight: 800; text-align: right;">${priceFormatted}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #F0E6DE;">
+              <td style="padding: 10px 14px; color: #8C7560; font-weight: 600;">Fitur Event Culling</td>
+              <td style="padding: 10px 14px; color: #2E7D32; font-weight: 700; text-align: right;">👑 Unlimited (Tanpa Batas)</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 14px; color: #8C7560; font-weight: 600;">Masa Aktif Berlaku s.d</td>
+              <td style="padding: 10px 14px; color: #E07B7B; font-weight: 800; text-align: right;">${formattedExpiry}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="text-align: center; margin: 24px 0 10px;">
+          <a href="https://sapatamu.id/sortir" style="background: linear-gradient(135deg, #C8962E, #E07B7B); color: white; padding: 14px 32px; border-radius: 30px; text-decoration: none; font-weight: 800; font-size: 14px; display: inline-block; box-shadow: 0 6px 18px rgba(200,150,46,0.3);">
+            Buka Dashboard Culling 🚀
+          </a>
+        </div>
+      </div>
+
+      <p style="text-align: center; font-size: 11px; color: #B0A090; margin-top: 24px; line-height: 1.5;">
+        Email ini berfungsi sebagai tanda terima pembayaran sah dari SapaTamu.id.<br>
+        &copy; ${new Date().getFullYear()} SapaTamu.id — All rights reserved.
+      </p>
+    </div>
+  `;
+
+  // 1. Send via WhatsApp (Fonnte)
+  if (vendor.whatsapp_number) {
+    const waMsg = `🎉 *PEMBAYARAN BERHASIL & PAKET PRO AKTIF*\n\nHalo Kak *${vendor.vendor_name || 'Fotografer'}*!\nTerima kasih, pembayaran upgrade paket SapaTamu Sortir Anda telah berhasil kami terima.\n\n📋 *Rincian Paket Anda:*\n• No. Invoice: *${orderId}*\n• Paket: *${planName}*\n• Total Bayar: *${priceFormatted}*\n• Status: *👑 PRO Aktif (Unlimited Event Culling)*\n• Masa Aktif Berlaku s.d: *${formattedExpiry}*\n\nSilakan nikmati kemudahan seleksi foto tanpa batas kuota di:\n👉 https://sapatamu.id/sortir\n\n_Terima kasih telah mempercayakan alur seleksi foto klien Anda kepada SapaTamu.id!_`;
+    sendFonnteWA(vendor.whatsapp_number, waMsg).catch(() => {});
+  }
+
+  // 2. Send via Email (GAS)
+  if (vendor.email) {
+    try {
+      await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sendCustomEmail',
+          recipient: vendor.email,
+          subject: `[Lunas] 🎉 Pembayaran Berhasil — Paket SapaTamu Sortir PRO Anda Telah Aktif`,
+          htmlBody: htmlBody,
+          senderName: 'SapaTamu Billing'
+        })
+      });
+    } catch (err) {
+      console.warn('Failed to send payment receipt email:', err);
+    }
+  }
+
+  // Audit log
+  await logSortirActivity(vendor.id, 'PAYMENT_SUCCESS_NOTIFICATION', 'WA+EMAIL', vendor.email, 'SUCCESS', {
+    order_id: orderId,
+    plan_type: planType,
+    gross_amount: grossAmount,
+    expires_at: expiresAt
+  });
+}
+
 // Drive helpers for recursive folder listing
 async function driveList(q, pageToken = null) {
   const fields = 'nextPageToken,files(id,name,mimeType,parents,thumbnailLink)';
@@ -705,6 +832,8 @@ export default async function handler(req, res) {
 
         if (transactions && transactions.length > 0) {
           const trx = transactions[0];
+          const wasPending = trx.payment_status === 'pending';
+
           await fetch(`${SB_URL}/rest/v1/rpc/activate_sortir_subscription`, {
             method: 'POST',
             headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}`, 'Content-Type': 'application/json' },
@@ -714,6 +843,23 @@ export default async function handler(req, res) {
               p_plan_type: trx.plan_type || 'monthly'
             })
           });
+
+          // Fetch updated vendor profile and send notification if first time activated
+          if (wasPending) {
+            const vRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors?id=eq.${trx.vendor_id}&select=*`, {
+              headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+            });
+            const vendors = await vRes.json();
+            if (vendors && vendors.length > 0) {
+              await sendPaymentSuccessNotification(
+                vendors[0],
+                trx.plan_type || 'monthly',
+                trx.gross_amount,
+                order_id,
+                vendors[0].subscription_expires_at
+              );
+            }
+          }
           console.log(`[Webhook Sortir] Subscription activated for order ${order_id}`);
         }
       }
@@ -745,6 +891,7 @@ export default async function handler(req, res) {
       }
 
       const trx = transactions[0];
+      const wasPending = trx.payment_status === 'pending';
 
       // Check with Midtrans API directly if server key configured
       let isSettled = trx.payment_status === 'settlement' || trx.payment_status === 'capture';
@@ -784,6 +931,17 @@ export default async function handler(req, res) {
         });
         const vData = await vRes.json();
         const v = (vData && vData[0]) || {};
+
+        // Send payment success confirmation via WhatsApp & Email
+        if (wasPending && v.id) {
+          await sendPaymentSuccessNotification(
+            v,
+            trx.plan_type || 'monthly',
+            trx.gross_amount,
+            trx.order_id,
+            v.subscription_expires_at
+          );
+        }
 
         return res.status(200).json({
           success: true,

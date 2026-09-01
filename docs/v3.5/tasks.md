@@ -56,3 +56,44 @@
 - [x] Responsivitas Modal OTP dan Paywall di Desktop ($\ge 1024$px), Tablet (768–1023px), dan Mobile (<768px).
 - [x] Alur anonim pada Penerjemah Indeks Manual (tidak terganggu oleh popup login).
 - [x] Multi-tenant isolation: Daftar Event Saya hanya memuat data event milik vendor yang sedang login (`vendor_id`).
+
+---
+
+### [x] Task 6 — Konsolidasi API Monolith & UI Clean-up (GATE-04, GATE-05, GATE-06)
+- [x] Konsolidasi seluruh file API sortir ke dalam 1 dispatcher monolith `api/sortir.js` untuk Vercel Free Tier.
+- [x] Hapus tombol navigasi header Owner, digantikan direct URL slug `/sortir-owner`.
+- [x] Penyesuaian alignment badge "✔ Dipilih" & pembersihan teks teknis Midtrans pada modal paywall.
+
+---
+
+### [x] Task 7 — Dropdown Kode Negara, Sanitasi WA & Notifikasi Reminder PRO H-7 (GATE-07)
+- [x] Dropdown kode negara (+62, +1, +60, dll) dengan sanitasi format standar E.164.
+- [x] Endpoint cron pengingat kedaluwarsa PRO (`action=run_reminder_cron`) via Email & WhatsApp Fonnte.
+- [x] Tabel audit log `sortir_logs` untuk mencatat riwayat notifikasi.
+
+---
+
+### [x] Task 8 — Alur Lupa Password & Reset Link Aman (GATE-08)
+- [x] Endpoint `action=forgot_password` (token 15 menit, dikirim via WhatsApp & Email).
+- [x] Endpoint `action=verify_reset_password` dengan proteksi anti-reuse (password baru tidak boleh sama dengan password lama).
+- [x] Handler UI reset password di `sortir.html` dengan modal sukses & autofill login.
+
+---
+
+### [x] Task 9 — Notifikasi Struk Pembayaran & Aktivasi Paket PRO (GATE-09)
+- [x] Helper `sendPaymentSuccessNotification` (Email HTML SapaTamu & WhatsApp Fonnte).
+- [x] Idempotency pre-check guard berbasis `sortir_logs` untuk mencegah notifikasi ganda saat webhook dan client berbenturan.
+- [x] Perekaman audit log dengan action `PAYMENT_SUCCESS_NOTIFICATION`.
+- *File:* `api/sortir.js`, `sortir.html`
+
+---
+
+### [x] Task 10 — Interactive Page Tour Guide (Free-First Onboarding) (GATE-10)
+- [x] Rancang 5 langkah interaktif onboarding: dimulai dari fitur 100% Free tanpa login (Penerjemah Indeks Manual & Local Culling) lalu mengarah ke fitur Cloud & PRO (Online Gallery & Manajemen Event).
+- [x] Komponen Spotlight Cutout emas (`#sortir-tour-spotlight`), Overlay gelap halus (`#sortir-tour-overlay`), dan Tooltip interaktif (`#sortir-tour-tooltip`).
+- [x] Checkbox *"Jangan tampilkan ini kedepannya"* tersimpan di `localStorage` (`sapatamu_sortir_tour_dismissed`).
+- [x] Floating trigger button melayang (`💡 Panduan Sortir`) di pojok kiri bawah untuk memutar ulang panduan kapan saja.
+- [x] Responsivitas 3-mode (Desktop, Tablet, Mobile) dengan auto-scroll halus ke elemen target.
+- *File:* `sortir.html`
+
+

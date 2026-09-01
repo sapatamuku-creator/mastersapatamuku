@@ -89,6 +89,7 @@ function doPost(e) {
       case 'setupWishesWatcher':
       case 'createMidtransTransaction':
       case 'sendOTP':
+      case 'sendCustomEmail':
       case 'savePendingClient':
       case 'registerAndActivate':
       case 'sendOwnerOtp':
