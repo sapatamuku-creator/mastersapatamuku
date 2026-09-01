@@ -3239,7 +3239,26 @@
                 .order('created_at', { ascending: false });
             
             if (!error && data) {
-                store.myEvents = data;
+                const eventIds = data.map(e => e.id);
+                let countMap = {};
+                if (eventIds.length > 0) {
+                    try {
+                        const { data: selData } = await supabase
+                            .from('sortir_selections')
+                            .select('event_id')
+                            .in('event_id', eventIds)
+                            .eq('is_selected', true);
+                        if (selData) {
+                            selData.forEach(s => {
+                                countMap[s.event_id] = (countMap[s.event_id] || 0) + 1;
+                            });
+                        }
+                    } catch(e) {}
+                }
+                store.myEvents = data.map(e => ({
+                    ...e,
+                    selected_count: countMap[e.id] || 0
+                }));
             } else {
                 store.myEvents = [];
             }
@@ -3257,7 +3276,31 @@
                     .from('sortir_events')
                     .select('*')
                     .in('event_slug', trackedSlugs);
-                store.myEvents = data || [];
+                
+                if (!error && data) {
+                    const eventIds = data.map(e => e.id);
+                    let countMap = {};
+                    if (eventIds.length > 0) {
+                        try {
+                            const { data: selData } = await supabase
+                                .from('sortir_selections')
+                                .select('event_id')
+                                .in('event_id', eventIds)
+                                .eq('is_selected', true);
+                            if (selData) {
+                                selData.forEach(s => {
+                                    countMap[s.event_id] = (countMap[s.event_id] || 0) + 1;
+                                });
+                            }
+                        } catch(e) {}
+                    }
+                    store.myEvents = data.map(e => ({
+                        ...e,
+                        selected_count: countMap[e.id] || 0
+                    }));
+                } else {
+                    store.myEvents = [];
+                }
             } else {
                 store.myEvents = [];
             }
@@ -3399,8 +3442,11 @@
             item.style.gap = '12px';
             item.innerHTML = `
                 <div style="flex: 1; min-width: 0;" onclick="selectActiveEventBySlug('${evt.event_slug}')">
-                    <h4 style="font-size: 15px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;">${evt.event_name}</h4>
-                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Slug: ?event=${evt.event_slug}</p>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <h4 style="font-size: 15px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; margin: 0;">${evt.event_name}</h4>
+                        <span class="selection-count-badge" id="event-badge-${evt.id}" style="flex-shrink: 0;">${evt.selected_count !== undefined ? evt.selected_count : 0} / ${evt.quota_limit}</span>
+                    </div>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">Slug: ?event=${evt.event_slug}</p>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-items: stretch;">
                     <button onclick="copyEventClientUrl('${evt.event_slug}', event)" class="btn btn-secondary btn-copy-url" style="padding: 5px 12px; font-size: 11px; font-weight: 700; border-radius: 8px; white-space: nowrap; border-color: rgba(224, 123, 123, 0.4); color: var(--primary); background: #FFF5F5;">
@@ -3486,6 +3532,15 @@
         store.activeSelections = data || [];
         updateActiveSelectionsUI();
 
+        const badgeEl = document.getElementById(`event-badge-${evt.id}`);
+        if (badgeEl) {
+            badgeEl.innerText = `${store.activeSelections.length} / ${evt.quota_limit}`;
+        }
+        if (store.myEvents) {
+            const myEvt = store.myEvents.find(e => e.id === evt.id);
+            if (myEvt) myEvt.selected_count = store.activeSelections.length;
+        }
+
         // Subscribe to real-time selections updates
         supabase
             .channel(`public:sortir_selections:event_id=eq.${evt.id}`)
@@ -3499,6 +3554,15 @@
                     .order('photo_name', { ascending: true });
                 store.activeSelections = updatedData || [];
                 updateActiveSelectionsUI();
+
+                const bEl = document.getElementById(`event-badge-${evt.id}`);
+                if (bEl) {
+                    bEl.innerText = `${store.activeSelections.length} / ${evt.quota_limit}`;
+                }
+                if (store.myEvents) {
+                    const mEvt = store.myEvents.find(e => e.id === evt.id);
+                    if (mEvt) mEvt.selected_count = store.activeSelections.length;
+                }
             })
             .subscribe();
     }

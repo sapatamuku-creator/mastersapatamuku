@@ -190,6 +190,14 @@
 - [x] Fitur *Smart Duplicate Resolution*: Otomatis menambahkan counter `-2`, `-3` (ala WordPress) hanya jika vendor yang sama membuat nama event yang identik, menjaga URL tetap rapi dan bebas karakter aneh.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 22 — Real-Time Selection Count Badge pada Kartu Daftar Event Saya (GATE-25)
+- [x] Menambahkan badge hasil sortir pilihan realtime `.selection-count-badge` (identik persis warna terracotta dan border-radius rounded 10px) di sebelah nama event pada setiap kartu di **Daftar Event Saya**.
+- [x] Batch fetching jumlah seleksi klien (`0 / 8`) saat dashboard pertama kali dibuka dan live-updating via Supabase Real-Time saat klien mencentang/membatalkan foto.
+- *File:* `sortir.html`
+
+
 
 
 
