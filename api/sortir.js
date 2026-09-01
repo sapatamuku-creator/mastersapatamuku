@@ -402,6 +402,92 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true });
     }
 
+    // 6b. ACTION: CHECK / VERIFY PAYMENT (CLIENT-SIDE SYNC AFTER SNAP)
+    if (action === 'check_payment' || action === 'verify_payment') {
+      const { orderId, vendorId } = req.method === 'POST' ? req.body : req.query;
+      const targetOrderId = (orderId || '').trim();
+
+      if (!targetOrderId && !vendorId) {
+        return res.status(400).json({ error: 'Missing orderId or vendorId' });
+      }
+
+      // Query latest transaction
+      let queryUrl = `${SB_URL}/rest/v1/sortir_transactions?order=created_at.desc&limit=1`;
+      if (targetOrderId) queryUrl += `&order_id=eq.${encodeURIComponent(targetOrderId)}`;
+      else if (vendorId) queryUrl += `&vendor_id=eq.${encodeURIComponent(vendorId)}`;
+
+      const trxRes = await fetch(queryUrl, {
+        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+      });
+      const transactions = await trxRes.json();
+
+      if (!transactions || transactions.length === 0) {
+        return res.status(404).json({ error: 'Transaksi tidak ditemukan.' });
+      }
+
+      const trx = transactions[0];
+
+      // Check with Midtrans API directly if server key configured
+      let isSettled = trx.payment_status === 'settlement' || trx.payment_status === 'capture';
+      if (!isSettled && MIDTRANS_SERVER_KEY && MIDTRANS_SERVER_KEY !== 'Mid-server-YOUR-KEY') {
+        try {
+          const authHeader = Buffer.from(`${MIDTRANS_SERVER_KEY}:`).toString('base64');
+          const midtransStatusRes = await fetch(`https://api.midtrans.com/v2/${trx.order_id}/status`, {
+            headers: { 'Accept': 'application/json', 'Authorization': `Basic ${authHeader}` }
+          });
+          if (midtransStatusRes.ok) {
+            const mData = await midtransStatusRes.json();
+            if (mData.transaction_status === 'settlement' || mData.transaction_status === 'capture') {
+              isSettled = true;
+            }
+          }
+        } catch (err) {
+          console.warn('Midtrans status check error:', err);
+        }
+      }
+
+      if (isSettled) {
+        // Activate subscription via RPC
+        const rpcRes = await fetch(`${SB_URL}/rest/v1/rpc/activate_sortir_subscription`, {
+          method: 'POST',
+          headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            p_vendor_id: trx.vendor_id,
+            p_order_id: trx.order_id,
+            p_plan_type: trx.plan_type || 'monthly'
+          })
+        });
+        const rpcData = await rpcRes.json();
+
+        // Get fresh vendor profile
+        const vRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors?id=eq.${trx.vendor_id}&select=*`, {
+          headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+        });
+        const vData = await vRes.json();
+        const v = (vData && vData[0]) || {};
+
+        return res.status(200).json({
+          success: true,
+          is_settled: true,
+          vendor: {
+            id: v.id,
+            vendor_name: v.vendor_name,
+            email: v.email,
+            free_quota_remaining: v.free_quota_remaining,
+            subscription_plan: v.subscription_plan,
+            subscription_expires_at: v.subscription_expires_at,
+            is_pro: true
+          }
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        is_settled: false,
+        payment_status: trx.payment_status
+      });
+    }
+
     // 7. ACTION: DRIVE IMAGE PROXY
     if (action === 'drive_img') {
       const { id, sz = 'w1600' } = req.query;

@@ -1922,8 +1922,19 @@
         document.getElementById('view-owner').style.display = 'none';
 
         // Clear dynamic headers
-        const headerActions = document.getElementById('header-actions');
-        if (headerActions) headerActions.innerHTML = '';
+        // Detect return from payment gateway
+        const paymentParam = params.get('payment');
+        const orderIdParam = params.get('order_id');
+        if (paymentParam === 'success' || orderIdParam) {
+            const v = getVendorAuth();
+            if (v && v.id) {
+                fetch('/api/sortir?action=check_payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId: orderIdParam, vendorId: v.id })
+                }).then(() => syncVendorProfile()).then(() => updateVendorHeaderUI()).catch(() => {});
+            }
+        }
 
         if (shareKey) {
             initP2PCullingView(shareKey);
@@ -2496,9 +2507,16 @@
                 window.snap.pay(data.token, {
                     onSuccess: async function(result) {
                         closeSortirPaywallModal();
-                        showAlert('Pembayaran Sukses! 🎉', 'Paket PRO Anda telah aktif. Durasi telah diperbarui.', '👑');
+                        try {
+                            await fetch('/api/sortir?action=check_payment', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ orderId: data.orderId, vendorId: v.id })
+                            });
+                        } catch(e) {}
                         await syncVendorProfile();
                         initDashboardView();
+                        showAlert('Pembayaran Sukses! 🎉', 'Paket PRO Anda telah aktif. Durasi telah diperbarui.', '👑');
                     },
                     onPending: function(result) {
                         closeSortirPaywallModal();
@@ -2509,6 +2527,7 @@
                     },
                     onClose: function() {
                         if (btn) { btn.disabled = false; btn.textContent = 'Lanjut Pembayaran 💳'; }
+                        syncVendorProfile().then(() => updateVendorHeaderUI());
                     }
                 });
             } else if (data.redirectUrl) {
@@ -2534,6 +2553,9 @@
         document.title = "Dashboard Culling — SapaTamu Sortir";
 
         updateVendorHeaderUI();
+
+        // Sync fresh vendor profile from server (auto-detect PRO activation)
+        await syncVendorProfile();
 
         // Dashboard header actions (owner button removed, accessible via direct slug /sortir-owner)
         const headerActions = document.getElementById('header-actions');
