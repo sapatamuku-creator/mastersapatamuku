@@ -221,6 +221,14 @@
 - [x] Menghilangkan ruang kosong (blank margin ~360px) di sisi kiri dan kanan pada monitor desktop/laptop beresolusi 1080p, 1440p, dan 2K.
 - *File:* `sortir.html`
 
+---
+
+### [x] Task 26 — Restorasi Sticky Lock Galeri Klien & Viewport Fix (GATE-29)
+- [x] Memperbaiki *viewport context* dengan mengganti `overflow-x: hidden` pada `html, body` menjadi `overflow-x: clip`, sehingga `position: sticky` kembali aktif normal di seluruh browser.
+- [x] Menambahkan class `.culling-sticky-bar` dengan offset responsif (`top: 72px` desktop, `top: 52px` mobile) dan `backdrop-filter: blur(16px)` untuk bilah kuota foto & tab filter pencarian.
+- *File:* `sortir.html`
+
+
 
 
 
