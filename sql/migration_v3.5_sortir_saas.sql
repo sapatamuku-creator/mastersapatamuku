@@ -22,6 +22,7 @@ CREATE TABLE public.sortir_vendors (
     subscription_plan VARCHAR(50) DEFAULT 'free' NOT NULL, -- 'free', 'monthly', 'yearly'
     subscription_started_at TIMESTAMPTZ,
     subscription_expires_at TIMESTAMPTZ,
+    last_reminder_sent_at TIMESTAMPTZ,
     is_active BOOLEAN DEFAULT TRUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -66,10 +67,26 @@ CREATE TABLE public.sortir_transactions (
 CREATE INDEX idx_sortir_transactions_vendor ON public.sortir_transactions(vendor_id);
 CREATE INDEX idx_sortir_transactions_order ON public.sortir_transactions(order_id);
 
--- 5. ROW LEVEL SECURITY (RLS) POLICIES
+-- 5. TABEL LOG AKTIVITAS & NOTIFIKASI REMINDER (AUDIT TRAIL)
+CREATE TABLE IF NOT EXISTS public.sortir_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vendor_id UUID REFERENCES public.sortir_vendors(id) ON DELETE SET NULL,
+    action_type VARCHAR(50) NOT NULL, -- 'REMINDER_PRO_H7', 'REMINDER_PRO_H3', 'REMINDER_PRO_H1', 'AUTH_REGISTER', 'SUBSCRIPTION_ACTIVATED'
+    channel VARCHAR(20) NOT NULL, -- 'WHATSAPP', 'EMAIL', 'SYSTEM'
+    target VARCHAR(100) NOT NULL, -- No. WA / Email
+    status VARCHAR(20) DEFAULT 'SUCCESS' NOT NULL, -- 'SUCCESS', 'FAILED'
+    details JSONB,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_sortir_logs_vendor ON public.sortir_logs(vendor_id);
+CREATE INDEX IF NOT EXISTS idx_sortir_logs_action ON public.sortir_logs(action_type, created_at);
+
+-- 6. ROW LEVEL SECURITY (RLS) POLICIES
 ALTER TABLE public.sortir_vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sortir_otps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sortir_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sortir_logs ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN
@@ -83,6 +100,10 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'sortir_transactions' AND policyname = 'Allow public operations for sortir_transactions') THEN
         CREATE POLICY "Allow public operations for sortir_transactions" ON public.sortir_transactions FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'sortir_logs' AND policyname = 'Allow public operations for sortir_logs') THEN
+        CREATE POLICY "Allow public operations for sortir_logs" ON public.sortir_logs FOR ALL USING (true) WITH CHECK (true);
     END IF;
 END $$;
 

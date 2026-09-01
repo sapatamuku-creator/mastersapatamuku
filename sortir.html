@@ -1180,15 +1180,32 @@
                         <input id="reg-email" type="email" placeholder="nama@email.com" class="form-control" required style="font-size:13px;">
                         <p style="font-size:10px; color:var(--text-muted); margin-top:3px;">1 Email hanya dapat didaftarkan untuk 1 akun vendor unik.</p>
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                        <div>
-                            <label class="form-label" style="font-size:12px;">Password</label>
-                            <input id="reg-pass" type="password" placeholder="Min 6 karakter" minlength="6" class="form-control" required style="font-size:13px;">
+                    <div>
+                        <label class="form-label" style="font-size:12px;">Password</label>
+                        <input id="reg-pass" type="password" placeholder="Min 6 karakter" minlength="6" class="form-control" required style="font-size:13px;">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:12px;">No. WhatsApp (Untuk Notifikasi & Reminder)</label>
+                        <div style="display:flex; gap:8px;">
+                            <select id="reg-country-code" class="form-control" style="width:125px; flex-shrink:0; font-size:12px; font-weight:700; background:#FFF9F5; padding:8px 6px; cursor:pointer;" onchange="updatePhonePlaceholder()">
+                                <option value="62" selected>🇮🇩 +62</option>
+                                <option value="60">🇲🇾 +60</option>
+                                <option value="65">🇸🇬 +65</option>
+                                <option value="673">🇧🇳 +673</option>
+                                <option value="63">🇵🇭 +63</option>
+                                <option value="66">🇹🇭 +66</option>
+                                <option value="61">🇦🇺 +61</option>
+                                <option value="1">🇺🇸 +1</option>
+                                <option value="44">🇬🇧 +44</option>
+                                <option value="81">🇯🇵 +81</option>
+                                <option value="966">🇸🇦 +966</option>
+                                <option value="971">🇦🇪 +971</option>
+                            </select>
+                            <input id="reg-wa" type="tel" placeholder="81234567890" class="form-control" style="flex:1; font-size:13px;" oninput="formatRegistrationPhoneInput(this)">
                         </div>
-                        <div>
-                            <label class="form-label" style="font-size:12px;">No. WhatsApp</label>
-                            <input id="reg-wa" type="tel" placeholder="081234..." class="form-control" style="font-size:13px;">
-                        </div>
+                        <p style="font-size:10px; color:var(--text-muted); margin-top:3px;">
+                            Format otomatis: <code>0812...</code> akan disimpan sebagai <code>+62 812...</code>
+                        </p>
                     </div>
                     <button type="submit" id="btn-send-otp" class="btn btn-primary" style="width:100%; padding:12px; margin-top:6px; font-size:13px;">
                         Kirim Kode OTP ke Email &rarr;
@@ -2223,13 +2240,44 @@
         el.style.color = isError ? '#E07B7B' : '#10B981';
     }
 
+    // Phone helper functions
+    window.updatePhonePlaceholder = function() {
+        const code = document.getElementById('reg-country-code')?.value || '62';
+        const input = document.getElementById('reg-wa');
+        if (!input) return;
+        if (code === '62') input.placeholder = '81234567890';
+        else if (code === '1') input.placeholder = '2025550123';
+        else if (code === '60') input.placeholder = '123456789';
+        else input.placeholder = 'Nomor WhatsApp';
+    };
+
+    window.formatRegistrationPhoneInput = function(input) {
+        if (!input) return;
+        let val = input.value.replace(/[^\d]/g, '');
+        const code = document.getElementById('reg-country-code')?.value || '62';
+
+        if (val.startsWith('0')) {
+            val = val.substring(1);
+        }
+        if (val.startsWith(code) && val.length > code.length + 5) {
+            val = val.substring(code.length);
+        }
+        input.value = val;
+    };
+
     // Request 6-Digit OTP for new registration
     window.handleSendOtp = async function(event) {
         event.preventDefault();
         const name = document.getElementById('reg-name').value.trim();
         const email = document.getElementById('reg-email').value.trim();
         const pass = document.getElementById('reg-pass').value;
-        const wa = document.getElementById('reg-wa').value.trim();
+
+        // Parse and standardize country code + phone
+        const countryCode = document.getElementById('reg-country-code')?.value || '62';
+        let rawWa = (document.getElementById('reg-wa')?.value || '').trim().replace(/[^\d]/g, '');
+        if (rawWa.startsWith('0')) rawWa = rawWa.substring(1);
+        if (rawWa.startsWith(countryCode)) rawWa = rawWa.substring(countryCode.length);
+        const formattedWa = rawWa ? (countryCode + rawWa) : '';
 
         if (!email || !pass) {
             setAuthModalAlert('Email dan password wajib diisi.');
@@ -2255,7 +2303,7 @@
             }
 
             // Save pending registration state
-            pendingOtpData = { name, email, pass, wa };
+            pendingOtpData = { name, email, pass, wa: formattedWa };
 
             // Transition to Sub-Step 2 (Input OTP)
             document.getElementById('reg-step-1').style.display = 'none';

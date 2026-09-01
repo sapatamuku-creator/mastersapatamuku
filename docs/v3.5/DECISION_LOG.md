@@ -115,6 +115,39 @@
 
 ---
 
+### GATE-06: Penyesuaian Posisi Badge "✔ Dipilih" & Pembersihan Teks Teknis (Midtrans) pada Paywall
+- **Timestamp Decision**: `2026-09-01T10:28:52+07:00`
+- **Status**: `APPROVED & IMPLEMENTED`
+1. **Fungsi Perubahan**: 
+   Menggeser badge "✔ Dipilih" ke atas memotong garis border atas (`top: -10px`) dan membersihkan penyebutan vendor teknis seperti Midtrans agar tampilan lebih profesional dan bersih.
+2. **Dari Kode Sebelumnya**: 
+   Badge berada di `top: 14px; right: 14px;` dan tombol bertuliskan "Lanjut Pembayaran via Midtrans 💳".
+3. **Mengarah Kemana**: 
+   - Badge bergeser ke `top: -10px; right: 16px; border: 2px solid white;`.
+   - Tombol diubah menjadi "Lanjut Pembayaran 💳" dan catatan perpanjangan dirapikan.
+4. **Cabang Routing Terdampak**: Modal Paywall `#sortir-paywall-modal` di `sortir.html`.
+5. **Risiko & Trade-off Jujur**: Tidak ada risiko fungsional.
+
+---
+
+### GATE-07: Dropdown Kode Negara, Koreksi Format WhatsApp & Notifikasi Reminder Akun PRO H-7 (Email & Fonnte WA)
+- **Timestamp Decision**: `2026-09-01T10:50:59+07:00`
+- **Status**: `APPROVED & IMPLEMENTED`
+1. **Fungsi Perubahan**: 
+   Menambahkan dropdown kode negara regional (default 🇮🇩 +62) pada form registrasi dengan auto-strip leading zero `0`, penambahan tabel `sortir_logs` untuk audit trail, serta otomasi cron reminder masa aktif PRO H-7 via Email dan Fonnte WhatsApp API.
+2. **Dari Kode Sebelumnya**: 
+   Input WA berupa text field polos tanpa dropdown negara, belum ada tabel `sortir_logs`, dan belum ada logika reminder H-7.
+3. **Mengarah Kemana**: 
+   - Form registrasi di `sortir.html` dilengkapi dropdown negara + auto format `62812...`.
+   - Backend `api/sortir.js` memformat nomor dengan `formatWhatsappNumber` dan mengirim notifikasi via `sendFonnteWA` & `sendReminderEmail`.
+   - Endpoint `action=run_reminder_cron` memindai akun PRO kadaluarsa $\le 7$ hari dengan proteksi anti-spam 20 jam dan mencatat ke `sortir_logs`.
+4. **Cabang Routing Terdampak**: Form registrasi, API `send_otp`, `verify_register`, `run_reminder_cron`, `get_sortir_logs`.
+5. **Risiko & Trade-off Jujur**:
+   - *Risiko*: Device Fonnte terputus/habis kuota.
+   - *Mitigasi*: Multi-channel fallback (dikirim ke WA & Email sekaligus) dan tercatat di `sortir_logs`.
+
+---
+
 ## ⏱️ 3. Audit Log & Timeline Eksekusi Teknis
 
 | No | Timestamp (WIB) | Aktivitas / Milestone | Target File / Komponen | Git Commit |
@@ -128,7 +161,10 @@
 | 7 | `2026-09-01 10:11:34` | **Uji E2E Berhasil**: Registrasi & OTP `opick8c@gmail.com` | `sortir_vendors`, `sortir_otps` | *Verified* |
 | 8 | `2026-09-01 10:12:38` | **Uji E2E Berhasil**: Buat Event & Pengurangan Kuota (10 $\rightarrow$ 9) | `sortir_events`, RPC Atomic | *Verified* |
 | 9 | `2026-09-01 10:18:42` | Fix Null Safety Guard `renderNearbyList` | `sortir.html` | `a9ae614` |
-| 10 | `2026-09-01 10:23:00` | **GATE-05**: Hapus Navigasi Owner Header & Direct Slug `/sortir-owner` | `sortir.html`, `vercel.json`, `DECISION_LOG.md` | *Pending Commit* |
+| 10 | `2026-09-01 10:23:00` | **GATE-05**: Hapus Navigasi Owner Header & Direct Slug `/sortir-owner` | `sortir.html`, `vercel.json`, `DECISION_LOG.md` | `1df3a96` |
+| 11 | `2026-09-01 10:33:00` | **GATE-06**: Aligment Badge Dipilih & Pembersihan Copy Midtrans | `sortir.html` | `ec5bdaa` |
+| 12 | `2026-09-01 10:41:00` | Auto-Sync Profil Live & Fallback Check Payment | `sortir.html`, `api/sortir.js` | `f493dc9` |
+| 13 | `2026-09-01 11:22:00` | **GATE-07**: Dropdown Kode Negara, Sanitasi WA Fonnte, Reminder H-7 & Tabel `sortir_logs` | `sortir.html`, `api/sortir.js`, `sql/` | *Pending Commit* |
 
 ---
 
@@ -142,3 +178,4 @@
 - **Initial Quota**: `10` (Free Tier).
 - **Post-Create Event Quota**: `9` (Atomic RPC verification sukses).
 - **Event ID**: `c74e1003-4625-4b7c-b23e-01bba62bf4f5` (*Prewedding Nadyfa & Dimas - Knowhere Studio*).
+- **Aktivasi PRO**: Sukses di-upgrade ke `monthly` (Aktif s.d 1 Oktober 2026).

@@ -14,10 +14,73 @@ const MIDTRANS_API_URL = IS_PRODUCTION
   ? "https://app.midtrans.com/snap/v1/transactions"
   : "https://app.sandbox.midtrans.com/snap/v1/transactions";
 
+const FONNTE_TOKEN = process.env.FONNTE_TOKEN || "fRx1Canf4GYroBZZNfo7";
+
 // Helper: Hash password
 function hashPassword(password) {
   const salt = 'sapatamu_sortir_salt_2026';
   return crypto.createHash('sha256').update(password + salt).digest('hex');
+}
+
+// Helper: Format and sanitize WhatsApp phone number to standard E.164 (default: 62)
+function formatWhatsappNumber(phone, defaultCountry = '62') {
+  if (!phone) return '';
+  let clean = phone.toString().replace(/[^\d]/g, '');
+  if (clean.startsWith('0')) {
+    clean = defaultCountry + clean.substring(1);
+  } else if (clean.startsWith('8')) {
+    clean = defaultCountry + clean;
+  }
+  return clean;
+}
+
+// Helper: Send WhatsApp message via Fonnte API
+async function sendFonnteWA(targetPhone, message) {
+  if (!targetPhone || !message) return { status: false, reason: 'Target or message missing' };
+  try {
+    const cleanTarget = formatWhatsappNumber(targetPhone);
+    const formData = new URLSearchParams();
+    formData.append('target', cleanTarget);
+    formData.append('message', message);
+    formData.append('countryCode', '62');
+
+    const response = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': FONNTE_TOKEN
+      },
+      body: formData
+    });
+    const resData = await response.json();
+    return resData;
+  } catch (err) {
+    console.error('Fonnte send error:', err);
+    return { status: false, reason: err.message };
+  }
+}
+
+// Helper: Write audit activity to sortir_logs
+async function logSortirActivity(vendorId, actionType, channel, target, status, details = {}) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/sortir_logs`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_SERVICE_KEY,
+        'Authorization': `Bearer ${SB_SERVICE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        vendor_id: vendorId || null,
+        action_type: actionType,
+        channel: channel,
+        target: target || '-',
+        status: status,
+        details: details
+      })
+    });
+  } catch (e) {
+    console.warn('Logging to sortir_logs failed:', e.message);
+  }
 }
 
 // Helper: Send OTP email via Google Apps Script Mailer / SMTP
@@ -63,6 +126,52 @@ async function sendOtpEmail(email, vendorName, otpCode) {
   } catch (err) {
     console.error('Failed to send email via GAS mailer:', err);
     return false;
+  }
+}
+
+// Helper: Send PRO Reminder Email
+async function sendReminderEmail(email, vendorName, daysLeft, expiresAtFormatted) {
+  const htmlBody = `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; background: #FFF9F5; border: 1px solid #F0E6DE; border-radius: 20px; color: #4A3F35;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h2 style="color: #C8962E; margin: 0; font-size: 24px; font-weight: 800;">👑 SapaTamu Sortir PRO</h2>
+        <p style="color: #8C7560; font-size: 13px; margin: 4px 0 0 0;">Pengingat Masa Aktif Paket PRO</p>
+      </div>
+      <div style="background: #FFFFFF; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(74,63,53,0.06);">
+        <p style="font-size: 14px; margin-top: 0; color: #4A3F35;">Halo <strong>${vendorName || 'Kak'}</strong>,</p>
+        <p style="font-size: 13px; color: #8C7560; line-height: 1.6;">
+          Masa aktif paket <strong>SapaTamu Sortir PRO</strong> Anda akan berakhir dalam <strong style="color: #E07B7B;">${daysLeft} hari lagi</strong> (pada <strong>${expiresAtFormatted}</strong>).
+        </p>
+        <p style="font-size: 13px; color: #8C7560; line-height: 1.6;">
+          Agar fitur <strong>Unlimited Culling Event</strong> dan akses seleksi foto klien Anda tetap aktif tanpa batas kuota, yuk lakukan perpanjangan paket Anda sekarang.
+        </p>
+        <div style="text-align: center; margin: 28px 0 16px;">
+          <a href="https://sapatamu.id/sortir" style="background: linear-gradient(135deg, #2E7D32, #4CAF50); color: white; padding: 14px 28px; border-radius: 30px; text-decoration: none; font-weight: 800; font-size: 14px; display: inline-block; box-shadow: 0 6px 18px rgba(76,175,80,0.3);">
+            Perpanjang Paket PRO Sekarang 💳
+          </a>
+        </div>
+      </div>
+      <p style="text-align: center; font-size: 11px; color: #B0A090; margin-top: 24px;">
+        &copy; ${new Date().getFullYear()} SapaTamu.id — Platform Alur Culling Foto Modern
+      </p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'sendCustomEmail',
+        recipient: email,
+        subject: `[Pengingat] Paket SapaTamu Sortir PRO Anda berakhir dalam ${daysLeft} hari`,
+        htmlBody: htmlBody
+      })
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('Reminder email send error:', err);
+    return { success: false, error: err.message };
   }
 }
 
@@ -194,6 +303,8 @@ export default async function handler(req, res) {
       });
 
       const pwdHash = hashPassword(password);
+      const cleanWa = formatWhatsappNumber(whatsappNumber);
+
       const insertRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors`, {
         method: 'POST',
         headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
@@ -201,7 +312,7 @@ export default async function handler(req, res) {
           vendor_name: (vendorName || cleanEmail.split('@')[0]).trim(),
           email: cleanEmail,
           password_hash: pwdHash,
-          whatsapp_number: (whatsappNumber || '').trim(),
+          whatsapp_number: cleanWa,
           free_quota_remaining: 10,
           subscription_plan: 'free',
           is_active: true
@@ -214,6 +325,12 @@ export default async function handler(req, res) {
 
       const created = await insertRes.json();
       const newVendor = created[0];
+
+      // Record audit log
+      await logSortirActivity(newVendor.id, 'AUTH_REGISTER', 'SYSTEM', cleanEmail, 'SUCCESS', {
+        vendor_name: newVendor.vendor_name,
+        whatsapp_number: newVendor.whatsapp_number
+      });
 
       return res.status(200).json({
         success: true,
@@ -486,6 +603,84 @@ export default async function handler(req, res) {
         is_settled: false,
         payment_status: trx.payment_status
       });
+    }
+
+    // 6c. ACTION: RUN PRO EXPIRATION REMINDER CRON (H-7, H-3, H-1 NOTIFICATIONS)
+    if (action === 'run_reminder_cron' || action === 'check_pro_reminders') {
+      const now = new Date();
+      const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      // Query active PRO vendors expiring in <= 7 days
+      const vRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors?subscription_plan=neq.free&subscription_expires_at=gt.${now.toISOString()}&subscription_expires_at=lte.${in7Days.toISOString()}&select=*`, {
+        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+      });
+      const vendors = await vRes.json();
+
+      const results = [];
+
+      for (const v of (vendors || [])) {
+        const expDate = new Date(v.subscription_expires_at);
+        const daysLeft = Math.max(1, Math.ceil((expDate - now) / (1000 * 60 * 60 * 24)));
+        const expFormatted = expDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        // Cooldown check: prevent sending duplicate reminder within 20 hours
+        if (v.last_reminder_sent_at) {
+          const lastSent = new Date(v.last_reminder_sent_at);
+          const hoursSinceLast = (now - lastSent) / (1000 * 60 * 60);
+          if (hoursSinceLast < 20) {
+            results.push({ vendor_id: v.id, vendor_name: v.vendor_name, status: 'SKIPPED_COOLDOWN', days_left: daysLeft });
+            continue;
+          }
+        }
+
+        // 1. Send WhatsApp Notification via Fonnte
+        let waResult = null;
+        if (v.whatsapp_number) {
+          const waMsg = `Halo Kak *${v.vendor_name || 'Fotografer'}*! 👋\n\nKami ingin menginformasikan bahwa paket *SapaTamu Sortir PRO* Anda akan berakhir dalam *${daysLeft} hari lagi* (pada tanggal *${expFormatted}*).\n\nAgar klien Anda tetap dapat melakukan seleksi foto secara lancar tanpa hambatan kuota, yuk perpanjang paket Anda sekarang:\n👉 https://sapatamu.id/sortir\n\nTerima kasih telah mempercayakan alur culling foto Anda bersama SapaTamu! ✨`;
+          waResult = await sendFonnteWA(v.whatsapp_number, waMsg);
+          await logSortirActivity(v.id, `REMINDER_PRO_H${daysLeft}`, 'WHATSAPP', v.whatsapp_number, waResult && waResult.status ? 'SUCCESS' : 'FAILED', waResult);
+        }
+
+        // 2. Send Email Notification
+        let emailResult = null;
+        if (v.email) {
+          emailResult = await sendReminderEmail(v.email, v.vendor_name, daysLeft, expFormatted);
+          await logSortirActivity(v.id, `REMINDER_PRO_H${daysLeft}`, 'EMAIL', v.email, emailResult && emailResult.status === 'success' ? 'SUCCESS' : 'SENT', emailResult);
+        }
+
+        // 3. Update last_reminder_sent_at on vendor record
+        await fetch(`${SB_URL}/rest/v1/sortir_vendors?id=eq.${v.id}`, {
+          method: 'PATCH',
+          headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ last_reminder_sent_at: now.toISOString() })
+        });
+
+        results.push({
+          vendor_id: v.id,
+          vendor_name: v.vendor_name,
+          email: v.email,
+          whatsapp: v.whatsapp_number,
+          days_left: daysLeft,
+          wa_result: waResult,
+          email_result: emailResult
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        checked_count: (vendors || []).length,
+        results: results
+      });
+    }
+
+    // 6d. ACTION: GET SORTIR LOGS (FOR OWNER/ADMIN AUDIT)
+    if (action === 'get_sortir_logs') {
+      const limit = parseInt(req.query.limit || '50');
+      const logRes = await fetch(`${SB_URL}/rest/v1/sortir_logs?order=created_at.desc&limit=${limit}&select=*,sortir_vendors(vendor_name,email)`, {
+        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+      });
+      const logs = await logRes.json();
+      return res.status(200).json({ success: true, logs: logs || [] });
     }
 
     // 7. ACTION: DRIVE IMAGE PROXY
