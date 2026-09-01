@@ -7,7 +7,7 @@ const SB_URL = "https://llrapesaaoliyjrrrsjh.supabase.co";
 const SB_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_publishable_414hQDyPBaFi0fnzmIKyZw_Iwa09Q0u";
 const MIDTRANS_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || "Mid-server-YOUR-KEY";
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-const GAS_URL = process.env.GAS_URL || "https://script.google.com/macros/s/AKfycbyC9-H72dZl1H7vIqg4dE4pL7pT9zQ8x/exec";
+const GAS_URL = process.env.GAS_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
 const IS_PRODUCTION = process.env.NODE_ENV === 'production' || true;
 
 const MIDTRANS_API_URL = IS_PRODUCTION 
@@ -277,7 +277,7 @@ export default async function handler(req, res) {
     // 1. ACTION: SEND OTP
     if (action === 'send_otp') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
-      const { email, vendorName } = req.body;
+      const { email, vendorName, whatsapp } = req.body;
       const cleanEmail = (email || '').toLowerCase().trim();
 
       if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
@@ -316,33 +316,54 @@ export default async function handler(req, res) {
         body: JSON.stringify({ email: cleanEmail, otp_code: otpCode, expires_at: expiresAt, is_used: false })
       });
 
-      await sendOtpEmail(cleanEmail, vendorName, otpCode);
+      // Send OTP via WhatsApp if phone is provided
+      if (whatsapp) {
+        const cleanPhone = formatWhatsappNumber(whatsapp, '62');
+        const waMsg = `*KODE VERIFIKASI OTP SAPATAMU SORTIR*\n\nKode OTP Anda adalah: *${otpCode}*\n\nKode ini berlaku selama 5 menit untuk aktivasi akun SapaTamu Sortir Anda (Free 10x Event Culling). Jangan bagikan kode ini kepada siapapun.`;
+        sendFonnteWA(cleanPhone, waMsg).catch(() => {});
+      }
+
+      // Send OTP via Email
+      sendOtpEmail(cleanEmail, vendorName, otpCode).catch(() => {});
 
       return res.status(200).json({
         success: true,
-        message: `Kode OTP 6-digit telah dikirim ke ${cleanEmail}. Silakan periksa email Anda.`,
+        message: `Kode OTP 6-digit telah dikirim ke WhatsApp / Email ${cleanEmail}. Silakan periksa pesan Anda.`,
         email: cleanEmail
       });
     }
 
-    // 1b. ACTION: FORGOT PASSWORD (REQUEST RESET LINK VIA EMAIL)
+    // 1b. ACTION: FORGOT PASSWORD (REQUEST RESET LINK VIA WHATSAPP & EMAIL)
     if (action === 'forgot_password') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
-      const { email } = req.body;
-      const cleanEmail = (email || '').toLowerCase().trim();
+      const { email, identifier } = req.body;
+      const rawInput = (email || identifier || '').trim();
 
-      if (!cleanEmail) return res.status(400).json({ error: 'Email wajib diisi.' });
+      if (!rawInput) return res.status(400).json({ error: 'Email atau No. WhatsApp wajib diisi.' });
 
-      // Check vendor exists
-      const checkRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors?email=eq.${encodeURIComponent(cleanEmail)}&select=*`, {
-        headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
-      });
-      const existing = await checkRes.json();
-      if (!existing || existing.length === 0) {
-        return res.status(404).json({ error: 'Email tidak terdaftar sebagai vendor fotografer.' });
+      let vendor = null;
+
+      if (rawInput.includes('@')) {
+        const cleanEmail = rawInput.toLowerCase();
+        const checkRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors?email=eq.${encodeURIComponent(cleanEmail)}&select=*`, {
+          headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+        });
+        const existing = await checkRes.json();
+        if (existing && existing.length > 0) vendor = existing[0];
+      } else {
+        const cleanPhone = formatWhatsappNumber(rawInput, '62');
+        const checkRes = await fetch(`${SB_URL}/rest/v1/sortir_vendors?or=(whatsapp_number.eq.${encodeURIComponent(cleanPhone)},whatsapp_number.eq.${encodeURIComponent(rawInput)})&select=*`, {
+          headers: { 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` }
+        });
+        const existing = await checkRes.json();
+        if (existing && existing.length > 0) vendor = existing[0];
       }
 
-      const vendor = existing[0];
+      if (!vendor) {
+        return res.status(404).json({ error: 'Akun dengan email / nomor WhatsApp tersebut tidak terdaftar sebagai vendor fotografer.' });
+      }
+
+      const cleanEmail = vendor.email.toLowerCase();
       const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
@@ -354,15 +375,34 @@ export default async function handler(req, res) {
       });
 
       const resetUrl = `https://sapatamu.id/sortir?action=reset_password&token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
-      await sendResetPasswordEmail(cleanEmail, vendor.vendor_name, resetUrl);
+
+      // 1. Send via WhatsApp (Fonnte) — Instant delivery
+      let waSent = false;
+      if (vendor.whatsapp_number) {
+        const waMsg = `🔐 *Reset Kata Sandi SapaTamu Sortir*\n\nHalo Kak *${vendor.vendor_name || 'Fotografer'}*!\nKami menerima permintaan untuk mengatur ulang kata sandi akun SapaTamu Sortir Anda (*${vendor.email}*).\n\nSilakan klik tautan berikut untuk membuat password baru:\n👉 ${resetUrl}\n\n⏱️ _Tautan ini aman dan hanya berlaku selama 15 menit. Jika bukan Anda yang meminta, abaikan pesan ini._`;
+        const waRes = await sendFonnteWA(vendor.whatsapp_number, waMsg);
+        waSent = waRes && waRes.status === true;
+      }
+
+      // 2. Send via Email (GAS)
+      sendResetPasswordEmail(cleanEmail, vendor.vendor_name, resetUrl).catch(() => {});
 
       // Audit log
-      await logSortirActivity(vendor.id, 'AUTH_FORGOT_PASSWORD_REQUEST', 'EMAIL', cleanEmail, 'SUCCESS');
+      await logSortirActivity(vendor.id, 'AUTH_FORGOT_PASSWORD_REQUEST', waSent ? 'WA+EMAIL' : 'EMAIL', cleanEmail, 'SUCCESS');
+
+      const maskedPhone = vendor.whatsapp_number 
+        ? vendor.whatsapp_number.replace(/(\d{4})\d+(\d{4})/, '$1****$2')
+        : '';
+
+      const returnMsg = maskedPhone 
+        ? `Tautan reset kata sandi telah dikirim ke WhatsApp (${maskedPhone}) dan Email Anda. Silakan periksa pesan masuk Anda (berlaku 15 menit).`
+        : `Tautan reset kata sandi telah dikirim ke email Anda. Silakan periksa kotak masuk atau spam (berlaku 15 menit).`;
 
       return res.status(200).json({
         success: true,
-        message: 'Tautan reset kata sandi telah dikirim ke email Anda. Silakan periksa kotak masuk atau spam (berlaku 15 menit).',
-        email: cleanEmail
+        message: returnMsg,
+        email: cleanEmail,
+        phone: maskedPhone
       });
     }
 
