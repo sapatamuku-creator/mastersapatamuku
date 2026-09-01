@@ -147,10 +147,18 @@
 
 ### [x] Task 16 — Penyelarasan Lebar Seragam Seluruh Section & Eliminasi Total Horizontal Scroll (GATE-18)
 - [x] Penyelarasan lebar seluruh kartu section (`#create-event-section`, `#my-events-section`, `#local-culling-section`, `#manual-translator-section`) menjadi 100% sejajar presisi di dalam container dengan padding seragam `20px 16px` dan radius `20px` di mobile.
-- [x] Header mobile ultra-kompak (`overflow: hidden; max-width: 100vw`): Nama vendor disembunyikan dari bar utama saat login, tombol dipadatkan, menghilangkan sumber utama pelebaran header >375px.
+- [x] Header mobile ultra-kompak (`overflow: hidden; max-width: 100vw`): Pengaturan responsif pada header saat login, tombol dipadatkan, menghilangkan sumber utama pelebaran header >375px.
 - [x] Perlindungan overflow global (`html, body { overflow-x: hidden; width: 100%; max-width: 100vw; }`) dan form grid 1-kolom di mobile.
 - [x] Eliminasi penuh horizontal scrolling (0 horizontal scroll) pada seluruh mode perangkat (teruji di iPhone SE 375px).
 - *File:* `sortir.html`
+
+---
+
+### [x] Task 17 — Tampilan Nama Vendor di Mobile dengan Smart Text Truncation (GATE-19)
+- [x] Menampilkan kembali nama vendor/studio fotografer di header mobile (<680px) dengan *smart text truncation* (`max-width: 85px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;`).
+- [x] Penyelarasan badge status (`👑 PRO Aktif`), nama studio, tombol `Perpanjang`, dan tombol `Keluar` agar tersusun anggun dalam 1 baris tanpa memicu horizontal scrolling.
+- *File:* `sortir.html`
+
 
 
 
