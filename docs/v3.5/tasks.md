@@ -260,3 +260,12 @@
 - [x] Harmonisasi fungsi legacy `vendorLogout()` dan `updateVendorHeader()` agar tidak menimpa atau menyembunyikan status vendor v3.5 di `localStorage`.
 - *File:* `sortir.html`, `docs/v3.5/tasks.md`, `docs/v3.5/DECISION_LOG.md`
 
+---
+
+### [x] Task 31 — Isolasi Event Vendor & Fallback WhatsApp Admin untuk Event Unassigned (GATE-34)
+- [x] Membersihkan relasi `vendor_id` di database Supabase: menetralkan `vendor_id = NULL` pada seluruh event legacy milik orang lain (nomor WhatsApp selain Knowhere Studio) yang sebelumnya terkena blanket update script restore.
+- [x] Memperbarui script pemulihan `sql/restore_vendor_account_21c16abd.sql` agar hanya menautkan event yang nomor `whatsapp_admin`-nya cocok dengan nomor WhatsApp vendor atau memiliki nama studio.
+- [x] Membuat script migrasi SQL mandiri `sql/migration_v3.5_fix_legacy_vendor_ownership.sql` untuk tata kelola kepemilikan event secara idempotens.
+- [x] Menyertakan `whatsapp_number` pada respons endpoint `action=get_profile` di `api/sortir.js` agar state nomor WhatsApp vendor tidak terhapus saat auto-sync profil dijalankan.
+- [x] Memperbarui query `initDashboardView` di `sortir.html`: mendukung koneksi ganda (mencocokkan `vendor_id == v.id` ATAU `vendor_id IS NULL` dengan fallback `whatsapp_admin` nomor telepon vendor yang telah dinormalisasi), auto-claim event unassigned di background, serta filter keamanan di frontend agar tidak ada kebocoran event antar vendor.
+- *File:* `sortir.html`, `api/sortir.js`, `sql/migration_v3.5_fix_legacy_vendor_ownership.sql`, `sql/restore_vendor_account_21c16abd.sql`, `docs/v3.5/tasks.md`, `docs/v3.5/DECISION_LOG.md`

@@ -215,6 +215,25 @@
 
 ---
 
+
+### GATE-34: Isolasi Event Vendor & Fallback WhatsApp Admin untuk Event Unassigned
+- **Timestamp Decision**: `2026-09-07T16:45:00+07:00`
+- **Status**: `APPROVED & IMPLEMENTED`
+1. **Fungsi Perubahan**: 
+   Memastikan daftar event vendor hanya menampilkan event milik vendor yang sedang login. Jika terdapat event unassigned (`vendor_id IS NULL`), sistem menggunakan koneksi cadangan berupa pencocokan nomor `whatsapp_admin` secara otomatis.
+2. **Dari Kode Sebelumnya**: 
+   Script restore sebelumnya melakukan blanket update `SET vendor_id = ... WHERE vendor_id IS NULL`, sehingga event milik pihak lain ikut tertaut ke akun Knowhere Studio. Selain itu, query dashboard hanya memfilter `eq('vendor_id', v.id)` tanpa fallback ke `whatsapp_admin`.
+3. **Mengarah Kemana**: 
+   - `sortir.html`: Query event cerdas berbasis `vendor_id.eq.ID` ATAU `vendor_id.is.null,whatsapp_admin.eq.WA` dengan normalisasi nomor E.164, auto-claim event unassigned di background, dan guard isolasi.
+   - `api/sortir.js`: Menyertakan `whatsapp_number` pada respons endpoint `get_profile`.
+   - `sql/migration_v3.5_fix_legacy_vendor_ownership.sql`: Script pembersihan relasi event milik nomor WhatsApp lain.
+   - `sql/restore_vendor_account_21c16abd.sql`: Perbaikan filter update berbasis kecocokan nomor WhatsApp.
+4. **Cabang Routing Terdampak**: Dashboard Sortir ([sortir.html](file:///d:/Google%20Antigrafity/mastersapatamuku/sortir.html)), endpoint `api/sortir?action=get_profile`.
+5. **Risiko & Trade-off Jujur**: 
+   - *Risiko*: Rendah. Tidak ada data foto atau hasil seleksi yang diubah/dihapus; hanya field relasi kepemilikan yang dirapikan.
+
+---
+
 ## ⏱️ 3. Audit Log & Timeline Eksekusi Teknis
 
 | No | Timestamp (WIB) | Aktivitas / Milestone | Target File / Komponen | Git Commit |

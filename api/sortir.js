@@ -733,6 +733,7 @@ export default async function handler(req, res) {
           id: v.id,
           vendor_name: v.vendor_name,
           email: v.email,
+          whatsapp_number: v.whatsapp_number,
           free_quota_remaining: v.free_quota_remaining,
           subscription_plan: v.subscription_plan,
           subscription_expires_at: v.subscription_expires_at,

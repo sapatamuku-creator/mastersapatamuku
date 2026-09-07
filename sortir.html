@@ -3360,15 +3360,56 @@
         const v = getVendorAuth();
 
         if (v && v.id) {
-            // Logged in: Fetch events belonging to this vendor
-            const { data, error } = await supabase
-                .from('sortir_events')
-                .select('*')
-                .eq('vendor_id', v.id)
-                .order('created_at', { ascending: false });
-            
+            // Logged in: Fetch events belonging to this vendor (vendor_id or fallback whatsapp_admin for unassigned events)
+            const rawWa = v.whatsapp_number ? String(v.whatsapp_number).replace(/\D/g, '') : '';
+            let waVariants = [];
+            if (rawWa) {
+                const stdWa = rawWa.startsWith('0') ? '62' + rawWa.substring(1) : (rawWa.startsWith('62') ? rawWa : '62' + rawWa);
+                const localWa = '0' + stdWa.replace(/^62/, '');
+                waVariants = Array.from(new Set([stdWa, localWa, rawWa, '+' + stdWa]));
+            }
+
+            let query = supabase.from('sortir_events').select('*');
+            if (waVariants.length > 0) {
+                const waFilter = waVariants.map(w => `and(vendor_id.is.null,whatsapp_admin.eq.${w})`).join(',');
+                query = query.or(`vendor_id.eq.${v.id},${waFilter}`);
+            } else {
+                query = query.eq('vendor_id', v.id);
+            }
+
+            const { data, error } = await query.order('created_at', { ascending: false });
+
+            // Auto-link legacy unassigned events that match this vendor's WhatsApp
+            if (data && data.length > 0) {
+                const unlinkedIds = data.filter(e => !e.vendor_id).map(e => e.id);
+                if (unlinkedIds.length > 0) {
+                    supabase.from('sortir_events').update({ vendor_id: v.id }).in('id', unlinkedIds).then(() => {});
+                }
+            }
+
+            let vendorEvents = [];
             if (!error && data) {
-                const eventIds = data.map(e => e.id);
+                vendorEvents = data.filter(e => {
+                    if (e.vendor_id === v.id) {
+                        if (waVariants.length > 0 && e.whatsapp_admin) {
+                            const evtWa = String(e.whatsapp_admin).replace(/\D/g, '');
+                            const isMatch = waVariants.some(w => evtWa === w.replace(/\D/g, ''));
+                            if (!isMatch && (e.event_name && !e.event_name.toLowerCase().includes('knowhere'))) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+                    if (!e.vendor_id && waVariants.length > 0 && e.whatsapp_admin) {
+                        const evtWa = String(e.whatsapp_admin).replace(/\D/g, '');
+                        return waVariants.some(w => evtWa === w.replace(/\D/g, ''));
+                    }
+                    return false;
+                });
+            }
+
+            if (vendorEvents.length > 0) {
+                const eventIds = vendorEvents.map(e => e.id);
                 let countMap = {};
                 if (eventIds.length > 0) {
                     try {
@@ -3384,7 +3425,7 @@
                         }
                     } catch(e) {}
                 }
-                store.myEvents = data.map(e => ({
+                store.myEvents = vendorEvents.map(e => ({
                     ...e,
                     selected_count: countMap[e.id] || 0
                 }));
