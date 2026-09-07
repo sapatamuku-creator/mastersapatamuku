@@ -178,6 +178,43 @@
 
 ---
 
+
+### GATE-32: Perbaikan Skema Supabase sortir_events (expires_at, is_locked) & Dual Fallback RPC
+- **Timestamp Decision**: `2026-09-07T10:30:00+07:00`
+- **Status**: `APPROVED & IMPLEMENTED`
+1. **Fungsi Perubahan**: 
+   Menambahkan patch migrasi database untuk kolom `expires_at` dan `is_locked` pada `sortir_events` beserta parameter `p_expires_at` pada RPC `create_sortir_event_with_quota`, dan dual resilient fallback pada form event culling agar event tetap bisa dibuat walaupun patch skema cloud belum dieksekusi.
+2. **Dari Kode Sebelumnya**: 
+   RPC `create_sortir_event_with_quota` lama tidak menerima parameter `p_expires_at`, sehingga pembuatan event dengan durasi expiry memicu error schema cache PostgREST.
+3. **Mengarah Kemana**: 
+   - `sql/migration_v3.5_patch_event_expiry_lock.sql` (patch migrasi siap pakai).
+   - `sql/migration_v3.5_sortir_saas.sql` (skema master tersinkron).
+   - `sortir.html` (dual resilient retry RPC & direct insert).
+4. **Cabang Routing Terdampak**: Form buat event di `sortir.html`, RPC Supabase `create_sortir_event_with_quota`.
+5. **Risiko & Trade-off Jujur**:
+   - *Risiko*: Jika schema cache cloud belum update, event dibuat dengan fallback legacy (expires_at null).
+   - *Mitigasi*: Auto-retry transparan dan notifikasi reload schema di file SQL.
+
+---
+
+### GATE-33: Perbaikan Clickability Tombol Keluar Vendor, Robust Logout Flow & Tour Overlay Pointer-Events Guard
+- **Timestamp Decision**: `2026-09-07T10:35:00+07:00`
+- **Status**: `APPROVED & IMPLEMENTED`
+1. **Fungsi Perubahan**: 
+   Memperbaiki tombol Keluar vendor di header `sortir.html` agar responsif 100% saat diklik di semua mode (desktop/tablet/mobile), bebas tumpang tindih dengan tour guide overlay, dan alur konfirmasi logout berjalan mulus.
+2. **Dari Kode Sebelumnya**: 
+   Tombol Keluar tidak memiliki ID unik, confirmation modal z-index lebih rendah dari elemen spotlight/overlay tour guide, tidak ada penanganan penutupan otomatis tour guide yang masih aktif saat logout, dan tidak ada re-entrance guard.
+3. **Mengarah Kemana**: 
+   - `sortir.html`: Atribut `id="vendor-logout-btn"`, cursor pointer, min-height 28px.
+   - `updateVendorHeaderUI()`: Binding `logoutBtn.onclick` dengan stopPropagation dan handler `window.handleVendorLogout`.
+   - `handleVendorLogout`: Auto-dismiss tour guide jika aktif (`finishSortirTour(false)`), modal konfirmasi `#confirm-modal` dengan `z-index: 2147483647`, fallback `window.confirm`, pembersihan auth vendor + Supabase sign out, toast feedback, re-entrance guard `isVendorLoggingOut`, serta refresh hard reload.
+   - Harmonisasi legacy `vendorLogout()` dan `updateVendorHeader()` agar tidak merusak state vendor v3.5.
+4. **Cabang Routing Terdampak**: Header navbar vendor di `sortir.html`, modal konfirmasi, tour guide module.
+5. **Risiko & Trade-off Jujur**:
+   - *Risiko*: Rendah. `location.reload()` dipanggil setelah delay 300ms toast feedback agar user memahami proses keluar akun.
+
+---
+
 ## ‚è±Ô∏è 3. Audit Log & Timeline Eksekusi Teknis
 
 | No | Timestamp (WIB) | Aktivitas / Milestone | Target File / Komponen | Git Commit |
@@ -200,7 +237,7 @@
 
 ---
 
-## üß™ 4. Bukti Verifikasi Pengujian (E2E Test Output)üß™ 4. Bukti Verifikasi Pengujian (E2E Test Output)
+## üß™ 4. Bukti Verifikasi Pengujian (E2E Test Output)ÔøΩÔøΩÔøΩ 4. Bukti Verifikasi Pengujian (E2E Test Output)
 
 ### Test Case 1: Akun Vendor `Knowhere Studio`
 - **Email**: `opick8c@gmail.com`

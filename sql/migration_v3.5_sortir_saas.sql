@@ -6,13 +6,8 @@
 -- Script ini membersihkan tabel lama jika ada, dan membuat skema baru v3.5 secara bersih.
 -- ==============================================================================
 
--- 0. BERSIHKAN STRUKTUR LAMA (JIKA PERNAH ADA VERSI LEGACY)
-DROP TABLE IF EXISTS public.sortir_otps CASCADE;
-DROP TABLE IF EXISTS public.sortir_transactions CASCADE;
-DROP TABLE IF EXISTS public.sortir_vendors CASCADE;
-
 -- 1. TABEL UTAMA VENDOR (AKUN FOTOGRAFER / VENDOR)
-CREATE TABLE public.sortir_vendors (
+CREATE TABLE IF NOT EXISTS public.sortir_vendors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -28,11 +23,11 @@ CREATE TABLE public.sortir_vendors (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-CREATE INDEX idx_sortir_vendors_email ON public.sortir_vendors(email);
-CREATE INDEX idx_sortir_vendors_sub_exp ON public.sortir_vendors(subscription_expires_at);
+CREATE INDEX IF NOT EXISTS idx_sortir_vendors_email ON public.sortir_vendors(email);
+CREATE INDEX IF NOT EXISTS idx_sortir_vendors_sub_exp ON public.sortir_vendors(subscription_expires_at);
 
 -- 2. TABEL KODE VERIFIKASI OTP EMAIL (1 EMAIL 1 AKUN)
-CREATE TABLE public.sortir_otps (
+CREATE TABLE IF NOT EXISTS public.sortir_otps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL,
     otp_code VARCHAR(255) NOT NULL,
@@ -41,16 +36,20 @@ CREATE TABLE public.sortir_otps (
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-CREATE INDEX idx_sortir_otps_email_code ON public.sortir_otps(email, otp_code, is_used);
+CREATE INDEX IF NOT EXISTS idx_sortir_otps_email_code ON public.sortir_otps(email, otp_code, is_used);
 
--- 3. TAMBAHKAN RELASI VENDOR_ID PADA TABEL EVENT CULLING (JIKA BELUM ADA)
+-- 3. TAMBAHKAN RELASI VENDOR_ID, EXPIRY & LOCK PADA TABEL EVENT CULLING (JIKA BELUM ADA)
 ALTER TABLE public.sortir_events 
-ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES public.sortir_vendors(id) ON DELETE SET NULL;
+ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES public.sortir_vendors(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT FALSE NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_sortir_events_vendor_id ON public.sortir_events(vendor_id);
+CREATE INDEX IF NOT EXISTS idx_sortir_events_expires_at ON public.sortir_events(expires_at);
+CREATE INDEX IF NOT EXISTS idx_sortir_events_is_locked ON public.sortir_events(is_locked);
 
 -- 4. TABEL RIWAYAT TRANSAKSI / MIDTRANS SUBSCRIPTION
-CREATE TABLE public.sortir_transactions (
+CREATE TABLE IF NOT EXISTS public.sortir_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_id UUID REFERENCES public.sortir_vendors(id) ON DELETE CASCADE,
     order_id VARCHAR(100) UNIQUE NOT NULL,
@@ -64,8 +63,8 @@ CREATE TABLE public.sortir_transactions (
     settled_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_sortir_transactions_vendor ON public.sortir_transactions(vendor_id);
-CREATE INDEX idx_sortir_transactions_order ON public.sortir_transactions(order_id);
+CREATE INDEX IF NOT EXISTS idx_sortir_transactions_vendor ON public.sortir_transactions(vendor_id);
+CREATE INDEX IF NOT EXISTS idx_sortir_transactions_order ON public.sortir_transactions(order_id);
 
 -- 5. TABEL LOG AKTIVITAS & NOTIFIKASI REMINDER (AUDIT TRAIL)
 CREATE TABLE IF NOT EXISTS public.sortir_logs (
@@ -109,7 +108,11 @@ END $$;
 
 -- 6. STORED PROCEDURE / RPC: PENGURANGAN KUOTA & OVERRIDE SUBSCRIPTION (ATOMIC)
 
--- 6a. Atomic Create Event with Quota Check
+-- 6a. Atomic Create Event with Quota Check & Expiry/Lock Support
+DROP FUNCTION IF EXISTS public.create_sortir_event_with_quota(
+    UUID, VARCHAR, VARCHAR, INTEGER, TEXT, VARCHAR, VARCHAR
+);
+
 CREATE OR REPLACE FUNCTION public.create_sortir_event_with_quota(
     p_vendor_id UUID,
     p_event_name VARCHAR(150),
@@ -117,7 +120,8 @@ CREATE OR REPLACE FUNCTION public.create_sortir_event_with_quota(
     p_quota_limit INTEGER,
     p_drive_folder_url TEXT,
     p_drive_folder_id VARCHAR(100),
-    p_whatsapp_admin VARCHAR(20)
+    p_whatsapp_admin VARCHAR(20),
+    p_expires_at TIMESTAMPTZ DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -160,10 +164,12 @@ BEGIN
     -- 4. Buat Event Culling Baru
     INSERT INTO public.sortir_events (
         event_name, event_slug, quota_limit, 
-        drive_folder_url, drive_folder_id, whatsapp_admin, vendor_id
+        drive_folder_url, drive_folder_id, whatsapp_admin, vendor_id,
+        expires_at, is_locked
     ) VALUES (
         p_event_name, p_event_slug, p_quota_limit, 
-        p_drive_folder_url, p_drive_folder_id, p_whatsapp_admin, p_vendor_id
+        p_drive_folder_url, p_drive_folder_id, p_whatsapp_admin, p_vendor_id,
+        p_expires_at, FALSE
     ) RETURNING * INTO v_new_event;
 
     RETURN jsonb_build_object(

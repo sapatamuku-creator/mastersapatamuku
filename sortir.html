@@ -99,7 +99,7 @@
         header {
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 2147483645;
             background: rgba(255, 249, 245, 0.85);
             backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border);
@@ -407,7 +407,7 @@
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 999999;
+            z-index: 2147483647;
         }
 
         .notification-content {
@@ -1467,7 +1467,7 @@
                     <div class="vendor-header-actions-group" style="display:flex; align-items:center; gap:6px;">
                         <span id="vendor-status-badge" class="vendor-header-badge" style="background:#E8F5E9; color:#2E7D32; font-weight:800; font-size:11px; padding:4px 10px; border-radius:20px;">Free: 10/10</span>
                         <button id="vendor-upgrade-btn" onclick="openSortirPaywallModal()" class="btn btn-primary" style="padding:6px 12px; font-size:11px; background:var(--gold); border:none;">👑 Upgrade PRO</button>
-                        <button onclick="handleVendorLogout()" class="btn btn-secondary" style="padding:6px 10px; font-size:11px;">Keluar</button>
+                        <button id="vendor-logout-btn" type="button" onclick="handleVendorLogout()" class="btn btn-secondary" style="padding:6px 10px; font-size:11px; cursor:pointer; min-height:28px;">Keluar</button>
                     </div>
                 </div>
             </div>
@@ -2252,7 +2252,7 @@
 </div>
 
 <!-- Custom confirmation modal (Ganti confirm browser) -->
-<div id="confirm-modal" class="notification-modal" style="display:none;">
+<div id="confirm-modal" class="notification-modal" style="display:none; z-index:2147483647;">
     <div class="notification-content" style="max-width: 420px; text-align: center; border-radius: 24px; padding: 32px 24px;">
         <div id="confirm-modal-icon" style="font-size: 38px; margin-bottom: 12px;">❓</div>
         <h3 id="confirm-modal-title" style="font-size: 19px; font-weight: 800; margin-bottom: 8px; color: var(--text-main);">Konfirmasi</h3>
@@ -2748,6 +2748,20 @@
                     upgradeBtn.style.background = 'var(--gold)';
                 }
             }
+
+            const logoutBtn = document.getElementById('vendor-logout-btn');
+            if (logoutBtn) {
+                logoutBtn.style.cursor = 'pointer';
+                logoutBtn.onclick = function(e) {
+                    if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    if (typeof window.handleVendorLogout === 'function') {
+                        window.handleVendorLogout();
+                    }
+                };
+            }
         } else {
             loginBtn.style.display = 'inline-flex';
             userInfo.style.display = 'none';
@@ -3172,18 +3186,49 @@
         }
     };
 
+    let isVendorLoggingOut = false;
     window.handleVendorLogout = async function() {
-        const confirmed = await window.showConfirm(
-            'Keluar Akun Vendor',
-            'Apakah Anda yakin ingin keluar dari akun vendor SapaTamu Sortir?',
-            { confirmText: 'Ya, Keluar', cancelText: 'Batal', icon: '🚪' }
-        );
+        if (isVendorLoggingOut) return;
+        isVendorLoggingOut = true;
+
+        // Auto-dismiss tour guide overlay if active
+        if (typeof window.finishSortirTour === 'function') {
+            try { window.finishSortirTour(false); } catch (e) {}
+        }
+
+        let confirmed = false;
+        try {
+            if (typeof window.showConfirm === 'function') {
+                confirmed = await window.showConfirm(
+                    'Keluar Akun Vendor',
+                    'Apakah Anda yakin ingin keluar dari akun vendor SapaTamu Sortir?',
+                    { confirmText: 'Ya, Keluar', cancelText: 'Batal', icon: '🚪' }
+                );
+            } else {
+                confirmed = window.confirm('Apakah Anda yakin ingin keluar dari akun vendor SapaTamu Sortir?');
+            }
+        } catch (e) {
+            console.warn('showConfirm error, fallback to browser confirm:', e);
+            confirmed = window.confirm('Apakah Anda yakin ingin keluar dari akun vendor SapaTamu Sortir?');
+        }
+
         if (confirmed) {
             clearVendorAuth();
-            window.showToast('Anda telah keluar dari akun vendor.', 'info');
-            initDashboardView();
+            const sb = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+            if (sb && sb.auth) {
+                try { await sb.auth.signOut(); } catch (e) {}
+            }
+            if (typeof window.showToast === 'function') {
+                window.showToast('Anda telah keluar dari akun vendor.', 'info');
+            }
+            setTimeout(() => {
+                window.location.reload();
+            }, 300);
+        } else {
+            isVendorLoggingOut = false;
         }
     };
+    window.vendorLogout = window.handleVendorLogout;
 
     // ─────────────────────────────────────────────────────────────
     // PAYWALL & MIDTRANS SNAP INTEGRATION
@@ -3903,7 +3948,7 @@
         }
 
         // 3. Call Supabase RPC create_sortir_event_with_quota
-        const { data: rpcData, error: rpcError } = await supabase.rpc('create_sortir_event_with_quota', {
+        let rpcPayload = {
             p_vendor_id: v.id,
             p_event_name: name,
             p_event_slug: slug,
@@ -3912,25 +3957,53 @@
             p_drive_folder_id: folderId,
             p_whatsapp_admin: wa,
             p_expires_at: expiresAt
-        });
+        };
+
+        let { data: rpcData, error: rpcError } = await supabase.rpc('create_sortir_event_with_quota', rpcPayload);
+
+        // Jika RPC gagal karena signature p_expires_at belum ada di cloud DB, retry RPC tanpa p_expires_at
+        if (rpcError && (rpcError.message?.includes('p_expires_at') || rpcError.details?.includes('p_expires_at') || rpcError.code === 'PGRST202')) {
+            console.warn('RPC p_expires_at signature mismatch, retrying with legacy RPC params...');
+            const { p_expires_at, ...legacyPayload } = rpcPayload;
+            const retryRpc = await supabase.rpc('create_sortir_event_with_quota', legacyPayload);
+            if (!retryRpc.error) {
+                rpcData = retryRpc.data;
+                rpcError = null;
+            }
+        }
 
         if (rpcError) {
             // Fallback direct insert if RPC not created yet
             console.warn('RPC create_sortir_event_with_quota fallback:', rpcError);
-            const { data, error } = await supabase
+            let insertPayload = {
+                event_name: name,
+                event_slug: slug,
+                quota_limit: quota,
+                drive_folder_url: driveUrl,
+                drive_folder_id: folderId,
+                whatsapp_admin: wa,
+                vendor_id: v.id,
+                expires_at: expiresAt,
+                is_locked: false
+            };
+
+            let { data, error } = await supabase
                 .from('sortir_events')
-                .insert({
-                    event_name: name,
-                    event_slug: slug,
-                    quota_limit: quota,
-                    drive_folder_url: driveUrl,
-                    drive_folder_id: folderId,
-                    whatsapp_admin: wa,
-                    vendor_id: v.id,
-                    expires_at: expiresAt,
-                    is_locked: false
-                })
+                .insert(insertPayload)
                 .select();
+
+            // Resilient retry: jika kolom expires_at / is_locked belum ada di Supabase schema cache
+            if (error && (error.message?.includes('expires_at') || error.message?.includes('is_locked') || error.code === 'PGRST204')) {
+                console.warn('Retrying insert without expires_at / is_locked due to pending DB schema cache...');
+                delete insertPayload.expires_at;
+                delete insertPayload.is_locked;
+                const retryInsert = await supabase
+                    .from('sortir_events')
+                    .insert(insertPayload)
+                    .select();
+                data = retryInsert.data;
+                error = retryInsert.error;
+            }
 
             if (error) {
                 showAlert('Error', `Gagal menyimpan event: ${error.message}`, '❌');
@@ -6330,11 +6403,23 @@ async function vendorRegister(){
     msgEl.textContent='Cek email verifikasi, lalu Masuk lagi';
 }
 async function vendorLogout(){
-    const sb=getSupabaseClient();
-    if(sb) await sb.auth.signOut();
-    updateVendorHeader(); location.reload();
+    if (typeof window.handleVendorLogout === 'function') {
+        return window.handleVendorLogout();
+    }
+    try { localStorage.removeItem('sortir_vendor_auth'); } catch (e) {}
+    const sb = getSupabaseClient();
+    if (sb && sb.auth) {
+        try { await sb.auth.signOut(); } catch (e) {}
+    }
+    location.reload();
 }
 async function updateVendorHeader(){
+    // Check v3.5 custom auth first; if present, do not overwrite header UI
+    try {
+        const v = JSON.parse(localStorage.getItem('sortir_vendor_auth') || 'null');
+        if (v && (v.id || v.email)) return;
+    } catch (e) {}
+
     const sb=getSupabaseClient();
     const btn=document.getElementById('vendor-login-btn');
     const info=document.getElementById('vendor-user-info');

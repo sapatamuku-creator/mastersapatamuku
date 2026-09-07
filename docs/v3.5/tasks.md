@@ -242,22 +242,21 @@
 - [x] Memulihkan kontrol visibilitas JavaScript saat logout/login sehingga tombol `[Masuk / Daftar Vendor]` dan bilah aksi vendor (`Free: 10/10`, `Upgrade PRO`, `Keluar`) tidak lagi muncul bersamaan di HP saat belum login.
 - *File:* `sortir.html`
 
+---
 
+### [x] Task 29 — Perbaikan Skema Supabase sortir_events (expires_at, is_locked) & Penyelarasan RPC (GATE-32)
+- [x] Membuat patch migrasi database `sql/migration_v3.5_patch_event_expiry_lock.sql` yang menambahkan kolom `expires_at TIMESTAMPTZ` dan `is_locked BOOLEAN DEFAULT FALSE` pada tabel `public.sortir_events`, menyertakan index B-Tree, serta memperbarui stored procedure RPC `public.create_sortir_event_with_quota` dengan parameter `p_expires_at TIMESTAMPTZ DEFAULT NULL`.
+- [x] Sinkronisasi master script `sql/migration_v3.5_sortir_saas.sql` agar menyertakan kolom dan signature RPC terbaru secara utuh.
+- [x] Menambahkan mekanisme *dual resilient fallback retry* pada form pembuatan event di `sortir.html`: jika DB cloud belum dieksekusi patch migrasinya, RPC otomatis di-retry tanpa parameter `p_expires_at` dan direct insert otomatis mengeliminasi kolom yang belum tercatat di PostgREST schema cache agar vendor tetap dapat membuat event tanpa dialog error.
+- *File:* `sql/migration_v3.5_patch_event_expiry_lock.sql`, `sql/migration_v3.5_sortir_saas.sql`, `sortir.html`
 
+---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### [x] Task 30 — Perbaikan Clickability Tombol Keluar Vendor, Robust Logout Flow & Tour Overlay Pointer-Events Guard (GATE-33)
+- [x] Menambahkan atribut unik `id="vendor-logout-btn"`, `type="button"`, `cursor:pointer;`, dan `min-height:28px;` pada tombol Keluar di header vendor `sortir.html`.
+- [x] Menambahkan direct DOM `addEventListener` pada `vendor-logout-btn` di dalam `updateVendorHeaderUI()` untuk melengkapi inline `onclick` dan mencegah timing delay pada deferred module script.
+- [x] Menaikkan `z-index` elemen `header` (`2147483645`) dan `#confirm-modal` (`2147483647`) agar selalu berada di atas tour spotlight dan overlay (`2147483640`), mencegah klik header tertelan oleh layer tour guide.
+- [x] Memperbarui alur `handleVendorLogout`: auto-dismiss tour guide jika aktif, try-catch konfirmasi dengan fallback `window.confirm()` browser, pembersihan `sortir_vendor_auth` + `sb.auth.signOut()`, serta hard reload `location.reload()` agar seluruh state dan listener memori vendor ter-reset bersih 100%.
+- [x] Harmonisasi fungsi legacy `vendorLogout()` dan `updateVendorHeader()` agar tidak menimpa atau menyembunyikan status vendor v3.5 di `localStorage`.
+- *File:* `sortir.html`, `docs/v3.5/tasks.md`, `docs/v3.5/DECISION_LOG.md`
 
