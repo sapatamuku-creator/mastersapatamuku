@@ -1,16 +1,16 @@
-# Graph Report - mastersapatamuku  (2026-09-08)
+# Graph Report - mastersapatamuku  (2026-09-07)
 
 ## Corpus Check
-- 193 files · ~1,048,184 words
+- 193 files · ~1,046,893 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1912 nodes · 1985 edges · 181 communities (150 shown, 31 thin omitted)
+- 1909 nodes · 1981 edges · 181 communities (150 shown, 31 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `390bbd51`
+- Built from commit: `ace515d1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -169,7 +169,7 @@
 - restore_vendor_account_21c16abd.sql
 
 ## God Nodes (most connected - your core abstractions)
-1. `📋 Task List & Status` - 33 edges
+1. `📋 Task List & Status` - 32 edges
 2. `handler()` - 30 edges
 3. `HIGH — Temuan Detail` - 17 edges
 4. `HIGH TASKS (16)` - 17 edges
@@ -295,7 +295,7 @@ Nodes (9): 1. PEMETAAN FILE & PERAN DALAM SISTEM, 2. DIAGRAM KERANGKA & ALUR ROU
 
 ### Community 31 - "Vercel API: Create Payment Handler"
 Cohesion: 0.10
-Nodes (20): 📊 1. Latar Belakang & Analisis Kebutuhan, 🛡️ 2. Format Decision Gate (5-Point Standard SapaTamu), ⏱️ 3. Audit Log & Timeline Eksekusi Teknis, 🧪 4. Bukti Verifikasi Pengujian (E2E Test Output)��� 4. Bukti Verifikasi Pengujian (E2E Test Output), Decision Log — SapaTamu v3.5 (Sortir SaaS, Hybrid Access & Subscription), GATE-01: Pemisahan Akses Halaman `/sortir` (Public Free vs Gated Auth), GATE-02: Registrasi Vendor dengan OTP Email (1-Email-1-Akun Unik), GATE-03: Paywall Subscription, Kuota Free Tier 10x & Override Reset (+12 more)
+Nodes (19): 📊 1. Latar Belakang & Analisis Kebutuhan, 🛡️ 2. Format Decision Gate (5-Point Standard SapaTamu), ⏱️ 3. Audit Log & Timeline Eksekusi Teknis, 🧪 4. Bukti Verifikasi Pengujian (E2E Test Output)��� 4. Bukti Verifikasi Pengujian (E2E Test Output), Decision Log — SapaTamu v3.5 (Sortir SaaS, Hybrid Access & Subscription), GATE-01: Pemisahan Akses Halaman `/sortir` (Public Free vs Gated Auth), GATE-02: Registrasi Vendor dengan OTP Email (1-Email-1-Akun Unik), GATE-03: Paywall Subscription, Kuota Free Tier 10x & Override Reset (+11 more)
 
 ### Community 32 - "Vercel API: Get Email Handler"
 Cohesion: 0.13
@@ -303,7 +303,7 @@ Nodes (15): L10. Remove console.log leak, L11. Remove hardcoded ssId/username, L
 
 ### Community 33 - "Vercel API: Sortir Session Handler"
 Cohesion: 0.06
-Nodes (34): 📋 Task List & Status, Tasks & Roadmap — SapaTamu Sortir v3.5 (SaaS Hybrid Access & Subscription), [x] Task 10 — Interactive Page Tour Guide (Free-First Onboarding) (GATE-10), [x] Task 11 — Section Quick Navigator Bar (Pill Jump Menu & 100% FREE Spotlight) (GATE-11), [x] Task 12 — Penyelarasan Desain Tab Navigasi Standar Marketplace SapaTamu (GATE-12), [x] Task 13 — Standarisasi Rasio Breakpoint 3-Mode SapaTamu (<680px Mobile), [x] Task 14 — Marketplace Category Pill Chips & Sticky Lock On Scroll (GATE-15), [x] Task 15 — Perbaikan Offset Sticky Anti-Terpotong & Auto-Scroll Non-Login (GATE-16) (+26 more)
+Nodes (33): 📋 Task List & Status, Tasks & Roadmap — SapaTamu Sortir v3.5 (SaaS Hybrid Access & Subscription), [x] Task 10 — Interactive Page Tour Guide (Free-First Onboarding) (GATE-10), [x] Task 11 — Section Quick Navigator Bar (Pill Jump Menu & 100% FREE Spotlight) (GATE-11), [x] Task 12 — Penyelarasan Desain Tab Navigasi Standar Marketplace SapaTamu (GATE-12), [x] Task 13 — Standarisasi Rasio Breakpoint 3-Mode SapaTamu (<680px Mobile), [x] Task 14 — Marketplace Category Pill Chips & Sticky Lock On Scroll (GATE-15), [x] Task 15 — Perbaikan Offset Sticky Anti-Terpotong & Auto-Scroll Non-Login (GATE-16) (+25 more)
 
 ### Community 43 - "Subdomain Resolution Utility"
 Cohesion: 0.60
@@ -650,8 +650,8 @@ Cohesion: 0.25
 Nodes (7): Fase 1 — Fondasi & Alur Inti, Fase 2 — Import Excel, Fase 3 — Duplicate Manager, Fase 4 — Sync Sheet UI, Fase 5 — Hero Dinamis & Navigasi, Fase 6 — Tools & Polish, TASKS — Formulir Tamu Reference Build
 
 ### Community 166 - "sortir.js"
-Cohesion: 0.33
-Nodes (12): collectFiles(), deduplicatePhotoFiles(), driveList(), formatWhatsappNumber(), handler(), hashPassword(), logSortirActivity(), sendFonnteWA() (+4 more)
+Cohesion: 0.36
+Nodes (11): collectFiles(), driveList(), formatWhatsappNumber(), handler(), hashPassword(), logSortirActivity(), sendFonnteWA(), sendOtpEmail() (+3 more)
 
 ### Community 167 - "🛡️ Rencana Gate & Detail Keputusan (5-Point Format)"
 Cohesion: 0.14
@@ -682,7 +682,7 @@ Cohesion: 0.29
 Nodes (7): scripts, build, check, dev, lint, start, typecheck
 
 ## Knowledge Gaps
-- **1213 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1208 more)
+- **1211 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1206 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **31 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -696,10 +696,10 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1213 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1211 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: List Drive Files` be split into smaller, more focused modules?**
   _Cohesion score 0.12857142857142856 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: Create Payment Handler` be split into smaller, more focused modules?**
-  _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1 - nodes in this community are weakly interconnected._

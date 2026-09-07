@@ -234,6 +234,23 @@
 
 ---
 
+### GATE-35: Smart RAW & JPG Preview Pairing and Deduplication
+- **Timestamp Decision**: `2026-09-08T06:40:00+07:00`
+- **Status**: `APPROVED & IMPLEMENTED`
+- **1. Fungsi Perubahan**:
+  Menyempurnakan logika preview file Google Drive pada galeri culling klien. Jika dalam satu folder terdapat file foto dengan nama dasar yang sama dalam format RAW dan format preview (misalnya `GSC0067.ARW` dan `GSC0067.JPG`), sistem secara cerdas menampilkan **hanya file JPG preview** yang jauh lebih ringan dan cepat dimuat. Jika sebuah file hanya memiliki 1 format (hanya RAW atau hanya JPG), file tersebut tetap dipertahankan dan ditampilkan normal.
+- **2. Dari Kode Sebelumnya**:
+  Sebelumnya, endpoint `api/sortir?action=list_drive` mengembalikan semua file yang cocok dengan regex ekstensi gambar tanpa deduplikasi, sehingga foto yang sama muncul dua kali di galeri culling (satu file `.ARW` yang seringkali tidak memiliki thumbnail/berat dan satu file `.JPG`).
+- **3. Mengarah Kemana**:
+  - `api/sortir.js`: Query Drive API menyertakan field `size`. Fungsi `deduplicatePhotoFiles(files)` mengelompokkan file per folder & nama dasar, memprioritaskan format preview/JPG atau ukuran file lebih kecil.
+  - `sortir.html`: Helper `deduplicatePhotoFiles` di sisi klien untuk *defense-in-depth*, serta rekonsiliasi seleksi jika sebelumnya klien telah menandai file versi RAW.
+- **4. Cabang Routing Terdampak**:
+  Endpoint `api/sortir?action=list_drive` dan tampilan Culling Klien (`sortir.html?event=...`).
+- **5. Risiko & Trade-off Jujur**:
+  - *Risiko*: 0 breaking change. Skrip copy fotografer (`downloadCopyScript`) menggunakan wildcard `copy "%SOURCE%\GSC0067.*" "%DEST%\"` berbasis nama dasar, sehingga seleksi klien terhadap `GSC0067.JPG` tetap otomatis menyalin file RAW dan JPG di komputer fotografer.
+
+---
+
 ## ⏱️ 3. Audit Log & Timeline Eksekusi Teknis
 
 | No | Timestamp (WIB) | Aktivitas / Milestone | Target File / Komponen | Git Commit |

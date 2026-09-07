@@ -4295,6 +4295,90 @@
         directBrowserExport(wizard.files, subfolder);
     };
 
+    // Helper to deduplicate RAW + JPG photo pairs from Google Drive
+    function deduplicatePhotoFiles(files) {
+        if (!Array.isArray(files) || files.length <= 1) return files || [];
+
+        const PREVIEW_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'heic']);
+        const RAW_EXTS = new Set([
+            'arw', 'srf', 'sr2',               // Sony
+            'cr2', 'cr3', 'crw',               // Canon
+            'nef', 'nrw',                      // Nikon
+            'raf',                             // Fujifilm
+            'rw2',                             // Panasonic / Lumix
+            'orf',                             // Olympus
+            'pef',                             // Pentax
+            'dng', 'raw', 'rwl', 'iiq'         // Adobe / Leica / Phase One / Generic
+        ]);
+
+        function parseFileName(name) {
+            if (!name) return { base: '', ext: '' };
+            const lastDot = name.lastIndexOf('.');
+            if (lastDot === -1) return { base: name.toLowerCase().trim(), ext: '' };
+            return {
+                base: name.substring(0, lastDot).toLowerCase().trim(),
+                ext: name.substring(lastDot + 1).toLowerCase().trim()
+            };
+        }
+
+        // Group files by parent folder + base filename
+        const groups = new Map();
+        for (const file of files) {
+            const { base, ext } = parseFileName(file.name);
+            const parentKey = (file.parents && file.parents[0]) ? file.parents[0] : '';
+            const key = (parentKey ? parentKey + '::' : '') + (base || file.name.toLowerCase());
+            if (!groups.has(key)) {
+                groups.set(key, []);
+            }
+            groups.get(key).push({ file, ext });
+        }
+
+        const result = [];
+
+        for (const [, items] of groups.entries()) {
+            if (items.length === 1) {
+                result.push(items[0].file);
+                continue;
+            }
+
+            // Multiple files with the same base name (e.g. GSC0067.ARW and GSC0067.JPG)
+            const previewItems = items.filter(item => PREVIEW_EXTS.has(item.ext));
+            const rawItems = items.filter(item => RAW_EXTS.has(item.ext));
+
+            if (previewItems.length > 0) {
+                const jpgItems = previewItems.filter(item => item.ext === 'jpg' || item.ext === 'jpeg');
+                const candidateList = jpgItems.length > 0 ? jpgItems : previewItems;
+
+                candidateList.sort((a, b) => {
+                    const sizeA = parseInt(a.file.size || '0', 10) || 0;
+                    const sizeB = parseInt(b.file.size || '0', 10) || 0;
+                    if (sizeA && sizeB) return sizeA - sizeB;
+                    return 0;
+                });
+
+                result.push(candidateList[0].file);
+            } else if (rawItems.length > 0) {
+                rawItems.sort((a, b) => {
+                    const sizeA = parseInt(a.file.size || '0', 10) || 0;
+                    const sizeB = parseInt(b.file.size || '0', 10) || 0;
+                    if (sizeA && sizeB) return sizeA - sizeB;
+                    return 0;
+                });
+                result.push(rawItems[0].file);
+            } else {
+                items.sort((a, b) => {
+                    const sizeA = parseInt(a.file.size || '0', 10) || 0;
+                    const sizeB = parseInt(b.file.size || '0', 10) || 0;
+                    if (sizeA && sizeB) return sizeA - sizeB;
+                    return 0;
+                });
+                result.push(items[0].file);
+            }
+        }
+
+        return result;
+    }
+
     // ----------------------------------------------------
     // VIEW 2: CLIENT CULLING VIEW LOGIC
     // ----------------------------------------------------
@@ -4384,7 +4468,7 @@
         // Fetch current selections
         const { data: currentSels } = await supabase
             .from('sortir_selections')
-            .select('photo_id')
+            .select('photo_id, photo_name')
             .eq('event_id', event.id)
             .eq('is_selected', true);
         
@@ -4399,7 +4483,22 @@
         try {
             const res = await fetch(`api/sortir?action=list_drive&folderId=${event.drive_folder_id}`);
             if (!res.ok) throw new Error("Gagal memuat isi Google Drive");
-            store.cullingFiles = await res.json();
+            const rawFiles = await res.json();
+            store.cullingFiles = deduplicatePhotoFiles(rawFiles);
+
+            // Reconcile selections if a client previously selected a RAW pair that is now deduplicated to JPG
+            if (currentSels && currentSels.length > 0) {
+                const selectedBaseNames = new Set(
+                    currentSels.map(s => (s.photo_name ? s.photo_name.split('.').slice(0, -1).join('.').toLowerCase().trim() : ''))
+                );
+                store.cullingFiles.forEach(f => {
+                    const fBase = f.name ? f.name.split('.').slice(0, -1).join('.').toLowerCase().trim() : '';
+                    if (currentSels.some(s => s.photo_id === f.id) || (fBase && selectedBaseNames.has(fBase))) {
+                        store.cullingSelections.add(f.id);
+                    }
+                });
+                updateClientQuotaUI();
+            }
             
             document.getElementById('culling-loading-grid').style.display = 'none';
             

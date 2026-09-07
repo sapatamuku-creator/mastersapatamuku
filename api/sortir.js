@@ -353,7 +353,7 @@ async function sendPaymentSuccessNotification(vendor, planType, grossAmount, ord
 
 // Drive helpers for recursive folder listing
 async function driveList(q, pageToken = null) {
-  const fields = 'nextPageToken,files(id,name,mimeType,parents,thumbnailLink)';
+  const fields = 'nextPageToken,files(id,name,mimeType,parents,thumbnailLink,size)';
   let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&key=${GOOGLE_API_KEY}&fields=${encodeURIComponent(fields)}&pageSize=1000&orderBy=name`;
   if (pageToken) url += `&pageToken=${pageToken}`;
   const res = await fetch(url);
@@ -382,6 +382,95 @@ async function collectFiles(folderId, depth = 0) {
   } while (pageToken);
 
   return results;
+}
+
+// Helper to deduplicate RAW + JPG photo pairs from Google Drive
+function deduplicatePhotoFiles(files) {
+  if (!Array.isArray(files) || files.length <= 1) return files || [];
+
+  const PREVIEW_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'heic']);
+  const RAW_EXTS = new Set([
+    'arw', 'srf', 'sr2',               // Sony
+    'cr2', 'cr3', 'crw',               // Canon
+    'nef', 'nrw',                      // Nikon
+    'raf',                             // Fujifilm
+    'rw2',                             // Panasonic / Lumix
+    'orf',                             // Olympus
+    'pef',                             // Pentax
+    'dng', 'raw', 'rwl', 'iiq'         // Adobe / Leica / Phase One / Generic
+  ]);
+
+  function parseFileName(name) {
+    if (!name) return { base: '', ext: '' };
+    const lastDot = name.lastIndexOf('.');
+    if (lastDot === -1) return { base: name.toLowerCase().trim(), ext: '' };
+    return {
+      base: name.substring(0, lastDot).toLowerCase().trim(),
+      ext: name.substring(lastDot + 1).toLowerCase().trim()
+    };
+  }
+
+  // Group files by parent folder + base filename
+  const groups = new Map();
+  for (const file of files) {
+    const { base, ext } = parseFileName(file.name);
+    const parentKey = (file.parents && file.parents[0]) ? file.parents[0] : '';
+    const key = (parentKey ? parentKey + '::' : '') + (base || file.name.toLowerCase());
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key).push({ file, ext });
+  }
+
+  const result = [];
+
+  for (const [, items] of groups.entries()) {
+    if (items.length === 1) {
+      result.push(items[0].file);
+      continue;
+    }
+
+    // Multiple files with the same base name (e.g. GSC0067.ARW and GSC0067.JPG)
+    // 1. Separate preview files (JPG, JPEG, PNG, WEBP, HEIC) from RAW files
+    const previewItems = items.filter(item => PREVIEW_EXTS.has(item.ext));
+    const rawItems = items.filter(item => RAW_EXTS.has(item.ext));
+
+    if (previewItems.length > 0) {
+      // Prioritize standard JPG/JPEG first
+      const jpgItems = previewItems.filter(item => item.ext === 'jpg' || item.ext === 'jpeg');
+      const candidateList = jpgItems.length > 0 ? jpgItems : previewItems;
+
+      // If multiple preview files exist, pick the one with smaller size (preview) or first
+      candidateList.sort((a, b) => {
+        const sizeA = parseInt(a.file.size || '0', 10) || 0;
+        const sizeB = parseInt(b.file.size || '0', 10) || 0;
+        if (sizeA && sizeB) return sizeA - sizeB;
+        return 0;
+      });
+
+      result.push(candidateList[0].file);
+    } else if (rawItems.length > 0) {
+      // No preview format exists, only multiple RAW formats: pick smaller size or first
+      rawItems.sort((a, b) => {
+        const sizeA = parseInt(a.file.size || '0', 10) || 0;
+        const sizeB = parseInt(b.file.size || '0', 10) || 0;
+        if (sizeA && sizeB) return sizeA - sizeB;
+        return 0;
+      });
+      result.push(rawItems[0].file);
+    } else {
+      // Other formats: pick smaller size or first
+      items.sort((a, b) => {
+        const sizeA = parseInt(a.file.size || '0', 10) || 0;
+        const sizeB = parseInt(b.file.size || '0', 10) || 0;
+        if (sizeA && sizeB) return sizeA - sizeB;
+        return 0;
+      });
+      result.push(items[0].file);
+    }
+  }
+
+  return result;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1085,10 +1174,11 @@ export default async function handler(req, res) {
       if (!GOOGLE_API_KEY) return res.status(500).json({ error: 'GOOGLE_API_KEY not configured' });
 
       const files = await collectFiles(folderId);
-      const imageExts = /\.(jpg|jpeg|png|gif|webp|heic|tif|tiff|cr2|cr3|nef|arw|dng|raf|rw2|orf|raw)$/i;
+      const imageExts = /\.(jpg|jpeg|png|gif|webp|heic|tif|tiff|cr2|cr3|nef|nrw|arw|dng|raf|rw2|orf|pef|raw|rwl|sr2|srf|iiq)$/i;
       const imageFiles = files.filter(f => imageExts.test(f.name) || (f.mimeType && f.mimeType.startsWith('image/')));
+      const deduplicated = deduplicatePhotoFiles(imageFiles);
 
-      return res.status(200).json(imageFiles);
+      return res.status(200).json(deduplicated);
     }
 
     // Default fallback

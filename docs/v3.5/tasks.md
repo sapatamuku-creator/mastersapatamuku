@@ -269,3 +269,12 @@
 - [x] Menyertakan `whatsapp_number` pada respons endpoint `action=get_profile` di `api/sortir.js` agar state nomor WhatsApp vendor tidak terhapus saat auto-sync profil dijalankan.
 - [x] Memperbarui query `initDashboardView` di `sortir.html`: mendukung koneksi ganda (mencocokkan `vendor_id == v.id` ATAU `vendor_id IS NULL` dengan fallback `whatsapp_admin` nomor telepon vendor yang telah dinormalisasi), auto-claim event unassigned di background, serta filter keamanan di frontend agar tidak ada kebocoran event antar vendor.
 - *File:* `sortir.html`, `api/sortir.js`, `sql/migration_v3.5_fix_legacy_vendor_ownership.sql`, `sql/restore_vendor_account_21c16abd.sql`, `docs/v3.5/tasks.md`, `docs/v3.5/DECISION_LOG.md`
+
+---
+
+### [x] Task 32 — Smart RAW & JPG Preview Pairing and Deduplication (GATE-35)
+- [x] Backend Deduplication (`api/sortir.js`): Mengambil metadata `size` dari Google Drive API (`nextPageToken,files(id,name,mimeType,parents,thumbnailLink,size)`). Mengimplementasikan helper `deduplicatePhotoFiles(files)` yang mengelompokkan file berdasarkan `parentFolder::baseFileName` (case-insensitive, tanpa ekstensi). Jika dalam 1 folder terdapat file dengan nama dasar yang sama (misal `GSC0067.ARW` dan `GSC0067.JPG`), memprioritaskan format preview (`.jpg`, `.jpeg`, `.png`, `.webp`, `.heic`) atau ukuran file yang lebih kecil, sehingga hanya file JPG preview yang ditampilkan. Jika hanya ada file RAW atau hanya ada file JPG tunggal (single file), file tersebut tetap dipertahankan dan ditampilkan normal.
+- [x] Frontend Resilient Deduplication (`sortir.html`): Menerapkan fungsi `deduplicatePhotoFiles(files)` pada sisi klien sebelum merender `store.cullingFiles` sebagai *defense-in-depth*.
+- [x] Selection Reconciliation (`sortir.html`): Jika sebelumnya klien telah memilih foto melalui file RAW dan kemudian diduplikasi/dipasangkan ke file JPG preview, seleksi dicocokkan otomatis berdasarkan kesamaan nama dasar (`baseName`) agar centang pilihan foto klien tidak hilang.
+- [x] Kompatibilitas Skrip Copy Fotografer (`downloadCopyScript`): Skrip copy fotografer menggunakan pencocokan wildcard `copy "%SOURCE%\GSC0067.*" "%DEST%\"` berbasis nama dasar file, sehingga klien yang memilih `GSC0067.JPG` otomatis menyalin file RAW dan JPG secara bersamaan di komputer fotografer tanpa perlu mengubah script ekspor.
+- *File:* `api/sortir.js`, `sortir.html`, `docs/v3.5/tasks.md`, `docs/v3.5/DECISION_LOG.md`
