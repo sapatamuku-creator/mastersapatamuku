@@ -2598,7 +2598,7 @@
 
         if (pTitle) pTitle.innerText = title;
         if (pSub) pSub.innerText = subtitle;
-        if (pCounter) pCounter.innerText = '0 / 0 Foto';
+        if (pCounter) pCounter.innerText = '0 dari 0 foto';
         if (pPercent) pPercent.innerText = '0%';
         if (pBar) pBar.style.width = '0%';
         if (pDetail) pDetail.innerText = 'Mohon jangan menutup browser selama proses ini...';
@@ -2607,7 +2607,7 @@
         if (modal) modal.style.display = 'flex';
     }
 
-    function updateProgressModal(current, total, statusText = '', detailText = '') {
+    function updateProgressModal(current, total, statusText = '', detailText = '', rawCount = -1) {
         const pCounter = document.getElementById('progress-modal-counter');
         const pPercent = document.getElementById('progress-modal-percent');
         const pBar = document.getElementById('progress-modal-bar');
@@ -2615,7 +2615,10 @@
 
         const percent = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
 
-        if (pCounter) pCounter.innerText = `${current} / ${total} Foto`;
+        // Format: "116 dari 402 foto (116 RAW pasangan)" jika ada RAW pairs
+        let counterText = `${current} dari ${total} foto`;
+        if (rawCount > 0) counterText += ` (${rawCount} RAW pasangan)`;
+        if (pCounter) pCounter.innerText = counterText;
         if (pPercent) pPercent.innerText = `${percent}%`;
         if (pBar) pBar.style.width = `${percent}%`;
         if (detailText && pDetail) pDetail.innerText = detailText;
@@ -4247,7 +4250,8 @@
                                     copiedCount, 
                                     totalTargetCount, 
                                     `Menyalin: ${fileName}`, 
-                                    `${copiedCount} dari ${totalTargetCount} foto tersalin (${matchedTargets.size} target cocok)`
+                                    `Folder: ${sourceHandle.name}`,
+                                    matchedTargets.size
                                 );
 
                                 // Tiny pause so browser updates progress UI smoothly
@@ -5997,7 +6001,8 @@
                     i + 1, 
                     totalToCopy, 
                     `Menyalin: ${f.name}`, 
-                    `${i + 1} dari ${totalToCopy} foto (${paired > 0 ? paired + ' RAW pasangan' : '100%'})`
+                    `Folder: ${dirHandle.name}`,
+                    paired
                 );
 
                 await new Promise(r => setTimeout(r, 12));
