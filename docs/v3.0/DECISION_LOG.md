@@ -39,6 +39,9 @@
 | 2026-08-26 | FIX-PROFILE-LOGISTICS-PERSISTENCE-AND-RESOLVER | LANJUT | Fix race condition subdomain_resolver di profile.html (tunggu SAPATAMU_RESOLVED sebelum fetch), perbaiki session ID resolution, tambahkan instant hydration local cache (sapatamu_logistics_ssId), dan update GAS action ke saveWelcomePhotos. User: lanjut dan push |
 | 2026-08-26 | FEAT-ANGPAO-MOBILE-BOTTOM-SHEET | LANJUT | Terapkan sistem Mobile Bottom Sheet (<680px) pada dialog input angpao & kado fisik di angpao.html: grip handle bar, slide-up 60 FPS, touch-friendly numpad/shortcuts, safe area padding, dan swipe down dismiss. User: lanjut |
 | 2026-08-26 | PERF-ANGPAO-MOBILE-SCANNER-RATIO-AND-RESPONSIVE | LANJUT | Kompakkan rasio scanner barcode mobile (max-width 110px) dan pangkas header di angpao.html agar area daftar tamu lega (>75% viewport), plus adaptasi grid tablet 2-kolom. User: maksud saya ukuran scanner barcodenya juga di perkecil rasionya untuk mobile mode |
+| 2026-09-14 | AUTO-SYNC-MASTER opsi C | LANJUT | onEdit Master + timer 10 mnt di CentralBackend.gs (handleMasterEdit, autoSyncMasterClientsTimed, setupMasterAutoSyncTrigger), reuse syncClientToSupabaseWithResult, tanpa endpoint baru. Risiko: RLS belum fix ikut gagal, kuota UrlFetch 2x, delete baris Sheet tidak hapus Supabase. User: C |
+| 2026-09-14 | FIX-409-SUBDOMAIN subdomain saja | LANJUT | Upsert clients pakai ?on_conflict=subdomain di syncClientToSupabaseWithResult agar ClaraClairyn vs claraclairyn tidak 409. Tanpa normalisasi massal username. User: subdomain saja |
+| 2026-09-14 | REALTIME-INLINE-RETRY opsi A | LANJUT | Retry inline 2x + status jujur sbOk/sbCode di register/update, onEdit per-baris, timer 10 mnt dimatikan (safety harian opsional), frontend retry hanya update idempotent. Sentuh CentralBackend.gs + owner.html. User: opsi A |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.

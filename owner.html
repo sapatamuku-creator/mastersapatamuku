@@ -722,26 +722,42 @@
         const btn = row.querySelector('.save-row-btn');
         btn.innerText = '⏳...'; btn.disabled = true;
 
+        // OPSI A: update idempotent — aman retry full request max 2x (jeda 2 dtk + 8 dtk) jika Supabase transient gagal.
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        const retryableSb = (code) => code === 0 || code === 408 || code === 429 || (code >= 500 && code <= 599);
+        const postUpdate = () => fetch(GAS_SYNC_URL, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "updateOwnerClient",
+                adminPassword: adminPassword,
+                originalUsername: username,
+                clientData: payload
+            })
+        }).then(r => r.json());
+
         try {
-            const res = await fetch(GAS_SYNC_URL, {
-                method: "POST",
-                body: JSON.stringify({ 
-                    action: "updateOwnerClient", 
-                    adminPassword: adminPassword,
-                    originalUsername: username,
-                    clientData: payload
-                })
-            });
-            const out = await res.json();
+            let out = await postUpdate();
             if (out.status !== 'success') throw new Error(out.message || "Gagal update di Backend");
-            
+            // Retry frontend hanya jika Sheet OK tapi Supabase transient gagal (GAS sudah retry inline 2x).
+            for (const wait of [2000, 8000]) {
+                if (out.sbOk !== false || !retryableSb(out.sbCode)) break;
+                btn.innerText = '🔁...';
+                await sleep(wait);
+                out = await postUpdate();
+                if (out.status !== 'success') throw new Error(out.message || "Gagal update di Backend");
+            }
+
             const targetIdx = allClients.findIndex(c => c.username === username);
             if (targetIdx !== -1) {
                 allClients[targetIdx] = { ...allClients[targetIdx], ...payload };
             }
             if (payload.subdomain) row.setAttribute('data-username', payload.subdomain);
             row.classList.remove('dirty');
-            showToast("✅ Tersimpan di Supabase & Spreadsheet!", "green");
+            if (out.sbOk === false) {
+                showToast(`⚠️ Spreadsheet OK, Supabase pending (${out.sbCode}). Ulangi Simpan / tunggu safety sync.`, "gold");
+            } else {
+                showToast("✅ Tersimpan di Supabase & Spreadsheet!", "green");
+            }
         } catch (e) {
             showToast("❌ Error: " + e.message, "red");
         }
@@ -941,6 +957,8 @@
             address: ""
         };
 
+        // OPSI A: register NON-idempotent — JANGAN retry full request (duplikat Sheet+file).
+        // GAS sudah retry inline bagian Supabase-nya; frontend cukup baca status jujur.
         try {
             const res = await fetch(GAS_SYNC_URL, {
                 method: "POST",
@@ -948,7 +966,13 @@
             });
             const out = await res.json();
             if (out.status === 'success') {
-                showToast("✅ Klien berhasil ditambahkan dan diaktifkan!", "green");
+                const sbOk = out.data && out.data.sbOk;
+                const sbCode = out.data && out.data.sbCode;
+                if (sbOk === false) {
+                    showToast(`⚠️ Akun dibuat (Sheet OK), Supabase pending (${sbCode}). Cek login / tunggu safety sync, jangan daftar ulang.`, "gold");
+                } else {
+                    showToast("✅ Klien berhasil ditambahkan dan diaktifkan!", "green");
+                }
                 closeAddClientModal();
                 loadClients();
             } else {

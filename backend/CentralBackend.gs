@@ -339,9 +339,10 @@ function handleRegisterAndActivate(data) {
       data.package || "", tgl  // L: Paket, M: Event Date (slot check)
     ]);
 
-    // Update/Sync ke Supabase dengan status Active + SSID
+    // Update/Sync ke Supabase dengan status Active + SSID (OPSI A: retry inline, status jujur)
+    var sbRes = { code: 0, ok: false, raw: "not-attempted" };
     try {
-      syncClientToSupabase({
+      sbRes = syncClientToSupabaseWithRetry({
         username: sub, ssid: newSsId,
         password: hashedPassword, whatsapp: data.whatsapp,
         wedding_date: tgl, created_at: new Date().toISOString(),
@@ -349,8 +350,12 @@ function handleRegisterAndActivate(data) {
         category: cat, subdomain: sub,
         client_name: clientName, package: data.package || ""
       });
-      syncAdminPasswordToSupabase();
+      if (!sbRes.ok) console.error("Sync Supabase aktivasi gagal [" + sub + "]: " + sbRes.raw);
+      try { syncAdminPasswordToSupabase(); } catch (adminErr) {
+        console.error("Sync admin password gagal: " + adminErr.toString());
+      }
     } catch (e) {
+      sbRes = { code: 0, ok: false, raw: String(e).substring(0, 300) };
       console.error("Sync Supabase aktivasi gagal: " + e.toString());
     }
 
@@ -396,8 +401,8 @@ function handleRegisterAndActivate(data) {
 
     return createResponse({
       status: "success",
-      message: "Akun berhasil diaktifkan!",
-      data: { ssId: newSsId, fileName: finalFileName }
+      message: sbRes.ok ? "Akun berhasil diaktifkan!" : "Sheet & Spreadsheet OK, Supabase pending (" + sbRes.code + ") — ditangkap safety sync berikutnya.",
+      data: { ssId: newSsId, fileName: finalFileName, sbCode: sbRes.code, sbOk: sbRes.ok, sbRaw: sbRes.raw }
     });
   } catch (err) {
     // 🔴 LOG ke system_logs — error aktivasi akun adalah kejadian kritis
@@ -562,18 +567,27 @@ function handleUpdateOwnerClient(data) {
     ];
     sheet.getRange(rowIndex, 1, 1, 13).setValues([newRow]);
 
-    // Sync perubahan ke Supabase
+    // Sync perubahan ke Supabase (OPSI A: retry inline, status jujur; idempotent aman di-retry frontend)
+    var sbUpd = { code: 0, ok: false, raw: "not-attempted" };
     try {
-      syncClientToSupabase({
+      sbUpd = syncClientToSupabaseWithRetry({
         username: newRow[0], ssid: newRow[1], password: newRow[2],
         whatsapp: newRow[3], wedding_date: newRow[4],
         created_at: new Date(newRow[5]).toISOString(),
         email: newRow[6], status: newRow[7], category: newRow[8],
         subdomain: newRow[9], client_name: newRow[10], package: newRow[11] || ""
       });
-    } catch (e) { console.error("Sync update owner ke Supabase gagal: " + e.toString()); }
+      if (!sbUpd.ok) console.error("Sync update owner ke Supabase gagal: " + sbUpd.raw);
+    } catch (e) {
+      sbUpd = { code: 0, ok: false, raw: String(e).substring(0, 300) };
+      console.error("Sync update owner ke Supabase gagal: " + e.toString());
+    }
 
-    return createResponse({ status: "success", message: "Data client berhasil diperbarui." });
+    return createResponse({
+      status: "success",
+      message: sbUpd.ok ? "Data client berhasil diperbarui." : "Spreadsheet OK, Supabase pending (" + sbUpd.code + ") — ulangi Simpan atau tunggu safety sync.",
+      sbCode: sbUpd.code, sbOk: sbUpd.ok, sbRaw: sbUpd.raw
+    });
   } catch (err) {
     return createResponse({ status: "error", message: "Gagal update data: " + err.toString() });
   }
@@ -1525,7 +1539,9 @@ function syncClientToSupabase(rowData) {
 }
 
 function syncClientToSupabaseWithResult(rowData) {
-  const sbUrl = SUPABASE_URL + "/rest/v1/clients";
+  // FIX-409: upsert berdasar subdomain (unique, lowercase) agar beda
+  // kapital username (ClaraClairyn vs claraclairyn) tidak 409.
+  const sbUrl = SUPABASE_URL + "/rest/v1/clients?on_conflict=subdomain";
   
   const payload = {
     username: rowData.username,
@@ -1556,6 +1572,43 @@ function syncClientToSupabaseWithResult(rowData) {
 
   const res = supabaseFetch(sbUrl, options);
   return "Status: " + res.getResponseCode() + ", Response: " + res.getContentText();
+}
+
+// --- OPSI A: retry inline + status jujur (tanpa polling boros) ---
+function parseSbCode(resText) {
+  try {
+    var m = String(resText || "").match(/Status:\s*(\d+)/);
+    return m ? parseInt(m[1], 10) : 0;
+  } catch (e) { return 0; }
+}
+
+function isSbRetryable(code) {
+  // Retry hanya untuk transient. 4xx (400/401/403/409) percuma di-retry.
+  return code === 0 || code === 408 || code === 429 ||
+    (code >= 500 && code <= 599);
+}
+
+function isSbOk(code) { return code === 200 || code === 201 || code === 204; }
+
+// Max 3 percobaan (1 + 2 retry, jeda 2 dtk + 8 dtk). Non-retryable langsung stop.
+function syncClientToSupabaseWithRetry(rowData) {
+  var lastText = "";
+  var lastCode = 0;
+  var waits = [2000, 8000];
+  for (var attempt = 1; attempt <= 3; attempt++) {
+    try {
+      lastText = syncClientToSupabaseWithResult(rowData);
+    } catch (e) {
+      lastText = "Status: 0, Response: " + e.toString();
+    }
+    lastCode = parseSbCode(lastText);
+    if (isSbOk(lastCode)) return { code: lastCode, ok: true, raw: String(lastText).substring(0, 300) };
+    if (!isSbRetryable(lastCode) || attempt === 3) {
+      return { code: lastCode, ok: false, raw: String(lastText).substring(0, 300) };
+    }
+    try { Utilities.sleep(waits[attempt - 1] || 2000); } catch (sleepErr) {}
+  }
+  return { code: lastCode, ok: false, raw: String(lastText).substring(0, 300) };
 }
 
 function syncAdminPasswordToSupabase() {
@@ -2176,6 +2229,149 @@ function cleanDemoData30Days() {
   } catch (e) {
     messageLog.push("Gagal membersihkan database Supabase: " + e.toString());
   }
-  
+
   return messageLog.join(" | ");
+}
+
+// ============================================================
+// AUTO-SYNC MASTER SHEET -> SUPABASE (OPSI A: inline retry + onEdit realtime)
+// Timer 10 mnt DIMATIKAN. Safety net opsional via setupMasterNightlySafety().
+// Reuse syncClientToSupabaseWithResult() — tanpa endpoint baru.
+// ============================================================
+
+// Helper: bangun clientData dari 1 baris Master (kolom A-M, index 0-12).
+// Disamakan dengan parsing di syncAllClientsToSupabase().
+function buildMasterClientData(row, dRow) {
+  var username = String(row[0] || "").trim();
+  if (!username) return null;
+
+  var createdAtVal = new Date().toISOString();
+  if (row[5]) {
+    try {
+      createdAtVal = new Date(row[5]).toISOString();
+    } catch (dateErr) {
+      // fallback: waktu sekarang (sama seperti bulk sync)
+    }
+  }
+
+  var pwd = row[2];
+  if (pwd instanceof Date) {
+    pwd = String((dRow && dRow[2]) || "").replace(/\s+/g, '').toLowerCase();
+  } else {
+    pwd = String(pwd || "").trim();
+  }
+
+  return {
+    username: username,
+    ssid: String(row[1] || "").trim(),
+    password: pwd,
+    whatsapp: String(row[3] || "").trim(),
+    wedding_date: String(row[4] || "").trim(),
+    created_at: createdAtVal,
+    email: String(row[6] || "").trim(),
+    status: String(row[7] || "Active").trim(),
+    category: String(row[8] || "wedding").trim(),
+    subdomain: String(row[9] || username).trim(),
+    client_name: String(row[10] || "").trim(),
+    package: String(row[11] || "").trim()
+  };
+}
+
+// Installable onEdit: edit manual di Master Sheet langsung push baris itu.
+// Catatan: edit via API/appendRow TIDAK memicu onEdit — ditangkap timer.
+function handleMasterEdit(e) {
+  try {
+    if (!e || !e.range || !e.source) return;
+    var srcId = "";
+    try { srcId = e.source.getId(); } catch (idErr) { return; }
+    if (srcId !== MASTER_SS_ID) return;
+
+    var sheet = e.range.getSheet();
+    if (!sheet || sheet.getName() !== MASTER_SHEET_NAME) return;
+
+    var editedRow = e.range.getRow();
+    if (editedRow <= 1) return; // header + password admin K1
+
+    var ss = SpreadsheetApp.openById(MASTER_SS_ID);
+    var sh = ss.getSheetByName(MASTER_SHEET_NAME);
+    var lastCol = Math.min(Math.max(sh.getLastColumn(), 12), 13);
+    var values = sh.getRange(editedRow, 1, 1, lastCol).getValues()[0];
+    var dValues = sh.getRange(editedRow, 1, 1, lastCol).getDisplayValues()[0];
+
+    var clientData = buildMasterClientData(values, dValues);
+    if (!clientData) return;
+
+    // OPSI A: realtime per-baris (1 call + retry transient), bukan full-scan.
+    var sbOne = syncClientToSupabaseWithRetry(clientData);
+    console.log("Auto-sync onEdit [" + clientData.username + "]: code=" + sbOne.code + " ok=" + sbOne.ok + " " + sbOne.raw);
+  } catch (err) {
+    console.error("handleMasterEdit error: " + err.toString());
+  }
+}
+
+// Safety net manual/harian: full sync Master -> clients.
+// Dipakai via setupMasterNightlySafety() atau Run manual; bukan timer 10 mnt.
+function autoSyncMasterClientsTimed() {
+  try {
+    var result = syncAllClientsToSupabase();
+    console.log("Auto-sync timed Master->Supabase selesai. " + result);
+    return result;
+  } catch (err) {
+    var msg = "autoSyncMasterClientsTimed error: " + err.toString();
+    console.error(msg);
+    return msg;
+  }
+}
+
+// OPSI A: hanya onEdit realtime (1 call per edit). Timer 10 mnt DIMATIKAN agar tidak boros.
+// Jalankan SEKALI di editor setelah deploy untuk migrasi dari opsi C.
+function setupMasterAutoSyncTrigger() {
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    for (var i = 0; i < triggers.length; i++) {
+      var fn = triggers[i].getHandlerFunction();
+      if (fn === "handleMasterEdit" || fn === "autoSyncMasterClientsTimed") {
+        ScriptApp.deleteTrigger(triggers[i]);
+      }
+    }
+
+    var masterSs = SpreadsheetApp.openById(MASTER_SS_ID);
+    ScriptApp.newTrigger("handleMasterEdit")
+      .forSpreadsheet(masterSs)
+      .onEdit()
+      .create();
+
+    var msg = "Master auto-sync OPSI A: onEdit AKTIF, timer 10 mnt DIMATIKAN. Inline retry 2x di tiap aksi.";
+    console.log(msg);
+    return msg;
+  } catch (e) {
+    var errMsg = "Gagal pasang Master auto-sync: " + e.toString();
+    console.error(errMsg);
+    return errMsg;
+  }
+}
+
+// Safety net opsional: full-scan 1x sehari jam 03:00 (bukan tiap 10 mnt).
+// Jalankan manual hanya jika butuh jaring pengaman (mis. tutup tab saat retry).
+function setupMasterNightlySafety() {
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    for (var i = 0; i < triggers.length; i++) {
+      if (triggers[i].getHandlerFunction() === "autoSyncMasterClientsTimed") {
+        ScriptApp.deleteTrigger(triggers[i]);
+      }
+    }
+    ScriptApp.newTrigger("autoSyncMasterClientsTimed")
+      .timeBased()
+      .everyDays(1)
+      .atHour(3)
+      .create();
+    var msg = "Safety net AKTIF: full-scan 1x sehari jam 03:00.";
+    console.log(msg);
+    return msg;
+  } catch (e) {
+    var errMsg = "Gagal pasang safety net: " + e.toString();
+    console.error(errMsg);
+    return errMsg;
+  }
 }
