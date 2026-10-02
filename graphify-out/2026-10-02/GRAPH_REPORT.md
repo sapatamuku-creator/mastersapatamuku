@@ -1,16 +1,16 @@
-# Graph Report - mastersapatamuku  (2026-10-02)
+# Graph Report - mastersapatamuku  (2026-09-08)
 
 ## Corpus Check
-- 193 files · ~1,048,683 words
+- 193 files · ~1,048,184 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1913 nodes · 1986 edges · 181 communities (150 shown, 31 thin omitted)
+- 1912 nodes · 1985 edges · 181 communities (150 shown, 31 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `20a0b4a3`
+- Built from commit: `390bbd51`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -294,8 +294,8 @@ Cohesion: 0.20
 Nodes (9): 1. PEMETAAN FILE & PERAN DALAM SISTEM, 2. DIAGRAM KERANGKA & ALUR ROUTING, 3. AUDIT JALUR A: PURE LOCAL LAN BRIDGE (`sortir_bridge.py`), 4. AUDIT JALUR B: WEB BROWSER HYBRID (`sortir.html`), 5. KESIMPULAN AUDIT & SOLUSI TERBAIK, Alur Eksekusi & Titik Bottleneck:, 📑 DOKUMEN AUDIT ARSITEKTUR & ROUTING KERANGKA, Endpoint Routing & Cara Kerja: (+1 more)
 
 ### Community 31 - "Vercel API: Create Payment Handler"
-Cohesion: 0.09
-Nodes (21): 📊 1. Latar Belakang & Analisis Kebutuhan, 🛡️ 2. Format Decision Gate (5-Point Standard SapaTamu), ⏱️ 3. Audit Log & Timeline Eksekusi Teknis, 🧪 4. Bukti Verifikasi Pengujian (E2E Test Output)��� 4. Bukti Verifikasi Pengujian (E2E Test Output), Decision Log — SapaTamu v3.5 (Sortir SaaS, Hybrid Access & Subscription), GATE-01: Pemisahan Akses Halaman `/sortir` (Public Free vs Gated Auth), GATE-02: Registrasi Vendor dengan OTP Email (1-Email-1-Akun Unik), GATE-03: Paywall Subscription, Kuota Free Tier 10x & Override Reset (+13 more)
+Cohesion: 0.10
+Nodes (20): 📊 1. Latar Belakang & Analisis Kebutuhan, 🛡️ 2. Format Decision Gate (5-Point Standard SapaTamu), ⏱️ 3. Audit Log & Timeline Eksekusi Teknis, 🧪 4. Bukti Verifikasi Pengujian (E2E Test Output)��� 4. Bukti Verifikasi Pengujian (E2E Test Output), Decision Log — SapaTamu v3.5 (Sortir SaaS, Hybrid Access & Subscription), GATE-01: Pemisahan Akses Halaman `/sortir` (Public Free vs Gated Auth), GATE-02: Registrasi Vendor dengan OTP Email (1-Email-1-Akun Unik), GATE-03: Paywall Subscription, Kuota Free Tier 10x & Override Reset (+12 more)
 
 ### Community 32 - "Vercel API: Get Email Handler"
 Cohesion: 0.13
@@ -682,7 +682,7 @@ Cohesion: 0.29
 Nodes (7): scripts, build, check, dev, lint, start, typecheck
 
 ## Knowledge Gaps
-- **1214 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1209 more)
+- **1213 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1208 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **31 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -696,10 +696,10 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1214 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1213 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: List Drive Files` be split into smaller, more focused modules?**
   _Cohesion score 0.12857142857142856 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: Create Payment Handler` be split into smaller, more focused modules?**
-  _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._

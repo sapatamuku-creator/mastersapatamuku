@@ -268,8 +268,8 @@
 | 11 | `2026-09-01 10:33:00` | **GATE-06**: Aligment Badge Dipilih & Pembersihan Copy Midtrans | `sortir.html` | `ec5bdaa` |
 | 12 | `2026-09-01 10:41:00` | Auto-Sync Profil Live & Fallback Check Payment | `sortir.html`, `api/sortir.js` | `f493dc9` |
 | 13 | `2026-09-01 11:22:00` | **GATE-07**: Dropdown Kode Negara, Sanitasi WA Fonnte, Reminder H-7 & Tabel `sortir_logs` | `sortir.html`, `api/sortir.js`, `sql/` | `b170c05` |
-| 14 | `2026-09-01 12:15:00` | **GATE-08**: Fitur Lupa Password, Email Link Reset, Anti-Reuse Password & Success Modal | `sortir.html`, `api/sortir.js`, `sql/` | `b12751a` |
 | 15 | `2026-09-01 14:40:00` | **GATE-09**: Notifikasi Struk Pembayaran & Aktivasi Paket PRO (Email & WA) | `api/sortir.js`, `backend/`, `DECISION_LOG.md` | *Pending Commit* |
+| 16 | `2026-10-02 10:45:00` | **GATE-33**: Perbaikan Filter Event Milik Vendor pada Dashboard Sortir | `sortir.html`, `DECISION_LOG.md` | *Pending Commit* |
 
 ---
 
@@ -290,3 +290,15 @@
 - **Old Password Login**: Ditolak HTTP 401.
 - **New Password Login**: Sukses HTTP 200.
 - **Restored**: Password dikembalikan ke `qwerty123` & verifikasi sukses.
+
+---
+
+### GATE-33: Perbaikan Filter Event Milik Vendor pada Dashboard Sortir (Tampil Utuh 9 Event)
+- **Timestamp Decision**: `2026-10-02T10:45:00+07:00`
+- **Status**: `APPROVED & IMPLEMENTED`
+1. **Fungsi Perubahan**: Memastikan semua event yang memiliki `vendor_id` sama dengan ID vendor yang sedang login langsung ditampilkan secara utuh tanpa difilter ulang oleh nomor WhatsApp admin atau nama event.
+2. **Dari Kode Sebelumnya**: Pada `sortir.html` baris 3405–3414, kode mengecek varian nomor WA dan keyword 'knowhere' pada event_name meskipun `e.vendor_id === v.id`, sehingga event dengan nomor WA berbeda (seperti event "Widya & Sanli") otomatis tersembunyi.
+3. **Mengarah Kemana**: Pada `sortir.html`, event yang memiliki `e.vendor_id === v.id` langsung mengembalikan `return true;`.
+4. **Cabang Routing Terdampak**: Dashboard Sortir Fotografer (`/sortir`).
+5. **Risiko & Trade-off Jujur**: Risiko rendah, tidak mengubah struktur database maupun routing API. Event vendor ditampilkan utuh 9 item.
+

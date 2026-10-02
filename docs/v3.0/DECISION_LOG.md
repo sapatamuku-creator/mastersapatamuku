@@ -42,6 +42,7 @@
 | 2026-09-14 | AUTO-SYNC-MASTER opsi C | LANJUT | onEdit Master + timer 10 mnt di CentralBackend.gs (handleMasterEdit, autoSyncMasterClientsTimed, setupMasterAutoSyncTrigger), reuse syncClientToSupabaseWithResult, tanpa endpoint baru. Risiko: RLS belum fix ikut gagal, kuota UrlFetch 2x, delete baris Sheet tidak hapus Supabase. User: C |
 | 2026-09-14 | FIX-409-SUBDOMAIN subdomain saja | LANJUT | Upsert clients pakai ?on_conflict=subdomain di syncClientToSupabaseWithResult agar ClaraClairyn vs claraclairyn tidak 409. Tanpa normalisasi massal username. User: subdomain saja |
 | 2026-09-14 | REALTIME-INLINE-RETRY opsi A | LANJUT | Retry inline 2x + status jujur sbOk/sbCode di register/update, onEdit per-baris, timer 10 mnt dimatikan (safety harian opsional), frontend retry hanya update idempotent. Sentuh CentralBackend.gs + owner.html. User: opsi A |
+| 2026-10-02 | FIX-SORTIR-EVENT-LIST-FILTER | LANJUT | Hapus filter nomor WA & keyword 'knowhere' pada event yang sudah memiliki vendor_id cocok di sortir.html, sehingga seluruh 9 event vendor tampil utuh. User: LANJUT dan PUSH |
 
 ## Cara pakai
 - Saat GATE disetujui user (`LANJUT`), tambahkan baris di tabel atas.
