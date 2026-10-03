@@ -179,6 +179,35 @@
                 background-position: 200% 0;
             }
         }
+
+        /* 3-bucket responsive: mobile <768px, tablet 768-1023px, desktop >=1024px */
+        @media (max-width: 767px) {
+            .premium-card {
+                padding: 28px 20px;
+                border-radius: 28px;
+            }
+            .sapatamu-btn {
+                width: 100%;
+                min-height: 48px;
+                padding: 14px 20px;
+            }
+            .sapatamu-input {
+                font-size: 16px; /* cegah auto-zoom iOS */
+                padding: 14px 18px;
+            }
+            .photo-card {
+                aspect-ratio: 16/10;
+            }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .premium-card {
+                padding: 36px 28px;
+                border-radius: 32px;
+            }
+            .sapatamu-btn {
+                min-height: 46px;
+            }
+        }
     </style>
     <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
@@ -304,15 +333,24 @@
     <script>
         let currentPhotos = [];
 
-        window.showSapaModal = function(title, msg, icon = "✨") {
+        window.showSapaModal = function(title, msg, icon = "✨", onConfirm = null) {
+            var modal = document.getElementById('sapa-notify-modal');
+            if (!modal) return;
             document.getElementById('notify-title').innerText = title;
-            document.getElementById('notify-msg').innerText = msg;
+            document.getElementById('notify-msg').innerHTML = msg;
             document.getElementById('notify-icon').innerText = icon;
-            document.getElementById('sapa-notify-modal').style.display = 'flex';
+            modal.style.display = 'flex';
+            window._modalConfirmCallback = onConfirm;
         };
 
         window.closeSapaModal = function() {
-            document.getElementById('sapa-notify-modal').style.display = 'none';
+            var modal = document.getElementById('sapa-notify-modal');
+            if (modal) modal.style.display = 'none';
+            if (typeof window._modalConfirmCallback === 'function') {
+                var cb = window._modalConfirmCallback;
+                window._modalConfirmCallback = null;
+                cb();
+            }
         };
 
         function markUnsaved() {
@@ -463,20 +501,34 @@
             return rawUrl;
         }
 
-        function addMedia(type = 'photo') {
+        window.addMedia = function(type = 'photo') {
             const input = document.getElementById('new_photo');
-            let rawUrl = input.value.trim();
+            if (!input) return;
+            let rawUrl = (input.value || '').trim();
             if (!rawUrl) {
-                showSapaModal("Input Kosong", "Silakan paste link Google Drive / YouTube / URL media terlebih dahulu.", "⚠️");
+                window.showSapaModal("Input Kosong", "Silakan paste link Google Drive / YouTube / URL media terlebih dahulu.", "⚠️");
                 return;
             }
 
             const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
-            const match = rawUrl.match(driveRegex);
+            let match = rawUrl.match(driveRegex);
+            let fileId = (match && match[1]) ? match[1] : null;
+
+            // Dukung paste terpotong / bare ID (mis. hanya "1bPOXKzTICD7nzjL/view?usp=..."): ambil segmen alfanumerik terpanjang
+            if (!fileId) {
+                const bareId = rawUrl.match(/^[\w-]{25,}$/);
+                if (bareId) {
+                    fileId = bareId[0];
+                } else if (rawUrl.indexOf('http') !== 0 && rawUrl.indexOf('/') !== -1) {
+                    const seg = rawUrl.split('/').filter(Boolean).sort(function(a, b) { return b.length - a.length; })[0] || '';
+                    const cleaned = seg.split('?')[0].split('&')[0];
+                    if (/^[\w-]{20,}$/.test(cleaned)) fileId = cleaned;
+                }
+            }
+
             let finalUrl = rawUrl;
 
-            if (match && match[1] && (rawUrl.includes("drive.google.com") || rawUrl.includes("google.com/file") || rawUrl.includes("lh3.googleusercontent.com"))) {
-                const fileId = match[1];
+            if (fileId && (rawUrl.includes("drive.google") || rawUrl.includes("google.com/file") || rawUrl.includes("lh3.googleusercontent.com") || fileId === rawUrl || rawUrl.includes(fileId))) {
                 if (type === 'video') {
                     finalUrl = `https://drive.google.com/file/d/${fileId}/preview#video`;
                 } else {
@@ -485,17 +537,25 @@
                 }
             } else if (type === 'video' && !isVideoUrl(finalUrl) && !isYouTubeUrl(finalUrl)) {
                 finalUrl = finalUrl + '#video';
+            } else if (type === 'photo' && finalUrl.indexOf('http') !== 0 && !fileId) {
+                window.showSapaModal("Link Tidak Valid", "Link foto tidak dikenali. Paste link Google Drive lengkap (https://drive.google.com/file/d/.../view) atau URL gambar https://...", "⚠️");
+                return;
             }
 
             currentPhotos.push(finalUrl);
             input.value = "";
             renderGallery();
             markUnsaved();
+        };
+
+        function addMedia(type = 'photo') {
+            return window.addMedia(type);
         }
 
         function addPhoto() {
-            addMedia('photo');
+            return window.addMedia('photo');
         }
+        window.addPhoto = addPhoto;
 
         function renderGallery() {
             const container = document.getElementById('photo_gallery');
@@ -662,43 +722,20 @@
                     status.innerText = "Berhasil disimpan ke Supabase TV!";
                     status.className = "text-xs font-semibold text-green-500";
                 } else {
-                    showSapaModal("Gagal", "Gagal menyimpan: " + e.toString(), "❌");
+                    window.showSapaModal("Gagal", "Gagal menyimpan: " + e.toString(), "❌");
                     status.innerText = "Gagal menyimpan!";
                     status.className = "text-xs font-semibold text-red-500";
                 }
-            }
-        function showSapaModal(title, msg, icon = "✨", onConfirm = null) {
-            let modal = document.getElementById('sapa-notify-modal');
-            if (!modal) return;
-            document.getElementById('notify-title').innerText = title;
-            document.getElementById('notify-msg').innerHTML = msg;
-            document.getElementById('notify-icon').innerText = icon;
-            modal.style.display = 'flex';
-            window._modalConfirmCallback = onConfirm;
-        }
-
-        function closeSapaModal() {
-            const modal = document.getElementById('sapa-notify-modal');
-            if (modal) modal.style.display = 'none';
-            if (typeof window._modalConfirmCallback === 'function') {
-                const cb = window._modalConfirmCallback;
-                window._modalConfirmCallback = null;
-                cb();
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "SIMPAN KE SERVER";
             }
         }
+        window.savePhotos = savePhotos;
+        window.removePhoto = removePhoto;
 
         window.addEventListener('DOMContentLoaded', loadGallery);
     </script>
-
-    <!-- Custom Sapa Notification Modal -->
-    <div id="sapa-notify-modal" style="position: fixed; inset: 0; background: rgba(74, 63, 53, 0.45); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 9999999;">
-        <div style="background: #fff; width: 90%; max-width: 420px; border-radius: 28px; padding: 40px 32px; text-align: center; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border); animation: modalPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);">
-            <div id="notify-icon" style="font-size: 48px; margin-bottom: 16px; line-height: 1;">✨</div>
-            <h2 id="notify-title" style="font-family: 'Lora', serif; font-size: 22px; font-weight: 700; color: var(--text-main); margin-bottom: 12px;">Pesan</h2>
-            <div id="notify-msg" style="font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 28px;">Pesan notifikasi akan muncul di sini.</div>
-            <button onclick="closeSapaModal()" class="w-full bg-[#E07B7B] hover:bg-[#d96262] text-white py-3 px-4 rounded-xl font-bold text-sm tracking-wide uppercase transition-all shadow-md">Mengerti</button>
-        </div>
-    </div>
 
 <script src="offline-db.js"></script>
 <script src="sync-engine.js"></script>
