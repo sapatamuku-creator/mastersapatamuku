@@ -2047,6 +2047,19 @@
                         </div>
                     </div>
                     <div id="imp-dup-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; padding-right: 2px;"></div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px;">
+                        <span style="font-size: 9px; color: var(--text-muted); font-weight: 700;">Tampil:</span>
+                        <select id="imp-dup-cap" onchange="setDupCap(this.value)" aria-label="Jumlah kartu pembanding yang ditampilkan" style="background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 10px; font-weight: 800; color: var(--text-main); outline: none; cursor: pointer;">
+                            <option value="30">30</option>
+                            <option value="40">40</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="all">Semua (tanpa limit)</option>
+                            <option value="custom">Custom…</option>
+                        </select>
+                        <input type="number" id="imp-dup-cap-custom" min="1" max="10000" step="1" placeholder="Jml…" aria-label="Jumlah custom kartu pembanding" style="display: none; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 10px; font-weight: 800; color: var(--text-main); outline: none; width: 84px;" onchange="setDupCapCustom(this.value)">
+                        <span id="imp-dup-shown" style="font-size: 9px; color: var(--text-muted);"></span>
+                    </div>
                     <div id="imp-dup-overflow" style="display: none; font-size: 9px; color: var(--text-muted); margin-top: 6px; font-style: italic;"></div>
                 </div>
                 <style>
@@ -4610,10 +4623,17 @@
     let importAllSheets = false;
     let lastImportBatch = null;
     let lastImportReport = null;
-    // Keputusan per tamu duplikat: { [kodeUnik]: 'skip' | 'fill' | 'overwrite' }
+    // Keputusan per tamu duplikat: { [idxBaris]: 'skip' | 'fill' | 'overwrite' }
     let impRowDecisions = {};
     // Hasil analisis terakhir (untuk render keputusan + eksekusi tanpa hitung ulang)
     let lastImportAnalysis = null;
+    // Batas kartu pembanding yang dirender: angka | 'all' (fleksibel via UI, tersimpan per browser)
+    let impDupCap = 30;
+    try {
+        const savedCap = localStorage.getItem("sapatamu_import_dupcap_v1");
+        if (savedCap === "all") impDupCap = "all";
+        else if (parseInt(savedCap) > 0) impDupCap = parseInt(savedCap);
+    } catch (e) {}
 
     window.openImportExcelModal = function() {
         // Copy option values from Sisi Kiri
@@ -5060,6 +5080,54 @@
         });
         updateExcelPreview();
     };
+
+    window.setDupCap = function(v) {
+        const customInput = document.getElementById('imp-dup-cap-custom');
+        if (v === 'custom') {
+            if (customInput) {
+                customInput.style.display = "inline-block";
+                customInput.value = (typeof impDupCap === 'number') ? impDupCap : "";
+                customInput.focus();
+            }
+            return;
+        }
+        if (customInput) customInput.style.display = "none";
+        impDupCap = (v === 'all') ? 'all' : (parseInt(v) > 0 ? parseInt(v) : 30);
+        try { localStorage.setItem("sapatamu_import_dupcap_v1", String(impDupCap)); } catch (e) {}
+        if (lastImportAnalysis) renderDupDecisionList(lastImportAnalysis);
+    };
+
+    window.setDupCapCustom = function(v) {
+        const n = parseInt(v);
+        if (!(n > 0)) return;
+        impDupCap = Math.min(n, 10000);
+        try { localStorage.setItem("sapatamu_import_dupcap_v1", String(impDupCap)); } catch (e) {}
+        if (lastImportAnalysis) renderDupDecisionList(lastImportAnalysis);
+    };
+
+    function getDupCap() {
+        return impDupCap === 'all' ? Infinity : (impDupCap > 0 ? impDupCap : 30);
+    }
+
+    function syncDupCapControl() {
+        const sel = document.getElementById('imp-dup-cap');
+        const customInput = document.getElementById('imp-dup-cap-custom');
+        if (!sel) return;
+        const presets = ["30", "40", "50", "100"];
+        if (impDupCap === 'all') {
+            sel.value = 'all';
+            if (customInput) customInput.style.display = "none";
+        } else if (presets.includes(String(impDupCap))) {
+            sel.value = String(impDupCap);
+            if (customInput) customInput.style.display = "none";
+        } else {
+            sel.value = 'custom';
+            if (customInput) {
+                customInput.style.display = "inline-block";
+                customInput.value = impDupCap;
+            }
+        }
+    }
 
     window.applyDupDecisionToAll = function(mode) {
         (lastImportAnalysis ? lastImportAnalysis.rows : []).forEach(item => {
@@ -5940,11 +6008,16 @@
         if (dupItems.length === 0) {
             wrap.style.display = "none";
             if (overflow) overflow.style.display = "none";
+            const shownEmpty = document.getElementById('imp-dup-shown');
+            if (shownEmpty) shownEmpty.innerText = "";
             return;
         }
         wrap.style.display = "block";
 
-        const CAP = 30;
+        const CAP = getDupCap();
+        syncDupCapControl();
+        const shownEl = document.getElementById('imp-dup-shown');
+        if (shownEl) shownEl.innerText = `Menampilkan ${Math.min(CAP, dupItems.length)} dari ${dupItems.length} duplikat`;
         const metadata = readImportMetadata();
         dupItems.slice(0, CAP).forEach(item => {
             const m = item.matched;
@@ -6004,8 +6077,9 @@
 
         if (overflow) {
             if (dupItems.length > CAP) {
+                const modeLabel = getImportDupMode() === 'fill' ? 'lengkapi' : getImportDupMode() === 'skip' ? 'lewati' : 'timpa';
                 overflow.style.display = "block";
-                overflow.innerText = `+${dupItems.length - CAP} baris duplikat lain mengikuti mode global (${getImportDupMode() === 'fill' ? 'lengkapi' : getImportDupMode() === 'skip' ? 'lewati' : 'timpa'}).`;
+                overflow.innerText = `+${dupItems.length - CAP} baris duplikat lain mengikuti mode global (${modeLabel}). Naikkan jumlah tampil di atas untuk memutuskan per baris.`;
             } else {
                 overflow.style.display = "none";
             }
