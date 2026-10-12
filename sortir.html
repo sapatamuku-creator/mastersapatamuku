@@ -1966,6 +1966,13 @@
                         </div>
                     </div>
                     <div style="background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-family: monospace; font-size: 11px; max-height: 100px; overflow-y: auto; white-space: pre-wrap; color: var(--text-muted);" id="local-file-list-preview">Belum ada foto yang dipilih.</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); cursor: pointer; min-height: 40px;">
+                            <input type="checkbox" id="local-thumb-toggle" checked onchange="toggleLocalThumbPref()" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                            <span>Simpan thumb instan <span style="opacity: .75;">(±50–130MB/project, hapus via Cache)</span></span>
+                        </label>
+                        <span id="local-thumb-status" class="local-buffer-status" style="padding: 0;"></span>
+                    </div>
                 </div>
 
                 <!-- Local Pinterest Gallery -->
@@ -5852,6 +5859,206 @@
         window.addEventListener('beforeunload', __flush);
     }
 
+    // ── P3a: Thumb cache (grid ringan, lightbox tetap full-res) ──
+    const THUMB_IDB_NAME = 'sapatamu-sortir-thumbs-v1';
+    const THUMB_IDB_STORE = 'thumbs';
+    const THUMB_MAX_DIM = 400;
+    let thumbIdbPromise = null;
+    let thumbGenToken = 0;
+    let thumbStats = { done: 0, total: 0, running: false };
+
+    function localThumbEnabled() {
+        try {
+            const v = localStorage.getItem('sortir_thumb_enabled');
+            return v === null ? true : v === '1';
+        } catch (e) { return true; }
+    }
+
+    function syncThumbToggleUI() {
+        const el = document.getElementById('local-thumb-toggle');
+        if (el) el.checked = localThumbEnabled();
+    }
+
+    window.toggleLocalThumbPref = function() {
+        const el = document.getElementById('local-thumb-toggle');
+        const on = el ? el.checked : true;
+        try { localStorage.setItem('sortir_thumb_enabled', on ? '1' : '0'); } catch (e) {}
+        if (on && localStore.files.length && !thumbStats.running) {
+            startThumbPipeline();
+        } else {
+            updateThumbStatus();
+        }
+    };
+
+    function thumbOpenIdb() {
+        if (thumbIdbPromise) return thumbIdbPromise;
+        thumbIdbPromise = new Promise((resolve, reject) => {
+            if (!('indexedDB' in window)) return reject(new Error('IndexedDB tidak tersedia'));
+            const req = indexedDB.open(THUMB_IDB_NAME, 1);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains(THUMB_IDB_STORE)) {
+                    db.createObjectStore(THUMB_IDB_STORE, { keyPath: 'key' });
+                }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error || new Error('Gagal membuka thumb DB'));
+        });
+        return thumbIdbPromise;
+    }
+
+    async function thumbIdbGet(key) {
+        try {
+            const db = await thumbOpenIdb();
+            return await new Promise((resolve) => {
+                const tx = db.transaction(THUMB_IDB_STORE, 'readonly');
+                const rq = tx.objectStore(THUMB_IDB_STORE).get(key);
+                rq.onsuccess = () => resolve(rq.result || null);
+                rq.onerror = () => resolve(null);
+            });
+        } catch (e) { return null; }
+    }
+
+    async function thumbIdbPut(key, blob, w, h) {
+        try {
+            const db = await thumbOpenIdb();
+            return await new Promise((resolve) => {
+                const tx = db.transaction(THUMB_IDB_STORE, 'readwrite');
+                tx.objectStore(THUMB_IDB_STORE).put({ key, blob, w: w || 0, h: h || 0, updatedAt: Date.now() });
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        } catch (e) { return false; }
+    }
+
+    async function thumbIdbClearAll() {
+        try {
+            const db = await thumbOpenIdb();
+            return await new Promise((resolve) => {
+                const tx = db.transaction(THUMB_IDB_STORE, 'readwrite');
+                tx.objectStore(THUMB_IDB_STORE).clear();
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        } catch (e) { return false; }
+    }
+
+    function updateThumbStatus() {
+        const el = document.getElementById('local-thumb-status');
+        if (!el) return;
+        if (!localStore.files.length) { el.textContent = ''; return; }
+        if (!localThumbEnabled()) { el.textContent = 'Thumb nonaktif — grid pakai foto asli.'; return; }
+        if (thumbStats.running) {
+            el.textContent = `Thumb ${thumbStats.done}/${thumbStats.total}…`;
+        } else if (thumbStats.total > 0) {
+            el.textContent = thumbStats.done >= thumbStats.total
+                ? `Thumb siap ${thumbStats.done}/${thumbStats.total} — scroll balik instan.`
+                : `Thumb ${thumbStats.done}/${thumbStats.total} (sebagian fallback foto asli).`;
+        } else {
+            el.textContent = '';
+        }
+    }
+
+    // Buat 1 thumb WebP <=400px tanpa memblokir UI. Gagal -> null (fallback full-res).
+    async function makeThumbBlob(file) {
+        try {
+            if (!('createImageBitmap' in window)) return null;
+            let bmp = null;
+            try {
+                bmp = await createImageBitmap(file, { resizeWidth: THUMB_MAX_DIM, resizeQuality: 'high' });
+            } catch (e) {
+                bmp = await createImageBitmap(file);
+            }
+            const ratio = (bmp.height || 1) / Math.max(1, (bmp.width || 1));
+            let w = bmp.width, h = bmp.height;
+            if (w > THUMB_MAX_DIM) { w = THUMB_MAX_DIM; h = Math.max(1, Math.round(w * ratio)); }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d', { alpha: false });
+            if (!ctx) { if (bmp.close) bmp.close(); return null; }
+            ctx.fillStyle = '#F0E6DE';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(bmp, 0, 0, w, h);
+            if (bmp.close) bmp.close();
+            const blob = await new Promise((resolve) => {
+                if (canvas.toBlob) {
+                    canvas.toBlob(b => resolve(b), 'image/webp', 0.72);
+                } else resolve(null);
+            });
+            if (blob && blob.size > 0) return { blob, w, h };
+            return null;
+        } catch (e) { return null; }
+    }
+
+    function applyThumbToCard(entry) {
+        if (!entry || !entry.thumbUrl) return;
+        const card = document.getElementById(`local-card-${entry.id}`);
+        if (!card) return;
+        const img = card.querySelector('img');
+        if (img && img.getAttribute('src') !== entry.thumbUrl) {
+            img.src = entry.thumbUrl;
+        }
+    }
+
+    async function startThumbPipeline() {
+        if (!localThumbEnabled() || !localStore.files.length) { updateThumbStatus(); return; }
+        const token = ++thumbGenToken;
+        thumbStats = { done: 0, total: localStore.files.length, running: true };
+        updateThumbStatus();
+        // Tahap 1: baca thumb yang sudah ada di IDB (cepat, tanpa decode)
+        let cached = 0;
+        for (let i = 0; i < localStore.files.length; i++) {
+            if (token !== thumbGenToken) return;
+            const entry = localStore.files[i];
+            if (entry.thumbUrl) { cached++; thumbStats.done = cached; continue; }
+            const rec = await thumbIdbGet(entry.key);
+            if (token !== thumbGenToken) return;
+            if (rec && rec.blob) {
+                try {
+                    entry.thumbUrl = URL.createObjectURL(rec.blob);
+                    entry.thumbW = rec.w; entry.thumbH = rec.h;
+                    applyThumbToCard(entry);
+                    cached++;
+                } catch (e) {}
+            }
+            thumbStats.done = cached;
+            if (i % 25 === 24) { updateThumbStatus(); await new Promise(r => setTimeout(r, 0)); }
+        }
+        // Tahap 2: generate yang belum ada, simpan bertahap (yield tiap item agar scroll tetap lancar)
+        let made = 0;
+        for (let i = 0; i < localStore.files.length; i++) {
+            if (token !== thumbGenToken) return;
+            const entry = localStore.files[i];
+            if (entry.thumbUrl) continue;
+            const made0 = await makeThumbBlob(entry.file);
+            if (token !== thumbGenToken) return;
+            if (made0 && made0.blob) {
+                try {
+                    entry.thumbUrl = URL.createObjectURL(made0.blob);
+                    entry.thumbW = made0.w; entry.thumbH = made0.h;
+                    applyThumbToCard(entry);
+                    made++;
+                    thumbStats.done = cached + made;
+                    // Simpan ke IDB tanpa menahan UI; kegagalan kuota -> berhenti diam-diam
+                    const ok = await thumbIdbPut(entry.key, made0.blob, made0.w, made0.h);
+                    if (!ok && made0.blob.size > 200000) {
+                        // Kemungkinan kuota penuh: hentikan generate, grid tetap jalan full-res
+                        break;
+                    }
+                } catch (e) {}
+            }
+            if (i % 4 === 3) { updateThumbStatus(); await new Promise(r => setTimeout(r, 0)); }
+        }
+        if (token !== thumbGenToken) return;
+        thumbStats.running = false;
+        updateThumbStatus();
+    }
+
+    function cancelThumbPipeline() {
+        thumbGenToken++;
+        thumbStats.running = false;
+    }
+
     window.handleLocalFolderSelect = async function(event) {
         const files = Array.from(event.target.files);
         if (files.length === 0) return;
@@ -5924,7 +6131,13 @@
                 URL.revokeObjectURL(f.url);
                 f.url = null;
             }
+            if (f.thumbUrl) {
+                try { URL.revokeObjectURL(f.thumbUrl); } catch (e) {}
+                f.thumbUrl = null;
+            }
         });
+        cancelThumbPipeline();
+        thumbStats = { done: 0, total: 0, running: false };
         localStore.allFiles = [];
         localStore.files = [];
         localStore.byId.clear();
@@ -5966,7 +6179,10 @@
                 size: f.size,
                 lastModified: f.lastModified,
                 file: f,
-                url: URL.createObjectURL(f)
+                url: URL.createObjectURL(f),
+                thumbUrl: null, // P3a: diisi async oleh thumb pipeline (grid), lightbox tetap pakai url full
+                thumbW: 0,
+                thumbH: 0
             };
             return entry;
         });
@@ -6038,6 +6254,9 @@
         updateLocalSelectionUI();
         renderLocalGalleryChunk();
         setupLocalScrollObserver();
+        // P3a: grid langsung tampil full-res, thumb menyusul di background
+        syncThumbToggleUI();
+        startThumbPipeline();
     }
 
     function renderLocalGalleryChunk() {
@@ -6065,7 +6284,7 @@
             pin.id = `local-card-${f.id}`;
             pin.dataset.key = f.key;
             pin.innerHTML = `
-                <img src="${f.url}" loading="lazy" alt="${f.name}" draggable="false">
+                <img src="${f.thumbUrl || f.url}" loading="lazy" decoding="async" alt="${f.name}" draggable="false">
                 <div class="pin-check-badge">✓</div>
             `;
             photoLightbox.bindEvents(pin, f, () => toggleLocalSelection(f.id, f.name), localStore.files, i, true);
@@ -6316,7 +6535,7 @@
             if (usageEl) {
                 if (navigator.storage && navigator.storage.estimate) {
                     const est = await navigator.storage.estimate();
-                    usageEl.textContent = `Pemakaian origin: ${localFmtBytes(est.usage || 0)} / ${localFmtBytes(est.quota || 0)} • Cache seleksi hanya metadata (±60 byte/foto).`;
+                    usageEl.textContent = `Pemakaian origin: ${localFmtBytes(est.usage || 0)} / ${localFmtBytes(est.quota || 0)} • Seleksi = metadata kecil; thumb shared ±30–80KB/foto (Hapus Semua ikut hapus thumb).`;
                 } else {
                     usageEl.textContent = 'Info kuota penyimpanan tidak tersedia di browser ini.';
                 }
@@ -6357,9 +6576,17 @@
     window.clearAllLocalCache = async function() {
         const items = await localIdbList();
         for (const p of items) { if (p && p.projectId) await localIdbRemove(p.projectId); }
+        // P3a: thumb bersifat shared antar project (key = fileKey), hanya Hapus Semua yang membersihkannya
+        try { await thumbIdbClearAll(); } catch (e) {}
+        cancelThumbPipeline();
+        localStore.files.forEach(f => {
+            if (f.thumbUrl) { try { URL.revokeObjectURL(f.thumbUrl); } catch (e) {} f.thumbUrl = null; }
+        });
+        thumbStats = { done: 0, total: 0, running: false };
         localStore.projectId = null;
         localStore.selections.clear();
         updateLocalSelectionUI();
+        updateThumbStatus();
         document.querySelectorAll('#local-gallery .pin-card.selected').forEach(el => el.classList.remove('selected'));
         await refreshLocalCacheManager();
     };
