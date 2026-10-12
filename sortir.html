@@ -2393,7 +2393,7 @@
     <div class="photo-lightbox-header">
         <div id="photo-lightbox-title" class="photo-lightbox-title">Nama Foto</div>
         <div class="photo-lightbox-actions">
-            <button id="photo-lightbox-check-btn" class="photo-lightbox-check-btn" onclick="toggleLightboxSelection(event)" title="Pilih / Batalkan Foto (Spasi)">
+            <button id="photo-lightbox-check-btn" class="photo-lightbox-check-btn" onclick="toggleLightboxSelection(event)" title="Pilih (P) / Batal (X) / Toggle (Spasi)">
                 <span id="photo-lightbox-check-icon">✓</span> <span id="photo-lightbox-check-text">Pilih Foto</span>
             </button>
             <button class="photo-lightbox-close" onclick="closePhotoLightbox()" title="Tutup (Esc)">✕</button>
@@ -2408,7 +2408,7 @@
         <img id="photo-lightbox-img" class="photo-lightbox-img" src="" alt="Preview Foto" onclick="toggleLightboxZoom(event)">
     </div>
     <div class="photo-lightbox-badge">
-        <span>🔍 Zoom/Pinch 2 Jari • ↔ Swipe/Panah untuk ganti foto • Klik luar untuk tutup</span>
+        <span>🔍 Zoom/Pinch 2 Jari • ↔ Swipe/Panah ganti foto • <b>P</b> pilih • <b>X</b> batal • Klik luar tutup</span>
     </div>
 </div>
 
@@ -4809,6 +4809,13 @@
             }
         },
 
+        // Lightroom-style explicit set: P = pilih, X = batal (tanpa toggle buta)
+        setCurrentSelection(wantSelected) {
+            if (!this.fileList || !this.fileList[this.currentIndex]) return;
+            if (this.isCurrentFileSelected() === wantSelected) return;
+            this.toggleCurrentSelection();
+        },
+
         close() {
             this.cancelTimer();
             const modal = document.getElementById('photo-lightbox-modal');
@@ -5088,6 +5095,12 @@
         } else if (e.key === ' ' || e.key === 'Enter') {
             e.preventDefault();
             photoLightbox.toggleCurrentSelection();
+        } else if (e.key === 'p' || e.key === 'P') {
+            // Lightroom: P = flag/pilih eksplisit
+            photoLightbox.setCurrentSelection(true);
+        } else if (e.key === 'x' || e.key === 'X') {
+            // Lightroom: X = tolak/batal eksplisit
+            photoLightbox.setCurrentSelection(false);
         }
     });
 
