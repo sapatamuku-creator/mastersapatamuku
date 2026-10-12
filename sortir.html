@@ -1973,7 +1973,7 @@
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
                         <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); cursor: pointer; min-height: 40px;">
                             <input type="checkbox" id="local-thumb-toggle" checked onchange="toggleLocalThumbPref()" style="width: 18px; height: 18px; accent-color: var(--primary);">
-                            <span>Simpan thumb instan <span style="opacity: .75;">(±50–130MB/project, hapus via Cache)</span></span>
+                            <span>Simpan thumb instan <span style="opacity: .75;">(±80–180MB/project, hapus via Cache)</span></span>
                         </label>
                         <span id="local-thumb-status" class="local-buffer-status" style="padding: 0;"></span>
                     </div>
@@ -5864,9 +5864,13 @@
     }
 
     // ── P3a: Thumb cache (grid ringan, lightbox tetap full-res) ──
-    const THUMB_IDB_NAME = 'sapatamu-sortir-thumbs-v1';
+    const THUMB_IDB_NAME = 'sapatamu-sortir-thumbs-v2';
+    const THUMB_IDB_NAME_V1 = 'sapatamu-sortir-thumbs-v1';
     const THUMB_IDB_STORE = 'thumbs';
-    const THUMB_MAX_DIM = 400;
+    // P3b: kartu grid tingginya tetap 280px, jadi kartu landscape tampil jauh
+    // lebih lebar dari portrait -> thumb landscape butuh long-edge lebih besar.
+    const THUMB_W_PORTRAIT = 400;
+    const THUMB_W_LANDSCAPE = 800;
     let thumbIdbPromise = null;
     let thumbGenToken = 0;
     let thumbStats = { done: 0, total: 0, running: false };
@@ -5905,7 +5909,16 @@
                     db.createObjectStore(THUMB_IDB_STORE, { keyPath: 'key' });
                 }
             };
-            req.onsuccess = () => resolve(req.result);
+            req.onsuccess = () => {
+                resolve(req.result);
+                // P3b: hapus DB v1 (thumb 400px rata yang blur untuk landscape) sekali saja
+                try {
+                    if (!window.__thumbV1Purged && 'deleteDatabase' in indexedDB) {
+                        window.__thumbV1Purged = true;
+                        indexedDB.deleteDatabase(THUMB_IDB_NAME_V1);
+                    }
+                } catch (e) {}
+            };
             req.onerror = () => reject(req.error || new Error('Gagal membuka thumb DB'));
         });
         return thumbIdbPromise;
@@ -5963,19 +5976,24 @@
         }
     }
 
-    // Buat 1 thumb WebP <=400px tanpa memblokir UI. Gagal -> null (fallback full-res).
+    // P3b: thumb orientasi-aware. Decode 1x di 800px, lalu canvas ke target:
+    // landscape (tampil lebar di kartu 280px) -> 800px/q0.75, portrait -> 400px/q0.72.
+    // Gagal -> null (fallback full-res).
     async function makeThumbBlob(file) {
         try {
             if (!('createImageBitmap' in window)) return null;
             let bmp = null;
             try {
-                bmp = await createImageBitmap(file, { resizeWidth: THUMB_MAX_DIM, resizeQuality: 'high' });
+                bmp = await createImageBitmap(file, { resizeWidth: THUMB_W_LANDSCAPE, resizeQuality: 'high' });
             } catch (e) {
                 bmp = await createImageBitmap(file);
             }
-            const ratio = (bmp.height || 1) / Math.max(1, (bmp.width || 1));
-            let w = bmp.width, h = bmp.height;
-            if (w > THUMB_MAX_DIM) { w = THUMB_MAX_DIM; h = Math.max(1, Math.round(w * ratio)); }
+            const bw = bmp.width || 1, bh = bmp.height || 1;
+            const isLandscape = bw >= bh;
+            const targetW = isLandscape ? THUMB_W_LANDSCAPE : THUMB_W_PORTRAIT;
+            const scale = Math.min(1, targetW / bw);
+            const w = Math.max(1, Math.round(bw * scale));
+            const h = Math.max(1, Math.round(bh * scale));
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
             const ctx = canvas.getContext('2d', { alpha: false });
@@ -5986,7 +6004,7 @@
             if (bmp.close) bmp.close();
             const blob = await new Promise((resolve) => {
                 if (canvas.toBlob) {
-                    canvas.toBlob(b => resolve(b), 'image/webp', 0.72);
+                    canvas.toBlob(b => resolve(b), 'image/webp', isLandscape ? 0.75 : 0.72);
                 } else resolve(null);
             });
             if (blob && blob.size > 0) return { blob, w, h };
@@ -6539,7 +6557,7 @@
             if (usageEl) {
                 if (navigator.storage && navigator.storage.estimate) {
                     const est = await navigator.storage.estimate();
-                    usageEl.textContent = `Pemakaian origin: ${localFmtBytes(est.usage || 0)} / ${localFmtBytes(est.quota || 0)} • Seleksi = metadata kecil; thumb shared ±30–80KB/foto (Hapus Semua ikut hapus thumb).`;
+                    usageEl.textContent = `Pemakaian origin: ${localFmtBytes(est.usage || 0)} / ${localFmtBytes(est.quota || 0)} • Seleksi = metadata kecil; thumb shared (landscape 800px, portrait 400px). Hapus Semua ikut hapus thumb.`;
                 } else {
                     usageEl.textContent = 'Info kuota penyimpanan tidak tersedia di browser ini.';
                 }
