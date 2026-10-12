@@ -53,3 +53,4 @@
 - Tidak ubah jalur route/backend yang sudah ada.
 - Selfie tetap ke Drive via GAS `action=confirm_checkin` — hanya kompresi client.
 - Optimasi hanya anti-bug & selaras antar halaman (kiosk, checkin, onsite, analytics, welcome).
+| 2026-10-12 | P1-Persistensi-Seleksi sortir lokal | LANJUT | fileKey name|size|lastModified + fingerprint cyrb53 + IndexedDB sapatamu-sortir-v1 (metadata saja) + debounce 400ms + flush pagehide + fallback overlap 80 persen + modal Kelola Cache. Hanya sortir.html Local Culling; lightbox/ekspor kompatibel mundur. Risiko rendah-sedang: hash chunked anti-jank, private-mode hilang. User: setuju |

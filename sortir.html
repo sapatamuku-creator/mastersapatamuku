@@ -1950,12 +1950,15 @@
                             <span style="font-size: 13px; color: var(--text-muted);">Foto Terpilih:</span>
                             <strong id="local-selection-count" style="color: var(--primary); font-size: 16px; margin-left: 6px;">0 / 0</strong>
                         </div>
-                        <div style="display: flex; gap: 8px;">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button onclick="localCopyFilterText()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;">
                                 📋 Salin Teks Filter
                             </button>
                             <button onclick="localShowGuide()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;">
                                 💡 Panduan Lightroom
+                            </button>
+                            <button onclick="openLocalCacheManager()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;">
+                                🗄️ Cache
                             </button>
                             <button onclick="localExportFiles()" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;">
                                 📁 Ekspor File ke Folder
@@ -1973,6 +1976,25 @@
                     <span>Memuat foto berikutnya...</span>
                 </div>
                 <div id="local-buffer-status" class="local-buffer-status"></div>
+
+                <!-- P1: Kelola Cache IndexedDB (mobile <680px, tablet 680-1023px, desktop >=1024px) -->
+                <div id="local-cache-modal" style="display:none; position:fixed; inset:0; z-index:9999998; background:rgba(74,63,53,.5); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:16px;" onclick="if(event.target===this)closeLocalCacheManager()">
+                    <div style="background:#fff; border:1px solid var(--border); border-radius:20px; width:100%; max-width:560px; max-height:82vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:var(--shadow-lg);">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px 12px;">
+                            <div>
+                                <h4 style="font-size:16px; font-weight:800; color:var(--text-main); margin:0;">🗄️ Cache Seleksi Lokal</h4>
+                                <p id="local-cache-usage" style="font-size:12px; color:var(--text-muted); margin:4px 0 0;">Menghitung pemakaian…</p>
+                            </div>
+                            <button onclick="closeLocalCacheManager()" aria-label="Tutup kelola cache" style="width:40px; height:40px; min-width:40px; border-radius:50%; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <div id="local-cache-list" style="padding:4px 20px 12px; overflow-y:auto; font-size:13px; color:var(--text-main);"></div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; padding:12px 20px 18px; border-top:1px solid var(--border);">
+                            <button onclick="refreshLocalCacheManager()" class="btn btn-secondary" style="padding:10px 18px; font-size:12px;">🔄 Muat Ulang</button>
+                            <button onclick="clearAllLocalCache()" class="btn btn-secondary" style="padding:10px 18px; font-size:12px; color:#C53030; border-color:rgba(224,123,123,.4);">🗑️ Hapus Semua</button>
+                            <button onclick="closeLocalCacheManager()" class="btn btn-primary" style="padding:10px 18px; font-size:12px;">Tutup</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -4644,7 +4666,10 @@
             if (!this.fileList || !this.fileList[this.currentIndex]) return false;
             const file = this.fileList[this.currentIndex];
             if (this.isLocal) {
-                return localStore.selections && localStore.selections.has(file.id);
+                try {
+                    if (typeof localIsSelected === 'function') return localIsSelected(file.key || file.id);
+                } catch (e) {}
+                return localStore.selections && (localStore.selections.has(file.key) || localStore.selections.has(file.id));
             }
             if (window._isRemotePCMode) {
                 return window._remoteSelections && window._remoteSelections.has(file.name);
@@ -5679,7 +5704,12 @@
     const localStore = {
         files: [],
         allFiles: [], // All files from folder (including RAW) for pairing
-        selections: new Set(),
+        selections: new Set(), // P1: berisi stable fileKey (name|size|lastModified), bukan id random
+        byId: new Map(), // P1: id random -> file entry (kompatibilitas lightbox lama)
+        byKey: new Map(), // P1: fileKey stabil -> file entry
+        projectId: null, // P1: fingerprint folder aktif
+        folderName: '',
+        saveTimer: null,
         directoryHandle: null,
         // Buffer / Infinite Scroll state
         renderIndex: 0,
@@ -5689,7 +5719,138 @@
         observer: null
     };
 
+    // P1: kunci stabil per foto agar seleksi survive reload (id random lama tidak stabil)
+    function localFileKey(name, size, lastModified) {
+        return `${String(name || '').toLowerCase()}|${size || 0}|${lastModified || 0}`;
+    }
+
+    function localResolveKey(idOrKey) {
+        if (!idOrKey) return null;
+        if (localStore.byKey.has(idOrKey)) return idOrKey;
+        const byId = localStore.byId.get(idOrKey);
+        if (byId) return byId.key;
+        return null;
+    }
+
+    function localIsSelected(idOrKey) {
+        const key = localResolveKey(idOrKey);
+        if (key) return localStore.selections.has(key);
+        // Fallback data lama (sebelum P1 menyimpan id): anggap id itu sendiri sebagai key
+        return localStore.selections.has(idOrKey);
+    }
+
     const IMAGE_EXTS = new Set(['jpg','jpeg','png','webp','tiff','tif','heic','bmp']);
+
+    // ── P1: IndexedDB persistensi seleksi (metadata saja, tanpa bytes foto) ──
+    const LOCAL_IDB_NAME = 'sapatamu-sortir-v1';
+    const LOCAL_IDB_STORE = 'projects';
+    let localIdbPromise = null;
+
+    function localOpenIdb() {
+        if (localIdbPromise) return localIdbPromise;
+        localIdbPromise = new Promise((resolve, reject) => {
+            if (!('indexedDB' in window)) return reject(new Error('IndexedDB tidak tersedia'));
+            const req = indexedDB.open(LOCAL_IDB_NAME, 1);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains(LOCAL_IDB_STORE)) {
+                    db.createObjectStore(LOCAL_IDB_STORE, { keyPath: 'projectId' });
+                }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error || new Error('Gagal membuka IndexedDB'));
+        });
+        return localIdbPromise;
+    }
+
+    async function localIdbGet(projectId) {
+        try {
+            const db = await localOpenIdb();
+            return await new Promise((resolve) => {
+                const tx = db.transaction(LOCAL_IDB_STORE, 'readonly');
+                const rq = tx.objectStore(LOCAL_IDB_STORE).get(projectId);
+                rq.onsuccess = () => resolve(rq.result || null);
+                rq.onerror = () => resolve(null);
+            });
+        } catch (e) { return null; }
+    }
+
+    async function localIdbPut(record) {
+        try {
+            const db = await localOpenIdb();
+            return await new Promise((resolve) => {
+                const tx = db.transaction(LOCAL_IDB_STORE, 'readwrite');
+                tx.objectStore(LOCAL_IDB_STORE).put(record);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        } catch (e) { return false; }
+    }
+
+    async function localIdbList() {
+        try {
+            const db = await localOpenIdb();
+            return await new Promise((resolve) => {
+                const tx = db.transaction(LOCAL_IDB_STORE, 'readonly');
+                const rq = tx.objectStore(LOCAL_IDB_STORE).getAll();
+                rq.onsuccess = () => resolve(rq.result || []);
+                rq.onerror = () => resolve([]);
+            });
+        } catch (e) { return []; }
+    }
+
+    async function localIdbRemove(projectId) {
+        try {
+            const db = await localOpenIdb();
+            return await new Promise((resolve) => {
+                const tx = db.transaction(LOCAL_IDB_STORE, 'readwrite');
+                tx.objectStore(LOCAL_IDB_STORE).delete(projectId);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        } catch (e) { return false; }
+    }
+
+    // Hash cyrb53 untuk fingerprint folder (murah, tanpa dependensi)
+    function localHashStr(str, seed = 0) {
+        let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+        for (let i = 0; i < str.length; i++) {
+            const ch = str.charCodeAt(i);
+            h1 = Math.imul(h1 ^ ch, 2654435761);
+            h2 = Math.imul(h2 ^ ch, 1597334677);
+        }
+        h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+        h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+        return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+    }
+
+    // Tulis debounce: uncheck/check hanya menandai dirty, flush 1x transaksi
+    function scheduleLocalSelectionsSave() {
+        if (localStore.saveTimer) clearTimeout(localStore.saveTimer);
+        localStore.saveTimer = setTimeout(() => { flushLocalSelectionsSave(); }, 400);
+    }
+
+    async function flushLocalSelectionsSave() {
+        if (localStore.saveTimer) { clearTimeout(localStore.saveTimer); localStore.saveTimer = null; }
+        if (!localStore.projectId) return;
+        const keys = Array.from(localStore.selections);
+        await localIdbPut({
+            projectId: localStore.projectId,
+            folderName: localStore.folderName || '',
+            fileCount: localStore.files.length,
+            selectedCount: keys.length,
+            selections: keys,
+            updatedAt: Date.now()
+        });
+    }
+
+    if (!window.__localSelFlushBound) {
+        window.__localSelFlushBound = true;
+        const __flush = () => { flushLocalSelectionsSave(); };
+        document.addEventListener('visibilitychange', () => { if (document.hidden) __flush(); });
+        window.addEventListener('pagehide', __flush);
+        window.addEventListener('beforeunload', __flush);
+    }
 
     window.handleLocalFolderSelect = async function(event) {
         const files = Array.from(event.target.files);
@@ -5741,6 +5902,22 @@
     }
 
     function cleanupLocalBuffer() {
+        // P1: simpan project lama dulu sebelum DOM dihancurkan (fire-and-forget).
+        // Catat: projectId dibaca SEBELUM di-null-kan agar flush tidak no-op.
+        try {
+            if (localStore.saveTimer) { clearTimeout(localStore.saveTimer); localStore.saveTimer = null; }
+            const __pid = localStore.projectId;
+            if (__pid) {
+                localIdbPut({
+                    projectId: __pid,
+                    folderName: localStore.folderName || '',
+                    fileCount: localStore.files.length,
+                    selectedCount: localStore.selections.size,
+                    selections: Array.from(localStore.selections),
+                    updatedAt: Date.now()
+                });
+            }
+        } catch (e) {}
         // Revoke all object URLs to free memory
         localStore.files.forEach(f => {
             if (f.url) {
@@ -5749,6 +5926,10 @@
             }
         });
         localStore.allFiles = [];
+        localStore.files = [];
+        localStore.byId.clear();
+        localStore.byKey.clear();
+        localStore.projectId = null;
         // Disconnect observer
         if (localStore.observer) {
             localStore.observer.disconnect();
@@ -5764,7 +5945,7 @@
         if (statusEl) statusEl.textContent = '';
     }
 
-    function processLocalFiles(files) {
+    async function processLocalFiles(files) {
         // Cleanup previous session if any
         cleanupLocalBuffer();
 
@@ -5776,13 +5957,74 @@
             return IMAGE_EXTS.has(ext);
         });
 
-        localStore.files = imageFiles.map(f => ({
-            id: Math.random().toString(36).substring(2, 10),
-            name: f.name,
-            file: f,
-            url: URL.createObjectURL(f)
-        }));
+        localStore.files = imageFiles.map(f => {
+            const key = localFileKey(f.name, f.size, f.lastModified);
+            const entry = {
+                id: Math.random().toString(36).substring(2, 10),
+                key,
+                name: f.name,
+                size: f.size,
+                lastModified: f.lastModified,
+                file: f,
+                url: URL.createObjectURL(f)
+            };
+            return entry;
+        });
+        localStore.byId.clear();
+        localStore.byKey.clear();
+        localStore.files.forEach(entry => {
+            localStore.byId.set(entry.id, entry);
+            localStore.byKey.set(entry.key, entry);
+        });
         localStore.selections.clear();
+
+        // P1: fingerprint folder -> restore seleksi (yield tiap 300 file agar UI tidak freeze)
+        try {
+            const sortedKeys = localStore.files.map(f => f.key).sort();
+            let fpInput = '';
+            for (let i = 0; i < sortedKeys.length; i++) {
+                fpInput += sortedKeys[i] + '\n';
+                if (i % 300 === 299) await new Promise(r => setTimeout(r, 0));
+            }
+            const fingerprint = 'fp_' + localHashStr(fpInput + '|n=' + sortedKeys.length);
+            const firstFile = files[0];
+            const rel = (firstFile && firstFile.webkitRelativePath) || '';
+            const folderName = rel ? rel.split('/')[0] : (localStore.folderName || 'Folder Lokal');
+            localStore.folderName = folderName;
+            localStore.projectId = fingerprint;
+
+            let restored = 0;
+            const exact = await localIdbGet(fingerprint);
+            if (exact && Array.isArray(exact.selections)) {
+                exact.selections.forEach(k => { if (localStore.byKey.has(k)) { localStore.selections.add(k); restored++; } });
+            } else {
+                // Fallback: folder sama + overlap >80% (menangani tambah/hapus foto)
+                const all = await localIdbList();
+                let best = null, bestOverlap = 0;
+                for (const p of all) {
+                    if (!p || p.folderName !== folderName || !Array.isArray(p.selections)) continue;
+                    let overlap = 0;
+                    for (const k of p.selections) if (localStore.byKey.has(k)) overlap++;
+                    if (overlap > bestOverlap) { bestOverlap = overlap; best = p; }
+                }
+                const denom = best && best.selections.length ? best.selections.length : 0;
+                if (best && denom > 0 && (bestOverlap / denom) >= 0.8) {
+                    best.selections.forEach(k => { if (localStore.byKey.has(k)) { localStore.selections.add(k); restored++; } });
+                    // Adopsi fingerprint baru agar sesi berikutnya exact-match
+                    await localIdbPut({
+                        projectId: fingerprint,
+                        folderName,
+                        fileCount: localStore.files.length,
+                        selectedCount: localStore.selections.size,
+                        selections: Array.from(localStore.selections),
+                        updatedAt: Date.now()
+                    });
+                }
+            }
+            if (restored > 0 && window.showToast) {
+                try { window.showToast(`Dipulihkan ${restored} foto terpilih dari sesi sebelumnya ✓`, 'green'); } catch (e) {}
+            }
+        } catch (e) { console.warn('[P1 restore]', e); }
 
         // Reset buffer state
         localStore.renderIndex = 0;
@@ -5817,10 +6059,11 @@
         const fragment = document.createDocumentFragment();
         for (let i = start; i < end; i++) {
             const f = localStore.files[i];
-            const isSelected = localStore.selections.has(f.id);
+            const isSelected = localStore.selections.has(f.key);
             const pin = document.createElement('div');
             pin.className = `pin-card ${isSelected ? 'selected' : ''}`;
             pin.id = `local-card-${f.id}`;
+            pin.dataset.key = f.key;
             pin.innerHTML = `
                 <img src="${f.url}" loading="lazy" alt="${f.name}" draggable="false">
                 <div class="pin-check-badge">✓</div>
@@ -5885,14 +6128,27 @@
     }
 
     window.toggleLocalSelection = function(id, name) {
-        if (localStore.selections.has(id)) {
-            localStore.selections.delete(id);
+        // P1: terima id random lama ATAU fileKey stabil; simpan selalu sebagai fileKey
+        let key = localResolveKey(id);
+        let cardId = id;
+        if (!key) {
+            // Entry belum terindeks (mis. dipanggil sebelum processLocalFiles selesai): fallback ke id
+            key = id;
+            const card = document.getElementById(`local-card-${id}`);
+            if (card && card.dataset.key) key = card.dataset.key;
         } else {
-            localStore.selections.add(id);
+            const entry = localStore.byKey.get(key);
+            if (entry) cardId = entry.id;
         }
-        const card = document.getElementById(`local-card-${id}`);
-        if (card) card.classList.toggle('selected', localStore.selections.has(id));
+        if (localStore.selections.has(key)) {
+            localStore.selections.delete(key);
+        } else {
+            localStore.selections.add(key);
+        }
+        const card = document.getElementById(`local-card-${cardId}`) || document.getElementById(`local-card-${id}`);
+        if (card) card.classList.toggle('selected', localStore.selections.has(key));
         updateLocalSelectionUI();
+        scheduleLocalSelectionsSave();
         if (photoLightbox.isOpen) {
             photoLightbox.updateHeaderUI();
         }
@@ -5904,7 +6160,7 @@
         document.getElementById('local-selection-count').innerText = `${count} / ${total}`;
 
         const selectedNames = localStore.files
-            .filter(f => localStore.selections.has(f.id))
+            .filter(f => localStore.selections.has(f.key))
             .map(f => f.name.split('.').slice(0, -1).join('.'));
 
         document.getElementById('local-file-list-preview').textContent =
@@ -5914,7 +6170,7 @@
     // Export Option A: Copy filter text
     window.localCopyFilterText = function() {
         const selectedNames = localStore.files
-            .filter(f => localStore.selections.has(f.id))
+            .filter(f => localStore.selections.has(f.key))
             .map(f => f.name.split('.').slice(0, -1).join('.'));
 
         if (selectedNames.length === 0) {
@@ -5934,7 +6190,7 @@
     const RAW_EXTS = new Set(['arw','cr2','cr3','nef','dng','raf','rw2','orf','raw']);
 
     window.localExportFiles = async function() {
-        const selected = localStore.files.filter(f => localStore.selections.has(f.id));
+        const selected = localStore.files.filter(f => localStore.selections.has(f.key));
         if (selected.length === 0) {
             showAlert('Peringatan', 'Belum ada foto yang dipilih untuk diekspor.', '⚠️');
             return;
@@ -6021,6 +6277,91 @@
     };
     window.closeLRGuide = function() {
         document.getElementById('lr-guide-modal').style.display = 'none';
+    };
+
+    // ── P1: Kelola Cache IndexedDB ──
+    function localFmtBytes(n) {
+        if (!n || n <= 0) return '0 B';
+        const u = ['B', 'KB', 'MB', 'GB'];
+        let i = 0;
+        while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+        return `${n >= 100 ? Math.round(n) : n.toFixed(1)} ${u[i]}`;
+    }
+
+    function localFmtDate(ts) {
+        try { return new Date(ts).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+        catch (e) { return '-'; }
+    }
+
+    function localEscapeHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    window.openLocalCacheManager = async function() {
+        const modal = document.getElementById('local-cache-modal');
+        if (modal) modal.style.display = 'flex';
+        await refreshLocalCacheManager();
+    };
+
+    window.closeLocalCacheManager = function() {
+        const modal = document.getElementById('local-cache-modal');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.refreshLocalCacheManager = async function() {
+        const usageEl = document.getElementById('local-cache-usage');
+        const listEl = document.getElementById('local-cache-list');
+        if (!listEl) return;
+        try {
+            if (usageEl) {
+                if (navigator.storage && navigator.storage.estimate) {
+                    const est = await navigator.storage.estimate();
+                    usageEl.textContent = `Pemakaian origin: ${localFmtBytes(est.usage || 0)} / ${localFmtBytes(est.quota || 0)} • Cache seleksi hanya metadata (±60 byte/foto).`;
+                } else {
+                    usageEl.textContent = 'Info kuota penyimpanan tidak tersedia di browser ini.';
+                }
+            }
+            const items = (await localIdbList()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            if (!items.length) {
+                listEl.innerHTML = '<div style="padding:18px 4px; color:var(--text-muted); font-size:12.5px;">Belum ada cache. Buka folder foto lalu ceklis — statusnya tersimpan otomatis di browser ini.</div>';
+                return;
+            }
+            listEl.innerHTML = items.map(p => {
+                const sel = Array.isArray(p.selections) ? p.selections.length : (p.selectedCount || 0);
+                const active = localStore.projectId && p.projectId === localStore.projectId;
+                return `<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:8px; ${active ? 'background:#FFF5F5;' : 'background:#fff;'}">
+                    <div style="min-width:0;">
+                        <div style="font-weight:800; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${localEscapeHtml(p.folderName || '(tanpa nama)')}${active ? ' • <span style="color:var(--primary);">aktif</span>' : ''}</div>
+                        <div style="font-size:11.5px; color:var(--text-muted);">${p.fileCount || 0} foto • ${sel} terpilih • ${localFmtDate(p.updatedAt)}</div>
+                    </div>
+                    <button onclick="deleteLocalCacheProject('${p.projectId}')" class="btn btn-secondary" style="padding:8px 14px; font-size:11px; flex-shrink:0; min-height:40px;">Hapus</button>
+                </div>`;
+            }).join('');
+        } catch (e) {
+            listEl.innerHTML = '<div style="padding:18px 4px; color:#C53030; font-size:12.5px;">Gagal membaca cache: ' + localEscapeHtml(e.message || e) + '</div>';
+        }
+    };
+
+    window.deleteLocalCacheProject = async function(projectId) {
+        if (!projectId) return;
+        const ok = await localIdbRemove(projectId);
+        if (ok && localStore.projectId === projectId) {
+            localStore.projectId = null;
+            localStore.selections.clear();
+            updateLocalSelectionUI();
+            document.querySelectorAll('#local-gallery .pin-card.selected').forEach(el => el.classList.remove('selected'));
+        }
+        await refreshLocalCacheManager();
+    };
+
+    window.clearAllLocalCache = async function() {
+        const items = await localIdbList();
+        for (const p of items) { if (p && p.projectId) await localIdbRemove(p.projectId); }
+        localStore.projectId = null;
+        localStore.selections.clear();
+        updateLocalSelectionUI();
+        document.querySelectorAll('#local-gallery .pin-card.selected').forEach(el => el.classList.remove('selected'));
+        await refreshLocalCacheManager();
     };
 
 </script>
