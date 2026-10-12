@@ -972,8 +972,98 @@
                 clientSsid = window.CURRENT_SS_ID;
                 parseUrlParams();
                 loadWeddingSettings();
+                /* [2026-10-12 FEAT-RSVP-DASHBOARD] Silent Realtime Tracking Buka Link */
+                recordRsvpOpened();
             } else {
                 setTimeout(checkSubdomainResolution, 50);
+            }
+        }
+
+        /* [2026-10-12 FEAT-RSVP-DASHBOARD] Silent Realtime Tracking Buka Link Tamu */
+        async function recordRsvpOpened() {
+            if (!clientSsid || !guestId) return;
+            try {
+                const SB_HDRS = {
+                    "apikey": SB_KEY,
+                    "Authorization": "Bearer " + SB_KEY,
+                    "Content-Type": "application/json"
+                };
+                // 1. Cek apakah row sudah ada di rsvp_dashboard
+                const checkRes = await fetch(`${SB_URL}/rest/v1/rsvp_dashboard?ssid=eq.${clientSsid}&kode_tamu=eq.${encodeURIComponent(guestId)}&limit=1`, {
+                    headers: SB_HDRS
+                });
+                if (checkRes.ok) {
+                    const rows = await checkRes.json();
+                    if (rows && rows.length > 0) {
+                        const existing = rows[0];
+                        // Jika sudah ada, tambahkan open_count & update timestamp
+                        const currentCount = (existing.open_count || 1) + 1;
+                        fetch(`${SB_URL}/rest/v1/rsvp_dashboard?ssid=eq.${clientSsid}&kode_tamu=eq.${encodeURIComponent(guestId)}`, {
+                            method: "PATCH",
+                            headers: SB_HDRS,
+                            body: JSON.stringify({
+                                open_count: currentCount,
+                                updated_at: new Date().toISOString()
+                            })
+                        }).catch(() => {});
+                        return;
+                    }
+                }
+
+                // 2. Row belum ada -> fetch info detail tamu dari tabel tamu (kategori, pihak, sesi)
+                let kategori = "Umum";
+                let pihak = "-";
+                let sesi = "-";
+                try {
+                    const tRes = await fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${clientSsid}&kode=eq.${encodeURIComponent(guestId)}&limit=1`, {
+                        headers: SB_HDRS
+                    });
+                    if (tRes.ok) {
+                        const tRows = await tRes.json();
+                        if (tRows && tRows.length > 0) {
+                            kategori = tRows[0].kategori || kategori;
+                            pihak = tRows[0].pihak_pengundang || pihak;
+                            sesi = tRows[0].sesi || sesi;
+                        }
+                    }
+                } catch(e) {}
+
+                const newRow = {
+                    ssid: clientSsid,
+                    kode_tamu: guestId,
+                    nama_tamu: guestName || "Tamu Undangan",
+                    kategori: kategori,
+                    pihak_pengundang: pihak,
+                    sesi: sesi,
+                    status_rsvp: "opened",
+                    pax: 0,
+                    open_count: 1,
+                    opened_at: new Date().toISOString()
+                };
+
+                fetch(`${SB_URL}/rest/v1/rsvp_dashboard`, {
+                    method: "POST",
+                    headers: SB_HDRS,
+                    body: JSON.stringify(newRow)
+                }).then(r => {
+                    // 409 = tab lain membuat row duluan -> fallback naikkan open_count
+                    if (r.status === 409) {
+                        fetch(`${SB_URL}/rest/v1/rsvp_dashboard?ssid=eq.${clientSsid}&kode_tamu=eq.${encodeURIComponent(guestId)}&limit=1`, { headers: SB_HDRS })
+                            .then(rr => rr.ok ? rr.json() : [])
+                            .then(rows2 => {
+                                if (rows2 && rows2.length > 0) {
+                                    fetch(`${SB_URL}/rest/v1/rsvp_dashboard?ssid=eq.${clientSsid}&kode_tamu=eq.${encodeURIComponent(guestId)}`, {
+                                        method: "PATCH",
+                                        headers: SB_HDRS,
+                                        body: JSON.stringify({ open_count: (rows2[0].open_count || 1) + 1, updated_at: new Date().toISOString() })
+                                    }).catch(() => {});
+                                }
+                            }).catch(() => {});
+                    }
+                }).catch(e => console.warn("[RSVP Tracking] Post opened failed:", e));
+
+            } catch (err) {
+                console.warn("[RSVP Tracking] Silent tracking error:", err);
             }
         }
 
@@ -1158,22 +1248,48 @@
                         })
                     }).then(r => r.json()).then(data => {
                         if (data.status === "success" && data.fileUrl) {
-                            // Update Supabase with selfie URL
+                            // Update Supabase with selfie URL (legacy tamu)
                             fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${clientSsid}&kode=eq.${guestId}`, {
                                 method: "PATCH",
                                 headers: SB_HDRS,
                                 body: JSON.stringify({ selfie_url: data.fileUrl })
                             }).catch(e => console.warn("Selfie URL sync failed:", e));
+
+                            // [2026-10-12 FEAT-RSVP-DASHBOARD] Upsert selfie URL in rsvp_dashboard
+                            // (upsert, bukan PATCH: row bisa belum ada jika submit kilat <1 dtk setelah buka link)
+                            fetch(`${SB_URL}/rest/v1/rsvp_dashboard?on_conflict=ssid,kode_tamu`, {
+                                method: "POST",
+                                headers: { ...SB_HDRS, "Prefer": "resolution=merge-duplicates" },
+                                body: JSON.stringify({ ssid: clientSsid, kode_tamu: guestId, selfie_url: data.fileUrl, updated_at: new Date().toISOString() })
+                            }).catch(e => console.warn("Selfie URL rsvp_dashboard sync failed:", e));
                         }
                     }).catch(e => console.warn("Background selfie upload failed:", e));
                 }
 
-                // Supabase RSVP update (background)
+                // Supabase RSVP update (background legacy)
                 fetch(`${SB_URL}/rest/v1/tamu?ssid=eq.${clientSsid}&kode=eq.${guestId}`, {
                     method: "PATCH",
                     headers: SB_HDRS,
                     body: JSON.stringify({ rencana_hadir: finalPax })
                 }).catch(e => console.warn("Background RSVP update failed:", e));
+
+                // [2026-10-12 FEAT-RSVP-DASHBOARD] Sync ke tabel rsvp_dashboard
+                // (upsert, bukan PATCH: row bisa belum ada jika submit kilat <1 dtk setelah buka link)
+                const rsvpStatusVal = (attendanceStatus === 'hadir') ? 'hadir' : 'tidak_hadir';
+                fetch(`${SB_URL}/rest/v1/rsvp_dashboard?on_conflict=ssid,kode_tamu`, {
+                    method: "POST",
+                    headers: { ...SB_HDRS, "Prefer": "resolution=merge-duplicates" },
+                    body: JSON.stringify({
+                        ssid: clientSsid,
+                        kode_tamu: guestId,
+                        nama_tamu: guestName || "Tamu Undangan",
+                        status_rsvp: rsvpStatusVal,
+                        pax: finalPax,
+                        ucapan: wishesText,
+                        submitted_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                }).catch(e => console.warn("Background rsvp_dashboard update failed:", e));
 
                 // Supabase wishes (background)
                 fetch(`${SB_URL}/rest/v1/wishes_queue`, {

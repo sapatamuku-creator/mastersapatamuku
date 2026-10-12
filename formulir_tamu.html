@@ -1526,6 +1526,22 @@
             filter: brightness(1.08);
             transform: translateY(-1px);
         }
+
+        /* [2026-10-12 FEAT-RSVP-DASHBOARD] RSVP Mini Overview & Filter Chips */
+        .rsvp-filter-chip {
+            padding: 4px 12px;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .rsvp-filter-chip:hover { border-color: var(--primary); color: var(--text-main); }
+        .rsvp-filter-chip.active { background: var(--text-main); color: #fff; border-color: var(--text-main); }
     </style>
     <script src="auth_guard.js?v=1.0"></script>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -1558,6 +1574,7 @@
                     <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
                     <div class="nav-divider"></div>
                     <a href="formulir_tamu.html" class="nav-link active" id="nav-formulir">Buku Tamu</a>
+                    <a href="rsvp_dashboard.html" class="nav-link" id="nav-rsvp">RSVP</a>
                     <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
                     <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
                 </div>
@@ -1733,6 +1750,54 @@
                             </div>
                         </div>
                         <button onclick="syncToSupabase()" style="background:#EF4444; border:none; cursor:pointer; color:#FFF; padding:6px 15px; border-radius:50px; font-size:9.5px; font-weight:800; white-space:nowrap; transition:0.2s;" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter='none'">SINKRONKAN SEKARANG</button>
+                    </div>
+
+                    <!-- [2026-10-12 FEAT-RSVP-DASHBOARD] RSVP MINI OVERVIEW STRIP -->
+                    <div id="rsvp-mini-overview" style="margin-bottom: 18px; background: rgba(255, 255, 255, 0.95); border: 1.5px solid var(--border); border-radius: 20px; padding: 14px 18px; box-shadow: 0 4px 18px rgba(140, 117, 96, 0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 16px;">💌</span>
+                                <span style="font-size: 11px; font-weight: 800; color: var(--text-main); letter-spacing: 0.8px; text-transform: uppercase;">Realtime RSVP Status</span>
+                                <span class="gas-sync-live-dot" title="Supabase Realtime Active"></span>
+                            </div>
+                            <a href="rsvp_dashboard.html" id="link-to-rsvp-dash" style="display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; color: var(--gold); text-decoration: none; padding: 5px 14px; border-radius: 50px; background: rgba(200, 150, 46, 0.08); border: 1px solid rgba(200, 150, 46, 0.2); transition: all 0.2s ease;">
+                                <span>Buka RSVP Dashboard Lengkap</span>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+                            </a>
+                        </div>
+                        
+                        <!-- Counters Strip -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3" style="margin-bottom: 10px;">
+                            <div style="background: #FFF9F5; border: 1px solid #F0E6DE; border-radius: 14px; padding: 8px 12px; text-align: center;">
+                                <div style="font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">👁️ Link Dibuka</div>
+                                <div id="rsvp-mini-opened-count" style="font-size: 16px; font-weight: 900; color: var(--text-main); margin-top: 2px;">0</div>
+                            </div>
+                            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 14px; padding: 8px 12px; text-align: center;">
+                                <div style="font-size: 9px; font-weight: 800; color: #065F46; text-transform: uppercase;">✅ Hadir</div>
+                                <div style="display: flex; align-items: baseline; justify-content: center; gap: 4px; margin-top: 2px;">
+                                    <span id="rsvp-mini-hadir-count" style="font-size: 16px; font-weight: 900; color: #047857;">0</span>
+                                    <span id="rsvp-mini-pax-count" style="font-size: 10px; font-weight: 800; color: #059669;">(0 Pax)</span>
+                                </div>
+                            </div>
+                            <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 14px; padding: 8px 12px; text-align: center;">
+                                <div style="font-size: 9px; font-weight: 800; color: #991B1B; text-transform: uppercase;">❌ Absen</div>
+                                <div id="rsvp-mini-absen-count" style="font-size: 16px; font-weight: 900; color: #B91C1C; margin-top: 2px;">0</div>
+                            </div>
+                            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 8px 12px; text-align: center;">
+                                <div style="font-size: 9px; font-weight: 800; color: #64748B; text-transform: uppercase;">⏳ Belum Buka</div>
+                                <div id="rsvp-mini-unopened-count" style="font-size: 16px; font-weight: 900; color: #475569; margin-top: 2px;">0</div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Filter Chips -->
+                        <div style="display: flex; align-items: center; gap: 6px; overflow-x: auto; padding-top: 4px; scrollbar-width: none;">
+                            <span style="font-size: 9.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-right: 4px; flex-shrink: 0;">Filter RSVP:</span>
+                            <button type="button" class="rsvp-filter-chip active" onclick="setRsvpFilter('all')" data-filter="all">Semua</button>
+                            <button type="button" class="rsvp-filter-chip" onclick="setRsvpFilter('hadir')" data-filter="hadir">✅ Hadir</button>
+                            <button type="button" class="rsvp-filter-chip" onclick="setRsvpFilter('tidak_hadir')" data-filter="tidak_hadir">❌ Tidak Hadir</button>
+                            <button type="button" class="rsvp-filter-chip" onclick="setRsvpFilter('opened')" data-filter="opened">👁️ Dibuka Saja</button>
+                            <button type="button" class="rsvp-filter-chip" onclick="setRsvpFilter('unopened')" data-filter="unopened">⏳ Belum Buka</button>
+                        </div>
                     </div>
 
                     <input type="text" id="guest-search" oninput="debouncedFilterGuestList()" placeholder="🔍 Cari Nama, WA, Kategori, atau Status..." 
@@ -2896,6 +2961,10 @@
             render(MASTER_LIST);
             toggleProcessing(false); // ← Spinner hilang SEKARANG, tidak tunggu metadata
 
+            // [2026-10-12 FEAT-RSVP-DASHBOARD] Load RSVP data & listener
+            loadRsvpDashboardData(ssId);
+            initRsvpRealtime(ssId);
+
             // ===== STEP 2: Fetch METADATA, SUBDOMAIN, & WELCOME PHOTOS di background (tidak blokir UI) =====
             Promise.all([
                 fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${ssId}&select=*`, { headers: SB_HEADERS })
@@ -3089,12 +3158,127 @@
                 const banner = document.getElementById('mismatch-banner');
                 if (banner) banner.style.display = 'none';
                 render(MASTER_LIST);
+                // [2026-10-12 FEAT-RSVP-DASHBOARD] Load RSVP data & listener
+                loadRsvpDashboardData(CURRENT_SS_ID);
+                initRsvpRealtime(CURRENT_SS_ID);
             } catch(gasErr) {
                 console.error("GAS fallback also failed:", gasErr);
                 showSapaModal("Connection Error", "Gagal menghubungi server (Supabase & GAS offline). Pastikan Anda memiliki koneksi internet.", "⚠️");
             } finally {
                 toggleProcessing(false);
             }
+        }
+    }
+
+    /* [2026-10-12 FEAT-RSVP-DASHBOARD] Realtime RSVP State & Handlers */
+    window.RSVP_DATA_MAP = {};
+    window.ACTIVE_RSVP_FILTER = 'all';
+
+    async function loadRsvpDashboardData(ssId) {
+        if (!ssId) return;
+        try {
+            let rows = [];
+            let offset = 0;
+            const limit = 1000;
+            while (true) {
+                const res = await fetch(`${SB_URL}/rest/v1/rsvp_dashboard?ssid=eq.${ssId}&select=*&limit=${limit}&offset=${offset}`, {
+                    headers: SB_HEADERS
+                });
+                if (!res.ok) break;
+                const chunk = await res.json();
+                if (!Array.isArray(chunk) || chunk.length === 0) break;
+                rows.push(...chunk);
+                if (chunk.length < limit) break;
+                offset += limit;
+            }
+
+            window.RSVP_DATA_MAP = {};
+            let openedCount = 0;
+            let hadirCount = 0;
+            let paxCount = 0;
+            let absenCount = 0;
+
+            rows.forEach(r => {
+                if (!r.kode_tamu) return;
+                window.RSVP_DATA_MAP[r.kode_tamu] = r;
+
+                const isOpen = (r.open_count && r.open_count > 0) || r.status_rsvp === 'opened' || r.status_rsvp === 'hadir' || r.status_rsvp === 'tidak_hadir';
+                if (isOpen) openedCount++;
+                if (r.status_rsvp === 'hadir') {
+                    hadirCount++;
+                    paxCount += (parseInt(r.pax) || 0);
+                } else if (r.status_rsvp === 'tidak_hadir') {
+                    absenCount++;
+                }
+            });
+
+            const totalGuests = (window.MASTER_LIST && window.MASTER_LIST.length) || 0;
+            const unopenedCount = Math.max(0, totalGuests - openedCount);
+
+            // Update mini overview strip
+            const openedEl = document.getElementById('rsvp-mini-opened-count');
+            const hadirEl = document.getElementById('rsvp-mini-hadir-count');
+            const paxEl = document.getElementById('rsvp-mini-pax-count');
+            const absenEl = document.getElementById('rsvp-mini-absen-count');
+            const unopenedEl = document.getElementById('rsvp-mini-unopened-count');
+
+            if (openedEl) openedEl.innerText = openedCount;
+            if (hadirEl) hadirEl.innerText = hadirCount;
+            if (paxEl) paxEl.innerText = `(${paxCount} Pax)`;
+            if (absenEl) absenEl.innerText = absenCount;
+            if (unopenedEl) unopenedEl.innerText = unopenedCount;
+
+            // Re-render guest list with RSVP status badges if list is ready
+            if (window.MASTER_LIST && window.MASTER_LIST.length > 0) {
+                if (typeof filterGuestList === 'function') {
+                    filterGuestList();
+                }
+            }
+        } catch(err) {
+            console.warn("[RSVP] Failed loading rsvp_dashboard:", err);
+        }
+    }
+
+    window.setRsvpFilter = function(filterVal) {
+        window.ACTIVE_RSVP_FILTER = filterVal;
+        document.querySelectorAll('.rsvp-filter-chip').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-filter') === filterVal);
+        });
+        if (typeof filterGuestList === 'function') {
+            filterGuestList();
+        }
+    };
+
+    function initRsvpRealtime(ssId) {
+        if (!ssId) return;
+        const startChannel = () => {
+            try {
+                if (!window.supabase || typeof window.supabase.createClient !== 'function') return;
+                const client = window._formulirSbClient || window.supabase.createClient(SB_URL, SB_KEY);
+                window._formulirSbClient = client;
+                client
+                    .channel('rsvp-dash-listener-' + ssId)
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'rsvp_dashboard',
+                        filter: `ssid=eq.${ssId}`
+                    }, () => {
+                        loadRsvpDashboardData(ssId);
+                    })
+                    .subscribe();
+            } catch(e) {
+                console.warn("[RSVP Realtime] Init error:", e);
+            }
+        };
+
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+            startChannel();
+        } else {
+            const s = document.createElement('script');
+            s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+            s.onload = startChannel;
+            document.head.appendChild(s);
         }
     }
 
@@ -4125,14 +4309,27 @@
         if (activeFilters.blast && activeFilters.blast.length > 0) {
             baseList = baseList.filter(g => {
                 const statusWA = g.statusWA || '';
-                const isSent    = statusWA.includes('\u2705') || statusWA.toUpperCase().includes('SENT');
-                const isPending = !isSent && (statusWA.includes('\u26a0') || statusWA.toLowerCase().includes('duplikasi'));
+                const isSent    = statusWA.includes('✅') || statusWA.toUpperCase().includes('SENT');
+                const isPending = !isSent && (statusWA.includes('⚠️') || statusWA.toLowerCase().includes('duplikasi'));
                 
                 let match = false;
                 if (activeFilters.blast.includes('sent') && isSent) match = true;
                 if (activeFilters.blast.includes('pending') && isPending) match = true;
                 if (activeFilters.blast.includes('blast') && !isSent && !isPending) match = true;
                 return match;
+            });
+        }
+
+        // [2026-10-12 FEAT-RSVP-DASHBOARD] Filter RSVP Quick Chips
+        if (window.ACTIVE_RSVP_FILTER && window.ACTIVE_RSVP_FILTER !== 'all') {
+            baseList = baseList.filter(g => {
+                const rsvp = window.RSVP_DATA_MAP ? window.RSVP_DATA_MAP[g.kode] : null;
+                const isOpened = rsvp && ((rsvp.open_count && rsvp.open_count > 0) || rsvp.status_rsvp === 'opened' || rsvp.status_rsvp === 'hadir' || rsvp.status_rsvp === 'tidak_hadir');
+                if (window.ACTIVE_RSVP_FILTER === 'hadir') return rsvp && rsvp.status_rsvp === 'hadir';
+                if (window.ACTIVE_RSVP_FILTER === 'tidak_hadir') return rsvp && rsvp.status_rsvp === 'tidak_hadir';
+                if (window.ACTIVE_RSVP_FILTER === 'opened') return isOpened && (!rsvp.status_rsvp || rsvp.status_rsvp === 'opened');
+                if (window.ACTIVE_RSVP_FILTER === 'unopened') return !isOpened;
+                return true;
             });
         }
 
@@ -4265,6 +4462,19 @@
                 ? `<button class="delete-guest-btn" onclick="confirmDeleteGuest(event, '${g.kode}', '${(g.nama || '').replace(/'/g, "\\'")}', ${isSent})" style="position:absolute; top:12px; right:12px; border:none; background:#FEE2E2; color:#991B1B; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;">✕</button>`
                 : '';
 
+            // [2026-10-12 FEAT-RSVP-DASHBOARD] RSVP Status Badge
+            const rsvp = (window.RSVP_DATA_MAP && window.RSVP_DATA_MAP[g.kode]) ? window.RSVP_DATA_MAP[g.kode] : null;
+            let rsvpBadge = '';
+            if (rsvp && rsvp.status_rsvp === 'hadir') {
+                rsvpBadge = `<span style="font-size:7.5px; font-weight:900; background:#ECFDF5; color:#047857; border:1px solid #A7F3D0; padding:2px 6px; border-radius:20px; white-space:nowrap;" title="Hadir (${rsvp.pax || 1} Pax)">✅ HADIR (${rsvp.pax || 1}P)</span>`;
+            } else if (rsvp && rsvp.status_rsvp === 'tidak_hadir') {
+                rsvpBadge = `<span style="font-size:7.5px; font-weight:900; background:#FEF2F2; color:#B91C1C; border:1px solid #FECACA; padding:2px 6px; border-radius:20px; white-space:nowrap;" title="Tidak Hadir">❌ ABSEN</span>`;
+            } else if (rsvp && ((rsvp.open_count && rsvp.open_count > 0) || rsvp.status_rsvp === 'opened')) {
+                rsvpBadge = `<span style="font-size:7.5px; font-weight:900; background:#FFF9F5; color:#C2410C; border:1px solid #FFEDD5; padding:2px 6px; border-radius:20px; white-space:nowrap;" title="Dibuka ${rsvp.open_count || 1}x">👁️ DIBUKA (${rsvp.open_count || 1}x)</span>`;
+            } else {
+                rsvpBadge = `<span style="font-size:7.5px; font-weight:800; background:#F8FAFC; color:#64748B; border:1px solid #E2E8F0; padding:2px 6px; border-radius:20px; white-space:nowrap;" title="Belum Membuka Link">⏳ BELUM</span>`;
+            }
+
             return `
                 <div class="guest-item-card" 
                     style="border:${cardBorder}; background:${cardBg}; padding:15px; border-radius:20px; display:flex; flex-direction:column; justify-content:space-between; cursor:default; transition:0.3s; min-height:140px; box-shadow:0 10px 20px rgba(140,117,96,0.03); position:relative;">
@@ -4277,6 +4487,7 @@
                             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-top:6px; flex-wrap:wrap;">
                                 <div style="font-size:9px; color:var(--gold); font-weight:800; text-transform:uppercase; min-width:0;">${g.kategori}</div>
                                 <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">
+                                    ${rsvpBadge}
                                     ${(isDupNumber && !isPending) ? '<span style="font-size:7.5px; font-weight:900; background:#FEF3C7; color:#D97706; padding:2px 6px; border-radius:20px; white-space:nowrap;">⚠️  DUPLIKAT</span>' : ''}
                                     ${isPending ? '<span style="font-size:7.5px; font-weight:900; background:#FEF3C7; color:#D97706; padding:2px 6px; border-radius:20px; white-space:nowrap;">⚠️  PENDING</span>' : ''}
                                     <div style="font-size:9px; color:var(--text-muted); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;">${isInstagram ? g.whatsapp : normalizePhone(g.whatsapp) || '-'}</div>
@@ -4392,12 +4603,26 @@
                 ? `<button class="d-btn-action" onclick="confirmDeleteGuest(event, '${g.kode}', '${(g.nama || '').replace(/'/g, "\\'")}', ${isSent})" style="background:#FEE2E2; color:#991B1B;" title="Hapus Tamu">✕</button>`
                 : '';
 
+            // [2026-10-12 FEAT-RSVP-DASHBOARD] RSVP Badge Details
+            const rsvpD = (window.RSVP_DATA_MAP && window.RSVP_DATA_MAP[g.kode]) ? window.RSVP_DATA_MAP[g.kode] : null;
+            let rsvpBadgeD = '';
+            if (rsvpD && rsvpD.status_rsvp === 'hadir') {
+                rsvpBadgeD = `<span style="font-size:7px; font-weight:900; background:#ECFDF5; color:#047857; border:1px solid #A7F3D0; padding:1px 5px; border-radius:10px; margin-left:3px; flex-shrink:0;">✅ HADIR (${rsvpD.pax || 1}P)</span>`;
+            } else if (rsvpD && rsvpD.status_rsvp === 'tidak_hadir') {
+                rsvpBadgeD = `<span style="font-size:7px; font-weight:900; background:#FEF2F2; color:#B91C1C; border:1px solid #FECACA; padding:1px 5px; border-radius:10px; margin-left:3px; flex-shrink:0;">❌ ABSEN</span>`;
+            } else if (rsvpD && ((rsvpD.open_count && rsvpD.open_count > 0) || rsvpD.status_rsvp === 'opened')) {
+                rsvpBadgeD = `<span style="font-size:7px; font-weight:900; background:#FFF9F5; color:#C2410C; border:1px solid #FFEDD5; padding:1px 5px; border-radius:10px; margin-left:3px; flex-shrink:0;">👁️ BUKA (${rsvpD.open_count || 1}x)</span>`;
+            } else {
+                rsvpBadgeD = `<span style="font-size:7px; font-weight:800; background:#F8FAFC; color:#64748B; border:1px solid #E2E8F0; padding:1px 5px; border-radius:10px; margin-left:3px; flex-shrink:0;">⏳ BELUM</span>`;
+            }
+
             return `
             <div class="${rowClass}">
                 <span class="d-sync">${syncIcon}</span>
                 <div class="d-name-col">
                     <div class="d-name">
                         <span title="${g.nama}">${g.nama}</span>
+                        ${rsvpBadgeD}
                         ${(isDupNumber && !isPending) ? '<span style="font-size:7px; font-weight:900; background:#FEF3C7; color:#D97706; padding:1px 5px; border-radius:10px; flex-shrink:0;">⚠️ DUPLIKAT</span>' : ''}
                         ${isPending ? '<span style="font-size:7px; font-weight:900; background:#FEF3C7; color:#D97706; padding:1px 5px; border-radius:10px; flex-shrink:0;">⚠️ PENDING</span>' : ''}
                     </div>

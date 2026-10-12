@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSVP Live Dashboard — SapaTamu.Ku</title>
+    <meta name="description" content="Dashboard analitik RSVP realtime buku tamu digital SapaTamu. Pantau konfirmasi kehadiran, tamu yang membuka link, dan estimasi pax catering.">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+
+    <script src="config.js"></script>
+    <script src="subdomain_resolver.js?v=3.5"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="animations.css">
+
+    <style>
+        :root {
+            --primary: #E07B7B; /* Rose */
+            --primary-light: #FDF2F2;
+            --bg: #FFF9F5;      /* Warm White */
+            --card: #FFFFFF;
+            --text-main: #4A3F35; /* Warm Dark Brown */
+            --text-muted: #8C7560; /* Warm Brown */
+            --border: #F0E6DE;
+            --gold: #C8962E;
+            --gold-light: #FDF8ED;
+            --success: #10B981;
+            --success-bg: #ECFDF5;
+            --danger: #EF4444;
+            --danger-bg: #FEF2F2;
+            --warning: #D97706;
+            --warning-bg: #FFFBEB;
+            --info: #3B82F6;
+            --info-bg: #EFF6FF;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* DYNAMIC ISLAND NAVBAR */
+        .sapatamu-navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px 15px 5px; display: flex; justify-content: center; z-index: 10000; }
+        .nav-outer-wrapper {
+            position: relative; display: flex; align-items: center;
+            background: rgba(255, 253, 251, 0.94); backdrop-filter: blur(20px);
+            border-radius: 50px; box-shadow: 0 10px 30px rgba(74, 63, 53, 0.10);
+            border: 1px solid var(--border); overflow: hidden; width: min(980px, 96vw);
+        }
+        .nav-scroll-container {
+            display: flex; align-items: center; gap: 5px; padding: 6px 15px;
+            overflow-x: auto; white-space: nowrap; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none; width: 100%;
+        }
+        .nav-scroll-container::-webkit-scrollbar { display: none; }
+        .nav-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-link {
+            text-decoration: none; font-size: 10.5px; font-weight: 700; color: var(--text-muted);
+            padding: 8px 16px; border-radius: 30px; transition: all 0.2s ease; display: flex;
+            align-items: center; white-space: nowrap;
+        }
+        .nav-link:hover { color: var(--primary); background: rgba(224, 123, 123, 0.08); }
+        .nav-link.active { background: var(--primary); color: white !important; }
+        .nav-link.sign-out { color: #E07B7B !important; }
+        .nav-divider { width: 1px; height: 16px; background: #EEE0D5; margin: 0 6px; flex-shrink: 0; }
+
+        /* HERO HEADER & AMBIENT */
+        .event-header-top {
+            position: relative; overflow: hidden; box-sizing: border-box;
+            padding: 85px 24px 30px; background: #FFF9F5;
+            border-radius: 0 0 40px 40px; box-shadow: 0 15px 35px rgba(140, 117, 96, 0.06);
+            border-bottom: 1px solid rgba(240, 230, 222, 0.5);
+        }
+        .hero-bg-container { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; }
+        .hero-bg-slide {
+            position: absolute; inset: 0; width: 100%; height: 100%; background-size: cover; background-position: center;
+            opacity: 0; transform: scale(1.04); transition: opacity 1.8s ease, transform 10s ease;
+        }
+        .hero-bg-slide.active { opacity: 1; transform: scale(1); z-index: 1; }
+        .hero-overlay-frost {
+            position: absolute; inset: 0; z-index: 2; pointer-events: none;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 249, 245, 0.50) 45%, rgba(255, 255, 255, 0.70) 100%);
+        }
+        .event-header-content { position: relative; z-index: 3; max-width: 1200px; margin: 0 auto; }
+
+        /* LIVE TELEMETRY DOT */
+        .live-dot-pulse {
+            width: 8px; height: 8px; border-radius: 50%; background: #10B981;
+            box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+            animation: livePulse 2s infinite;
+        }
+        @keyframes livePulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* KPI STAT CARDS */
+        .kpi-card {
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px);
+            border: 1px solid var(--border); border-radius: 20px; padding: 20px 22px;
+            box-shadow: 0 8px 24px rgba(140, 117, 96, 0.05); transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative; overflow: hidden;
+        }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(140, 117, 96, 0.09); }
+        .kpi-card .kpi-num { font-size: clamp(24px, 3.5vw, 32px); font-weight: 900; line-height: 1.1; margin: 6px 0 2px; }
+        .kpi-card .kpi-sub { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+
+        /* TICKER REALTIME */
+        .live-ticker-wrap {
+            background: linear-gradient(90deg, rgba(200, 150, 46, 0.08), rgba(224, 123, 123, 0.08));
+            border: 1px solid rgba(200, 150, 46, 0.2); border-radius: 50px; padding: 8px 18px;
+            display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 700;
+        }
+
+        /* BADGES */
+        .badge-rsvp {
+            display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 50px;
+            font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
+        }
+        .badge-rsvp.hadir { background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
+        .badge-rsvp.tidak_hadir { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+        .badge-rsvp.opened { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
+        .badge-rsvp.unopened { background: #F8FAFC; color: #64748B; border: 1px solid #E2E8F0; }
+
+        /* BUTTONS */
+        .btn-action {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 8px 16px; border-radius: 50px; font-size: 11px; font-weight: 800; cursor: pointer;
+            border: none; transition: all 0.2s ease;
+        }
+        .btn-action:active { transform: scale(0.96); }
+        .btn-primary-action {
+            background: var(--text-main); color: #fff; box-shadow: 0 4px 14px rgba(74, 63, 53, 0.15);
+        }
+        .btn-primary-action:hover { background: #2E2721; }
+        .btn-gold-action {
+            background: linear-gradient(135deg, var(--gold), #B38224); color: #fff; box-shadow: 0 4px 14px rgba(200, 150, 46, 0.25);
+        }
+        .btn-wa-follow {
+            background: #25D366; color: #fff; padding: 6px 12px; border-radius: 50px; font-size: 10px; font-weight: 800;
+            display: inline-flex; align-items: center; gap: 5px; text-decoration: none; transition: transform 0.15s ease;
+        }
+        .btn-wa-follow:hover { background: #20BA5A; transform: scale(1.03); }
+        .btn-wa-follow:active { transform: scale(0.96); }
+
+        /* FILTER CHIP */
+        .filter-chip {
+            padding: 6px 14px; border-radius: 50px; border: 1px solid var(--border); background: #fff;
+            color: var(--text-muted); font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .filter-chip:hover { border-color: var(--primary); color: var(--text-main); }
+        .filter-chip.active { background: var(--text-main); color: #fff; border-color: var(--text-main); }
+
+        /* TABLE VIEW */
+        .rsvp-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .rsvp-table th {
+            position: sticky; top: 0; background: #FFF9F5; z-index: 5;
+            padding: 12px 14px; font-size: 10px; font-weight: 800; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1px; border-bottom: 1.5px solid var(--border); text-align: left;
+        }
+        .rsvp-table td {
+            padding: 14px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-main);
+            vertical-align: middle; background: #fff; transition: background 0.15s ease;
+        }
+        .rsvp-table tr:hover td { background: #FFFBF8; }
+
+        /* DETAIL DRAWER / MODAL */
+        #detailDrawerOverlay {
+            position: fixed; inset: 0; background: rgba(74, 63, 53, 0.45); backdrop-filter: blur(8px);
+            z-index: 999999; display: none; align-items: center; justify-content: center; padding: 20px;
+        }
+        .drawer-box {
+            background: #fff; border-radius: 30px; width: 100%; max-width: 520px; max-height: 90vh;
+            overflow-y: auto; box-shadow: 0 30px 60px rgba(74, 63, 53, 0.2); border: 1px solid var(--border);
+            padding: 32px; position: relative; animation: modalPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* 3 RESPONSIVE BREAKPOINTS (Desktop >=1024px, Tablet 768-1023px, Mobile <768px) */
+        @media (max-width: 1023.98px) {
+            .desktop-only { display: none !important; }
+        }
+        @media (max-width: 767.98px) {
+            .event-header-top { padding: 65px 16px 20px !important; border-radius: 0 0 28px 28px !important; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+            .table-view-container { display: none !important; }
+            .mobile-cards-container { display: flex !important; flex-direction: column; gap: 12px; }
+            #detailDrawerOverlay { align-items: flex-end !important; padding: 0 !important; }
+            .drawer-box {
+                max-width: 100% !important; border-radius: 28px 28px 0 0 !important; padding: 24px 20px 32px !important;
+                max-height: 85vh !important;
+            }
+        }
+        @media (min-width: 768px) {
+            .mobile-cards-container { display: none !important; }
+            .table-view-container { display: block !important; }
+        }
+    </style>
+    <script src="auth_guard.js?v=1.0"></script>
+</head>
+<body id="main-body" onload="(typeof SapaGuard !== 'undefined' && SapaGuard.apply('sensitive')); initRsvpDashboard()">
+
+    <!-- DYNAMIC ISLAND NAVBAR -->
+    <nav class="sapatamu-navbar">
+        <div class="nav-outer-wrapper" id="nav-island">
+            <div class="nav-scroll-container" id="nav-scroll">
+                <div class="nav-group">
+                    <a href="dashboard.html" class="nav-link" id="nav-dashboard">Dashboard</a>
+                    <div class="nav-divider"></div>
+                    <a href="formulir_tamu.html" class="nav-link" id="nav-formulir">Buku Tamu</a>
+                    <a href="rsvp_dashboard.html" class="nav-link active" id="nav-rsvp">RSVP</a>
+                    <a href="wa_blast.html" class="nav-link" id="nav-wa">WA Blast</a>
+                    <a href="undangan.html" class="nav-link" id="nav-undangan">Undangan</a>
+                </div>
+                <div class="nav-divider"></div>
+                <div class="nav-group">
+                    <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
+                    <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
+                    <a href="souvenir.html" class="nav-link" id="nav-souvenir">Souvenir</a>
+                    <a href="analytics.html" class="nav-link" id="nav-analytics">Analytics</a>
+                    <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
+                    <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
+                </div>
+                <div class="nav-divider"></div>
+                <a href="logout.html" class="nav-link sign-out" id="nav-logout">Sign Out</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HEADER EVENT -->
+    <header class="event-header-top">
+        <div id="hero-slides-wrapper" class="hero-bg-container"></div>
+        <div class="hero-overlay-frost"></div>
+
+        <div class="event-header-content">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span class="live-dot-pulse"></span>
+                        <span style="font-size: 10px; font-weight: 800; color: #10B981; letter-spacing: 2px; text-transform: uppercase;">Realtime Supabase Live</span>
+                    </div>
+                    <h1 id="view-wedding-name" style="font-family: 'Lora', serif; font-size: clamp(24px, 4vw, 36px); font-weight: 700; color: var(--text-main); margin: 0;">Memuat Acara...</h1>
+                    <p id="view-schedule" style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-top: 4px;">-</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button onclick="exportRsvpToExcel()" class="btn-action btn-gold-action" title="Download Excel/CSV untuk Katering & WO">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        <span>EXPORT CATERING (CSV)</span>
+                    </button>
+                    <button onclick="refreshData()" class="btn-action btn-primary-action" title="Refresh Data">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5"/></svg>
+                        <span>REFRESH</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- LIVE TICKER NOTIFIKASI REALTIME -->
+            <div id="liveTickerContainer" style="margin-top: 20px; display: none;">
+                <div class="live-ticker-wrap">
+                    <span style="font-size: 14px;">🔔</span>
+                    <span id="liveTickerText">Memantau respon tamu secara realtime...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN BODY -->
+    <main class="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+        <!-- 4 KPI EXECUTIVE STAT CARDS -->
+        <div class="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6 sm:mb-8">
+            <!-- Total Undangan & Buka -->
+            <div class="kpi-card" style="border-top: 4px solid var(--info);">
+                <div class="flex items-center justify-between">
+                    <span class="kpi-sub">TOTAL UNDANGAN</span>
+                    <span style="font-size: 16px;">📨</span>
+                </div>
+                <div class="kpi-num" id="kpi-total-guests">0</div>
+                <div class="flex items-center justify-between text-[11px] text-[#8C7560] font-semibold mt-1">
+                    <span>Sudah Buka Link:</span>
+                    <span id="kpi-opened-pct" class="font-bold text-[#3B82F6]">0% (0)</span>
+                </div>
+            </div>
+
+            <!-- Konfirmasi Hadir & Pax -->
+            <div class="kpi-card" style="border-top: 4px solid var(--success);">
+                <div class="flex items-center justify-between">
+                    <span class="kpi-sub" style="color: #065F46;">KONFIRMASI HADIR</span>
+                    <span style="font-size: 16px;">✅</span>
+                </div>
+                <div class="kpi-num text-[#047857]" id="kpi-hadir-count">0</div>
+                <div class="flex items-center justify-between text-[11px] font-semibold mt-1">
+                    <span class="text-[#065F46]">Total Pax Katering:</span>
+                    <span id="kpi-total-pax" class="font-extrabold text-[#059669]">0 Pax</span>
+                </div>
+            </div>
+
+            <!-- Konfirmasi Tidak Hadir -->
+            <div class="kpi-card" style="border-top: 4px solid var(--danger);">
+                <div class="flex items-center justify-between">
+                    <span class="kpi-sub" style="color: #991B1B;">BERHALANGAN (ABSEN)</span>
+                    <span style="font-size: 16px;">❌</span>
+                </div>
+                <div class="kpi-num text-[#B91C1C]" id="kpi-absen-count">0</div>
+                <div class="flex items-center justify-between text-[11px] text-[#991B1B] font-semibold mt-1">
+                    <span>Persentase Absen:</span>
+                    <span id="kpi-absen-pct" class="font-bold">0%</span>
+                </div>
+            </div>
+
+            <!-- Menunggu / Belum Buka -->
+            <div class="kpi-card" style="border-top: 4px solid var(--warning);">
+                <div class="flex items-center justify-between">
+                    <span class="kpi-sub" style="color: #92400E;">BELUM MERESPON</span>
+                    <span style="font-size: 16px;">⏳</span>
+                </div>
+                <div class="kpi-num text-[#B45309]" id="kpi-pending-count">0</div>
+                <div class="flex items-center justify-between text-[11px] text-[#92400E] font-semibold mt-1">
+                    <span>Belum Buka Link:</span>
+                    <span id="kpi-unopened-count" class="font-bold">0 Tamu</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTROLS & MULTI-FILTER BAR -->
+        <div style="background: #fff; border: 1px solid var(--border); border-radius: 24px; padding: 18px 22px; box-shadow: 0 6px 20px rgba(140, 117, 96, 0.04); margin-bottom: 24px;">
+            <!-- Baris Atas: Search & Quick Status Chips -->
+            <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-4">
+                <div class="relative flex-1">
+                    <input type="text" id="guestSearchInput" oninput="debouncedFilter()" placeholder="🔍 Cari Nama, No. WhatsApp, ID, Alamat, atau Ucapan..."
+                           class="w-full pl-4 pr-10 py-3 bg-[#FFF9F5] border border-[#F0E6DE] rounded-xl text-sm font-semibold outline-none focus:border-[#E07B7B] focus:bg-white transition-all">
+                </div>
+                <!-- Status Filter Chips -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    <button type="button" class="filter-chip active" onclick="setStatusFilter('all')" data-status="all">Semua (<span id="count-chip-all">0</span>)</button>
+                    <button type="button" class="filter-chip" onclick="setStatusFilter('hadir')" data-status="hadir">✅ Hadir (<span id="count-chip-hadir">0</span>)</button>
+                    <button type="button" class="filter-chip" onclick="setStatusFilter('tidak_hadir')" data-status="tidak_hadir">❌ Absen (<span id="count-chip-absen">0</span>)</button>
+                    <button type="button" class="filter-chip" onclick="setStatusFilter('opened')" data-status="opened">👁️ Dibuka Saja (<span id="count-chip-opened">0</span>)</button>
+                    <button type="button" class="filter-chip" onclick="setStatusFilter('unopened')" data-status="unopened">⏳ Belum Buka (<span id="count-chip-unopened">0</span>)</button>
+                </div>
+            </div>
+
+            <!-- Baris Bawah: Dropdown Filter Pengelompokan (Pihak, Sesi, Kategori) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-[#F0E6DE]">
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-[#8C7560] mb-1 tracking-wider">Pihak Pengundang</label>
+                    <select id="filterPihak" onchange="applyFilters()" class="w-full p-2.5 bg-[#FFF9F5] border border-[#F0E6DE] rounded-xl text-xs font-bold text-[#4A3F35] outline-none">
+                        <option value="">-- Semua Pihak Pengundang --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-[#8C7560] mb-1 tracking-wider">Sesi Undangan</label>
+                    <select id="filterSesi" onchange="applyFilters()" class="w-full p-2.5 bg-[#FFF9F5] border border-[#F0E6DE] rounded-xl text-xs font-bold text-[#4A3F35] outline-none">
+                        <option value="">-- Semua Sesi Acara --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-extrabold uppercase text-[#8C7560] mb-1 tracking-wider">Kategori Tamu</label>
+                    <select id="filterKategori" onchange="applyFilters()" class="w-full p-2.5 bg-[#FFF9F5] border border-[#F0E6DE] rounded-xl text-xs font-bold text-[#4A3F35] outline-none">
+                        <option value="">-- Semua Kategori (VIP/Umum) --</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLE VIEW CONTAINER (DESKTOP & TABLET >=768px) -->
+        <div class="table-view-container bg-white border border-[#F0E6DE] rounded-[24px] overflow-hidden shadow-sm">
+            <div class="overflow-x-auto max-h-[70vh]">
+                <table class="rsvp-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">No</th>
+                            <th>Data Tamu</th>
+                            <th>Klasifikasi</th>
+                            <th>Sesi & Alamat</th>
+                            <th>Status RSVP</th>
+                            <th>Pax</th>
+                            <th>Waktu Buka / Submit</th>
+                            <th style="text-align: right;">Aksi & Follow-Up</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rsvpTableBody">
+                        <tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">Memuat data tamu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- MOBILE CARDS CONTAINER (MOBILE <768px) -->
+        <div class="mobile-cards-container" id="rsvpMobileCardsList">
+            <!-- Diisi secara dinamis via JS -->
+        </div>
+
+    </main>
+
+    <!-- DETAIL DRAWER MODAL (KARTU INSPEKSI TAMU LENGKAP) -->
+    <div id="detailDrawerOverlay" onclick="closeDetailDrawer(event)">
+        <div class="drawer-box" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div>
+                    <span id="drawer-kategori-tag" class="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-[#FFF9F5] text-[#8C7560] border border-[#F0E6DE] uppercase">VIP</span>
+                    <h2 id="drawer-guest-name" style="font-family: 'Lora', serif; font-size: 22px; font-weight: 700; color: var(--text-main); margin-top: 6px;">Nama Tamu</h2>
+                    <p id="drawer-guest-id" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">ID: -</p>
+                </div>
+                <button onclick="closeDetailDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); padding: 4px;">✕</button>
+            </div>
+
+            <!-- Foto Selfie Preview (jika ada) -->
+            <div id="drawer-selfie-box" style="display: none; margin-bottom: 18px; text-align: center;">
+                <p style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Foto Selfie Tamu</p>
+                <img id="drawer-selfie-img" src="" alt="Selfie Tamu" style="max-height: 180px; border-radius: 16px; margin: 0 auto; border: 2px solid var(--border); box-shadow: 0 4px 14px rgba(0,0,0,0.06);">
+            </div>
+
+            <div class="space-y-3 mb-6">
+                <div class="flex justify-between items-center p-3 bg-[#FFF9F5] rounded-xl border border-[#F0E6DE]">
+                    <span class="text-xs font-bold text-[#8C7560]">Status RSVP</span>
+                    <div id="drawer-status-badge"></div>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-[#FFF9F5] rounded-xl border border-[#F0E6DE]">
+                    <span class="text-xs font-bold text-[#8C7560]">Jumlah Pax Hadir</span>
+                    <span id="drawer-pax-count" class="text-sm font-extrabold text-[#047857]">0 Pax</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-[#FFF9F5] rounded-xl border border-[#F0E6DE]">
+                    <span class="text-xs font-bold text-[#8C7560]">Pihak Pengundang</span>
+                    <span id="drawer-pihak" class="text-xs font-bold text-[#4A3F35]">-</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-[#FFF9F5] rounded-xl border border-[#F0E6DE]">
+                    <span class="text-xs font-bold text-[#8C7560]">Sesi Acara</span>
+                    <span id="drawer-sesi" class="text-xs font-bold text-[#4A3F35]">-</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-[#FFF9F5] rounded-xl border border-[#F0E6DE]">
+                    <span class="text-xs font-bold text-[#8C7560]">Alamat / Instansi</span>
+                    <span id="drawer-alamat" class="text-xs font-bold text-[#4A3F35]">-</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-[#FFF9F5] rounded-xl border border-[#F0E6DE]">
+                    <span class="text-xs font-bold text-[#8C7560]">Hak Souvenir</span>
+                    <span id="drawer-souvenir" class="text-xs font-bold text-[#4A3F35]">-</span>
+                </div>
+                <div class="p-3 bg-[#FFF9F5] rounded-xl border border-[#F0E6DE]">
+                    <span class="text-xs font-bold text-[#8C7560] block mb-1">Doa Restu & Ucapan</span>
+                    <p id="drawer-ucapan" class="text-xs font-semibold text-[#4A3F35] italic leading-relaxed">- Belum ada ucapan -</p>
+                </div>
+                <div class="text-[10.5px] font-semibold text-[#8C7560] px-1 space-y-1">
+                    <p>👁️ Pertama kali buka link: <span id="drawer-opened-time" class="font-bold">-</span> (Dibuka <span id="drawer-open-count" class="font-bold">0</span>x)</p>
+                    <p>📝 Konfirmasi disubmit: <span id="drawer-submitted-time" class="font-bold">-</span></p>
+                </div>
+            </div>
+
+            <!-- Tombol 1-Click WhatsApp Follow-up -->
+            <div id="drawer-wa-action-container">
+                <a id="drawer-btn-wa" href="#" target="_blank" class="w-full py-3.5 bg-[#25D366] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md hover:bg-[#20BA5A] transition-all">
+                    <span>💬 Kirim Pesan Pengingat WhatsApp</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- CORE SCRIPT -->
+    <script>
+        let CURRENT_SS_ID = "";
+        let RAW_TAMU_LIST = [];
+        let RSVP_MAP = {};
+        let COMBINED_LIST = [];
+        let FILTERED_LIST = [];
+        let ACTIVE_STATUS_FILTER = "all";
+        let WEDDING_METADATA = {};
+
+        window.initRsvpDashboard = function() {
+            if (window.SAPATAMU_RESOLVED) {
+                const urlParams = new URLSearchParams(window.location.search);
+                let sessSsid = "";
+                try {
+                    const s = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || "{}");
+                    sessSsid = s.ssId || s.ssid || "";
+                } catch(e) {}
+                CURRENT_SS_ID = window.CURRENT_SS_ID || urlParams.get("ssId") || sessSsid || localStorage.getItem("st_saved_ssid");
+
+                if (!CURRENT_SS_ID) {
+                    window.location.href = "login.html";
+                    return;
+                }
+
+                localStorage.setItem("st_saved_ssid", CURRENT_SS_ID);
+                syncNavbarLinks();
+                loadMetadataAndSlides();
+                refreshData();
+                initRealtimeSubscription();
+            } else {
+                setTimeout(initRsvpDashboard, 60);
+            }
+        };
+
+        function syncNavbarLinks() {
+            const links = document.querySelectorAll('.nav-link');
+            links.forEach(l => {
+                const base = l.getAttribute('href').split('?')[0];
+                l.href = `${base}?ssId=${CURRENT_SS_ID}`;
+            });
+        }
+
+        async function loadMetadataAndSlides() {
+            try {
+                const res = await fetch(`${SB_URL}/rest/v1/metadata_client?ssid=eq.${CURRENT_SS_ID}&limit=1`, {
+                    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                });
+                if (res.ok) {
+                    const rows = await res.json();
+                    if (rows && rows.length > 0) {
+                        WEDDING_METADATA = rows[0];
+                        document.getElementById('view-wedding-name').innerText = WEDDING_METADATA.nama_pengantin || "Acara Pernikahan";
+                        document.getElementById('view-schedule').innerText = `${WEDDING_METADATA.hari_tanggal || "-"} • ${WEDDING_METADATA.waktu_acara || "-"} • ${WEDDING_METADATA.lokasi_acara || "-"}`;
+                    }
+                }
+            } catch(e) {
+                console.warn("Failed to load metadata:", e);
+            }
+        }
+
+        async function fetchAllRecords(endpoint, queryParams = "") {
+            const SB_HDRS = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY };
+            let all = [];
+            let offset = 0;
+            const limit = 1000;
+            while (true) {
+                const url = `${SB_URL}/rest/v1/${endpoint}?ssid=eq.${CURRENT_SS_ID}${queryParams}&limit=${limit}&offset=${offset}`;
+                const res = await fetch(url, { headers: SB_HDRS });
+                if (!res.ok) break;
+                const chunk = await res.json();
+                if (!Array.isArray(chunk) || chunk.length === 0) break;
+                all.push(...chunk);
+                if (chunk.length < limit) break;
+                offset += limit;
+            }
+            return all;
+        }
+
+        async function refreshData() {
+            try {
+                // Fetch seluruh tamu & rsvp log dengan auto-pagination (>1000 tamu support)
+                const [allTamu, allRsvp] = await Promise.all([
+                    fetchAllRecords("tamu", "&order=row.asc"),
+                    fetchAllRecords("rsvp_dashboard", "")
+                ]);
+
+                RAW_TAMU_LIST = allTamu || [];
+                RSVP_MAP = {};
+                (allRsvp || []).forEach(r => {
+                    if (r.kode_tamu) RSVP_MAP[r.kode_tamu] = r;
+                });
+
+                mergeAndCompileData();
+                populateDropdownOptions();
+                applyFilters();
+                updateKpiCards();
+            } catch (err) {
+                console.error("Gagal refresh data RSVP:", err);
+            }
+        }
+
+        function mergeAndCompileData() {
+            COMBINED_LIST = RAW_TAMU_LIST.map((t, idx) => {
+                const kode = t.kode || "";
+                const rsvp = RSVP_MAP[kode] || null;
+
+                let statusRsvp = "unopened";
+                let paxActual = 0;
+                let openedAt = null;
+                let submittedAt = null;
+                let ucapan = "";
+                let selfieUrl = t.selfie_url || null;
+                let openCount = 0;
+
+                if (rsvp) {
+                    statusRsvp = rsvp.status_rsvp || "opened";
+                    paxActual = parseInt(rsvp.pax) || 0;
+                    openedAt = rsvp.opened_at;
+                    submittedAt = rsvp.submitted_at;
+                    ucapan = rsvp.ucapan || "";
+                    if (rsvp.selfie_url) selfieUrl = rsvp.selfie_url;
+                    openCount = rsvp.open_count || 1;
+                } else if (t.rencana_hadir && parseInt(t.rencana_hadir) > 0) {
+                    // Fallback jika sudah pernah submit sebelum tabel baru
+                    statusRsvp = "hadir";
+                    paxActual = parseInt(t.rencana_hadir);
+                }
+
+                return {
+                    no: idx + 1,
+                    kode: kode,
+                    nama: t.nama || "Tamu Undangan",
+                    whatsapp: t.whatsapp || "",
+                    kategori: t.kategori || "Umum",
+                    pihak: t.pihak_pengundang || "-",
+                    sesi: t.sesi || "-",
+                    alamat: t.alamat || "-",
+                    souvenir: t.souvenir || "tidak",
+                    status_wa: t.status_wa || "",
+                    status_rsvp: statusRsvp,
+                    pax: paxActual,
+                    opened_at: openedAt,
+                    submitted_at: submittedAt,
+                    ucapan: ucapan,
+                    selfie_url: selfieUrl,
+                    open_count: openCount
+                };
+            });
+        }
+
+        function populateDropdownOptions() {
+            const pihakSelect = document.getElementById('filterPihak');
+            const sesiSelect = document.getElementById('filterSesi');
+            const katSelect = document.getElementById('filterKategori');
+
+            const uniquePihak = [...new Set(COMBINED_LIST.map(g => (g.pihak || '').trim()).filter(Boolean))].sort();
+            const uniqueSesi = [...new Set(COMBINED_LIST.map(g => (g.sesi || '').trim()).filter(Boolean))].sort();
+            const uniqueKat = [...new Set(COMBINED_LIST.map(g => (g.kategori || '').trim()).filter(Boolean))].sort();
+
+            const curP = pihakSelect.value;
+            const curS = sesiSelect.value;
+            const curK = katSelect.value;
+
+            pihakSelect.innerHTML = '<option value="">-- Semua Pihak Pengundang --</option>' + uniquePihak.map(p => `<option value="${escAttr(p)}">${escHtml(p)}</option>`).join('');
+            sesiSelect.innerHTML = '<option value="">-- Semua Sesi Acara --</option>' + uniqueSesi.map(s => `<option value="${escAttr(s)}">${escHtml(s)}</option>`).join('');
+            katSelect.innerHTML = '<option value="">-- Semua Kategori (VIP/Umum) --</option>' + uniqueKat.map(k => `<option value="${escAttr(k)}">${escHtml(k)}</option>`).join('');
+
+            if (curP) pihakSelect.value = curP;
+            if (curS) sesiSelect.value = curS;
+            if (curK) katSelect.value = curK;
+        }
+
+        let debounceTimer = null;
+        function debouncedFilter() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(applyFilters, 250);
+        }
+
+        function setStatusFilter(status) {
+            ACTIVE_STATUS_FILTER = status;
+            document.querySelectorAll('.filter-chip').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-status') === status);
+            });
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const query = (document.getElementById('guestSearchInput').value || '').trim().toLowerCase();
+            const selPihak = document.getElementById('filterPihak').value;
+            const selSesi = document.getElementById('filterSesi').value;
+            const selKat = document.getElementById('filterKategori').value;
+
+            FILTERED_LIST = COMBINED_LIST.filter(g => {
+                // Filter Status RSVP
+                if (ACTIVE_STATUS_FILTER !== "all") {
+                    if (ACTIVE_STATUS_FILTER === "hadir" && g.status_rsvp !== "hadir") return false;
+                    if (ACTIVE_STATUS_FILTER === "tidak_hadir" && g.status_rsvp !== "tidak_hadir") return false;
+                    if (ACTIVE_STATUS_FILTER === "opened" && g.status_rsvp !== "opened") return false;
+                    if (ACTIVE_STATUS_FILTER === "unopened" && g.status_rsvp !== "unopened") return false;
+                }
+
+                // Filter Dropdown
+                if (selPihak && g.pihak !== selPihak) return false;
+                if (selSesi && g.sesi !== selSesi) return false;
+                if (selKat && g.kategori !== selKat) return false;
+
+                // Search Query
+                if (query) {
+                    const text = [g.nama, g.whatsapp, g.kode, g.alamat, g.kategori, g.pihak, g.ucapan].join(' ').toLowerCase();
+                    if (!text.includes(query)) return false;
+                }
+
+                return true;
+            });
+
+            renderTable(FILTERED_LIST);
+            renderMobileCards(FILTERED_LIST);
+        }
+
+        function updateKpiCards() {
+            const total = COMBINED_LIST.length;
+            const hadirList = COMBINED_LIST.filter(g => g.status_rsvp === "hadir");
+            const absenList = COMBINED_LIST.filter(g => g.status_rsvp === "tidak_hadir");
+            const openedList = COMBINED_LIST.filter(g => g.status_rsvp === "opened");
+            const unopenedList = COMBINED_LIST.filter(g => g.status_rsvp === "unopened");
+
+            // Total yang sudah membuka link (opened + hadir + tidak_hadir)
+            const totalEverOpened = COMBINED_LIST.filter(g => g.status_rsvp !== "unopened").length;
+            const openedPct = total > 0 ? Math.round((totalEverOpened / total) * 100) : 0;
+
+            const totalPax = hadirList.reduce((acc, curr) => acc + (Number(curr.pax) || 0), 0);
+            const absenPct = total > 0 ? Math.round((absenList.length / total) * 100) : 0;
+
+            // Update UI KPI
+            document.getElementById('kpi-total-guests').innerText = total;
+            document.getElementById('kpi-opened-pct').innerText = `${openedPct}% (${totalEverOpened} Tamu)`;
+            document.getElementById('kpi-hadir-count').innerText = hadirList.length;
+            document.getElementById('kpi-total-pax').innerText = `${totalPax} Pax`;
+            document.getElementById('kpi-absen-count').innerText = absenList.length;
+            document.getElementById('kpi-absen-pct').innerText = `${absenPct}%`;
+            document.getElementById('kpi-pending-count').innerText = (openedList.length + unopenedList.length);
+            document.getElementById('kpi-unopened-count').innerText = `${unopenedList.length} Tamu`;
+
+            // Chips Counters
+            document.getElementById('count-chip-all').innerText = total;
+            document.getElementById('count-chip-hadir').innerText = hadirList.length;
+            document.getElementById('count-chip-absen').innerText = absenList.length;
+            document.getElementById('count-chip-opened').innerText = openedList.length;
+            document.getElementById('count-chip-unopened').innerText = unopenedList.length;
+        }
+
+        function getBadgeHtml(status, pax) {
+            if (status === "hadir") {
+                return `<span class="badge-rsvp hadir">✅ Hadir (${Number(pax) || 0} Pax)</span>`;
+            } else if (status === "tidak_hadir") {
+                return `<span class="badge-rsvp tidak_hadir">❌ Tidak Hadir</span>`;
+            } else if (status === "opened") {
+                return `<span class="badge-rsvp opened">👁️ Link Dibuka</span>`;
+            } else {
+                return `<span class="badge-rsvp unopened">⏳ Belum Buka</span>`;
+            }
+        }
+
+        function formatDateTime(isoStr) {
+            if (!isoStr) return "-";
+            try {
+                const d = new Date(isoStr);
+                const pad = n => String(n).padStart(2, '0');
+                return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            } catch(e) { return "-"; }
+        }
+
+        /* [2026-10-12] XSS hardening: nama/ucapan/kode tamu berasal dari form publik */
+        function escHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function escAttr(s) { return escHtml(s); }
+
+        function renderTable(list) {
+            const tbody = document.getElementById('rsvpTableBody');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 50px; color: var(--text-muted); font-weight: 700;">Tidak ada data tamu yang cocok dengan filter.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map((g, idx) => {
+                const badge = getBadgeHtml(g.status_rsvp, g.pax);
+                const timeLog = g.submitted_at ? `Submit: ${formatDateTime(g.submitted_at)}` : (g.opened_at ? `Buka: ${formatDateTime(g.opened_at)}` : "-");
+
+                return `
+                <tr>
+                    <td style="font-weight: 800; color: var(--text-muted);">${idx + 1}</td>
+                    <td>
+                        <div style="font-weight: 800; color: var(--text-main); font-size: 13px;">${escHtml(g.nama)}</div>
+                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-top: 2px;">
+                            ID: <span style="color: var(--gold);">${escHtml(g.kode)}</span> • WA: ${escHtml(g.whatsapp) || '-'}
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 3px; align-items: flex-start;">
+                            <span style="font-size: 9.5px; font-weight: 800; background: #FFF9F5; border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; color: var(--text-muted);">${escHtml(g.kategori)}</span>
+                            <span style="font-size: 9.5px; font-weight: 700; color: var(--text-main);">${escHtml(g.pihak)}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-main);">${escHtml(g.sesi)}</div>
+                        <div style="font-size: 10px; color: var(--text-muted);">${escHtml(g.alamat)}</div>
+                    </td>
+                    <td>${badge}</td>
+                    <td>
+                        <span style="font-size: 13px; font-weight: 900; color: ${g.status_rsvp === 'hadir' ? '#047857' : 'var(--text-muted)'};">
+                            ${g.status_rsvp === 'hadir' ? (Number(g.pax) || 0) : '-'}
+                        </span>
+                    </td>
+                    <td style="font-size: 10.5px; font-weight: 600; color: var(--text-muted);">
+                        ${timeLog}
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; align-items: center; gap: 6px;">
+                            <button data-kode="${escAttr(g.kode)}" onclick="openDetailDrawer(this.dataset.kode)" style="background: #FFF9F5; border: 1px solid var(--border); color: var(--text-main); padding: 5px 10px; border-radius: 50px; font-size: 10px; font-weight: 800; cursor: pointer; transition: 0.2s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+                                👁️ Detail
+                            </button>
+                            ${getFollowUpButtonHtml(g)}
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderMobileCards(list) {
+            const container = document.getElementById('rsvpMobileCardsList');
+            if (!list || list.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted); font-weight: 700;">Tidak ada data tamu.</div>';
+                return;
+            }
+
+            container.innerHTML = list.map(g => {
+                const badge = getBadgeHtml(g.status_rsvp, g.pax);
+                return `
+                <div style="background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 16px; box-shadow: 0 4px 14px rgba(140, 117, 96, 0.04);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                        <div>
+                            <span style="font-size: 9px; font-weight: 800; background: #FFF9F5; border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; color: var(--text-muted);">${escHtml(g.kategori)}</span>
+                            <h3 style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-top: 4px;">${escHtml(g.nama)}</h3>
+                            <p style="font-size: 10px; font-weight: 700; color: var(--text-muted);">ID: ${escHtml(g.kode)} • ${escHtml(g.pihak)}</p>
+                        </div>
+                        <div>${badge}</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #F0E6DE; padding-top: 10px; margin-top: 10px;">
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted);">
+                            Pax: <span style="font-weight: 900; color: ${g.status_rsvp === 'hadir' ? '#047857' : 'inherit'};">${g.status_rsvp === 'hadir' ? (Number(g.pax) || 0) + ' Pax' : '-'}</span>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button data-kode="${escAttr(g.kode)}" onclick="openDetailDrawer(this.dataset.kode)" style="background: #FFF9F5; border: 1px solid var(--border); padding: 5px 12px; border-radius: 50px; font-size: 10px; font-weight: 800; cursor: pointer;">Detail</button>
+                            ${getFollowUpButtonHtml(g)}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function getFollowUpButtonHtml(g) {
+            if (!g.whatsapp) return '';
+            const phone = g.whatsapp.replace(/\D/g, '');
+            const cleanPhone = phone.startsWith('0') ? '62' + phone.substring(1) : (phone.startsWith('62') ? phone : '62' + phone);
+
+            let msgText = "";
+            const weddingName = WEDDING_METADATA.nama_pengantin || "kami";
+
+            if (g.status_rsvp === "unopened") {
+                msgText = `Halo Kak ${g.nama}, kami ingin mengingatkan kembali undangan pernikahan ${weddingName}. Kami sangat berharap kehadiran Kakak. Tautan RSVP digital: https://${window.CURRENT_SUBDOMAIN || 'wedding'}.sapatamu.id/rsvp.html?id=${g.kode}`;
+            } else if (g.status_rsvp === "opened") {
+                msgText = `Halo Kak ${g.nama}, terima kasih telah membuka undangan pernikahan ${weddingName}. Mohon bantuannya untuk mengonfirmasi kehadiran & jumlah pax yang akan hadir agar kami dapat menyiapkan jamuan terbaik. Terima kasih!`;
+            } else {
+                return ''; // Jika sudah hadir/absen, tidak perlu tombol follow-up
+            }
+
+            const waLink = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msgText)}`;
+            return `<a href="${waLink}" target="_blank" class="btn-wa-follow" title="Kirim Pengingat WhatsApp">💬 Follow-up</a>`;
+        }
+
+        // DETAIL DRAWER CONTROLLER
+        window.openDetailDrawer = function(kode) {
+            const guest = COMBINED_LIST.find(g => g.kode === kode);
+            if (!guest) return;
+
+            document.getElementById('drawer-kategori-tag').innerText = guest.kategori;
+            document.getElementById('drawer-guest-name').innerText = guest.nama;
+            document.getElementById('drawer-guest-id').innerText = `ID: ${guest.kode} • WA: ${guest.whatsapp || '-'}`;
+
+            document.getElementById('drawer-status-badge').innerHTML = getBadgeHtml(guest.status_rsvp, guest.pax);
+            document.getElementById('drawer-pax-count').innerText = guest.status_rsvp === 'hadir' ? `${guest.pax} Pax` : '-';
+            document.getElementById('drawer-pihak').innerText = guest.pihak;
+            document.getElementById('drawer-sesi').innerText = guest.sesi;
+            document.getElementById('drawer-alamat').innerText = guest.alamat;
+            document.getElementById('drawer-souvenir').innerText = (guest.souvenir || 'tidak').toUpperCase();
+            document.getElementById('drawer-ucapan').innerText = guest.ucapan ? `"${guest.ucapan}"` : '- Belum ada ucapan -';
+
+            document.getElementById('drawer-opened-time').innerText = formatDateTime(guest.opened_at);
+            document.getElementById('drawer-open-count').innerText = guest.open_count || 0;
+            document.getElementById('drawer-submitted-time').innerText = formatDateTime(guest.submitted_at);
+
+            // Selfie box
+            const selfieBox = document.getElementById('drawer-selfie-box');
+            const selfieImg = document.getElementById('drawer-selfie-img');
+            if (guest.selfie_url) {
+                selfieImg.src = guest.selfie_url;
+                selfieBox.style.display = 'block';
+            } else {
+                selfieBox.style.display = 'none';
+            }
+
+            // WA Follow-up button
+            const waBtnContainer = document.getElementById('drawer-wa-action-container');
+            const waBtn = document.getElementById('drawer-btn-wa');
+            if (guest.whatsapp) {
+                const phone = guest.whatsapp.replace(/\D/g, '');
+                const cleanPhone = phone.startsWith('0') ? '62' + phone.substring(1) : (phone.startsWith('62') ? phone : '62' + phone);
+                const weddingName = WEDDING_METADATA.nama_pengantin || "kami";
+                const msg = `Halo Kak ${guest.nama}, salam hangat dari ${weddingName}. Kami ingin mengonfirmasi kehadiran Kakak pada acara kami. Terima kasih!`;
+                waBtn.href = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`;
+                waBtnContainer.style.display = 'block';
+            } else {
+                waBtnContainer.style.display = 'none';
+            }
+
+            document.getElementById('detailDrawerOverlay').style.display = 'flex';
+        };
+
+        window.closeDetailDrawer = function() {
+            document.getElementById('detailDrawerOverlay').style.display = 'none';
+        };
+
+        // EXPORT TO CSV / EXCEL
+        window.exportRsvpToExcel = function() {
+            if (!COMBINED_LIST || COMBINED_LIST.length === 0) {
+                alert("Data tamu belum dimuat.");
+                return;
+            }
+
+            const headers = ["No", "Kode Unik", "Nama Tamu", "No WhatsApp", "Kategori", "Pihak Pengundang", "Sesi", "Alamat", "Status RSVP", "Pax Hadir", "Waktu Buka", "Waktu Submit", "Ucapan Doa"];
+            const rows = COMBINED_LIST.map((g, idx) => [
+                idx + 1,
+                `"${g.kode}"`,
+                `"${(g.nama || '').replace(/"/g, '""')}"`,
+                `"${g.whatsapp}"`,
+                `"${g.kategori}"`,
+                `"${g.pihak}"`,
+                `"${g.sesi}"`,
+                `"${(g.alamat || '').replace(/"/g, '""')}"`,
+                `"${g.status_rsvp.toUpperCase()}"`,
+                g.status_rsvp === 'hadir' ? g.pax : 0,
+                `"${g.opened_at || '-'}"`,
+                `"${g.submitted_at || '-'}"`,
+                `"${(g.ucapan || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`
+            ]);
+
+            const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + 
+                [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            const dateStr = new Date().toISOString().slice(0, 10);
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `RSVP_Catering_Report_${CURRENT_SS_ID}_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        // SUPABASE REALTIME SUBSCRIPTION
+        function initRealtimeSubscription() {
+            if (!window.supabase) {
+                // Load supabase-js jika belum ada
+                const script = document.createElement('script');
+                script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+                script.onload = () => setupRealtimeChannel();
+                document.head.appendChild(script);
+            } else {
+                setupRealtimeChannel();
+            }
+        }
+
+        function setupRealtimeChannel() {
+            try {
+                const sbClient = window.supabase.createClient(SB_URL, SB_KEY);
+                sbClient
+                    .channel('rsvp-live-feed-' + CURRENT_SS_ID)
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'rsvp_dashboard',
+                        filter: `ssid=eq.${CURRENT_SS_ID}`
+                    }, payload => {
+                        handleIncomingRealtimeUpdate(payload);
+                    })
+                    .subscribe((status) => {
+                        console.log("Supabase Realtime RSVP subscription status:", status);
+                    });
+            } catch(e) {
+                console.warn("Realtime setup failed:", e);
+            }
+        }
+
+        function handleIncomingRealtimeUpdate(payload) {
+            console.log("Realtime RSVP Event received:", payload);
+            const newRecord = payload.new;
+            if (!newRecord || !newRecord.kode_tamu) return;
+
+            // Update local RSVP_MAP
+            RSVP_MAP[newRecord.kode_tamu] = newRecord;
+
+            // Tampilkan live ticker banner
+            const tickerContainer = document.getElementById('liveTickerContainer');
+            const tickerText = document.getElementById('liveTickerText');
+            if (tickerContainer && tickerText) {
+                const statusTxt = newRecord.status_rsvp === 'hadir' ? `konfirmasi HADIR (${newRecord.pax} pax) 🎉` : (newRecord.status_rsvp === 'tidak_hadir' ? 'konfirmasi TIDAK HADIR' : 'baru saja MEMBUKA link undangan 👁️');
+                tickerText.innerHTML = `<strong>${escHtml(newRecord.nama_tamu) || 'Tamu'}</strong> ${statusTxt}`;
+                tickerContainer.style.display = 'block';
+            }
+
+            mergeAndCompileData();
+            applyFilters();
+            updateKpiCards();
+        }
+    </script>
+</body>
+</html>
