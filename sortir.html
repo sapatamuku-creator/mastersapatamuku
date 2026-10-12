@@ -4820,6 +4820,8 @@
                 this.panX = 0;
                 this.panY = 0;
                 this.applyTransform();
+                // FIX-Lightbox-Fullres: lepas bitmap full-res saat tutup (tanpa tulis cache)
+                img.removeAttribute('src');
             }
             this.isOpen = false;
 
@@ -4968,6 +4970,8 @@
         bindEvents(cardEl, file, onToggle = null, fileList = null, index = -1, isLocal = false) {
             const toggleFn = onToggle || (() => toggleClientSelection(file.id, file.name));
             const getImgSrc = () => {
+                // FIX-Lightbox-Fullres: lokal selalu file asli (blob sesi), bukan thumb kartu
+                if (isLocal && file && file.url) return file.url;
                 const img = cardEl.querySelector('img');
                 return img ? (img.currentSrc || img.src) : (file.url || `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`);
             };
