@@ -728,47 +728,71 @@
     let welcomePhotos = [];
     let selectedAvatarUrl = null;
 
-    async function fetchSettingsSilently() {
-        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db')||'{}').ssId);
-        if (!ssId) return;
+    function toDriveThumb(rawUrl) {
+        let previewUrl = String(rawUrl || '').trim();
+        const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+        const match = previewUrl.match(driveRegex);
+        if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file"))) {
+            previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
+        }
+        return previewUrl;
+    }
+
+    // Sumber foto = sama seperti config display: Supabase config_welcome dulu, GAS fallback.
+    // READ ONLY string URL (Drive) yang sudah ditempel user — tanpa Storage, tanpa upload.
+    async function fetchWelcomePhotos(ssId) {
+        if (!ssId) return [];
+        try {
+            const res = await fetch(`${SB_URL}/rest/v1/config_welcome?ssid=eq.${encodeURIComponent(ssId)}&select=data&limit=1`, {
+                headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+            });
+            if (res.ok) {
+                const rows = await res.json();
+                if (rows && rows.length > 0 && rows[0].data && rows[0].data.urlFoto) {
+                    const list = String(rows[0].data.urlFoto).split(",").map(u => u.trim()).filter(u => u !== "");
+                    if (list.length > 0) return list;
+                }
+            }
+        } catch (e) {
+            console.warn("Avatar: Supabase config_welcome fetch failed:", e);
+        }
         try {
             const url = (window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec") + "?action=getSettings&ssId=" + ssId;
             const res = await fetch(url);
             const data = await res.json();
-            
             if (data.status === "success" && data.data && data.data.urlFoto) {
-                welcomePhotos = data.data.urlFoto.split(",").filter(u => u.trim());
-                
-                // If user doesn't have an avatar yet, auto-set to the first picture
-                if (!localStorage.getItem('sapatamu_avatar') && welcomePhotos.length > 0) {
-                    let previewUrl = welcomePhotos[0].trim();
-                    const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
-                    const match = previewUrl.match(driveRegex);
-                    if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file"))) {
-                        previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
-                    }
-                    localStorage.setItem('sapatamu_avatar', previewUrl);
-                    renderProfileData(document.getElementById('sidebar-name').innerText, document.getElementById('sidebar-tier').innerText);
-                }
+                const list = String(data.data.urlFoto).split(",").map(u => u.trim()).filter(u => u !== "");
+                if (list.length > 0) return list;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn("Avatar: GAS getSettings fetch failed:", e);
+        }
+        return [];
+    }
+
+    async function fetchSettingsSilently() {
+        const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db')||'{}').ssId);
+        if (!ssId) return;
+        const photos = await fetchWelcomePhotos(ssId);
+        if (photos.length === 0) return;
+        welcomePhotos = photos;
+
+        // If user doesn't have an avatar yet, auto-set to the first picture
+        if (!localStorage.getItem('sapatamu_avatar')) {
+            const previewUrl = toDriveThumb(photos[0]);
+            localStorage.setItem('sapatamu_avatar', previewUrl);
+            renderProfileData(document.getElementById('sidebar-name').innerText, document.getElementById('sidebar-tier').innerText);
+        }
     }
 
     async function openAvatarModal() {
         document.getElementById('avatarModal').style.display = 'flex';
         const grid = document.getElementById('avatar-grid');
-        
+
         if (welcomePhotos.length === 0) {
-            grid.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; font-size:12px; color:#aaa;">Memuat foto... atau Anda belum mengunggah foto di Layar Sapa.</div>';
+            grid.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; font-size:12px; color:#aaa;">Memuat foto...</div>';
             const ssId = window.CURRENT_SS_ID || (JSON.parse(localStorage.getItem('sapatamu_db')||'{}').ssId);
-            if(ssId) {
-                const url = (window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec") + "?action=getSettings&ssId=" + ssId;
-                const res = await fetch(url);
-                const data = await res.json();
-                if (data.status === "success" && data.data && data.data.urlFoto) {
-                    welcomePhotos = data.data.urlFoto.split(",").filter(u => u.trim());
-                }
-            }
+            welcomePhotos = await fetchWelcomePhotos(ssId);
         }
         
         if (welcomePhotos.length === 0) {
@@ -777,13 +801,8 @@
         }
         
         grid.innerHTML = welcomePhotos.map((url, idx) => {
-            let previewUrl = url.trim();
-            const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
-            const match = previewUrl.match(driveRegex);
-            if (match && match[1] && (previewUrl.includes("drive.google.com") || previewUrl.includes("google.com/file"))) {
-                previewUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w200`;
-            }
-            
+            const previewUrl = toDriveThumb(url);
+
             const isSelected = localStorage.getItem('sapatamu_avatar') === previewUrl ? 'selected' : '';
             return `<div class="avatar-item ${isSelected}" onclick="selectAvatarItem(this, '${previewUrl}')">
                         <img src="${previewUrl}" onerror="this.style.display='none'">
