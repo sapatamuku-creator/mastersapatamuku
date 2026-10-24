@@ -3202,6 +3202,7 @@
                 if (!r.kode_tamu) return;
                 window.RSVP_DATA_MAP[r.kode_tamu] = r;
 
+                /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Semua buka asli dihitung (blast sistem ATAU kirim manual oleh klien) */
                 const isOpen = (r.open_count && r.open_count > 0) || r.status_rsvp === 'opened' || r.status_rsvp === 'hadir' || r.status_rsvp === 'tidak_hadir';
                 if (isOpen) openedCount++;
                 if (r.status_rsvp === 'hadir') {
@@ -3212,8 +3213,16 @@
                 }
             });
 
-            const totalGuests = (window.MASTER_LIST && window.MASTER_LIST.length) || 0;
-            const unopenedCount = Math.max(0, totalGuests - openedCount);
+            /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] BELUM BUKA = funnel undangan online saja:
+               tamu berkontak WA/IG dikurangi yang (di antara tamu itu sendiri) sudah membuka.
+               Tamu data offline (kontak '-') tidak dihitung di bucket mana pun. */
+            const onlineGuests = (window.MASTER_LIST || []).filter(g => hasInviteChannel(g));
+            const onlineGuestKodes = new Set(onlineGuests.map(g => g.kode));
+            let openedOnlineCount = 0;
+            rows.forEach(r => {
+                if (r.kode_tamu && onlineGuestKodes.has(r.kode_tamu)) openedOnlineCount++;
+            });
+            const unopenedCount = Math.max(0, onlineGuests.length - openedOnlineCount);
 
             // Update mini overview strip
             const openedEl = document.getElementById('rsvp-mini-opened-count');
@@ -4328,7 +4337,9 @@
                 if (window.ACTIVE_RSVP_FILTER === 'hadir') return rsvp && rsvp.status_rsvp === 'hadir';
                 if (window.ACTIVE_RSVP_FILTER === 'tidak_hadir') return rsvp && rsvp.status_rsvp === 'tidak_hadir';
                 if (window.ACTIVE_RSVP_FILTER === 'opened') return isOpened && (!rsvp.status_rsvp || rsvp.status_rsvp === 'opened');
-                if (window.ACTIVE_RSVP_FILTER === 'unopened') return !isOpened;
+                /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Belum Buka hanya untuk tamu berkanal online;
+                   tamu tanpa kontak (OFFLINE) tidak masuk chip ini — hanya muncul di "Semua" */
+                if (window.ACTIVE_RSVP_FILTER === 'unopened') return !isOpened && hasInviteChannel(g);
                 return true;
             });
         }
@@ -4357,6 +4368,16 @@
         if (p.startsWith('0')) p = '62' + p.substring(1);
         return p;
     }
+
+    /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Tamu berkanal online = punya nomor WA (berisi digit) atau user IG (berisi huruf/@).
+       Kontak '-' / kosong = data tamu undangan fisik (OFFLINE), di luar funnel RSVP online. */
+    function hasInviteChannel(guest) {
+        if (!guest) return false;
+        const wa = (guest.whatsapp == null ? '' : String(guest.whatsapp)).trim();
+        if (!wa || wa === '-' || wa === '\u2014' || wa === '\u2013') return false;
+        return /\d/.test(wa) || /[a-zA-Z@]/.test(wa);
+    }
+    window.hasInviteChannel = hasInviteChannel;
 
     function render(list) {
         const listContainer = document.getElementById('v3-draft-list');
@@ -4470,9 +4491,13 @@
             } else if (rsvp && rsvp.status_rsvp === 'tidak_hadir') {
                 rsvpBadge = `<span style="font-size:7.5px; font-weight:900; background:#FEF2F2; color:#B91C1C; border:1px solid #FECACA; padding:2px 6px; border-radius:20px; white-space:nowrap;" title="Tidak Hadir">❌ ABSEN</span>`;
             } else if (rsvp && ((rsvp.open_count && rsvp.open_count > 0) || rsvp.status_rsvp === 'opened')) {
+                /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Buka asli tetap valid meski tamu tanpa kontak tercatat (bisa kirim manual oleh klien) */
                 rsvpBadge = `<span style="font-size:7.5px; font-weight:900; background:#FFF9F5; color:#C2410C; border:1px solid #FFEDD5; padding:2px 6px; border-radius:20px; white-space:nowrap;" title="Dibuka ${rsvp.open_count || 1}x">👁️ DIBUKA (${rsvp.open_count || 1}x)</span>`;
-            } else {
+            } else if (hasInviteChannel(g)) {
                 rsvpBadge = `<span style="font-size:7.5px; font-weight:800; background:#F8FAFC; color:#64748B; border:1px solid #E2E8F0; padding:2px 6px; border-radius:20px; white-space:nowrap;" title="Belum Membuka Link">⏳ BELUM</span>`;
+            } else {
+                /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Tamu tanpa kanal WA/IG & tanpa aktivitas RSVP = undangan fisik */
+                rsvpBadge = `<span style="font-size:7.5px; font-weight:900; background:#FBF7F2; color:#8A6D5C; border:1px solid #EFE3D8; padding:2px 6px; border-radius:20px; white-space:nowrap;" title="Undangan fisik — tamu tanpa kanal WA/IG, di luar funnel RSVP online">📥 OFFLINE</span>`;
             }
 
             return `
@@ -4611,9 +4636,13 @@
             } else if (rsvpD && rsvpD.status_rsvp === 'tidak_hadir') {
                 rsvpBadgeD = `<span style="font-size:7px; font-weight:900; background:#FEF2F2; color:#B91C1C; border:1px solid #FECACA; padding:1px 5px; border-radius:10px; margin-left:3px; flex-shrink:0;">❌ ABSEN</span>`;
             } else if (rsvpD && ((rsvpD.open_count && rsvpD.open_count > 0) || rsvpD.status_rsvp === 'opened')) {
+                /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Buka asli tetap valid meski tamu tanpa kontak tercatat */
                 rsvpBadgeD = `<span style="font-size:7px; font-weight:900; background:#FFF9F5; color:#C2410C; border:1px solid #FFEDD5; padding:1px 5px; border-radius:10px; margin-left:3px; flex-shrink:0;">👁️ BUKA (${rsvpD.open_count || 1}x)</span>`;
-            } else {
+            } else if (hasInviteChannel(g)) {
                 rsvpBadgeD = `<span style="font-size:7px; font-weight:800; background:#F8FAFC; color:#64748B; border:1px solid #E2E8F0; padding:1px 5px; border-radius:10px; margin-left:3px; flex-shrink:0;">⏳ BELUM</span>`;
+            } else {
+                /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Tamu tanpa kanal WA/IG & tanpa aktivitas RSVP = undangan fisik */
+                rsvpBadgeD = `<span style="font-size:7px; font-weight:900; background:#FBF7F2; color:#8A6D5C; border:1px solid #EFE3D8; padding:1px 5px; border-radius:10px; margin-left:3px; flex-shrink:0;">📥 OFFLINE</span>`;
             }
 
             return `

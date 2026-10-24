@@ -132,6 +132,7 @@
         .badge-rsvp.tidak_hadir { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
         .badge-rsvp.opened { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
         .badge-rsvp.unopened { background: #F8FAFC; color: #64748B; border: 1px solid #E2E8F0; }
+        .badge-rsvp.offline { background: #FBF7F2; color: #8A6D5C; border: 1px solid #EFE3D8; }
 
         /* BUTTONS */
         .btn-action {
@@ -568,6 +569,15 @@
             }
         }
 
+        /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Tamu berkanal online = punya nomor WA (berisi digit) atau user IG (berisi huruf/@).
+           Kontak '-' / kosong = data tamu undangan fisik (OFFLINE), di luar funnel RSVP online. */
+        function hasInviteChannel(guest) {
+            if (!guest) return false;
+            const wa = (guest.whatsapp == null ? '' : String(guest.whatsapp)).trim();
+            if (!wa || wa === '-' || wa === '\u2014' || wa === '\u2013') return false;
+            return /\d/.test(wa) || /[a-zA-Z@]/.test(wa);
+        }
+
         function mergeAndCompileData() {
             COMBINED_LIST = RAW_TAMU_LIST.map((t, idx) => {
                 const kode = t.kode || "";
@@ -593,6 +603,13 @@
                     // Fallback jika sudah pernah submit sebelum tabel baru
                     statusRsvp = "hadir";
                     paxActual = parseInt(t.rencana_hadir);
+                }
+
+                /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Tamu tanpa kontak WA/IG & tanpa aktivitas RSVP apa pun
+                   = data undangan fisik (OFFLINE), bukan bucket "Belum Buka" funnel online.
+                   Buka asli / hadir / tidak_hadir tetap dipertahankan apa pun kanal kirim. */
+                if (statusRsvp === "unopened" && !hasInviteChannel(t)) {
+                    statusRsvp = "offline";
                 }
 
                 return {
@@ -688,17 +705,21 @@
 
         function updateKpiCards() {
             const total = COMBINED_LIST.length;
+            const offlineList = COMBINED_LIST.filter(g => g.status_rsvp === "offline");
             const hadirList = COMBINED_LIST.filter(g => g.status_rsvp === "hadir");
             const absenList = COMBINED_LIST.filter(g => g.status_rsvp === "tidak_hadir");
             const openedList = COMBINED_LIST.filter(g => g.status_rsvp === "opened");
             const unopenedList = COMBINED_LIST.filter(g => g.status_rsvp === "unopened");
 
-            // Total yang sudah membuka link (opened + hadir + tidak_hadir)
-            const totalEverOpened = COMBINED_LIST.filter(g => g.status_rsvp !== "unopened").length;
-            const openedPct = total > 0 ? Math.round((totalEverOpened / total) * 100) : 0;
+            /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Persen buka & absen hanya atas funnel online:
+               tamu offline (tanpa kanal & tanpa aktivitas) dikecualikan dari pembilas maupun penyebut.
+               Tamu tanpa kontak yang tetap konfirmasi hadir/absen tetap masuk funnel (buka asli). */
+            const onlineTotal = total - offlineList.length;
+            const totalEverOpened = COMBINED_LIST.filter(g => g.status_rsvp !== "unopened" && g.status_rsvp !== "offline").length;
+            const openedPct = onlineTotal > 0 ? Math.round((totalEverOpened / onlineTotal) * 100) : 0;
 
             const totalPax = hadirList.reduce((acc, curr) => acc + (Number(curr.pax) || 0), 0);
-            const absenPct = total > 0 ? Math.round((absenList.length / total) * 100) : 0;
+            const absenPct = onlineTotal > 0 ? Math.round((absenList.length / onlineTotal) * 100) : 0;
 
             // Update UI KPI
             document.getElementById('kpi-total-guests').innerText = total;
@@ -725,6 +746,9 @@
                 return `<span class="badge-rsvp tidak_hadir">❌ Tidak Hadir</span>`;
             } else if (status === "opened") {
                 return `<span class="badge-rsvp opened">👁️ Link Dibuka</span>`;
+            } else if (status === "offline") {
+                /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Data undangan fisik, di luar funnel RSVP online */
+                return `<span class="badge-rsvp offline" title="Undangan fisik — tamu tanpa kanal WA/IG">📥 Offline</span>`;
             } else {
                 return `<span class="badge-rsvp unopened">⏳ Belum Buka</span>`;
             }
@@ -829,7 +853,9 @@
         }
 
         function getFollowUpButtonHtml(g) {
-            if (!g.whatsapp) return '';
+            /* [2026-10-24 FIX-RSVP-OFFLINE-GATE] Butuh nomor WA valid (minimal ada digit);
+               kontak '-' / user IG murni akan memproduksi link api.whatsapp.com/send?phone=62 yang rusak */
+            if (!g.whatsapp || !/\d/.test(String(g.whatsapp))) return '';
             const phone = g.whatsapp.replace(/\D/g, '');
             const cleanPhone = phone.startsWith('0') ? '62' + phone.substring(1) : (phone.startsWith('62') ? phone : '62' + phone);
 
