@@ -1,0 +1,2300 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
+    <meta name="theme-color" content="#C8962E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>SapaTamu - Merchandise Display</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <link rel="apple-touch-icon" href="assets/icon-guestbook-512.png">
+
+    <!-- Preconnect Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets & Core Libs -->
+    <link rel="stylesheet" href="assets/tailwind.css" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.tailwindcss.com';document.head.appendChild(s)">
+    <link rel="stylesheet" href="animations.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="config.js"></script>
+    <script type="module">
+        import { fetchAllTamu, createRealtimeTamu } from './lib/guestbook-core.js';
+        window.__guestbookCore = window.__guestbookCore || {};
+        window.__guestbookCore.fetchAllTamu = fetchAllTamu;
+        window.__guestbookCore.createRealtimeTamu = createRealtimeTamu;
+    </script>
+    <script src="subdomain_resolver.js?v=3.5"></script>
+    <script src="auth_guard.js?v=1.0"></script>
+
+    <style>
+        /* Sapatamu-Projects · canon v1 · tokens: warm · nav: island · perf: skeleton+cache */
+        :root {
+            /* — Warm Core Palette — */
+            --primary: #E07B7B;          /* Rose — CTA, active, selected */
+            --primary-light: #FDF2F2;    /* Rose wash */
+            --primary-dark: #C45A5A;
+            --primary-soft: rgba(224, 123, 123, 0.12);
+            --gold: #C8962E;             /* Royal Gold — accent, rank, bar */
+            --gold-light: #E8C878;
+            --gold-bg: rgba(200, 150, 46, 0.08);
+            --bg: #FFF9F5;               /* Page bg */
+            --bg-alt: #FFF5EE;
+            --card: #FFFFFF;
+            --card-glass: rgba(255, 255, 255, 0.78);
+            --card-glass-border: rgba(255, 255, 255, 0.85);
+            --border: rgba(200, 150, 46, 0.18);
+            --border-soft: #F0E6DE;
+            --text-main: #4A3F35;        /* Deep Espresso */
+            --text-light: #8A7E72;
+            --text-muted: #8C7560;       /* Warm Taupe */
+            --input-bg: #FDF8F4;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #D97706;
+
+            /* — Typography — */
+            --font-display: "Lora", Georgia, serif;
+            --font-body: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+            --font-mono: "JetBrains Mono", monospace;
+
+            /* — Radius & Shadow — */
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --radius-xl: 24px;
+            --radius-pill: 9999px;
+            --shadow-subtle: 0 10px 30px rgba(140, 117, 96, 0.06);
+            --shadow-elevated: 0 18px 45px rgba(74, 63, 53, 0.09);
+            --transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* ── PREWEDDING PHOTO SLIDESHOW BACKGROUND ── */
+        .hero-bg-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .hero-bg-slide {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transform: scale(1.05);
+            transition: opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1), transform 10s cubic-bezier(0.1, 0, 0.3, 1);
+        }
+        .hero-bg-slide.active {
+            opacity: 1;
+            transform: scale(1);
+            z-index: 1;
+        }
+        .hero-overlay-frost {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            /* Samakan souvenir.html: foto terlihat jelas, overlay tipis, blur 4px saja */
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 249, 245, 0.32) 45%, rgba(255, 255, 255, 0.52) 100%),
+                        linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 249, 245, 0.45) 100%);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        /* ── FLOATING PARTICLES ── */
+        .dynamic-bg {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 1;
+            overflow: hidden;
+            pointer-events: none;
+            margin: 0; padding: 0;
+            list-style: none;
+        }
+        .dynamic-bg li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 25px; height: 25px;
+            background: transparent;
+            animation: floatDiagonal 20s linear infinite;
+            bottom: -150px;
+        }
+        .dynamic-bg li::before {
+            content: '';
+            position: absolute;
+            width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23C8962E' opacity='0.20'%3E%3Cpath d='M6 2h11a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2zm1 2v2h9V4H7zm0 4v10h9V8H7z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        .dynamic-bg li:nth-child(1) { left: 10%; width: 35px; height: 35px; animation-delay: 0s; animation-duration: 24s; }
+        .dynamic-bg li:nth-child(2) { left: 25%; width: 22px; height: 22px; animation-delay: 3s; animation-duration: 18s; }
+        .dynamic-bg li:nth-child(3) { left: 55%; width: 38px; height: 38px; animation-delay: 1s; animation-duration: 22s; }
+        .dynamic-bg li:nth-child(4) { left: 75%; width: 26px; height: 26px; animation-delay: 5s; animation-duration: 19s; }
+        .dynamic-bg li:nth-child(5) { left: 88%; width: 32px; height: 32px; animation-delay: 2s; animation-duration: 20s; }
+        @keyframes floatDiagonal {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translate(12vw, -120vh) rotate(260deg); opacity: 0; }
+        }
+
+        /* ── DYNAMIC ISLAND SAPATAMU NAVBAR ── */
+        .sapatamu-navbar-wrap {
+            position: fixed;
+            top: 10px;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+            padding: 0 10px;
+        }
+        .sapatamu-navbar {
+            pointer-events: auto;
+            width: 100%;
+            max-width: 980px;
+            background: rgba(255, 253, 251, 0.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 9999px;
+            padding: 5px 12px;
+            box-shadow: 0 10px 30px rgba(74, 63, 53, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            transition: var(--transition);
+        }
+        .nav-links-scroll {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 2px 0;
+            mask-image: linear-gradient(90deg, transparent 0, black 12px, black calc(100% - 12px), transparent 100%);
+            -webkit-mask-image: linear-gradient(90deg, transparent 0, black 12px, black calc(100% - 12px), transparent 100%);
+        }
+        .nav-links-scroll::-webkit-scrollbar { display: none; }
+        .nav-pill {
+            font-size: 10.5px;
+            font-weight: 800;
+            color: var(--text-muted);
+            padding: 5px 10px;
+            border-radius: 9999px;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: var(--transition);
+        }
+        .nav-pill:hover {
+            color: var(--text-main);
+            background: rgba(74, 63, 53, 0.06);
+        }
+        .nav-pill.active-gold {
+            color: #fff;
+            background: var(--gold);
+            box-shadow: 0 2px 8px rgba(200, 150, 46, 0.35);
+        }
+
+        /* ── FROSTED GLASS CARDS — blur 8px (souvenir header) bukan 20px, foto tetap terlihat ── */
+        .sapatamu-glass-card {
+            background: var(--card-glass);
+            border: 1px solid var(--card-glass-border);
+            border-radius: var(--radius-xl);
+            padding: 22px 24px;
+            box-shadow: var(--shadow-subtle);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: var(--transition);
+        }
+        .sapatamu-glass-card:hover {
+            box-shadow: var(--shadow-elevated);
+        }
+
+        .st-label {
+            display: block;
+            font-size: 9px !important;
+            font-weight: 800;
+            color: var(--text-muted);
+            letter-spacing: 1.2px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .section-title-line {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #B5ADA5;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title-line::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--border-soft);
+        }
+
+        /* ── HERO EVENT HEADER — blur 8px seperti souvenir.html header, foto tidak tertutup ── */
+        .event-hero-box {
+            background: rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.85);
+            border-radius: 24px;
+            padding: 22px 18px;
+            text-align: center;
+            box-shadow: var(--shadow-subtle);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            margin-bottom: 18px;
+            position: relative;
+            z-index: 10;
+        }
+        .event-title-display {
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: clamp(22px, 5.5vw, 36px);
+            margin: 4px 0 6px;
+            line-height: 1.15;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+        }
+        .event-badge-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 12px;
+            border-radius: 20px;
+            background: var(--gold-bg);
+            border: 1px solid rgba(200, 150, 46, 0.25);
+            color: var(--gold);
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+        }
+
+        /* ── MOBILE SEGMENTED CONTROL (iOS Frosted Pill) ── */
+        .mobile-segmented-control {
+            display: none;
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.85);
+            border-radius: 9999px;
+            padding: 4px;
+            box-shadow: 0 4px 16px rgba(74, 63, 53, 0.05);
+            margin-bottom: 16px;
+            position: relative;
+            z-index: 10;
+        }
+        .mob-segment-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 9999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .mob-segment-btn.active {
+            background: #FFFFFF;
+            color: var(--text-main);
+            font-weight: 800;
+            box-shadow: 0 2px 10px rgba(74, 63, 53, 0.10);
+        }
+
+        /* ── PRODUCT CHIPS (Multi-Produk — Stand bisa banyak jenis) ── */
+        .product-chips {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 2px;
+        }
+        .product-chips::-webkit-scrollbar { display: none; }
+        .product-chip {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: 9999px;
+            border: 1.5px solid var(--border-soft);
+            background: rgba(255, 255, 255, 0.94);
+            font-size: 10.5px;
+            font-weight: 800;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        .product-chip:hover { border-color: var(--gold); color: var(--text-main); }
+        .product-chip.active {
+            border-color: var(--gold);
+            background: var(--gold);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(200, 150, 46, 0.32);
+        }
+        .product-chip .chip-stock {
+            font-size: 8.5px;
+            font-weight: 900;
+            padding: 1px 6px;
+            border-radius: 9999px;
+            background: rgba(74, 63, 53, 0.08);
+        }
+        .product-chip.active .chip-stock { background: rgba(255, 255, 255, 0.24); }
+
+        /* ── LUXURY SCANNER ARENA (BOUTIQUE POD) ── */
+        .scanner-boutique-pod {
+            background: linear-gradient(135deg, #2D241E 0%, #1A1410 100%);
+            border-radius: 20px;
+            border: 1.5px solid rgba(200, 150, 46, 0.35);
+            box-shadow: 0 12px 30px rgba(45, 36, 30, 0.22);
+            padding: 22px 16px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            color: white;
+        }
+        .scanner-beam-line {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #E07B7B, #E8C878, transparent);
+            box-shadow: 0 0 16px #E8C878;
+            animation: scanBeam 2.5s ease-in-out infinite alternate;
+        }
+        @keyframes scanBeam {
+            0% { top: 12%; opacity: 0.25; }
+            50% { opacity: 1; }
+            100% { top: 88%; opacity: 0.25; }
+        }
+
+        .scanned-code-hero {
+            font-family: var(--font-display);
+            font-size: clamp(28px, 6vw, 42px);
+            font-weight: 700;
+            color: var(--gold-light);
+            letter-spacing: 3px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 0 20px rgba(232, 200, 120, 0.45);
+        }
+
+        /* ── QTY STEPPER (Klaim Jumlah) ── */
+        .qty-stepper {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1.5px solid var(--border-soft);
+            border-radius: 9999px;
+            padding: 6px 10px;
+        }
+        .qty-btn {
+            width: 34px; height: 34px;
+            border-radius: 9999px;
+            border: none;
+            background: var(--gold-bg);
+            color: var(--text-main);
+            font-size: 16px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qty-btn:hover:enabled { background: var(--gold); color: #fff; }
+        .qty-btn:active:enabled { transform: scale(0.92); }
+        .qty-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .qty-val {
+            min-width: 44px;
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        /* ── INPUT FIELD & ACTION BUTTON ── */
+        .st-input {
+            width: 100%;
+            padding: 12px 14px 12px 40px;
+            background: var(--input-bg);
+            border: 1.5px solid var(--border-soft);
+            color: var(--text-main);
+            border-radius: 14px;
+            font-size: 13px !important;
+            font-weight: 700;
+            box-sizing: border-box;
+            outline: none;
+            transition: var(--transition);
+        }
+        .st-input:focus {
+            border-color: var(--gold);
+            background: #ffffff;
+            box-shadow: 0 0 0 3.5px rgba(200, 150, 46, 0.12);
+        }
+
+        .st-btn-gold {
+            background: linear-gradient(135deg, #C8962E 0%, #A6781D 100%);
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            border-radius: 14px;
+            padding: 12px 18px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(200, 150, 46, 0.28);
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .st-btn-gold:active {
+            transform: scale(0.97);
+        }
+
+        /* ── SECONDARY CAM BUTTON — selaras st-input ── */
+        .st-btn-cam {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.94);
+            border: 1.5px solid var(--border-soft);
+            border-radius: 14px;
+            color: var(--text-main);
+            font-size: 10.5px;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            box-shadow: 0 2px 8px rgba(74, 63, 53, 0.06);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: var(--transition);
+        }
+        .st-btn-cam:hover {
+            border-color: var(--gold);
+            background: #FFFFFF;
+            box-shadow: 0 4px 14px rgba(200, 150, 46, 0.12);
+            color: var(--gold);
+        }
+        .st-btn-cam:active { transform: scale(0.97); }
+        .st-btn-cam:focus-visible { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3.5px rgba(200, 150, 46, 0.12); }
+
+        /* ── ARRIVAL CARD STYLE (From souvenir.html) ── */
+        .arrival-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid var(--border-soft);
+            border-left: 4px solid var(--gold);
+            border-radius: 16px;
+            padding: 10px 14px;
+            animation: arrivalSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+            transition: var(--transition);
+        }
+        .arrival-card:hover {
+            transform: translateX(3px);
+            border-color: var(--gold);
+            box-shadow: 0 4px 16px rgba(140, 117, 96, 0.08);
+        }
+        @keyframes arrivalSlideIn {
+            from { opacity: 0; transform: translateX(-10px) scale(0.97); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+
+        /* ── SKELETON SHIMMER ── */
+        @keyframes shimmerPulse { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .skeleton-shimmer {
+            background: linear-gradient(90deg, #F5EFE9 0%, #FFFFFF 50%, #F5EFE9 100%);
+            background-size: 200% 100%;
+            animation: shimmerPulse 1.4s ease-in-out infinite;
+            border-radius: 6px;
+        }
+
+        /* ── 📜 RIWAYAT ISOLATED SCROLL — Warm Custom Scrollbar (UI-UX Pro Max 3-Mode) ── */
+        #recent-claims-list {
+            scrollbar-width: thin;
+            scrollbar-color: #C8962E rgba(240, 230, 222, 0.65);
+            scroll-behavior: smooth;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+        }
+        #recent-claims-list::-webkit-scrollbar { width: 6px; height: 6px; }
+        #recent-claims-list::-webkit-scrollbar-track { background: rgba(240, 230, 222, 0.65); border-radius: 9999px; }
+        #recent-claims-list::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #C8962E 0%, #A6781D 100%); border-radius: 9999px; border: 1px solid rgba(255,255,255,0.6); }
+        #recent-claims-list::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #D4A84B 0%, #B88A22 100%); }
+        #recent-claims-list::-webkit-scrollbar-thumb:active { background: #A6781D; }
+
+        /* ── 3-MODE RESPONSIVE BREAKPOINTS (SSOT perf-ui-ux-3mode: desktop ≥1024 / tablet 680–1023 / mobile <680) ── */
+        .view-desktop-grid {
+            display: grid;
+            grid-template-columns: 7fr 5fr;
+            gap: 1.25rem;
+            align-items: start;
+        }
+
+        /* Desktop ≥1024px — viewport-fit flex ratio, no page vertical scroll (all fit 1 view) */
+        @media (min-width: 1024px) {
+            html { height: 100dvh; height: 100vh; overflow: hidden; }
+            body {
+                height: 100dvh;
+                height: 100vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                padding-top: 64px !important; /* compact for fixed navbar 52px + 12px gap */
+                padding-bottom: 0 !important;
+            }
+            .sapatamu-navbar-wrap { position: fixed; top: 8px; }
+            .event-hero-box {
+                flex: 0 0 auto;
+                margin-bottom: 10px !important;
+                padding: 14px 18px !important;
+            }
+            .event-title-display { font-size: clamp(20px, 2.2vw, 28px) !important; }
+            main {
+                flex: 1 1 auto;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                margin-bottom: 0 !important;
+                padding-bottom: 10px;
+            }
+            .telemetry-grid {
+                flex: 0 0 auto;
+                margin-bottom: 0 !important;
+                gap: 0.75rem !important;
+            }
+            .telemetry-grid .sapatamu-glass-card { padding: 14px 16px !important; }
+            .view-desktop-grid {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow: hidden;
+                align-items: stretch !important;
+                gap: 1rem !important;
+                grid-template-columns: 1fr 1fr !important;
+            }
+            .left-combined {
+                display: flex;
+                flex-direction: column;
+                gap: 0.85rem;
+                min-height: 0;
+                overflow: hidden;
+                align-self: stretch;
+            }
+            .left-combined .telemetry-grid { flex: 0 0 auto; margin-bottom: 0 !important; }
+            .left-combined .col-scanner-panel { flex: 1 1 auto; min-height: 0; }
+            .col-scanner-panel {
+                min-height: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                align-self: stretch !important;
+                scrollbar-width: thin;
+                scrollbar-color: #C8962E rgba(240,230,222,0.5);
+                padding-right: 2px;
+                position: relative;
+                top: auto;
+            }
+            .col-scanner-panel::-webkit-scrollbar { width: 6px; }
+            .col-scanner-panel::-webkit-scrollbar-track { background: rgba(240,230,222,0.5); border-radius: 9999px; }
+            .col-scanner-panel::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #C8962E, #A6781D); border-radius: 9999px; }
+            .col-stream-panel {
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                align-self: stretch !important;
+            }
+            .col-stream-panel > .sapatamu-glass-card {
+                flex: 1 1 auto;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                max-height: none !important;
+                height: 100%;
+            }
+            #recent-claims-list {
+                flex: 1 1 auto;
+                min-height: 0;
+                max-height: none !important;
+                height: auto;
+                overflow-y: auto;
+                padding-right: 4px;
+            }
+        }
+
+        /* Tablet 680–1023px — single column centered, dvh-aware stream */
+        @media (min-width: 680px) and (max-width: 1023.98px) {
+            .view-desktop-grid {
+                grid-template-columns: 1fr;
+                max-width: 740px;
+                margin: 0 auto;
+                gap: 1.25rem;
+            }
+            .col-stream-panel > .sapatamu-glass-card {
+                max-height: none;
+            }
+            #recent-claims-list {
+                max-height: calc(100dvh - 280px) !important;
+                max-height: calc(100vh - 280px) !important;
+                min-height: 220px;
+            }
+        }
+
+        /* Mobile <680px — segmented SCAN|RECENT, dvh-aware */
+        @media (max-width: 679.98px) {
+            body { padding-top: 5rem !important; }
+            .nav-brand-sub { display: none; }
+            .view-desktop-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .mobile-segmented-control {
+                display: flex !important;
+            }
+            .tab-panel-inactive {
+                display: none !important;
+            }
+            .telemetry-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                gap: 0.45rem !important;
+            }
+            .telemetry-card {
+                padding: 0.65rem 0.5rem !important;
+                border-radius: 16px !important;
+            }
+            .telemetry-val {
+                font-size: 1.3rem !important;
+                line-height: 1.1 !important;
+            }
+            .col-stream-panel > .sapatamu-glass-card {
+                max-height: none;
+            }
+            #recent-claims-list {
+                max-height: calc(100dvh - 320px) !important;
+                max-height: calc(100vh - 320px) !important;
+                min-height: 200px;
+            }
+            /* perf-ui-ux-3mode: mobile hapus blur agar 60fps, foto tetap terlihat jelas */
+            .hero-overlay-frost { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: linear-gradient(135deg, rgba(255,255,255,0.52) 0%, rgba(255,249,245,0.28) 45%, rgba(255,255,255,0.48) 100%), linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,249,245,0.42) 100%) !important; }
+            .sapatamu-glass-card, .event-hero-box { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: rgba(255,255,255,0.92) !important; }
+        }
+
+        /* Toggle switch */
+        .switch { position: relative; display: inline-block; width: 32px; height: 18px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #E8D8CC; transition: .3s; border-radius: 32px; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: var(--gold); }
+        input:checked + .slider:before { transform: translateX(14px); }
+    </style>
+</head>
+
+<body class="pt-20 sm:pt-24 px-3 sm:px-6 md:px-8">
+
+    <!-- ── PREWEDDING AMBIENT SLIDESHOW BACKGROUND ── -->
+    <div id="hero-slides-wrapper" class="hero-bg-container"></div>
+    <div class="hero-overlay-frost"></div>
+
+    <!-- ── FLOATING PARTICLES ── -->
+    <ul class="dynamic-bg">
+        <li></li><li></li><li></li><li></li><li></li>
+    </ul>
+
+    <!-- ── 1. DYNAMIC ISLAND SAPATAMU NAVBAR ── -->
+    <div class="sapatamu-navbar-wrap">
+        <nav class="sapatamu-navbar">
+            <div class="flex items-center gap-1.5 pl-1 shrink-0">
+                <div class="w-7 h-7 rounded-full bg-gradient-to-br from-[#C8962E] to-[#A6781D] flex items-center justify-center text-white text-xs shadow-xs shrink-0">
+                    🥤
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-xs sm:text-sm font-black tracking-tight text-[#4A3F35] leading-none">sapa<span class="text-[#E07B7B]">tamu</span>.ku</span>
+                    <span class="nav-brand-sub text-[8px] font-bold text-[#8C7560] tracking-widest uppercase mt-0.5">Merchandise Display</span>
+                </div>
+            </div>
+
+            <!-- Nav Links Capsule Bar -->
+            <div class="nav-links-scroll">
+                <a href="dashboard.html" id="nav-dashboard" class="nav-pill">Dashboard</a>
+                <a href="formulir_tamu.html" id="nav-formulir" class="nav-pill hidden sm:inline-block">Buku Tamu</a>
+                <a href="wa_blast.html" id="nav-wa" class="nav-pill hidden sm:inline-block">WA Blast</a>
+                <a href="checkin.html" id="nav-checkin" class="nav-pill">Check-in</a>
+                <a href="onsite.html" id="nav-onsite" class="nav-pill">On-Site</a>
+                <a href="souvenir.html" id="nav-souvenir" class="nav-pill">Souvenir</a>
+                <a href="merchandise.html" class="nav-pill active-gold">Merchandise</a>
+                <a href="analytics.html" id="nav-analytics" class="nav-pill">Analytics</a>
+                <a href="luckydraw.html" id="nav-lucky" class="nav-pill hidden md:inline-block">Lucky Draw</a>
+            </div>
+
+            <!-- Right Quick Controls -->
+            <div class="flex items-center gap-1.5 pr-0.5 shrink-0">
+                <div class="flex items-center gap-1 bg-white/90 px-1.5 py-0.5 rounded-full border border-[#F0E6DE] shadow-xs">
+                    <span class="text-[8.5px] font-extrabold text-[#4A3F35] uppercase tracking-wider hidden sm:inline" id="scan-mode-label">FAST</span>
+                    <label class="switch" title="Fast Scan = langsung klaim 1 pcs. Slow Scan = pilih jumlah dulu, lalu konfirmasi.">
+                        <input type="checkbox" id="toggle-scan-mode" checked onchange="setScanMode(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <button type="button" id="btn-sound-toggle" onclick="toggleAudio()" class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/90 border border-[#F0E6DE] flex items-center justify-center text-xs shadow-xs hover:border-[#C8962E] transition-all" title="Toggle Suara Beep">
+                    🔊
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- ── 2. EVENT HERO HEADER (True Frosted Glass) ── -->
+    <header class="event-hero-box max-w-5xl mx-auto w-full">
+        <div class="event-badge-tag mb-1">
+            <span>🥤</span> <span id="view-event-category">SapaTamu Merchandise Console</span>
+        </div>
+        <h1 class="event-title-display" id="view-wedding-name">Memuat Acara...</h1>
+        <p class="text-[11px] sm:text-xs text-[#8C7560] font-semibold m-0" id="view-event-subtitle">
+            <span id="view-event-date">Memuat tanggal...</span> • <span id="view-event-venue">Ballroom Venue</span>
+        </p>
+    </header>
+
+    <!-- ── 3. MOBILE SEGMENTED CONTROL (<680px) ── -->
+    <div class="mobile-segmented-control max-w-xl mx-auto w-full">
+        <button type="button" id="mob-tab-scan" onclick="switchMobileTab('SCAN')" class="mob-segment-btn active">
+            ⚡ Pos Scanner
+        </button>
+        <button type="button" id="mob-tab-recent" onclick="switchMobileTab('RECENT')" class="mob-segment-btn">
+            📜 Riwayat (<span id="mob-recent-badge">0</span>)
+        </button>
+    </div>
+
+    <!-- ── 4. MAIN CONTENT CONTAINER (3-Mode Grid) ── -->
+    <main class="max-w-6xl mx-auto w-full flex-grow mb-12 relative z-10">
+
+        <div class="view-desktop-grid">
+
+            <!-- LEFT COMBINED 1/2: TELEMETRY + SCANNER -->
+            <div class="left-combined flex flex-col gap-4 min-w-0">
+                <!-- TELEMETRY COUNTER CARDS -->
+                <div class="telemetry-grid grid grid-cols-3 gap-2.5 sm:gap-4">
+
+                    <!-- Card 1: Merchandise Terklaim -->
+                    <div class="sapatamu-glass-card telemetry-card flex flex-col justify-between">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="st-label m-0 truncate">TERBAGI</span>
+                            <span id="merch-ratio-pct" class="text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 shrink-0">0%</span>
+                        </div>
+                        <div id="stat-merch-out" class="telemetry-val text-xl sm:text-3xl font-black text-[#10B981] tracking-tighter leading-none my-1">
+                            <div class="skeleton-shimmer h-6 w-12"></div>
+                        </div>
+                        <div>
+                            <div class="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 mb-0.5">
+                                <div id="merch-bar" class="h-full bg-[#10B981] transition-all duration-500" style="width: 0%;"></div>
+                            </div>
+                            <span id="merch-sub-desc" class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight block truncate">0 dari 0 Stok</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Sisa Stok Produk -->
+                    <div class="sapatamu-glass-card telemetry-card flex flex-col justify-between">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="st-label m-0 truncate">SISA STOK</span>
+                            <span id="stock-status-pill" class="text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 shrink-0">READY</span>
+                        </div>
+                        <div id="stat-merch-left" class="telemetry-val text-xl sm:text-3xl font-black text-[#C8962E] tracking-tighter leading-none my-1">
+                            <div class="skeleton-shimmer h-6 w-12"></div>
+                        </div>
+                        <div>
+                            <div class="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 mb-0.5">
+                                <div id="stock-bar" class="h-full bg-[#C8962E] transition-all duration-500" style="width: 100%;"></div>
+                            </div>
+                            <span id="stat-merch-total" class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight truncate block">Memuat produk...</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Tamu di Ballroom -->
+                    <div class="sapatamu-glass-card telemetry-card flex flex-col justify-between">
+                        <div class="flex items-center justify-between gap-1 mb-0.5">
+                            <span class="st-label m-0 truncate">BALLROOM</span>
+                            <span id="occupancy-status-pill" class="text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-800 shrink-0">LIVE</span>
+                        </div>
+                        <div id="stat-active-in-ballroom" class="telemetry-val text-xl sm:text-3xl font-black text-[#E07B7B] tracking-tighter leading-none my-1">
+                            <div class="skeleton-shimmer h-6 w-12"></div>
+                        </div>
+                        <div>
+                            <div class="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 mb-0.5">
+                                <div id="occupancy-bar" class="h-full bg-[#E07B7B] transition-all duration-500" style="width: 0%;"></div>
+                            </div>
+                            <span id="ballroom-sub-desc" class="text-[7px] sm:text-[8px] font-extrabold text-[#8C7560] uppercase tracking-tight block truncate">Tamu di Gedung</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ── SCANNER CONSOLE ── -->
+                <section id="panel-scanner" class="col-scanner-panel flex flex-col gap-4">
+
+                <!-- Produk chips (Multi-produk; sembunyi otomatis kalau cuma 1) -->
+                <div id="product-chips-wrap" class="sapatamu-glass-card hidden flex-col gap-2" style="display:none;">
+                    <span class="st-label m-0">Pilih Produk</span>
+                    <div id="product-chips" class="product-chips"></div>
+                </div>
+
+                <!-- SCANNER CONSOLE CARD -->
+                <div class="sapatamu-glass-card flex flex-col gap-4">
+
+                    <!-- Scanner Header -->
+                    <div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-[#F0E6DE]">
+                        <div class="flex items-center gap-2">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C8962E] opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-[#C8962E]"></span>
+                            </span>
+                            <span class="text-[11px] sm:text-xs font-black text-[#4A3F35] uppercase tracking-wider">HID Laser Gun Siap</span>
+                        </div>
+
+                        <button type="button" onclick="toggleCameraScanner()" id="btn-cam-toggle" class="st-btn-cam">
+                            <span class="text-[13px] leading-none">📷</span> <span id="cam-toggle-text">Buka Kamera</span>
+                        </button>
+                    </div>
+
+                    <!-- Visual Laser Scanner Box (Warm Boutique Pod) -->
+                    <div class="scanner-boutique-pod">
+                        <div class="scanner-beam-line"></div>
+                        <span class="text-[8.5px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">KODE TERAKHIR TERSCAN</span>
+                        <div id="display-scanned-code" class="scanned-code-hero">--- - -----</div>
+                        <span id="display-scanner-status" class="text-[9.5px] font-bold text-gray-300 uppercase tracking-wider block mt-0.5">Arahkan scanner gun ke label check-in tamu</span>
+                    </div>
+
+                    <!-- Camera Viewport Box (Expandable) -->
+                    <div id="camera-viewport-wrap" style="display: none;" class="relative bg-black rounded-2xl overflow-hidden shadow-inner">
+                        <div id="reader"></div>
+                        <button type="button" onclick="toggleCameraScanner()" class="absolute top-3 right-3 bg-black/70 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-20">✕</button>
+                    </div>
+
+                    <!-- Barcode Input Box (Responsive Flex Container) -->
+                    <div class="flex gap-2 items-stretch">
+                        <div class="relative flex-1 min-w-0">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#C8962E]">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                            </div>
+                            <input type="text" id="barcode-input" autofocus autocomplete="off" spellcheck="false"
+                                placeholder="Tembak barcode / ketik kode tamu..."
+                                class="st-input">
+                        </div>
+                        <button type="button" onclick="manualTriggerScan()" class="st-btn-gold">
+                            PROSES
+                        </button>
+                    </div>
+
+                    <p class="text-[9px] text-[#8C7560] m-0 italic flex items-center gap-1.5">
+                        <span>🛡️</span> <strong>Anti-Burst:</strong> Potong 9 karakter terakhir (<code class="bg-[#FFF0E6] text-[#C8962E] px-1 py-0.5 rounded font-mono font-bold">XXX-XXXXX</code>) — label QR check-in tamu.
+                    </p>
+
+                    <!-- Scan Result Card Banner (Arrival-Card Style) -->
+                    <div id="scan-result-card" class="hidden p-4 sm:p-5 rounded-2xl border transition-all">
+                        <!-- Dynamic Result Rendered Here -->
+                    </div>
+                </div>
+
+            </section>
+            </div>
+
+            <!-- RIGHT PANEL 1/2: STREAM OF RECENT CLAIMS -->
+            <section id="panel-recent" class="col-stream-panel flex flex-col gap-4">
+
+                <div class="sapatamu-glass-card flex flex-col flex-grow min-h-[380px]">
+                    <div class="section-title-line">
+                        <span>📜 Riwayat Pengambilan</span>
+                        <span id="recent-count-badge" class="text-[8.5px] font-black bg-[#FFF0E6] text-[#C8962E] px-2.5 py-0.5 rounded-full ml-auto">0 Tamu</span>
+                    </div>
+
+                    <!-- Quick Search in Recent Stream -->
+                    <div class="mb-3 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#C8962E]">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"></path></svg>
+                        </div>
+                        <input type="text" id="stream-search-box" placeholder="Cari nama/kode dalam riwayat..." oninput="filterRecentClaims(this.value)"
+                            class="st-input !py-[11px] !text-[12.5px]">
+                    </div>
+
+                    <!-- Stream List (Arrival-Card Style) -->
+                    <div id="recent-claims-list" class="flex flex-col gap-2 overflow-y-auto max-h-[460px] pr-1">
+                        <!-- Initial Skeletons at Detik 0 -->
+                        <div class="arrival-card">
+                            <div class="flex items-center gap-2.5">
+                                <div class="skeleton-shimmer w-7 h-7 rounded-xl"></div>
+                                <div class="space-y-1">
+                                    <div class="skeleton-shimmer h-3 w-28"></div>
+                                    <div class="skeleton-shimmer h-2 w-16"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-shimmer h-3.5 w-10 rounded"></div>
+                        </div>
+                        <div class="arrival-card">
+                            <div class="flex items-center gap-2.5">
+                                <div class="skeleton-shimmer w-7 h-7 rounded-xl"></div>
+                                <div class="space-y-1">
+                                    <div class="skeleton-shimmer h-3 w-32"></div>
+                                    <div class="skeleton-shimmer h-2 w-14"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-shimmer h-3.5 w-10 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="merchandise-toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#4A3F35] text-white px-5 py-3 rounded-2xl text-xs font-bold shadow-2xl opacity-0 pointer-events-none transition-all z-50 flex items-center gap-2">
+        <span id="toast-icon">✨</span>
+        <span id="toast-msg">Pesan Notifikasi</span>
+    </div>
+
+    <!-- JAVASCRIPT CORE LOGIC -->
+    <script>
+        let CURRENT_SS_ID = "";
+        let masterData = [];
+        let guestMap = new Map();
+        let totalBallroomCapacity = 0;
+
+        /* ── Merchandise State ──
+           merchProducts: [{key, name, stock, maxPerClaim}] dari config_welcome.data.merchandise
+           claimsMap: "KODE|productKey" → {kode_tamu, nama_tamu, product_key, product_name, qty, jam_claim, created_at}
+           Tidak ada konsep jam pulang — tamu tetap di dalam ballroom; klaim = log, bukan checkout. */
+        let merchProducts = [];
+        let activeProductKey = null;
+        let claimsMap = new Map();
+        let isFastScan = true;
+        let isAudioEnabled = true;
+        let html5QrCode = null;
+        let isCameraActive = false;
+        let pendingAction = null;   // {mode:'new'|'adjust', guest, product, baseQty, minQty, maxQty}
+
+        // ── HELPER STATUS CANON (readonly — untuk card Ballroom, TIDAK menulis ke tamu) ──
+        function isGuestHadir(g) {
+            if (!g) return false;
+            const s = String(g.statusHadir || "").trim().toLowerCase();
+            const jd = String(g.jamDatang || "").trim();
+            const hasValidCheckin = jd !== "" && jd !== "-" && jd !== "null" && jd !== "undefined";
+            return s === "1" || s === "true" || hasValidCheckin;
+        }
+
+        function hasGuestCheckout(g) {
+            if (!g) return false;
+            const jp = String(g.jamPulang || "").trim();
+            return jp !== "" && jp !== "-" && jp !== "null" && jp !== "undefined";
+        }
+
+        function nowStamp() {
+            return new Date().toLocaleTimeString('en-GB', { hour12: false });
+        }
+
+        // ── PRODUCT HELPERS ──
+        function getActiveProduct() {
+            return merchProducts.find(p => p.key === activeProductKey) || null;
+        }
+
+        function claimsForProduct(productKey) {
+            return Array.from(claimsMap.values()).filter(c => c.product_key === productKey);
+        }
+
+        function remainingStock(productKey) {
+            const p = merchProducts.find(x => x.key === productKey);
+            if (!p || !(parseInt(p.stock) > 0)) return 0;
+            const out = claimsForProduct(productKey).reduce((acc, c) => acc + (parseInt(c.qty) || 0), 0);
+            return Math.max(0, (parseInt(p.stock)) - out);
+        }
+
+        function getGuestClaim(kode, productKey) {
+            return claimsMap.get(`${String(kode).trim().toUpperCase()}|${productKey}`) || null;
+        }
+
+        function maxQtyFor(product, guest, existingQty) {
+            // Batas atas stepper untuk 1 tamu: maxPerClaim config (0/kosong = lepas batas)
+            let cap = Infinity;
+            if (product && parseInt(product.maxPerClaim) > 0) cap = parseInt(product.maxPerClaim);
+            // Sisa stok membatasi: existing + sisa
+            const stockCap = existingQty > 0 ? existingQty + remainingStock(product.key) : remainingStock(product.key);
+            return Math.max(1, Math.min(cap, stockCap));
+        }
+
+        // ── HERO BACKGROUND SLIDESHOW ──
+        let _heroPhotos = [];
+        let _heroActiveIdx = 0;
+        let _heroSlideTimer = null;
+
+        function parseHeroPhotoUrl(rawUrl) {
+            if (!rawUrl) return "";
+            let url = String(rawUrl).trim();
+            const driveRegex = /(?:\/d\/|id=)([\w-]+)/;
+            const match = url.match(driveRegex);
+            if (match && match[1] && (url.includes("drive.google.com") || url.includes("google.com/file") || url.includes("lh3.googleusercontent.com"))) {
+                return `https://lh3.googleusercontent.com/d/${match[1]}=w1280`;
+            }
+            return url;
+        }
+
+        function initHeroSlideshow(rawPhotoList) {
+            if (!rawPhotoList || rawPhotoList.length === 0) return;
+            const validUrls = rawPhotoList.map(parseHeroPhotoUrl).filter(Boolean);
+            if (validUrls.length === 0) return;
+
+            _heroPhotos = validUrls;
+            const container = document.getElementById('hero-slides-wrapper');
+            if (!container) return;
+
+            container.innerHTML = '';
+            if (_heroSlideTimer) { clearTimeout(_heroSlideTimer); _heroSlideTimer = null; }
+
+            _heroPhotos.forEach((src) => {
+                const slide = document.createElement('div');
+                slide.className = 'hero-bg-slide';
+                slide.style.backgroundImage = `url('${src}')`;
+                container.appendChild(slide);
+            });
+
+            const slides = container.querySelectorAll('.hero-bg-slide');
+            if (slides.length === 0) return;
+
+            _heroActiveIdx = Math.floor(Math.random() * slides.length);
+            slides[_heroActiveIdx].classList.add('active');
+
+            if (slides.length > 1) {
+                function loopHeroSlides() {
+                    _heroSlideTimer = setTimeout(() => {
+                        const currentSlide = slides[_heroActiveIdx];
+                        _heroActiveIdx = (_heroActiveIdx + 1) % slides.length;
+                        const nextSlide = slides[_heroActiveIdx];
+
+                        if (currentSlide) currentSlide.classList.remove('active');
+                        if (nextSlide) nextSlide.classList.add('active');
+
+                        loopHeroSlides();
+                    }, 8500);
+                }
+                loopHeroSlides();
+            }
+        }
+
+        // ── MOBILE TAB SWITCHER (<680px) ──
+        function switchMobileTab(mode) {
+            const tabScan = document.getElementById('mob-tab-scan');
+            const tabRecent = document.getElementById('mob-tab-recent');
+            const panelScan = document.getElementById('panel-scanner');
+            const panelRecent = document.getElementById('panel-recent');
+
+            if (mode === 'SCAN') {
+                tabScan.className = "mob-segment-btn active";
+                tabRecent.className = "mob-segment-btn";
+                panelScan.classList.remove('tab-panel-inactive');
+                panelRecent.classList.add('tab-panel-inactive');
+                const input = document.getElementById('barcode-input');
+                if (input) input.focus();
+            } else {
+                tabRecent.className = "mob-segment-btn active";
+                tabScan.className = "mob-segment-btn";
+                panelScan.classList.add('tab-panel-inactive');
+                panelRecent.classList.remove('tab-panel-inactive');
+            }
+        }
+
+        // ── AUDIO SYNTHESIZER ──
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playSuccessBeep() {
+            if (!isAudioEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.exponentialRampToValueAtTime(1760, now + 0.12);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } catch (e) { }
+        }
+
+        function playWarningBeep() {
+            if (!isAudioEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.setValueAtTime(180, now + 0.1);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } catch (e) { }
+        }
+
+        function toggleAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            const btn = document.getElementById('btn-sound-toggle');
+            if (btn) btn.innerText = isAudioEnabled ? "🔊" : "🔇";
+            showToast(isAudioEnabled ? "Suara beep diaktifkan" : "Suara dimatikan", isAudioEnabled ? "🔊" : "🔇");
+        }
+
+        /* [2026-10-24 FEAT-MERCHANDISE-DISPLAY] Fast Scan = scan → klaim instan 1 pcs.
+           Slow Scan = scan → kartu jumlah (+/−) → konfirmasi. Koreksi kapan saja lewat re-scan/Riwayat. */
+        function setScanMode(fastChecked) {
+            isFastScan = fastChecked;
+            const label = document.getElementById('scan-mode-label');
+            if (label) label.innerText = fastChecked ? "FAST" : "SLOW";
+            showToast(fastChecked ? "⚡ Fast Scan aktif — langsung 1 pcs" : "🐢 Slow Scan aktif — pilih jumlah dulu", fastChecked ? "⚡" : "🐢");
+        }
+
+        function showToast(msg, icon = "✨") {
+            const toast = document.getElementById('merchandise-toast');
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        // ── HID BARCODE SCANNER ENGINE WITH ANTI-BURST ──
+        const BURST_DEBOUNCE_MS = 120;
+        let barcodeDebounceTimer = null;
+        let lastScannedCode = "";
+        let lastScannedTime = 0;
+
+        function initBarcodeEngine() {
+            const inputEl = document.getElementById('barcode-input');
+            if (!inputEl) return;
+
+            window.addEventListener('click', (e) => {
+                if (['INPUT', 'TEXTAREA', 'BUTTON', 'A', 'SELECT'].includes(e.target.tagName)) return;
+                inputEl.focus();
+            });
+
+            inputEl.addEventListener('input', (e) => {
+                const val = e.target.value;
+                if (!val) return;
+
+                clearTimeout(barcodeDebounceTimer);
+                barcodeDebounceTimer = setTimeout(() => {
+                    processRawBarcodeInput(val);
+                }, BURST_DEBOUNCE_MS);
+            });
+
+            inputEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    clearTimeout(barcodeDebounceTimer);
+                    processRawBarcodeInput(inputEl.value);
+                }
+            });
+        }
+
+        function manualTriggerScan() {
+            const inputEl = document.getElementById('barcode-input');
+            if (inputEl && inputEl.value) {
+                processRawBarcodeInput(inputEl.value);
+            }
+        }
+
+        function processRawBarcodeInput(rawString) {
+            const inputEl = document.getElementById('barcode-input');
+            if (!rawString || !rawString.trim()) return;
+
+            let cleanCode = rawString.trim().toUpperCase();
+
+            // Clean 9 characters if length >= 9 (Format SapaTamu: XXX-XXXXX)
+            if (cleanCode.length >= 9) {
+                cleanCode = cleanCode.slice(-9);
+            }
+
+            // De-duplicate burst within 1.5s
+            const now = Date.now();
+            if (cleanCode === lastScannedCode && (now - lastScannedTime < 1500)) {
+                if (inputEl) inputEl.value = "";
+                return;
+            }
+
+            lastScannedCode = cleanCode;
+            lastScannedTime = now;
+
+            // Visual feedback on beam box
+            const displayCodeEl = document.getElementById('display-scanned-code');
+            const displayStatusEl = document.getElementById('display-scanner-status');
+            if (displayCodeEl) displayCodeEl.innerText = cleanCode;
+            if (displayStatusEl) displayStatusEl.innerText = "Memverifikasi data tamu...";
+
+            handleClaimByCode(cleanCode);
+
+            if (inputEl) inputEl.value = "";
+        }
+
+        // ── CLAIM MERCHANDISE (core flow — TIDAK menyentuh tabel tamu) ──
+        async function handleClaimByCode(codeToFind) {
+            if (!activeProductKey) {
+                playWarningBeep();
+                renderResultCard('NO_PRODUCT', null);
+                return;
+            }
+
+            let targetGuest = guestMap.get(codeToFind);
+            if (!targetGuest) {
+                const norm = codeToFind.toUpperCase();
+                targetGuest = masterData.find(g =>
+                    String(g.kode).toUpperCase() === norm ||
+                    String(g.kode).toUpperCase().endsWith(norm) ||
+                    String(g.nama).toUpperCase().includes(norm)
+                );
+            }
+
+            if (!targetGuest) {
+                playWarningBeep();
+                renderResultCard('NOT_FOUND', { kode: codeToFind });
+                return;
+            }
+
+            const product = getActiveProduct();
+            const existing = getGuestClaim(targetGuest.kode, product.key);
+
+            if (existing) {
+                // Tamu sudah pernah klaim → info + koreksi (stepper adj. jumlah baru)
+                playSuccessBeep();
+                renderResultCard('CLAIMED_ADJUST', targetGuest);
+                return;
+            }
+
+            // Belum pernah klaim
+            if (remainingStock(product.key) <= 0) {
+                playWarningBeep();
+                renderResultCard('NO_STOCK', targetGuest);
+                return;
+            }
+
+            if (isFastScan) {
+                // FAST: klaim instan 1 pcs
+                await commitClaim(targetGuest, product, 1);
+                return;
+            }
+
+            // SLOW: pilih jumlah dulu → konfirmasi
+            renderResultCard('WAITING_QTY', targetGuest);
+        }
+
+        function commitClaim(guest, product, qty) {
+            const existing = getGuestClaim(guest.kode, product.key);
+            const prevQty = existing ? (parseInt(existing.qty) || 0) : 0;
+            const newQty = prevQty + (parseInt(qty) || 0);
+            const jam = nowStamp();
+
+            // Optimistic local update
+            claimsMap.set(`${String(guest.kode).trim().toUpperCase()}|${product.key}`, {
+                kode_tamu: guest.kode,
+                nama_tamu: guest.nama,
+                product_key: product.key,
+                product_name: product.name,
+                qty: newQty,
+                jam_claim: jam,
+                created_at: (existing && existing.created_at) || new Date().toISOString(),
+                _local: true
+            });
+
+            playSuccessBeep();
+            renderResultCard('SUCCESS', guest, { qty: qty, newQty: newQty, product: product, jam: jam });
+            renderRecentClaims();
+            updateStats();
+            renderProductChips();
+
+            persistClaimWrite(guest, product, newQty, prevQty);
+        }
+
+        /* Persistence Supabase via REST langsung (pola rsvp open tracking).
+           Tidak ada sinkronisasi GAS — klaim merchandise hanya di Supabase + buffer offline lokal. */
+        async function persistClaimWrite(guest, product, newQty, prevQty) {
+            try {
+                if (!navigator.onLine || !window.SB_URL || !window.SB_KEY) {
+                    queueOfflineClaim(guest, product, newQty, prevQty);
+                    return;
+                }
+
+                const key = `${String(guest.kode).trim().toUpperCase()}|${product.key}`;
+                let row = { ssid: "", kode_tamu: guest.kode, product_key: product.key };
+
+                if (prevQty === 0) {
+                    const body = {
+                        ssid: CURRENT_SS_ID,
+                        kode_tamu: guest.kode,
+                        nama_tamu: guest.nama || "",
+                        product_key: product.key,
+                        product_name: product.name || "",
+                        qty: newQty,
+                        jam_claim: nowStamp()
+                    };
+                    row = body;
+                    const postRes = await fetch(`${window.SB_URL}/rest/v1/merchandise_claims`, {
+                        method: "POST",
+                        headers: {
+                            "apikey": window.SB_KEY,
+                            "Authorization": "Bearer " + window.SB_KEY,
+                            "Content-Type": "application/json",
+                            "Prefer": "resolution=merge-duplicates"
+                        },
+                        body: JSON.stringify(body)
+                    });
+                    // 409 = tab lain menulis baris dulu → ambil baris & PATCH qty
+                    if (postRes.status === 409) {
+                        await patchExistingRow(guest, product, newQty);
+                        return;
+                    }
+                    if (!postRes.ok) throw new Error("POST gagal: " + postRes.status);
+                    claimsMap.get(key)._local = false;
+                } else {
+                    await patchExistingRow(guest, product, newQty);
+                }
+            } catch (e) {
+                console.error("[Merchandise] Persist error:", e);
+                queueOfflineClaim(guest, product, newQty, prevQty);
+            }
+        }
+
+        async function patchExistingRow(guest, product, newQty) {
+            const res = await fetch(`${window.SB_URL}/rest/v1/merchandise_claims?ssid=eq.${encodeURIComponent(CURRENT_SS_ID)}&kode_tamu=eq.${encodeURIComponent(guest.kode)}&product_key=eq.${encodeURIComponent(product.key)}`, {
+                method: "PATCH",
+                headers: {
+                    "apikey": window.SB_KEY,
+                    "Authorization": "Bearer " + window.SB_KEY,
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal"
+                },
+                body: JSON.stringify({ qty: newQty, jam_claim: nowStamp(), updated_at: new Date().toISOString() })
+            });
+            if (!res.ok) throw new Error("PATCH gagal: " + res.status);
+            const key = `${String(guest.kode).trim().toUpperCase()}|${product.key}`;
+            if (claimsMap.get(key)) claimsMap.get(key)._local = false;
+        }
+
+        /* Offline buffer — localStorage queue, flush saat online.
+           Baris klaim BARU selalu masuk antrean bila persist ke server gagal
+           (offline maupun error jaringan) agar tidak ada klaim yang hilang. */
+        function queueOfflineClaim(guest, product, newQty, prevQty) {
+            if (prevQty === 0) {
+                try {
+                    const qKey = 'sapatamu_merch_queue_' + CURRENT_SS_ID;
+                    const q = JSON.parse(localStorage.getItem(qKey) || '[]');
+                    q.push({
+                        ssid: CURRENT_SS_ID,
+                        kode_tamu: guest.kode,
+                        nama_tamu: guest.nama || "",
+                        product_key: product.key,
+                        product_name: product.name || "",
+                        qty: newQty,
+                        jam_claim: nowStamp(),
+                        ts: Date.now()
+                    });
+                    localStorage.setItem(qKey, JSON.stringify(q));
+                    showToast(navigator.onLine ? "Gagal kirim — klaim disimpan lokal, akan disinkron" : "OFFLINE — klaim tersimpan lokal, menunggu koneksi", "📡");
+                } catch (e2) { console.warn(e2); }
+            } else {
+                showToast(navigator.onLine ? "Gagal kirim — koreksi ulang bila perlu" : "OFFLINE — koreksi menunggu koneksi", "📡");
+            }
+        }
+
+        async function flushOfflineQueue() {
+            if (!CURRENT_SS_ID || !navigator.onLine) return;
+            const qKey = 'sapatamu_merch_queue_' + CURRENT_SS_ID;
+            const q = JSON.parse(localStorage.getItem(qKey) || '[]');
+            if (q.length === 0) return;
+
+            const remaining = [];
+            for (const item of q) {
+                try {
+                    const guestLike = { kode: item.kode_tamu, nama: item.nama_tamu };
+                    const productLike = merchProducts.find(p => p.key === item.product_key) || { key: item.product_key, name: item.product_name, stock: 0, maxPerClaim: 0 };
+                    const existing = getGuestClaim(item.kode_tamu, item.product_key);
+                    if (existing) {
+                        await patchExistingRow(guestLike, productLike, Math.max((parseInt(existing.qty) || 0), parseInt(item.qty) || 1));
+                    } else {
+                        const postRes = await fetch(`${window.SB_URL}/rest/v1/merchandise_claims`, {
+                            method: "POST",
+                            headers: {
+                                "apikey": window.SB_KEY,
+                                "Authorization": "Bearer " + window.SB_KEY,
+                                "Content-Type": "application/json",
+                                "Prefer": "resolution=merge-duplicates"
+                            },
+                            body: JSON.stringify({ ssid: item.ssid, kode_tamu: item.kode_tamu, nama_tamu: item.nama_tamu, product_key: item.product_key, product_name: item.product_name, qty: item.qty, jam_claim: item.jam_claim })
+                        });
+                        if (postRes.status === 409) {
+                            await patchExistingRow(guestLike, productLike, Math.max(1, parseInt(item.qty) || 1));
+                        } else if (!postRes.ok) {
+                            remaining.push(item);
+                        }
+                    }
+                } catch (e) {
+                    remaining.push(item);
+                }
+            }
+            localStorage.setItem(qKey, JSON.stringify(remaining));
+            if (remaining.length < q.length) {
+                showToast(`Sinkronisasi offline: ${q.length - remaining.length} klaim terkirim`, "📡");
+                await fetchAllMerchClaims(true);
+                renderRecentClaims();
+                updateStats();
+                renderProductChips();
+            }
+        }
+
+        window.addEventListener('online', flushOfflineQueue);
+
+        // ── PENDING ACTION / STEPPER HANDLERS ──
+        function stepperAdjust(delta) {
+            if (!pendingAction) return;
+            const v = Math.min(pendingAction.maxQty, Math.max(pendingAction.minQty, pendingAction.currentQty + delta));
+            pendingAction.currentQty = v;
+            const qtyEl = document.getElementById('stepper-qty');
+            if (qtyEl) qtyEl.innerText = v;
+            renderStepperHint();
+        }
+
+        function renderStepperHint() {
+            const el = document.getElementById('stepper-hint');
+            if (!el || !pendingAction) return;
+            const remaining = remainingStock(pendingAction.product.key);
+            const maxLegacy = parseInt(pendingAction.product.maxPerClaim) > 0
+                ? ` • Max ${pendingAction.product.maxPerClaim}/${pendingAction.mode === 'adjust' ? 'tamu' : 'klaim'}`
+                : '';
+            el.innerText = `Sisa stok ${remaining} pcs${maxLegacy}`;
+        }
+
+        function confirmPendingClaim() {
+            if (!pendingAction) return;
+            const { guest, product, currentQty, baseQty } = pendingAction;
+            pendingAction = null;
+
+            if (baseQty > 0) {
+                // Koreksi jumlah (adjust) → PATCH dengan qty baru
+                const existing = getGuestClaim(guest.kode, product.key);
+                const jam = nowStamp();
+                claimsMap.set(`${String(guest.kode).trim().toUpperCase()}|${product.key}`, {
+                    ...existing,
+                    qty: currentQty,
+                    jam_claim: jam,
+                    _local: true
+                });
+                playSuccessBeep();
+                renderResultCard('SUCCESS', guest, { qty: currentQty - baseQty, newQty: currentQty, product: product, jam: jam, isAdjust: true });
+                renderRecentClaims();
+                updateStats();
+                renderProductChips();
+                persistClaimWrite(guest, product, currentQty, baseQty);
+            }
+        }
+
+        function cancelPendingClaim() {
+            pendingAction = null;
+            const card = document.getElementById('scan-result-card');
+            if (card) card.classList.add('hidden');
+            const displayStatusEl = document.getElementById('display-scanner-status');
+            if (displayStatusEl) displayStatusEl.innerText = "Arahkan scanner gun ke label check-in tamu";
+        }
+
+        function openStepper(guest, status) {
+            const product = getActiveProduct();
+            const existing = getGuestClaim(guest.kode, product.key);
+            const baseQty = existing ? (parseInt(existing.qty) || 0) : 0;
+            const minQty = (status === 'WAITING_QTY') ? 1 : 1;
+            const maxQty = maxQtyFor(product, guest, baseQty);
+            const startQty = (status === 'WAITING_QTY') ? 1 : baseQty;
+            pendingAction = { mode: (status === 'WAITING_QTY') ? 'new' : 'adjust', guest, product, baseQty, currentQty: startQty, minQty: minQty, maxQty: Math.max(minQty, maxQty) };
+        }
+
+        // ── RENDER RESULT BANNER ──
+        function renderResultCard(status, guest, extra = {}) {
+            const card = document.getElementById('scan-result-card');
+            const displayStatusEl = document.getElementById('display-scanner-status');
+            if (!card) return;
+
+            if (status === 'SUCCESS') {
+                pendingAction = null;
+                card.classList.remove('hidden');
+                const productName = extra.product ? extra.product.name : (getActiveProduct() || {}).name || "Produk";
+                if (displayStatusEl) displayStatusEl.innerText = "✓ Klaim Berhasil Tercatat";
+                card.className = "p-4 sm:p-5 rounded-2xl border border-emerald-300 bg-emerald-50/85 text-emerald-900 border-l-[5px] border-l-emerald-500 shadow-sm";
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl shrink-0 shadow-sm">✔️</div>
+                            <div>
+                                <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest block">${extra.isAdjust ? 'JUMLAH DIKOREKSI' : (extra.qty > 1 ? 'KLAIM BANYAK ✓' : 'KLAIM 1 PCS ✓')} — ${productName.toUpperCase()}</span>
+                                <h3 class="text-base sm:text-lg font-bold font-display text-emerald-950 leading-tight">${guest.nama}</h3>
+                                <p class="text-xs text-emerald-700 font-semibold mt-0.5">
+                                    ID: <span class="font-mono font-bold">${guest.kode}</span> • Pax: <strong>${guest.rencanaHadir || 1}</strong> • <span class="uppercase">${guest.kategori || 'REGULER'}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-[8.5px] font-bold text-emerald-600 block">TOTAL</span>
+                            <span class="text-xl sm:text-2xl font-black font-mono text-emerald-950">${extra.newQty}</span>
+                            <span class="text-[8.5px] font-bold text-emerald-600 block mt-0.5">${extra.jam || ''}</span>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (status === 'NO_STOCK') {
+                pendingAction = null;
+                card.classList.remove('hidden');
+                if (displayStatusEl) displayStatusEl.innerText = "✕ Stok Habis";
+                card.className = "p-4 sm:p-5 rounded-2xl border border-rose-300 bg-rose-50/85 text-rose-900 border-l-[5px] border-l-rose-500 shadow-sm";
+                card.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-xl shrink-0">🚫</div>
+                        <div>
+                            <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest block">STOK HABIS — ${(getActiveProduct() || { name: 'Produk' }).name.toUpperCase()}</span>
+                            <h3 class="text-base font-bold font-display text-rose-950">${guest.nama}</h3>
+                            <p class="text-xs text-rose-800 mt-0.5">
+                                Kuota untuk produk ini sudah terpakai semua. Tambah stok di halaman Config bila bus persediaan datang.
+                            </p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (status === 'NO_PRODUCT') {
+                pendingAction = null;
+                card.classList.remove('hidden');
+                if (displayStatusEl) displayStatusEl.innerText = "✕ Belum Ada Produk";
+                card.className = "p-4 sm:p-5 rounded-2xl border border-amber-300 bg-amber-50/85 text-amber-900 border-l-[5px] border-l-amber-500 shadow-sm";
+                card.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl shrink-0">📦</div>
+                        <div>
+                            <span class="text-[9px] font-black text-amber-700 uppercase tracking-widest block">PRODUK BELUM DIATUR</span>
+                            <h3 class="text-base font-bold font-display text-amber-950">Konfigurasi Merchandise dulu</h3>
+                            <p class="text-xs text-amber-800 mt-0.5">
+                                Buka halaman Config &gt; Event Logistics untuk menambah produk dan jumlah stoknya.
+                            </p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (status === 'CLAIMED_ADJUST') {
+                // Re-scan: info + koreksi
+                card.classList.remove('hidden');
+                const existing = getGuestClaim(guest.kode, activeProductKey);
+                if (displayStatusEl) displayStatusEl.innerText = "✔️ Sudah Ambil — Koreksi Bila Perlu";
+                card.className = "p-4 sm:p-5 rounded-2xl border border-amber-300 bg-amber-50/85 text-amber-900 border-l-[5px] border-l-amber-500 shadow-sm";
+                card.innerHTML = `
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl shrink-0">⚠️</div>
+                                <div>
+                                    <span class="text-[9px] font-black text-amber-700 uppercase tracking-widest block">SUDAH AMBIL ${(existing.qty || 0)} PCS</span>
+                                    <h3 class="text-base sm:text-lg font-bold font-display text-amber-950 leading-tight">${guest.nama}</h3>
+                                    <p class="text-xs text-amber-800 font-semibold mt-0.5">
+                                        ID: <span class="font-mono font-bold">${guest.kode}</span> • Jam: <strong>${existing.jam_claim || '-'}</strong>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span class="text-[8.5px] font-bold text-amber-600 block">TOTAL</span>
+                                <span class="text-xl sm:text-2xl font-black font-mono text-amber-950">${existing.qty || 0}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-amber-200/70">
+                            <div class="flex items-center gap-2">
+                                <div class="qty-stepper">
+                                    <button type="button" class="qty-btn" onclick="stepperAdjust(-1)">−</button>
+                                    <span id="stepper-qty" class="qty-val">0</span>
+                                    <button type="button" class="qty-btn" onclick="stepperAdjust(1)">+</button>
+                                </div>
+                                <span id="stepper-hint" class="text-[9px] font-bold text-amber-700"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="cancelPendingClaim()" class="st-btn-cam !bg-white">✕ Batal</button>
+                                <button type="button" onclick="confirmPendingClaim()" class="st-btn-gold">SIMPAN</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                openStepper(guest, status);
+                const startEl = document.getElementById('stepper-qty');
+                if (startEl) startEl.innerText = pendingAction.currentQty;
+                renderStepperHint();
+                return;
+            }
+
+            if (status === 'WAITING_QTY') {
+                // Slow mode baru: pilih jumlah → konfirmasi
+                card.classList.remove('hidden');
+                if (displayStatusEl) displayStatusEl.innerText = "Pilih Jumlah, lalu Konfirmasi";
+                card.className = "p-4 sm:p-5 rounded-2xl border border-blue-300 bg-blue-50/85 text-blue-900 border-l-[5px] border-l-blue-500 shadow-sm";
+                card.innerHTML = `
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-blue-500 text-white flex items-center justify-center text-xl shrink-0">🥤</div>
+                                <div>
+                                    <span class="text-[9px] font-black text-blue-700 uppercase tracking-widest block">PILIH JUMLAH — ${(getActiveProduct() || { name: 'Produk' }).name.toUpperCase()}</span>
+                                    <h3 class="text-base sm:text-lg font-bold font-display text-blue-950 leading-tight">${guest.nama}</h3>
+                                    <p class="text-xs text-blue-700 font-semibold mt-0.5">
+                                        ID: <span class="font-mono font-bold">${guest.kode}</span> • Pax: <strong>${guest.rencanaHadir || 1}</strong> • <span class="uppercase">${guest.kategori || 'REGULER'}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <div class="flex items-center gap-2">
+                                <div class="qty-stepper">
+                                    <button type="button" class="qty-btn" onclick="stepperAdjust(-1)">−</button>
+                                    <span id="stepper-qty" class="qty-val">1</span>
+                                    <button type="button" class="qty-btn" onclick="stepperAdjust(1)">+</button>
+                                </div>
+                                <span id="stepper-hint" class="text-[9px] font-bold text-blue-700"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="cancelPendingClaim()" class="st-btn-cam !bg-white">✕ Batal</button>
+                                <button type="button" onclick="confirmPendingClaim()" class="st-btn-gold">KONFIRMASI</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                openStepper(guest, status);
+                renderStepperHint();
+                return;
+            }
+
+            // NOT_FOUND default
+            pendingAction = null;
+            card.classList.remove('hidden');
+            if (displayStatusEl) displayStatusEl.innerText = "✕ Kode Tamu Tidak Dikenali";
+            card.className = "p-4 sm:p-5 rounded-2xl border border-rose-300 bg-rose-50/85 text-rose-900 border-l-[5px] border-l-rose-500 shadow-sm";
+            card.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-xl shrink-0">✕</div>
+                    <div>
+                        <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest block">KODE TIDAK DITEMUKAN</span>
+                        <h3 class="text-base font-bold font-display text-rose-950">Kode: ${guest.kode || '-'}</h3>
+                        <p class="text-xs text-rose-800 mt-0.5">
+                            Kode tidak terdaftar pada buku tamu acara ini. Pastikan barcode label check-in yang ditembak benar.
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ── RENDER RECENT CLAIMS LIST (log riwayat — tabel merchandise_claims) ──
+        function renderRecentClaims(filterText = "") {
+            const listEl = document.getElementById('recent-claims-list');
+            if (!listEl) return;
+
+            let claimList = Array.from(claimsMap.values());
+
+            if (filterText && filterText.trim()) {
+                const norm = filterText.trim().toUpperCase();
+                claimList = claimList.filter(c =>
+                    String(c.nama_tamu || '').toUpperCase().includes(norm) ||
+                    String(c.kode_tamu || '').toUpperCase().includes(norm) ||
+                    String(c.product_name || '').toUpperCase().includes(norm)
+                );
+            }
+
+            // Urutkan terbaru dulu (created_at desc, fallback ts lokal)
+            claimList.sort((a, b) => String(b.created_at || b.jam_claim || '').localeCompare(String(a.created_at || a.jam_claim || '')));
+
+            const badge = document.getElementById('recent-count-badge');
+            const mobBadge = document.getElementById('mob-recent-badge');
+            if (badge) badge.innerText = `${claimList.length} Tamu`;
+            if (mobBadge) mobBadge.innerText = `${claimList.length}`;
+
+            if (claimList.length === 0) {
+                listEl.innerHTML = `
+                    <div class="py-10 text-center text-[#8C7560]">
+                        <span class="text-2xl block mb-1 opacity-50">🥤</span>
+                        <p class="text-xs font-bold m-0 font-display">Belum ada merchandise yang diambil</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">Label check-in yang terscan akan tercatat di sini.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const singleProduct = merchProducts.length <= 1;
+            listEl.innerHTML = claimList.map(c => {
+                const isPending = c._local === true;
+                return `
+                <div class="arrival-card">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-[#C8962E] to-[#A6781D] text-white flex items-center justify-center text-xs font-black shrink-0 shadow-xs">×${c.qty}</div>
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-bold text-[#4A3F35] truncate leading-tight">${c.nama_tamu || c.kode_tamu}</h4>
+                            <p class="text-[9px] font-semibold text-[#8C7560] truncate mt-0.5">
+                                <span class="font-mono text-[#C8962E] font-bold">${c.kode_tamu}</span> • ${singleProduct ? '' : `<span class="uppercase">${c.product_name || '-'}</span> • `}<span>${c.jam_claim || ''}</span>${isPending ? ' • <span style="color:#D97706;">OFFLINE</span>' : ''}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 pl-2">
+                        <span class="text-[7.5px] font-extrabold text-[#C8962E] uppercase block tracking-wider">AMBIL</span>
+                        <span class="text-[11px] font-black font-mono text-[#4A3F35]">${c.qty} pcs</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function filterRecentClaims(val) {
+            renderRecentClaims(val);
+        }
+
+        // ── UPDATE STATS & TELEMETRY ──
+        function updateStats() {
+            const hadirGuests = masterData.filter(isGuestHadir);
+            const totalHadir = hadirGuests.length;
+            const checkoutGuests = masterData.filter(hasGuestCheckout);
+            const totalCheckout = checkoutGuests.length;
+            const activeInBallroom = Math.max(0, totalHadir - totalCheckout);
+
+            const product = getActiveProduct();
+            const outEl = document.getElementById('stat-merch-out');
+            const leftEl = document.getElementById('stat-merch-left');
+            const ballroomEl = document.getElementById('stat-active-in-ballroom');
+            const totalStockEl = document.getElementById('stat-merch-total');
+            const merchRatioEl = document.getElementById('merch-ratio-pct');
+            const merchSubEl = document.getElementById('merch-sub-desc');
+            const ballroomSubEl = document.getElementById('ballroom-sub-desc');
+            const merchBarEl = document.getElementById('merch-bar');
+            const stockBarEl = document.getElementById('stock-bar');
+            const occupancyBarEl = document.getElementById('occupancy-bar');
+            const stockPillEl = document.getElementById('stock-status-pill');
+
+            const productClaims = Array.from(claimsMap.values()).filter(c => c.product_key === activeProductKey);
+            const totalOutPcs = productClaims.reduce((acc, c) => acc + (parseInt(c.qty) || 0), 0);
+            const claimsCountGuests = productClaims.length;
+            const stock = product ? (parseInt(product.stock) || 0) : 0;
+            const remaining = stock > 0 ? Math.max(0, stock - totalOutPcs) : 0;
+
+            const outPct = stock > 0 ? Math.min(100, Math.round((totalOutPcs / stock) * 100)) : 0;
+            const stockPct = stock > 0 ? Math.round((remaining / stock) * 100) : 0;
+
+            let occupancyRatioPct = 0;
+            if (totalBallroomCapacity > 0) {
+                occupancyRatioPct = Math.min(100, Math.round((activeInBallroom / totalBallroomCapacity) * 100));
+            } else if (totalHadir > 0) {
+                occupancyRatioPct = Math.round((activeInBallroom / totalHadir) * 100);
+            }
+
+            if (outEl) outEl.innerText = `${totalOutPcs}`;
+            if (leftEl) leftEl.innerText = stock > 0 ? `${remaining}` : "-";
+            if (ballroomEl) ballroomEl.innerText = `${activeInBallroom}`;
+            if (totalStockEl) totalStockEl.innerText = product ? (stock > 0 ? `${product.name} • Dari ${stock} Stok` : `${product.name} • Stok Belum Diatur`) : "Produk Belum Diatur";
+            if (merchRatioEl) merchRatioEl.innerText = `${outPct}%`;
+            if (merchSubEl) merchSubEl.innerText = product ? `${claimsCountGuests} Tamu • Sisa ${remaining}` : "Atur di Config";
+            if (ballroomSubEl) {
+                ballroomSubEl.innerText = totalBallroomCapacity > 0 ? `${activeInBallroom} / ${totalBallroomCapacity} Kode` : `${activeInBallroom} Kode Aktif`;
+            }
+            if (merchBarEl) merchBarEl.style.width = `${outPct}%`;
+            if (stockBarEl) stockBarEl.style.width = `${Math.min(100, stockPct)}%`;
+            if (occupancyBarEl) occupancyBarEl.style.width = `${Math.min(100, occupancyRatioPct)}%`;
+
+            if (stockPillEl) {
+                const productEl = document.getElementById('stock-status-pill');
+                if (stock > 0 && remaining <= 0) {
+                    productEl.className = "text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-800 shrink-0";
+                    productEl.innerText = "HABIS";
+                } else if (stock > 0 && stockPct <= 15) {
+                    productEl.className = "text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 shrink-0";
+                    productEl.innerText = "MENIPIS";
+                } else if (stock > 0) {
+                    productEl.className = "text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 shrink-0";
+                    productEl.innerText = "READY";
+                } else {
+                    productEl.className = "text-[7.5px] sm:text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-gray-100 text-gray-600 shrink-0";
+                    productEl.innerText = "N/A";
+                }
+            }
+        }
+
+        // ── PRODUCT CHIPS ──
+        function renderProductChips() {
+            const wrap = document.getElementById('product-chips-wrap');
+            const chipsEl = document.getElementById('product-chips');
+            if (!wrap || !chipsEl) return;
+
+            if (merchProducts.length <= 1) {
+                wrap.style.display = 'none';
+                return;
+            }
+            wrap.style.display = 'flex';
+            chipsEl.innerHTML = merchProducts.map(p => {
+                const remaining = remainingStock(p.key);
+                return `
+                <button type="button" class="product-chip ${p.key === activeProductKey ? 'active' : ''}" onclick="selectProduct('${p.key}')">
+                    🥤 ${p.name}
+                    <span class="chip-stock">${remaining} sisa</span>
+                </button>`;
+            }).join('');
+        }
+
+        function selectProduct(key) {
+            activeProductKey = key;
+            localStorage.setItem('sapatamu_merch_active_' + CURRENT_SS_ID, key);
+            pendingAction = null;
+            const card = document.getElementById('scan-result-card');
+            if (card) card.classList.add('hidden');
+            renderProductChips();
+            updateStats();
+            renderRecentClaims();
+        }
+
+        // ── CAMERA SCANNER TOGGLE ──
+        function toggleCameraScanner() {
+            const wrap = document.getElementById('camera-viewport-wrap');
+            const btnText = document.getElementById('cam-toggle-text');
+
+            if (isCameraActive) {
+                if (html5QrCode) {
+                    html5QrCode.stop().then(() => {
+                        wrap.style.display = 'none';
+                        if (btnText) btnText.innerText = "Buka Kamera";
+                        isCameraActive = false;
+                    }).catch(e => console.error(e));
+                }
+            } else {
+                wrap.style.display = 'block';
+                if (btnText) btnText.innerText = "Tutup Kamera";
+                isCameraActive = true;
+
+                if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 15, qrbox: { width: 220, height: 220 } },
+                    (decodedText) => {
+                        processRawBarcodeInput(decodedText);
+                    },
+                    () => {}
+                ).catch(err => {
+                    console.error("Camera start error:", err);
+                    showToast("Gagal mengakses kamera.", "❌");
+                });
+            }
+        }
+
+        // ── FETCH EVENT METADATA & PHOTOS ──
+        async function fetchEventMetadata(ssId) {
+            try {
+                // 0. Fallback cache lokal instant
+                const localLogistics = JSON.parse(localStorage.getItem('sapatamu_logistics_' + ssId) || '{}');
+                if (localLogistics.kapasitasBallroom !== undefined && localLogistics.kapasitasBallroom !== null) {
+                    totalBallroomCapacity = parseInt(localLogistics.kapasitasBallroom, 10) || 0;
+                }
+
+                // 1. Fetch from config_welcome
+                const cfgRes = await fetch(`${window.SB_URL}/rest/v1/config_welcome?ssid=eq.${ssId}&select=data&limit=1`, {
+                    headers: { "apikey": window.SB_KEY, "Authorization": "Bearer " + window.SB_KEY }
+                });
+                if (cfgRes.ok) {
+                    const rows = await cfgRes.json();
+                    if (rows && rows.length > 0 && rows[0].data) {
+                        const d = rows[0].data;
+                        if (d.kapasitasBallroom !== undefined && d.kapasitasBallroom !== null) {
+                            totalBallroomCapacity = parseInt(d.kapasitasBallroom, 10) || 0;
+                        }
+                        parseMerchConfig(d.merchandise);
+
+                        if (d.urlFoto) {
+                            const photos = d.urlFoto.split(',').map(u => u.trim()).filter(Boolean);
+                            initHeroSlideshow(photos);
+                        }
+                    }
+                }
+
+                // 2. Fetch from metadata_client for couple name and schedule
+                const metaRes = await fetch(`${window.SB_URL}/rest/v1/metadata_client?ssid=eq.${ssId}&limit=1`, {
+                    headers: { "apikey": window.SB_KEY, "Authorization": "Bearer " + window.SB_KEY }
+                });
+                if (metaRes.ok) {
+                    const mRows = await metaRes.json();
+                    if (mRows && mRows.length > 0) {
+                        const m = mRows[0];
+                        if (m.nama_pengantin) {
+                            const nameEl = document.getElementById('view-wedding-name');
+                            if (nameEl) nameEl.innerText = m.nama_pengantin;
+                        }
+                        if (m.hari_tanggal) {
+                            const dateEl = document.getElementById('view-event-date');
+                            if (dateEl) dateEl.innerText = m.hari_tanggal;
+                        }
+                        if (m.tempat_acara) {
+                            const venueEl = document.getElementById('view-event-venue');
+                            if (venueEl) venueEl.innerText = m.tempat_acara;
+                        }
+                    }
+                }
+
+                // Fallback client profile
+                const sess = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+                if (sess.clientName && document.getElementById('view-wedding-name')?.innerText === "Memuat Acara...") {
+                    document.getElementById('view-wedding-name').innerText = sess.clientName;
+                }
+                const cachedAvatar = localStorage.getItem('sapatamu_avatar');
+                if (_heroPhotos.length === 0 && cachedAvatar) {
+                    initHeroSlideshow([cachedAvatar]);
+                }
+            } catch (e) {
+                console.warn("Event metadata fetch warning:", e);
+            } finally {
+                updateStats();
+            }
+        }
+
+        /* [2026-10-24 FEAT-MERCHANDISE-DISPLAY] Config produk dari halaman Config:
+           config_welcome.data.merchandise = { products: [{key, name, stock, maxPerClaim}] } */
+        function parseMerchConfig(rawMerch) {
+            try {
+                let products = [];
+                if (rawMerch && Array.isArray(rawMerch.products)) {
+                    products = rawMerch.products.filter(p => p && (p.name || p.key));
+                }
+                merchProducts = products.map((p, i) => ({
+                    key: String(p.key || 'produk-' + (i + 1)),
+                    name: String(p.name || 'Produk'),
+                    stock: parseInt(p.stock) || 0,
+                    maxPerClaim: parseInt(p.maxPerClaim) || 0
+                }));
+
+                if (merchProducts.length > 0) {
+                    const saved = localStorage.getItem('sapatamu_merch_active_' + CURRENT_SS_ID);
+                    const match = merchProducts.find(p => p.key === saved);
+                    activeProductKey = match ? saved : merchProducts[0].key;
+                } else {
+                    activeProductKey = null;
+                }
+                renderProductChips();
+                updateStats();
+            } catch (e) {
+                console.warn("[Merchandise] Config parse warning:", e);
+            }
+        }
+
+        // ── CLAIMS DATA (tabel merchandise_claims) ──
+        async function fetchAllMerchClaims(ssId, silent = false) {
+            try {
+                let all = [];
+                let offset = 0;
+                const limit = 1000;
+                while (true) {
+                    const res = await fetch(`${window.SB_URL}/rest/v1/merchandise_claims?ssid=eq.${ssId}&order=created_at.desc&limit=${limit}&offset=${offset}`, {
+                        headers: { "apikey": window.SB_KEY, "Authorization": "Bearer " + window.SB_KEY }
+                    });
+                    if (!res.ok) throw new Error("HTTP " + res.status);
+                    const chunk = await res.json();
+                    if (!Array.isArray(chunk) || chunk.length === 0) break;
+                    all = all.concat(chunk);
+                    if (chunk.length < limit) break;
+                    offset += limit;
+                }
+
+                claimsMap = new Map();
+                all.forEach(r => {
+                    if (!r.kode_tamu || !r.product_key) return;
+                    claimsMap.set(`${String(r.kode_tamu).trim().toUpperCase()}|${r.product_key}`, {
+                        kode_tamu: r.kode_tamu,
+                        nama_tamu: r.nama_tamu || "",
+                        product_key: r.product_key,
+                        product_name: r.product_name || "",
+                        qty: parseInt(r.qty) || 0,
+                        jam_claim: r.jam_claim || "",
+                        created_at: r.created_at || ""
+                    });
+                });
+                return true;
+            } catch (e) {
+                console.warn("[Merchandise] Claims fetch warning:", e);
+                if (!silent) showToast("Gagal memuat riwayat klaim — pastikan SQL merchandise_claims sudah dijalankan", "⚠️");
+                return false;
+            }
+        }
+
+        function initClaimsRealtime(ssId) {
+            if (!ssId || !window.supabase) return;
+            try {
+                const sb = window.supabase.createClient(window.SB_URL, window.SB_KEY);
+                sb.channel(`merch-claims-${ssId}`)
+                    .on(
+                        'postgres_changes',
+                        { event: '*', schema: 'public', table: 'merchandise_claims', filter: `ssid=eq.${ssId}` },
+                        (payload) => {
+                            if (payload.eventType === 'DELETE') {
+                                const old = payload.old || {};
+                                claimsMap.delete(`${String(old.kode_tamu || '').trim().toUpperCase()}|${old.product_key}`);
+                            } else {
+                                const item = payload.new;
+                                if (item && item.kode_tamu && item.product_key) {
+                                    claimsMap.set(`${String(item.kode_tamu).trim().toUpperCase()}|${item.product_key}`, {
+                                        kode_tamu: item.kode_tamu,
+                                        nama_tamu: item.nama_tamu || "",
+                                        product_key: item.product_key,
+                                        product_name: item.product_name || "",
+                                        qty: parseInt(item.qty) || 0,
+                                        jam_claim: item.jam_claim || "",
+                                        created_at: item.created_at || ""
+                                    });
+                                }
+                            }
+                            updateStats();
+                            renderRecentClaims();
+                            renderProductChips();
+                        }
+                    ).subscribe();
+            } catch (e) {
+                console.warn("[Merchandise] Realtime init error:", e);
+            }
+        }
+
+        // ── DATA INITIALIZATION ──
+        async function initPage() {
+            if (!window.SAPATAMU_RESOLVED) {
+                setTimeout(initPage, 100);
+                return;
+            }
+
+            const session = JSON.parse(sessionStorage.getItem('sapatamu_session') || localStorage.getItem('sapatamu_db') || '{}');
+            CURRENT_SS_ID = window.CURRENT_SS_ID || session.ssId;
+
+            if (!CURRENT_SS_ID) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            // Sync Navbar Links with ssId
+            const ssIdParam = `?ssId=${CURRENT_SS_ID}`;
+            const navLinks = {
+                'nav-dashboard': `dashboard.html${ssIdParam}`,
+                'nav-formulir': `formulir_tamu.html${ssIdParam}`,
+                'nav-wa': `wa_blast.html${ssIdParam}`,
+                'nav-checkin': `checkin.html${ssIdParam}`,
+                'nav-onsite': `onsite.html${ssIdParam}`,
+                'nav-souvenir': `souvenir.html${ssIdParam}`,
+                'nav-analytics': `analytics.html${ssIdParam}`,
+                'nav-lucky': `luckydraw.html${ssIdParam}`
+            };
+            Object.entries(navLinks).forEach(([id, url]) => {
+                const el = document.getElementById(id);
+                if (el) el.href = url;
+            });
+
+            initBarcodeEngine();
+            fetchEventMetadata(CURRENT_SS_ID);
+
+            // Fetch All Tamu (Loop Offset Pagination)
+            try {
+                if (window.__guestbookCore && window.__guestbookCore.fetchAllTamu) {
+                    masterData = await window.__guestbookCore.fetchAllTamu(CURRENT_SS_ID);
+                } else {
+                    const res = await fetch(`${window.SB_URL}/rest/v1/tamu?ssid=eq.${CURRENT_SS_ID}&order=row.desc`, {
+                        headers: { "apikey": window.SB_KEY, "Authorization": "Bearer " + window.SB_KEY }
+                    });
+                    masterData = await res.json();
+                }
+
+                // Map data to camelCase (dukung baik camelCase dari core maupun snake_case dari Supabase)
+                masterData = (masterData || []).map(item => ({
+                    row: item.row,
+                    nama: item.nama,
+                    whatsapp: item.whatsapp,
+                    kategori: item.kategori,
+                    kode: item.kode,
+                    rencanaHadir: item.rencanaHadir !== undefined ? item.rencanaHadir : item.rencana_hadir,
+                    statusHadir: String(item.statusHadir !== undefined ? item.statusHadir : (item.status_hadir || "0")),
+                    jamDatang: item.jamDatang || item.jam_datang || "-",
+                    jamPulang: item.jamPulang || item.jam_pulang || "-",
+                    souvenir: item.souvenir || "tidak",
+                    pihakPengundang: item.pihakPengundang || item.pihak_pengundang || "-",
+                    alamat: item.alamat || "-",
+                    realHadir: item.realHadir !== undefined ? item.realHadir : item.real_hadir,
+                    statusWA: item.statusWA || item.status_wa || "-",
+                    statusHadiah: item.statusHadiah || item.status_hadiah || "-",
+                    statusUndian: item.statusUndian || item.status_undian || "-",
+                    tandaKasih: item.tandaKasih !== undefined ? item.tandaKasih : item.tanda_kasih,
+                    sesi: item.sesi || "-"
+                }));
+
+                guestMap = new Map(masterData.map(g => [String(g.kode).trim().toUpperCase(), g]));
+
+                // Riwayat klaim + produk config
+                await fetchAllMerchClaims(CURRENT_SS_ID, false);
+                renderRecentClaims();
+                updateStats();
+                renderProductChips();
+
+                // Realtime tamu (untuk kartu Ballroom — read-only)
+                if (window.supabase) {
+                    const sb = window.supabase.createClient(window.SB_URL, window.SB_KEY);
+                    sb.channel(`merch-tamu-${CURRENT_SS_ID}`)
+                        .on(
+                            'postgres_changes',
+                            { event: '*', schema: 'public', table: 'tamu', filter: `ssid=eq.${CURRENT_SS_ID}` },
+                            (payload) => {
+                                const item = payload.new;
+                                if (payload.eventType === 'UPDATE' && item) {
+                                    const idx = masterData.findIndex(g => g.kode === item.kode || g.row === item.row);
+                                    if (idx !== -1) {
+                                        masterData[idx].statusHadir = String(item.status_hadir !== undefined ? item.status_hadir : item.statusHadir);
+                                        masterData[idx].jamDatang = item.jam_datang || item.jamDatang;
+                                        masterData[idx].jamPulang = item.jam_pulang || item.jamPulang;
+                                        guestMap.set(String(item.kode).trim().toUpperCase(), masterData[idx]);
+                                        updateStats();
+                                    }
+                                }
+                            }
+                        ).subscribe();
+
+                    // Realtime claims (semua device di stand tersinkron)
+                    initClaimsRealtime(CURRENT_SS_ID);
+
+                    // Realtime config produk (kalau stok di-Update di Config saat event)
+                    sb.channel(`merch-config-${CURRENT_SS_ID}`)
+                        .on(
+                            'postgres_changes',
+                            { event: '*', schema: 'public', table: 'config_welcome', filter: `ssid=eq.${CURRENT_SS_ID}` },
+                            (payload) => {
+                                const row = payload.new;
+                                if (row && row.data) {
+                                    if (row.data.kapasitasBallroom !== undefined && row.data.kapasitasBallroom !== null) {
+                                        totalBallroomCapacity = parseInt(row.data.kapasitasBallroom, 10) || 0;
+                                    }
+                                    parseMerchConfig(row.data.merchandise);
+                                    updateStats();
+                                }
+                            }
+                        ).subscribe();
+                }
+            } catch (e) {
+                console.error("Data load error:", e);
+            }
+
+            // Flush klaim offline yang tersisa
+            flushOfflineQueue();
+        }
+
+        window.onload = initPage;
+    </script>
+    <script src="offline-db.js"></script>
+    <script src="sync-engine.js"></script>
+    <script>
+        (function () {
+            if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () { }); }
+            window.addEventListener('online', function () { document.body.classList.remove('is-offline'); });
+            window.addEventListener('offline', function () { document.body.classList.add('is-offline'); });
+        })();
+    </script>
+    <style>
+        .is-offline::before {
+            content: '⚠️ OFFLINE — Data tersimpan lokal';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 99999;
+            background: #FEE2E2;
+            color: #991B1B;
+            text-align: center;
+            padding: 6px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        @media(min-width:1024px) {
+            .is-offline::before {
+                display: none;
+            }
+        }
+    </style>
+</body>
+</html>

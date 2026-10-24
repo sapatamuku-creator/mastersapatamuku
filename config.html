@@ -298,6 +298,18 @@
                         </div>
                     </div>
 
+                    <!-- MERCHANDISE DISPLAY — Produk & Stok Klaim (FEAT-MERCHANDISE-DISPLAY) -->
+                    <div class="bg-white/80 rounded-2xl p-5 border border-[#F0E6DE] mb-6">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-extrabold text-[#4A3F35] uppercase tracking-wider">🥤 Merchandise Display — Produk &amp; Stok Klaim</span>
+                            <button type="button" onclick="addMerchProductRow()" class="text-[10px] font-extrabold bg-[#4A3F35] text-white px-3 py-1.5 rounded-xl hover:bg-[#352c25] transition-all">
+                                + Tambah Produk
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-[#8C7560] mb-3">Atur produk untuk halaman Merchandise Display (stand kopi/suvenir/marchandise). Kolom "Maks/Klaim" kosong atau 0 = tanpa batas per tamu (tetap dibatasi stok).</p>
+                        <div id="merch-products-container" class="space-y-2"></div>
+                    </div>
+
                     <!-- Custom KPI Table -->
                     <div class="bg-white/80 rounded-2xl p-5 border border-[#F0E6DE]">
                         <div class="flex justify-between items-center mb-3">
@@ -403,6 +415,84 @@
             }
         };
 
+        /* ── Merchandise Display (FEAT-MERCHANDISE-DISPLAY) ──
+           Produk & stok klaim disimpan di config_welcome.data.merchandise
+           = { products: [{key, name, stock, maxPerClaim}] }
+           Dibaca halaman merchandise.html + analytics.html. */
+        let merchProductsConfig = [];
+
+        function slugifyMerchKey(name, idx) {
+            const slug = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            return slug || ('produk-' + (idx + 1));
+        }
+
+        function renderMerchProducts() {
+            const container = document.getElementById('merch-products-container');
+            if (!container) return;
+            if (!merchProductsConfig || merchProductsConfig.length === 0) {
+                container.innerHTML = '<p class="text-[11px] text-[#8C7560] italic py-2">Belum ada produk merchandise. Klik "+ Tambah Produk" untuk menambahkan.</p>';
+                return;
+            }
+            container.innerHTML = merchProductsConfig.map((p, idx) => `
+                <div class="flex items-center gap-2 p-2 bg-[#FFFDFB] rounded-xl border border-[#F0E6DE]">
+                    <input type="text" class="sapatamu-input py-1.5 px-3 text-xs flex-grow" placeholder="Nama Produk (mis: Kopi)" value="${p.name || ''}" oninput="updateMerchProduct(${idx}, 'name', this.value)">
+                    <input type="number" class="sapatamu-input py-1.5 px-3 text-xs w-28 font-bold" placeholder="Stok (Pcs)" value="${p.stock || ''}" min="0" oninput="updateMerchProduct(${idx}, 'stock', this.value)">
+                    <input type="number" class="sapatamu-input py-1.5 px-3 text-xs w-28 font-bold" placeholder="Maks/Klaim" value="${p.maxPerClaim || ''}" min="0" oninput="updateMerchProduct(${idx}, 'maxPerClaim', this.value)">
+                    <button type="button" onclick="removeMerchProductRow(${idx})" class="text-red-500 hover:text-red-700 p-1.5 font-bold text-sm" title="Hapus produk ini">✕</button>
+                </div>
+            `).join('');
+        }
+
+        window.addMerchProductRow = function() {
+            merchProductsConfig.push({ key: '', name: '', stock: '', maxPerClaim: '' });
+            renderMerchProducts();
+            markUnsaved();
+        };
+
+        window.removeMerchProductRow = function(idx) {
+            merchProductsConfig.splice(idx, 1);
+            renderMerchProducts();
+            markUnsaved();
+        };
+
+        window.updateMerchProduct = function(idx, key, val) {
+            if (merchProductsConfig[idx]) {
+                merchProductsConfig[idx][key] = val;
+                if (key === 'name') merchProductsConfig[idx].key = slugifyMerchKey(val, idx);
+                markUnsaved();
+            }
+        };
+
+        function loadMerchProducts(rawMerch) {
+            let products;
+            if (rawMerch && Array.isArray(rawMerch.products)) {
+                products = rawMerch.products; // konfigurasi eksplisit (boleh kosong)
+            } else if (rawMerch === undefined || rawMerch === null) {
+                // Seed default: 1 produk "Kopi" — stok 250 pcs, maks 2/tamu (bisa diedit)
+                products = [{ key: 'kopi', name: 'Kopi', stock: 250, maxPerClaim: 2 }];
+            } else {
+                products = [];
+            }
+            merchProductsConfig = products.map((p, i) => ({
+                key: String(p.key || slugifyMerchKey(p.name, i)),
+                name: String(p.name || ''),
+                stock: (p.stock === '' || p.stock === undefined || p.stock === null) ? '' : p.stock,
+                maxPerClaim: (p.maxPerClaim === '' || p.maxPerClaim === undefined || p.maxPerClaim === null) ? '' : p.maxPerClaim
+            }));
+            renderMerchProducts();
+        }
+
+        function collectMerchProducts() {
+            return (merchProductsConfig || [])
+                .filter(p => (p.name && String(p.name).trim() !== ''))
+                .map((p, i) => ({
+                    key: String(p.key || slugifyMerchKey(p.name, i)),
+                    name: String(p.name || '').trim() || ('Produk ' + (i + 1)),
+                    stock: parseInt(p.stock) > 0 ? parseInt(p.stock) : 0,
+                    maxPerClaim: parseInt(p.maxPerClaim) > 0 ? parseInt(p.maxPerClaim) : 0
+                }));
+        }
+
         async function loadGallery() {
             if (!window.SAPATAMU_RESOLVED) { setTimeout(loadGallery, 100); return; }
             syncNavbar();
@@ -437,6 +527,7 @@
                             if (Array.isArray(data.customMetrics)) {
                                 customMetrics = data.customMetrics;
                             }
+                            loadMerchProducts(data.merchandise);
                             renderCustomMetrics();
                             loaded = true;
                         }
@@ -467,6 +558,7 @@
                     gallery.innerHTML = '<div class="col-span-full py-12 text-center text-red-400 font-bold">Gagal memuat data dari server.</div>';
                 }
                 renderCustomMetrics();
+                loadMerchProducts(null);
             }
         }
 
@@ -675,6 +767,7 @@
                     existingData.kapasitasBallroom = kapasitas;
                     existingData.stokSouvenir = stokSouv;
                     existingData.customMetrics = customMetrics.filter(m => (m.label && m.label.trim() !== '') || m.target);
+                    existingData.merchandise = { products: collectMerchProducts() };
 
                     const upsertRes = await fetch(`${SB_URL}/rest/v1/config_welcome`, {
                         method: "POST",

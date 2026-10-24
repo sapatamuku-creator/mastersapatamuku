@@ -800,6 +800,7 @@
                     <a href="checkin.html" class="nav-link" id="nav-checkin">Check-in</a>
                     <a href="onsite.html" class="nav-link" id="nav-onsite">On-Site</a>
                     <a href="souvenir.html" class="nav-link" id="nav-souvenir">Souvenir</a>
+                    <a href="merchandise.html" class="nav-link" id="nav-merchandise">Merchandise</a>
                     <a href="analytics.html" class="nav-link active" id="nav-analytics">Analytics</a>
                     <a href="luckydraw.html" class="nav-link" id="nav-lucky">Lucky Draw</a>
                     <a href="angpao.html" class="nav-link" id="nav-angpao">Angpao</a>
@@ -875,6 +876,21 @@
                     </div>
                     <div class="w-full bg-gray-100 h-2 rounded-full mt-2.5 overflow-hidden">
                         <div id="souvenir-bar" class="h-full bg-[#C8962E] transition-all duration-500" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <!-- MERCHANDISE CLAIM CARD (FEAT-MERCHANDISE-DISPLAY) -->
+                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm p-4">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-gray-400 uppercase tracking-widest" style="font-size: clamp(7px, 0.65vw, 10px);">☕ Merchandise Terklaim</span>
+                        <span id="merch-ratio-pct" class="text-[8px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">0%</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <div id="side-merch-out" class="font-black text-[#C8962E] tracking-tighter" style="font-size: clamp(28px, 3.2vh, 48px); line-height:1;">0</div>
+                        <span id="side-merch-left" class="text-[10px] font-bold text-gray-400">/ Sisa 0 Pcs</span>
+                    </div>
+                    <div class="w-full bg-gray-100 h-2 rounded-full mt-2.5 overflow-hidden">
+                        <div id="merch-bar" class="h-full bg-[#C8962E] transition-all duration-500" style="width: 0%;"></div>
                     </div>
                 </div>
 
@@ -1649,6 +1665,9 @@
                     if (souvPct) souvPct.innerText = `-`;
                 }
 
+                // Widget klaim merchandise (FEAT-MERCHANDISE-DISPLAY)
+                updateMerchWidget();
+
                 // Render Custom Metrics KPI in Sidebar
                 const customKpiContainer = document.getElementById('custom-kpi-sidebar-container');
                 if (customKpiContainer) {
@@ -1697,6 +1716,48 @@
                 renderFlow();
                 try { window.__sapaPerf.measure('analytics:fetchData', _perfStart, (globalData.flowRaw ? globalData.flowRaw.length : 0) + ' flow, ' + sbData.length + ' tamu'); } catch(e) {}
             } catch (e) { console.error("Sync Error:", e); }
+        }
+
+        /* [2026-10-24 FEAT-MERCHANDISE-DISPLAY] Widget klaim merchandise di sidebar.
+           Total pcs = SUM(qty) tabel merchandise_claims; stok dari config_welcome.data.merchandise */
+        async function updateMerchWidget() {
+            if (!SB_URL || !SB_KEY || !CURRENT_SS_ID) return;
+            try {
+                const cfg = window.__eventConfig || {};
+                const merchCfg = (cfg.merchandise && Array.isArray(cfg.merchandise.products)) ? cfg.merchandise.products : [];
+                const totalStok = merchCfg.reduce((a, p) => a + (parseInt(p.stock) || 0), 0);
+
+                let all = [];
+                let offset = 0;
+                const limit = 1000;
+                while (true) {
+                    const res = await fetch(`${SB_URL}/rest/v1/merchandise_claims?ssid=eq.${CURRENT_SS_ID}&order=created_at.desc&limit=${limit}&offset=${offset}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+                    if (!res.ok) break;
+                    const chunk = await res.json();
+                    if (!Array.isArray(chunk) || chunk.length === 0) break;
+                    all = all.concat(chunk);
+                    if (chunk.length < limit) break;
+                    offset += limit;
+                }
+                const totalOutPcs = all.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
+
+                const outEl = document.getElementById('side-merch-out');
+                const leftEl = document.getElementById('side-merch-left');
+                const bar = document.getElementById('merch-bar');
+                const pct = document.getElementById('merch-ratio-pct');
+                if (outEl) outEl.innerText = totalOutPcs;
+                if (totalStok > 0) {
+                    const sisa = Math.max(0, totalStok - totalOutPcs);
+                    if (leftEl) leftEl.innerText = `/ Sisa ${sisa} Pcs`;
+                    const ratio = Math.min(100, Math.round((totalOutPcs / totalStok) * 100));
+                    if (bar) bar.style.width = `${ratio}%`;
+                    if (pct) pct.innerText = `${ratio}%`;
+                } else {
+                    if (leftEl) leftEl.innerText = merchCfg.length > 0 ? `/ Stok Belum Diatur` : `/ Produk Belum Diatur`;
+                    if (bar) bar.style.width = `0%`;
+                    if (pct) pct.innerText = `-`;
+                }
+            } catch (e) { console.warn("Merchandise widget error:", e); }
         }
 
         window.toggleFS = function () {
