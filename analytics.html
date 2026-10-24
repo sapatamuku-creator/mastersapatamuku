@@ -880,7 +880,7 @@
                 </div>
 
                 <!-- MERCHANDISE CLAIM CARD (FEAT-MERCHANDISE-DISPLAY) -->
-                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm p-4">
+                <div class="bg-white/70 backdrop-blur-md rounded-[24px] border border-[#F0E6DE]/60 shadow-sm p-4 cursor-pointer hover:border-[#C8962E]/50 transition-all group" onclick="openMerchDetailModal()" title="Klik untuk melihat rincian penerima">
                     <div class="flex justify-between items-center mb-1">
                         <span class="font-bold text-gray-400 uppercase tracking-widest" style="font-size: clamp(7px, 0.65vw, 10px);">☕ Merchandise Terklaim</span>
                         <span id="merch-ratio-pct" class="text-[8px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">0%</span>
@@ -891,6 +891,10 @@
                     </div>
                     <div class="w-full bg-gray-100 h-2 rounded-full mt-2.5 overflow-hidden">
                         <div id="merch-bar" class="h-full bg-[#C8962E] transition-all duration-500" style="width: 0%;"></div>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between text-[8px] font-extrabold text-[#C8962E]">
+                        <span>Realtime Stand Kopi</span>
+                        <span class="group-hover:translate-x-0.5 transition-transform">Rincian Penerima →</span>
                     </div>
                 </div>
 
@@ -979,6 +983,28 @@
                         <div class="eval-card h-14 bg-gray-100/80 animate-pulse"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RINCIAN MERCHANDISE RECIPIENTS -->
+    <div id="merch-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden" style="display:none;">
+        <div class="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#F0E6DE] overflow-hidden">
+            <div class="p-5 border-b border-[#F0E6DE] flex items-center justify-between bg-[#FFFDFB]">
+                <div>
+                    <h3 class="text-base font-bold text-[#4A3F35]">☕ Rincian Klaim Merchandise</h3>
+                    <p class="text-[11px] text-[#8C7560]" id="modal-merch-summary">Memuat data klaim...</p>
+                </div>
+                <button type="button" onclick="closeMerchDetailModal()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:text-black hover:bg-gray-200 flex items-center justify-center font-bold text-sm cursor-pointer">✕</button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-grow" id="modal-merch-list">
+                <!-- Items list rendered here -->
+            </div>
+            <div class="p-4 border-t border-[#F0E6DE] bg-[#FFF9F5] flex justify-between items-center">
+                <button type="button" onclick="exportMerchFromAnalytics()" class="text-xs font-bold bg-[#C8962E] text-white hover:bg-[#b08225] px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer">
+                    <span>📥</span> <span>Export CSV</span>
+                </button>
+                <button type="button" onclick="closeMerchDetailModal()" class="text-xs font-bold text-[#8C7560] hover:bg-gray-100 px-4 py-2 rounded-xl transition-all cursor-pointer">Tutup</button>
             </div>
         </div>
     </div>
@@ -1405,6 +1431,17 @@
                         .subscribe();
                 } catch(e) { console.warn('tamu realtime direct fallback error:', e); }
             }
+            // Supabase Realtime channel untuk merchandise_claims (update instan saat stand kopi scan)
+            if (window.supabase) {
+                try {
+                    const client = window.supabase.createClient(SB_URL, SB_KEY);
+                    client.channel('analytics_merch_channel_' + ssId.slice(0,6))
+                        .on('postgres_changes', { event: '*', schema: 'public', table: 'merchandise_claims', filter: `ssid=eq.${ssId}` }, () => {
+                            updateMerchWidget();
+                        })
+                        .subscribe();
+                } catch(e) { console.warn('merch realtime subscription error:', e); }
+            }
         }
 
         async function fetchData() {
@@ -1739,6 +1776,7 @@
                     if (chunk.length < limit) break;
                     offset += limit;
                 }
+                window._cachedMerchClaims = all;
                 const totalOutPcs = all.reduce((a, r) => a + (parseInt(r.qty) || 0), 0);
 
                 const outEl = document.getElementById('side-merch-out');
@@ -1759,6 +1797,74 @@
                 }
             } catch (e) { console.warn("Merchandise widget error:", e); }
         }
+
+        let _cachedMerchClaims = [];
+        window.openMerchDetailModal = function() {
+            const modal = document.getElementById('merch-detail-modal');
+            const summary = document.getElementById('modal-merch-summary');
+            const listEl = document.getElementById('modal-merch-list');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+
+            const claims = window._cachedMerchClaims || [];
+            const total = claims.reduce((a, c) => a + (parseInt(c.qty) || 1), 0);
+            if (summary) summary.innerText = `Total ${total} pcs terbagi kepada ${claims.length} tamu.`;
+
+            if (!listEl) return;
+            if (claims.length === 0) {
+                listEl.innerHTML = '<div class="py-8 text-center text-gray-400 text-xs italic">Belum ada data klaim merchandise tercatat.</div>';
+                return;
+            }
+
+            listEl.innerHTML = `
+                <div class="divide-y divide-gray-100">
+                    ${claims.map((c, i) => `
+                        <div class="py-2.5 flex items-center justify-between text-xs">
+                            <div>
+                                <div class="font-bold text-[#4A3F35]">${i+1}. ${c.nama_tamu || c.kode_tamu}</div>
+                                <div class="text-[10px] text-[#8C7560] font-mono">${c.kode_tamu} • <span class="uppercase">${c.product_name || 'Kopi'}</span> • ${c.jam_claim || '-'}</div>
+                            </div>
+                            <span class="font-black font-mono text-[#C8962E] bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">×${c.qty} pcs</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        };
+
+        window.closeMerchDetailModal = function() {
+            const modal = document.getElementById('merch-detail-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+            }
+        };
+
+        window.exportMerchFromAnalytics = function() {
+            const claims = window._cachedMerchClaims || [];
+            if (claims.length === 0) {
+                alert("Belum ada data klaim untuk diexport.");
+                return;
+            }
+            const headers = ["Waktu Klaim", "Kode Tamu", "Nama Tamu", "Produk", "Jumlah (Pcs)"];
+            const rows = claims.map(c => [
+                `"${(c.jam_claim || '').replace(/"/g, '""')}"`,
+                `"${(c.kode_tamu || '').replace(/"/g, '""')}"`,
+                `"${(c.nama_tamu || '').replace(/"/g, '""')}"`,
+                `"${(c.product_name || '').replace(/"/g, '""')}"`,
+                c.qty || 1
+            ]);
+            const csv = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Rekap_Klaim_Merchandise_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
 
         window.toggleFS = function () {
             if (!document.fullscreenElement) document.documentElement.requestFullscreen();

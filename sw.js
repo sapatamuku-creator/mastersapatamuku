@@ -13,6 +13,7 @@ const PRECACHE_ASSETS = [
   './checkin.html',
   './onsite.html',
   './souvenir.html',
+  './merchandise.html',
   './analytics.html',
   './config.html',
   './welcome.html',

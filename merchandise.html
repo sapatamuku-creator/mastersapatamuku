@@ -961,9 +961,14 @@
             <section id="panel-recent" class="col-stream-panel flex flex-col gap-4">
 
                 <div class="sapatamu-glass-card flex flex-col flex-grow min-h-[380px]">
-                    <div class="section-title-line">
-                        <span>📜 Riwayat Pengambilan</span>
-                        <span id="recent-count-badge" class="text-[8.5px] font-black bg-[#FFF0E6] text-[#C8962E] px-2.5 py-0.5 rounded-full ml-auto">0 Tamu</span>
+                    <div class="section-title-line flex items-center justify-between gap-2">
+                        <span class="flex items-center gap-1.5 font-bold">📜 Riwayat Pengambilan</span>
+                        <div class="flex items-center gap-1.5 ml-auto">
+                            <span id="recent-count-badge" class="text-[8.5px] font-black bg-[#FFF0E6] text-[#C8962E] px-2.5 py-0.5 rounded-full">0 Tamu</span>
+                            <button type="button" onclick="exportClaimsToCSV()" class="text-[9px] font-black bg-[#4A3F35] text-white hover:bg-[#382f27] px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 shadow-xs cursor-pointer" title="Unduh Rekap Klaim CSV">
+                                <span>📥</span> <span>Export CSV</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Quick Search in Recent Stream -->
@@ -1414,7 +1419,7 @@
                         jam_claim: nowStamp()
                     };
                     row = body;
-                    const postRes = await fetch(`${window.SB_URL}/rest/v1/merchandise_claims`, {
+                    const postRes = await fetch(`${window.SB_URL}/rest/v1/merchandise_claims?on_conflict=ssid,kode_tamu,product_key`, {
                         method: "POST",
                         headers: {
                             "apikey": window.SB_KEY,
@@ -1497,7 +1502,7 @@
                     if (existing) {
                         await patchExistingRow(guestLike, productLike, Math.max((parseInt(existing.qty) || 0), parseInt(item.qty) || 1));
                     } else {
-                        const postRes = await fetch(`${window.SB_URL}/rest/v1/merchandise_claims`, {
+                        const postRes = await fetch(`${window.SB_URL}/rest/v1/merchandise_claims?on_conflict=ssid,kode_tamu,product_key`, {
                             method: "POST",
                             headers: {
                                 "apikey": window.SB_KEY,
@@ -1809,20 +1814,26 @@
             const singleProduct = merchProducts.length <= 1;
             listEl.innerHTML = claimList.map(c => {
                 const isPending = c._local === true;
+                const safeName = encodeURIComponent(c.nama_tamu || c.kode_tamu || '');
                 return `
-                <div class="arrival-card">
-                    <div class="flex items-center gap-2.5 min-w-0">
+                <div class="arrival-card group hover:border-[#C8962E]/40 transition-all">
+                    <div class="flex items-center gap-2.5 min-w-0 flex-grow">
                         <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-[#C8962E] to-[#A6781D] text-white flex items-center justify-center text-xs font-black shrink-0 shadow-xs">×${c.qty}</div>
-                        <div class="min-w-0">
+                        <div class="min-w-0 flex-grow">
                             <h4 class="text-xs font-bold text-[#4A3F35] truncate leading-tight">${c.nama_tamu || c.kode_tamu}</h4>
                             <p class="text-[9px] font-semibold text-[#8C7560] truncate mt-0.5">
                                 <span class="font-mono text-[#C8962E] font-bold">${c.kode_tamu}</span> • ${singleProduct ? '' : `<span class="uppercase">${c.product_name || '-'}</span> • `}<span>${c.jam_claim || ''}</span>${isPending ? ' • <span style="color:#D97706;">OFFLINE</span>' : ''}
                             </p>
                         </div>
                     </div>
-                    <div class="text-right shrink-0 pl-2">
-                        <span class="text-[7.5px] font-extrabold text-[#C8962E] uppercase block tracking-wider">AMBIL</span>
-                        <span class="text-[11px] font-black font-mono text-[#4A3F35]">${c.qty} pcs</span>
+                    <div class="flex items-center gap-2 shrink-0 pl-2">
+                        <div class="text-right">
+                            <span class="text-[7.5px] font-extrabold text-[#C8962E] uppercase block tracking-wider">AMBIL</span>
+                            <span class="text-[11px] font-black font-mono text-[#4A3F35]">${c.qty} pcs</span>
+                        </div>
+                        <button type="button" onclick="cancelClaim('${c.kode_tamu}', '${c.product_key}', '${safeName}')" class="w-6 h-6 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer" title="Batalkan klaim tamu ini">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
                     </div>
                 </div>`;
             }).join('');
@@ -1830,6 +1841,70 @@
 
         function filterRecentClaims(val) {
             renderRecentClaims(val);
+        }
+
+        // ── EXPORT CLAIMS TO CSV ──
+        function exportClaimsToCSV() {
+            const claimList = Array.from(claimsMap.values());
+            if (claimList.length === 0) {
+                showToast("Belum ada data klaim untuk diexport", "ℹ️");
+                return;
+            }
+            const headers = ["Waktu Klaim", "Kode Tamu", "Nama Tamu", "Produk", "Jumlah (Pcs)", "Tanggal Created"];
+            const rows = claimList.map(c => [
+                `"${(c.jam_claim || '').replace(/"/g, '""')}"`,
+                `"${(c.kode_tamu || '').replace(/"/g, '""')}"`,
+                `"${(c.nama_tamu || '').replace(/"/g, '""')}"`,
+                `"${(c.product_name || '').replace(/"/g, '""')}"`,
+                c.qty || 1,
+                `"${(c.created_at || '').replace(/"/g, '""')}"`
+            ]);
+            const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            const safeEventName = (document.getElementById('view-wedding-name')?.innerText || 'Event').replace(/[^a-zA-Z0-9_-]/g, '_');
+            const dateStr = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `Rekap_Merchandise_${safeEventName}_${dateStr}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("File CSV berhasil diunduh!", "✅");
+        }
+
+        // ── BATALKAN / HAPUS KLAIM ──
+        async function cancelClaim(kode, productKey, rawName) {
+            const guestName = decodeURIComponent(rawName || kode);
+            if (!confirm(`Batalkan klaim merchandise untuk "${guestName}" (${kode})?\nKapasitas stok akan dikembalikan.`)) {
+                return;
+            }
+            const mapKey = `${String(kode).trim().toUpperCase()}|${productKey}`;
+            const existing = claimsMap.get(mapKey);
+            if (!existing) return;
+
+            // Optimistic delete local
+            claimsMap.delete(mapKey);
+            renderRecentClaims(document.getElementById('stream-search-box')?.value || '');
+            updateStats();
+            renderProductChips();
+            showToast(`Klaim ${guestName} dibatalkan`, "🗑️");
+
+            // Delete from Supabase
+            try {
+                if (navigator.onLine && window.SB_URL && window.SB_KEY) {
+                    await fetch(`${window.SB_URL}/rest/v1/merchandise_claims?ssid=eq.${encodeURIComponent(CURRENT_SS_ID)}&kode_tamu=eq.${encodeURIComponent(kode)}&product_key=eq.${encodeURIComponent(productKey)}`, {
+                        method: "DELETE",
+                        headers: {
+                            "apikey": window.SB_KEY,
+                            "Authorization": "Bearer " + window.SB_KEY
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn("[Merchandise] Delete server notice:", err);
+            }
         }
 
         // ── UPDATE STATS & TELEMETRY ──

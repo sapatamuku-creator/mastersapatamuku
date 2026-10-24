@@ -1,16 +1,16 @@
-# Graph Report - mastersapatamuku  (2026-10-12)
+# Graph Report - mastersapatamuku  (2026-10-24)
 
 ## Corpus Check
-- 194 files · ~1,060,993 words
+- 195 files · ~1,072,766 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1915 nodes · 1987 edges · 182 communities (150 shown, 32 thin omitted)
+- 1917 nodes · 1988 edges · 183 communities (150 shown, 33 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 13 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `54ed8795`
+- Built from commit: `cbb1f45f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -168,6 +168,7 @@
 - restore_sortir_vendors_table.sql
 - restore_vendor_account_21c16abd.sql
 - setup_rsvp_dashboard.sql
+- setup_merchandise_claims.sql
 
 ## God Nodes (most connected - your core abstractions)
 1. `📋 Task List & Status` - 33 edges
@@ -196,7 +197,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (182 total, 32 thin omitted)
+## Communities (183 total, 33 thin omitted)
 
 ### Community 0 - "Project Dependencies & Package Config"
 Cohesion: 0.07
@@ -683,9 +684,9 @@ Cohesion: 0.29
 Nodes (7): scripts, build, check, dev, lint, start, typecheck
 
 ## Knowledge Gaps
-- **1215 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1210 more)
+- **1216 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+1211 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **32 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **33 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -694,10 +695,10 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **Why does `devDependencies` connect `ai-website-cloner/package.json` to `ai-website-cloner/package.json`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
-- **Why does `Security Fix Tasks — SapaTamu.Ku` connect `CRITICAL TASKS (7)` to `Vercel API: Get Email Handler`, `MEDIUM TASKS (12)`, `MEDIUM TASKS (12)`?**
+- **Why does `scripts` connect `scripts` to `ai-website-cloner/package.json`?**
   _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _1215 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1216 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Project Dependencies & Package Config` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
 - **Should `Vercel API: List Drive Files` be split into smaller, more focused modules?**

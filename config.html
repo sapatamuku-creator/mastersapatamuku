@@ -433,14 +433,34 @@
                 container.innerHTML = '<p class="text-[11px] text-[#8C7560] italic py-2">Belum ada produk merchandise. Klik "+ Tambah Produk" untuk menambahkan.</p>';
                 return;
             }
-            container.innerHTML = merchProductsConfig.map((p, idx) => `
-                <div class="flex items-center gap-2 p-2 bg-[#FFFDFB] rounded-xl border border-[#F0E6DE]">
-                    <input type="text" class="sapatamu-input py-1.5 px-3 text-xs flex-grow" placeholder="Nama Produk (mis: Kopi)" value="${p.name || ''}" oninput="updateMerchProduct(${idx}, 'name', this.value)">
-                    <input type="number" class="sapatamu-input py-1.5 px-3 text-xs w-28 font-bold" placeholder="Stok (Pcs)" value="${p.stock || ''}" min="0" oninput="updateMerchProduct(${idx}, 'stock', this.value)">
-                    <input type="number" class="sapatamu-input py-1.5 px-3 text-xs w-28 font-bold" placeholder="Maks/Klaim" value="${p.maxPerClaim || ''}" min="0" oninput="updateMerchProduct(${idx}, 'maxPerClaim', this.value)">
-                    <button type="button" onclick="removeMerchProductRow(${idx})" class="text-red-500 hover:text-red-700 p-1.5 font-bold text-sm" title="Hapus produk ini">✕</button>
+            const headerHtml = `
+                <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-3 pb-1 text-[9px] font-bold text-[#8C7560] uppercase tracking-wider">
+                    <div class="sm:col-span-6">Nama Produk / Stand</div>
+                    <div class="sm:col-span-3">Kapasitas Stok (Pcs)</div>
+                    <div class="sm:col-span-2">Maks / Tamu</div>
+                    <div class="sm:col-span-1 text-right">Aksi</div>
+                </div>
+            `;
+            const rowsHtml = merchProductsConfig.map((p, idx) => `
+                <div class="flex flex-col sm:grid sm:grid-cols-12 gap-2 p-2.5 bg-[#FFFDFB] rounded-xl border border-[#F0E6DE] items-center">
+                    <div class="w-full sm:col-span-6">
+                        <label class="sm:hidden text-[9px] font-bold text-[#8C7560] block mb-0.5">Nama Produk</label>
+                        <input type="text" class="sapatamu-input py-1.5 px-3 text-xs w-full" placeholder="Nama Produk (mis: Kopi Stand)" value="${p.name || ''}" oninput="updateMerchProduct(${idx}, 'name', this.value)">
+                    </div>
+                    <div class="w-full sm:col-span-3">
+                        <label class="sm:hidden text-[9px] font-bold text-[#8C7560] block mb-0.5">Kapasitas Stok (Pcs)</label>
+                        <input type="number" class="sapatamu-input py-1.5 px-3 text-xs w-full font-bold" placeholder="Contoh: 250" value="${p.stock || ''}" min="0" oninput="updateMerchProduct(${idx}, 'stock', this.value)">
+                    </div>
+                    <div class="w-full sm:col-span-2">
+                        <label class="sm:hidden text-[9px] font-bold text-[#8C7560] block mb-0.5">Maks / Tamu (0=Bebas)</label>
+                        <input type="number" class="sapatamu-input py-1.5 px-3 text-xs w-full font-bold" placeholder="0 = Bebas" value="${p.maxPerClaim || ''}" min="0" oninput="updateMerchProduct(${idx}, 'maxPerClaim', this.value)">
+                    </div>
+                    <div class="w-full sm:col-span-1 flex justify-end">
+                        <button type="button" onclick="removeMerchProductRow(${idx})" class="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg p-1.5 font-bold text-sm transition-colors cursor-pointer" title="Hapus produk ini">✕</button>
+                    </div>
                 </div>
             `).join('');
+            container.innerHTML = headerHtml + rowsHtml;
         }
 
         window.addMerchProductRow = function() {
