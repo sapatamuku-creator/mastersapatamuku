@@ -513,6 +513,46 @@
                 }));
         }
 
+        /* [2026-10-25 FIX-MERCH-PERSIST] Sinkronisasi GAS menulis-ulang config_welcome.data
+           hanya dengan 5 key klasik sheet — data.merchandise selalu terhapus setelah save.
+           Karena itu produk merchandise disimpan JUGA ke tabel khusus merchandise_config
+           (anti-clobber), dan saat load tabel ini yang diprioritaskan. */
+        async function saveMerchProductsToTable(products) {
+            if (!window.SB_URL || !window.SB_KEY || !window.CURRENT_SS_ID) return false;
+            try {
+                const res = await fetch(`${SB_URL}/rest/v1/merchandise_config`, {
+                    method: "POST",
+                    headers: {
+                        "apikey": SB_KEY,
+                        "Authorization": "Bearer " + SB_KEY,
+                        "Content-Type": "application/json",
+                        "Prefer": "resolution=merge-duplicates"
+                    },
+                    body: JSON.stringify({ ssid: window.CURRENT_SS_ID, products: products || [], updated_at: new Date().toISOString() })
+                });
+                return res.ok;
+            } catch (e) {
+                console.warn("merchandise_config save notice:", e);
+                return false;
+            }
+        }
+
+        async function fetchMerchProductsFromTable(ssId) {
+            try {
+                const res = await fetch(
+                    `${SB_URL}/rest/v1/merchandise_config?ssid=eq.${encodeURIComponent(ssId)}&select=products&limit=1`,
+                    { headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY } }
+                );
+                if (res.ok) {
+                    const rows = await res.json();
+                    if (rows && rows.length > 0 && Array.isArray(rows[0].products)) return rows[0].products;
+                }
+            } catch (e) {
+                console.warn("merchandise_config load notice:", e);
+            }
+            return null;
+        }
+
         async function loadGallery() {
             if (!window.SAPATAMU_RESOLVED) { setTimeout(loadGallery, 100); return; }
             syncNavbar();
@@ -548,6 +588,11 @@
                                 customMetrics = data.customMetrics;
                             }
                             loadMerchProducts(data.merchandise);
+                            // Prioritas sumber produk: tabel merchandise_config (anti-clobber sinkronisasi GAS)
+                            const merchTableProducts = await fetchMerchProductsFromTable(ssId);
+                            if (merchTableProducts) {
+                                loadMerchProducts({ products: merchTableProducts });
+                            }
                             renderCustomMetrics();
                             loaded = true;
                         }
@@ -751,6 +796,7 @@
             const stokSouv = parseInt(document.getElementById('stok_souvenir')?.value) || 0;
 
             let sbSuccess = false;
+            let merchTableOk = false;
 
             // 1. Direct Update Supabase config_welcome table for INSTANT <300ms sync with welcome.html
             try {
@@ -802,6 +848,14 @@
                     if (upsertRes.ok) {
                         sbSuccess = true;
                         console.log("⚡ Supabase config_welcome updated instantly!");
+                        // [FIX-MERCH-PERSIST] Simpan juga ke tabel merchandise_config —
+                        // sumber kebenaran produk merchandise yang tahan clobber write-back GAS
+                        merchTableOk = await saveMerchProductsToTable(existingData.merchandise.products);
+                        if (merchTableOk) {
+                            console.log("⚡ Supabase merchandise_config updated!");
+                        } else {
+                            console.warn("⚠ merchandise_config gagal disimpan — pastikan SQL setup_merchandise_config.sql sudah dijalankan");
+                        }
                     }
                 }
             } catch (sbErr) {
@@ -822,8 +876,13 @@
                 const res = await fetch(window.SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
                 const data = await res.json();
                 if (data.status === "success" || sbSuccess) {
-                    status.innerText = "Berhasil disimpan & disinkronkan ke TV!";
-                    status.className = "text-xs font-semibold text-green-500";
+                    if (sbSuccess && !merchTableOk) {
+                        status.innerText = "Tersimpan, tapi sinkron tabel Merchandise gagal — coba simpan ulang.";
+                        status.className = "text-xs font-semibold text-orange-500";
+                    } else {
+                        status.innerText = "Berhasil disimpan & disinkronkan ke TV!";
+                        status.className = "text-xs font-semibold text-green-500";
+                    }
                     setTimeout(() => {
                         status.innerText = "Siap untuk sinkronisasi.";
                     }, 3000);

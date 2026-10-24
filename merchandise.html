@@ -1031,6 +1031,7 @@
            Tidak ada konsep jam pulang — tamu tetap di dalam ballroom; klaim = log, bukan checkout. */
         let merchProducts = [];
         let activeProductKey = null;
+        let merchConfigSourceLevel = -1; // [FIX-MERCH-PERSIST] -1 belum ada; 0 cache lokal; 1 config_welcome legacy; 2 tabel merchandise_config (utama)
         let claimsMap = new Map();
         let isFastScan = true;
         let isAudioEnabled = true;
@@ -2050,7 +2051,7 @@
                 }
                 // Instant hydration merchandise dari cache (sebelum Supabase fetch selesai)
                 if (localLogistics.merchandise && Array.isArray(localLogistics.merchandise.products)) {
-                    parseMerchConfig(localLogistics.merchandise);
+                    parseMerchConfig(localLogistics.merchandise, 0);
                 }
 
 
@@ -2066,6 +2067,22 @@
                             totalBallroomCapacity = parseInt(d.kapasitasBallroom, 10) || 0;
                         }
                         parseMerchConfig(d.merchandise);
+
+                        // [FIX-MERCH-PERSIST] Prioritas sumber produk: tabel merchandise_config
+                        // (config_welcome.data.merchandise bisa ditimpa sinkronisasi GAS)
+                        try {
+                            const mConfRes = await fetch(`${window.SB_URL}/rest/v1/merchandise_config?ssid=eq.${ssId}&select=products&limit=1`, {
+                                headers: { "apikey": window.SB_KEY, "Authorization": "Bearer " + window.SB_KEY }
+                            });
+                            if (mConfRes.ok) {
+                                const mConfRows = await mConfRes.json();
+                                if (mConfRows && mConfRows.length > 0 && Array.isArray(mConfRows[0].products)) {
+                                    parseMerchConfig({ products: mConfRows[0].products }, 2);
+                                }
+                            }
+                        } catch (mConfErr) {
+                            console.warn("[Merchandise] merchandise_config load notice:", mConfErr);
+                        }
 
                         if (d.urlFoto) {
                             const photos = d.urlFoto.split(',').map(u => u.trim()).filter(Boolean);
@@ -2113,20 +2130,25 @@
             }
         }
 
-        /* [2026-10-24 FEAT-MERCHANDISE-DISPLAY] Config produk dari halaman Config:
-           config_welcome.data.merchandise = { products: [{key, name, stock, maxPerClaim}] } */
-        function parseMerchConfig(rawMerch) {
+        /* [2026-10-24 FEAT-MERCHANDISE-DISPLAY] Config produk merchandise.
+           [2026-10-25 FIX-MERCH-PERSIST] Sumber berjenjang + anti-revert:
+             0 = cache localStorage (placeholder instan), 1 = config_welcome.data.merchandise
+             (legacy, bisa ditimpa sinkronisasi GAS), 2 = tabel merchandise_config (utama).
+           Input tidak valid (undefined/null) diabaikan agar produk termuat tidak ikut terhapus. */
+        function parseMerchConfig(rawMerch, sourceLevel = 1) {
             try {
-                let products = [];
-                if (rawMerch && Array.isArray(rawMerch.products)) {
-                    products = rawMerch.products.filter(p => p && (p.name || p.key));
-                }
-                merchProducts = products.map((p, i) => ({
-                    key: String(p.key || 'produk-' + (i + 1)),
-                    name: String(p.name || 'Produk'),
-                    stock: parseInt(p.stock) || 0,
-                    maxPerClaim: parseInt(p.maxPerClaim) || 0
-                }));
+                if (!rawMerch || !Array.isArray(rawMerch.products)) return;
+                if (sourceLevel < merchConfigSourceLevel) return;
+                merchConfigSourceLevel = sourceLevel;
+
+                merchProducts = rawMerch.products
+                    .filter(p => p && (p.name || p.key))
+                    .map((p, i) => ({
+                        key: String(p.key || 'produk-' + (i + 1)),
+                        name: String(p.name || 'Produk'),
+                        stock: parseInt(p.stock) || 0,
+                        maxPerClaim: parseInt(p.maxPerClaim) || 0
+                    }));
 
                 if (merchProducts.length > 0) {
                     const saved = localStorage.getItem('sapatamu_merch_active_' + CURRENT_SS_ID);

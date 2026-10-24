@@ -1756,12 +1756,20 @@
         }
 
         /* [2026-10-24 FEAT-MERCHANDISE-DISPLAY] Widget klaim merchandise di sidebar.
-           Total pcs = SUM(qty) tabel merchandise_claims; stok dari config_welcome.data.merchandise */
+           [2026-10-25 FIX-MERCH-PERSIST] Total pcs = SUM(qty) tabel merchandise_claims;
+           stok dari tabel merchandise_config (utama, anti-clobber GAS), fallback config_welcome.data.merchandise */
         async function updateMerchWidget() {
             if (!SB_URL || !SB_KEY || !CURRENT_SS_ID) return;
             try {
                 const cfg = window.__eventConfig || {};
-                const merchCfg = (cfg.merchandise && Array.isArray(cfg.merchandise.products)) ? cfg.merchandise.products : [];
+                let merchCfg = (cfg.merchandise && Array.isArray(cfg.merchandise.products)) ? cfg.merchandise.products : [];
+                try {
+                    const mRes = await fetch(`${SB_URL}/rest/v1/merchandise_config?ssid=eq.${CURRENT_SS_ID}&select=products&limit=1`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+                    if (mRes.ok) {
+                        const mRows = await mRes.json();
+                        if (mRows && mRows.length > 0 && Array.isArray(mRows[0].products)) merchCfg = mRows[0].products;
+                    }
+                } catch (mErr) { console.warn("merchandise_config load notice:", mErr); }
                 const totalStok = merchCfg.reduce((a, p) => a + (parseInt(p.stock) || 0), 0);
 
                 let all = [];

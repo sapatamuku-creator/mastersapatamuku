@@ -855,12 +855,23 @@
                         if (d.kapasitasBallroom !== undefined && d.kapasitasBallroom !== null) {
                             document.getElementById('inp-kapasitas-ballroom').value = d.kapasitasBallroom;
                         }
-                        loadProfileMerchProducts(d.merchandise);
+                        // Muat merchandise: tabel merchandise_config dulu (anti-clobber GAS), fallback data legacy
+                        let merchRaw = d.merchandise;
+                        try {
+                            const merchRes = await fetch(`${SB_URL}/rest/v1/merchandise_config?ssid=eq.${encodeURIComponent(ssId)}&select=products&limit=1`, {
+                                headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+                            });
+                            if (merchRes.ok) {
+                                const merchRows = await merchRes.json();
+                                if (merchRows && merchRows.length > 0 && Array.isArray(merchRows[0].products)) merchRaw = { products: merchRows[0].products };
+                            }
+                        } catch (merchErr) { console.warn("merchandise_config load notice:", merchErr); }
+                        loadProfileMerchProducts(merchRaw);
                         // Sync ke local cache
                         localStorage.setItem('sapatamu_logistics_' + ssId, JSON.stringify({
                             stokSouvenir: d.stokSouvenir,
                             kapasitasBallroom: d.kapasitasBallroom,
-                            merchandise: d.merchandise || { products: collectProfileMerchProducts() }
+                            merchandise: merchRaw || { products: collectProfileMerchProducts() }
                         }));
                     }
                 }
@@ -1117,6 +1128,29 @@
                     updated_at: new Date().toISOString()
                 })
             });
+            if (!upsertRes.ok) {
+                throw new Error("Supabase menolak penyimpanan config_welcome (HTTP " + upsertRes.status + ")");
+            }
+
+            // 3b. [FIX-MERCH-PERSIST] Upsert tabel merchandise_config — sumber kebenaran
+            // produk merchandise yang tahan clobber write-back GAS ke config_welcome.data
+            let merchTableOk = false;
+            try {
+                const merchRes = await fetch(`${SB_URL}/rest/v1/merchandise_config`, {
+                    method: 'POST',
+                    headers: {
+                        "apikey": SB_KEY,
+                        "Authorization": "Bearer " + SB_KEY,
+                        "Content-Type": "application/json",
+                        "Prefer": "resolution=merge-duplicates"
+                    },
+                    body: JSON.stringify({ ssid: ssId, products: merchData.products, updated_at: new Date().toISOString() })
+                });
+                merchTableOk = merchRes.ok;
+                if (!merchTableOk) console.warn("⚠ merchandise_config gagal disimpan — pastikan SQL setup_merchandise_config.sql sudah dijalankan (HTTP " + merchRes.status + ")");
+            } catch (merchErr) {
+                console.warn("merchandise_config save notice:", merchErr);
+            }
 
             // 4. Fallback sync ke GAS
             const gasUrl = window.SCRIPT_URL || "https://script.google.com/macros/s/AKfycbz5zBOJIO-b0MP-oqWhIUehqQaPbQt5pK9cMpTOYlj1pyT19LFD4VwynyJt_EAayBE/exec";
@@ -1147,7 +1181,7 @@
                 `🥤 <b>Merchandise Display:</b><br>${merchSummary}` +
                 `</div>` +
                 `</div>` +
-                `<span style="font-size:12px; color:var(--text-muted);">Perubahan telah disinkronkan ke Supabase & Google Spreadsheet.</span>`,
+                `<span style="font-size:12px; color:var(--text-muted);">${merchTableOk ? "Perubahan telah disinkronkan ke Supabase (termasuk tabel Merchandise) & Google Spreadsheet." : "⚠️ Sinkron tabel Merchandise gagal — silakan simpan ulang."}</span>`,
                 "✅"
             );
         } catch (e) {
